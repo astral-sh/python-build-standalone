@@ -893,10 +893,10 @@ def build_cpython(
 
         python_info["tcl_library_path"] = "install/lib"
         python_info["tcl_library_paths"] = [
-            "itcl4.2.2",
+            "itcl4.2.4",
             "tcl8",
             "tcl8.6",
-            "thread2.8.7",
+            "thread2.8.79",
             "tk8.6",
         ]
 

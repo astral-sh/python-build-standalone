@@ -1083,7 +1083,7 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
     # Copy tcl/tk/tix resources needed by tkinter.
     mkdir ${ROOT}/out/python/install/lib/tcl
     # Keep this list in sync with tcl_library_paths.
-    for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.2,tcl8,tcl8.6,thread2.8.7,tk8.6}; do
+    for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.4,tcl8,tcl8.6,thread2.8.9,tk8.6}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
 

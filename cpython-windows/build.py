@@ -456,6 +456,13 @@ def hack_props(
             rb"<tcltkDir>%s\$(ArchName)\</tcltkDir>" % tcltk_path,
         )
 
+    try:
+        static_replace_in_file(
+            tcltkprops_path, rb"<tclZlibDLLName>zlib1.dll</tclZlibDLLName>", rb""
+        )
+    except NoSearchStringError:
+        pass
+
     # We want to statically link against OpenSSL. This requires using our own
     # OpenSSL build. This requires some hacking of various files.
     openssl_props = pcbuild_path / "openssl.props"

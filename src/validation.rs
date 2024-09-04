@@ -395,6 +395,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: true,
             },
             MachOAllowedDylib {
+                name: "/System/Library/Frameworks/UniformTypeIdentifiers.framework/Versions/A/UniformTypeIdentifiers".to_string(),
+                max_compatibility_version: "1.0.0".try_into().unwrap(),
+                required: true,
+            },
+            MachOAllowedDylib {
                 name: "/usr/lib/libedit.3.dylib".to_string(),
                 max_compatibility_version: "2.0.0".try_into().unwrap(),
                 required: true,

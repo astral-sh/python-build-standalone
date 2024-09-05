@@ -473,7 +473,7 @@ if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
     # symbol.
     if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" ]; then
         if [ "${TARGET_TRIPLE}" != "aarch64-apple-darwin" ]; then
-            for symbol in clock_getres clock_gettime clock_settime faccessat fchmodat fchownat fdopendir fstatat futimens getentropy linkat mkdirat openat preadv pwritev readlinkat renameat symlinkat unlinkat utimensat; do
+            for symbol in clock_getres clock_gettime clock_settime faccessat fchmodat fchownat fdopendir fstatat futimens getentropy linkat mkdirat openat preadv pwritev readlinkat renameat symlinkat unlinkat utimensat uttype; do
                 CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_${symbol}=no"
             done
         fi

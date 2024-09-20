@@ -1783,6 +1783,12 @@ fn validate_distribution(
         let mut entry = entry.map_err(|e| anyhow!("failed to iterate over archive: {}", e))?;
         let path = entry.path()?.to_path_buf();
 
+        if let Some(file_name) = path.file_name() {
+            if file_name == "fips.dylib" || file_name == "fips.so" {
+                continue
+            }
+        }
+
         seen_paths.insert(path.clone());
 
         if let Some(link_name) = entry.link_name()? {

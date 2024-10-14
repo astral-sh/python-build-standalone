@@ -4,10 +4,10 @@
 
 DOWNLOADS = {
     "autoconf": {
-        "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.71.tar.gz",
-        "size": 2003781,
-        "sha256": "431075ad0bf529ef13cb41e9042c542381103e80015686222b8a9d4abef42a1c",
-        "version": "2.71",
+        "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.72.tar.gz",
+        "size": 2143794,
+        "sha256": "afb181a76e1ee72832f6581c0eddf8df032b83e2e0239ef79ebedc4467d92d6e",
+        "version": "2.72",
     },
     # 6.0.19 is the last version licensed under the Sleepycat license.
     "bdb": {

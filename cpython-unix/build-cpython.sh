@@ -259,9 +259,12 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i ${ROOT}/patch-pwd-remove-conditional.patch
 fi
 
-# Adjust BOLT flags to yield better behavior. See inline details in patch.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    # Adjust BOLT flags to yield better behavior. See inline details in patch.
     patch -p1 -i ${ROOT}/patch-configure-bolt-flags.patch
+
+    # Adjust BOLT application flags to make use of modern LLVM features.
+    patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags.patch
 fi
 
 # The optimization make targets are both phony and non-phony. This leads

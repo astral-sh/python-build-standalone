@@ -1,0 +1,23 @@
+diff --git a/configure.ac b/configure.ac
+index ee034e5a962..f1a69b7d4a7 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2183,8 +2183,9 @@ then
+     [m4_normalize("
+      -update-debug-sections
+      -reorder-blocks=ext-tsp
+-     -reorder-functions=hfsort+
++     -reorder-functions=cdsort
+      -split-functions
++     -split-strategy=cdsplit
+      -icf=1
+      -inline-all
+      -split-eh
+@@ -2196,6 +2197,7 @@ then
+      -dyno-stats
+      -use-gnu-stack
+      -frame-opt=hot
++     -hugify
+    ")]
+   )
+ fi

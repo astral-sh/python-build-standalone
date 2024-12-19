@@ -1,4 +1,4 @@
-name: Linux Python build
+name: linux
 
 on:
   push:

@@ -61,6 +61,7 @@ jobs:
           - gcc
           - xcb
           - xcb.cross
+    name: ${{ matrix.image }}
     runs-on: depot-ubuntu-22.04
     permissions:
       packages: write

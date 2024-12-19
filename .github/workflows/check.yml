@@ -1,7 +1,8 @@
-name: Check
+name: check
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 concurrency:

@@ -80,6 +80,13 @@ if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
     fi
 fi
 
+# disable readelf check when cross-compiling on older Python versions
+if [ -n "${CROSS_COMPILING}" ]; then
+    if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+        patch -p1 -i ${ROOT}/patch-cross-readelf.patch
+    fi
+fi
+
 # This patch is slightly different on Python 3.10+.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-xopen-source-ios.patch

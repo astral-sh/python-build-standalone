@@ -71,22 +71,6 @@ index c62a565eb6..7e5d34632c 100644
      	LDLIBRARY='libpython$(LDVERSION).dylib'
  	BLDLIBRARY='-L. -lpython$(LDVERSION)'
  	RUNSHARED=DYLD_LIBRARY_PATH=`pwd`${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}
-@@ -1626,15 +1665,6 @@ then
- fi
- 
- AC_CHECK_TOOLS([READELF], [readelf], [:])
--if test "$cross_compiling" = yes; then
--    case "$READELF" in
--	readelf|:)
--	AC_MSG_ERROR([readelf for the host is required for cross builds])
--	;;
--    esac
--fi
--AC_SUBST(READELF)
--
- 
- case $MACHDEP in
- hp*|HP*)
 @@ -3173,6 +3203,11 @@ then
  	Linux*|GNU*|QNX*|VxWorks*|Haiku*)
  		LDSHARED='$(CC) -shared'

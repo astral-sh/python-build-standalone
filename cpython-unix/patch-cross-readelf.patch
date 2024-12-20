@@ -1,0 +1,20 @@
+diff --git a/configure.ac b/configure.ac
+index c62a565eb6..7e5d34632c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1626,15 +1665,6 @@ then
+ fi
+ 
+ AC_CHECK_TOOLS([READELF], [readelf], [:])
+-if test "$cross_compiling" = yes; then
+-    case "$READELF" in
+-	readelf|:)
+-	AC_MSG_ERROR([readelf for the host is required for cross builds])
+-	;;
+-    esac
+-fi
+-AC_SUBST(READELF)
+-
+ 
+ case $MACHDEP in
+ hp*|HP*)

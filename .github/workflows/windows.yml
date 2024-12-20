@@ -106,7 +106,7 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
 
       - name: Download pythonbuild Executable
         uses: actions/download-artifact@v4
@@ -117,14 +117,14 @@ jobs:
       # don't get compiled properly.
       - name: Bootstrap Python environment
         run: |
-          py.exe -3.9 build-windows.py --help
+          py.exe -3.12 build-windows.py --help
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\${{ matrix.vcvars }}"
-          py.exe -3.9 build-windows.py --python cpython-${{ matrix.python }} --sh c:\cygwin\bin\sh.exe --options ${{ matrix.build_options }}
+          py.exe -3.12 build-windows.py --python cpython-${{ matrix.python }} --sh c:\cygwin\bin\sh.exe --options ${{ matrix.build_options }}
 
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}

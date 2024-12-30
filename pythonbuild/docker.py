@@ -48,6 +48,9 @@ def ensure_docker_image(client, fh, image_path=None):
         if "aux" in s and "ID" in s["aux"]:
             image = s["aux"]["ID"]
 
+        if "error" in s:
+            log(s["error"])
+
     if not image:
         raise Exception("unable to determine built Docker image")
 

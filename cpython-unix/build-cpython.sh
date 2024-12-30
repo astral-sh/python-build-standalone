@@ -9,6 +9,12 @@ export ROOT=`pwd`
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:${TOOLS_PATH}/deps/bin:$PATH
 
+# Ensure that `pkg-config` (run by CPython's configure script) can find our dependencies
+export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib/pkgconfig
+
+# Ensure that `pkg-config` invocations include the static libraries
+export PKG_CONFIG="pkg-config --static"
+
 # configure somehow has problems locating llvm-profdata even though it is in
 # PATH. The macro it is using allows us to specify its path via an
 # environment variable.

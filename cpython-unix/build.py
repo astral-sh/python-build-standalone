@@ -905,7 +905,7 @@ def build_cpython(
             "itcl4.2.4",
             "tcl8",
             "tcl8.6",
-            "thread2.8.79",
+            "thread2.8.7",
             "tk8.6",
         ]
 

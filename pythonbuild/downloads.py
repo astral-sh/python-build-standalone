@@ -115,12 +115,11 @@ DOWNLOADS = {
         "sha256": "828cb275b91268b1a3ea950d5c0c5eb076c678fdf005d517411f89cc8c3bb416",
         "version": "1.0.7",
     },
-    # 20221009-3.1 fails to build on musl due to an includes issue.
     "libedit": {
-        "url": "https://thrysoee.dk/editline/libedit-20210910-3.1.tar.gz",
-        "size": 524722,
-        "sha256": "6792a6a992050762edcca28ff3318cdb7de37dccf7bc30db59fcd7017eed13c5",
-        "version": "20210910-3.1",
+        "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz",
+        "size": 538611,
+        "sha256": "5f0573349d77c4a48967191cdd6634dd7aa5f6398c6a57fe037cc02696d6099f",
+        "version": "20240808-3.1",
         "library_names": ["edit"],
         "licenses": ["BSD-3-Clause"],
         "license_file": "LICENSE.libedit.txt",

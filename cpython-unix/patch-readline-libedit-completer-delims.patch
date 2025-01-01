@@ -1,0 +1,72 @@
+diff --git a/Lib/test/test_readline.py b/Lib/test/test_readline.py
+index 835280f2281..6c2726d3209 100644
+--- a/Lib/test/test_readline.py
++++ b/Lib/test/test_readline.py
+@@ -5,6 +5,7 @@
+ import os
+ import sys
+ import tempfile
++import textwrap
+ import unittest
+ from test.support import verbose
+ from test.support.import_helper import import_module
+@@ -163,6 +164,25 @@ def test_auto_history_disabled(self):
+         # end, so don't expect it in the output.
+         self.assertIn(b"History length: 0", output)
+ 
++    def test_set_complete_delims(self):
++        script = textwrap.dedent("""
++            import readline
++            def complete(text, state):
++                if state == 0 and text == "$":
++                    return "$complete"
++                return None
++            if "libedit" in getattr(readline, "__doc__", ""):
++                readline.parse_and_bind(r'bind "\\t" rl_complete')
++            else:
++                readline.parse_and_bind(r'"\\t": complete')
++            readline.set_completer_delims(" \\t\\n")
++            readline.set_completer(complete)
++            print(input())
++        """)
++
++        output = run_pty(script, input=b"$\t\n")
++        self.assertIn(b"$complete", output)
++
+     def test_nonascii(self):
+         loc = locale.setlocale(locale.LC_CTYPE, None)
+         if loc in ('C', 'POSIX'):
+diff --git a/Modules/readline.c b/Modules/readline.c
+index 8c7f526d418..1e13a0e6e06 100644
+--- a/Modules/readline.c
++++ b/Modules/readline.c
+@@ -572,6 +572,13 @@ readline_set_completer_delims(PyObject *module, PyObject *string)
+     if (break_chars) {
+         free(completer_word_break_characters);
+         completer_word_break_characters = break_chars;
++#ifdef WITH_EDITLINE
++        rl_basic_word_break_characters = break_chars;
++#else
++        if (using_libedit_emulation) {
++            rl_basic_word_break_characters = break_chars;
++        }
++#endif
+         rl_completer_word_break_characters = break_chars;
+         Py_RETURN_NONE;
+     }
+@@ -1260,6 +1267,15 @@ setup_readline(readlinestate *mod_state)
+     completer_word_break_characters =
+         strdup(" \t\n`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?");
+         /* All nonalphanums except '.' */
++#ifdef WITH_EDITLINE
++    // libedit uses rl_basic_word_break_characters instead of
++    // rl_completer_word_break_characters as complete delimiter
++    rl_basic_word_break_characters = completer_word_break_characters;
++#else
++    if (using_libedit_emulation) {
++        rl_basic_word_break_characters = completer_word_break_characters;
++    }
++#endif
+     rl_completer_word_break_characters = completer_word_break_characters;
+ 
+     mod_state->begidx = PyLong_FromLong(0L);

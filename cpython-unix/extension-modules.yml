@@ -880,8 +880,6 @@ readline:
     - readline.c
   defines:
     - USE_LIBEDIT=1
-    # While some versions do not, our readline `on_startup_hook` takes arguments.
-    - Py_RL_STARTUP_HOOK_TAKES_ARGS
   includes-deps:
     - libedit/include
     - libedit/include/ncursesw

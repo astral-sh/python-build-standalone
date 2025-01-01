@@ -1,0 +1,52 @@
+diff --git a/Modules/readline.c b/Modules/readline.c
+index 27b89de7279..8c7f526d418 100644
+--- a/Modules/readline.c
++++ b/Modules/readline.c
+@@ -440,7 +440,7 @@ readline_set_completion_display_matches_hook_impl(PyObject *module,
+        default completion display. */
+     rl_completion_display_matches_hook =
+         readlinestate_global->completion_display_matches_hook ?
+-#if defined(_RL_FUNCTION_TYPEDEF)
++#if defined(HAVE_RL_COMPDISP_FUNC_T)
+         (rl_compdisp_func_t *)on_completion_display_matches_hook : 0;
+ #else
+         (VFunction *)on_completion_display_matches_hook : 0;
+diff --git a/configure.ac b/configure.ac
+index e1cbb7c7fbe..629b7b76c3c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -5918,6 +5918,20 @@ if test "$py_cv_lib_readline" = yes; then
+   AC_CHECK_LIB($LIBREADLINE, append_history,
+     AC_DEFINE(HAVE_RL_APPEND_HISTORY, 1,
+       [Define if readline supports append_history]),,$READLINE_LIBS)
++
++  # in readline as well as newer editline (April 2023)
++  AC_CHECK_TYPE([rl_compdisp_func_t],
++                [AC_DEFINE([HAVE_RL_COMPDISP_FUNC_T], [1],
++                           [Define if readline supports rl_compdisp_func_t])],
++                [],
++                [
++#include <stdio.h> /* Must be first for Gnu Readline */
++#ifdef WITH_EDITLINE
++# include <editline/readline.h>
++#else
++# include <readline/readline.h>
++#endif
++                ])
+ fi
+ 
+ # End of readline checks: restore LIBS
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 0536047f573..94d02e14c44 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -968,6 +968,9 @@
+ /* Define if you can turn off readline's signal handling. */
+ #undef HAVE_RL_CATCH_SIGNAL
+ 
++/* Define if readline supports rl_compdisp_func_t */
++#undef HAVE_RL_COMPDISP_FUNC_T
++
+ /* Define if you have readline 2.2 */
+ #undef HAVE_RL_COMPLETION_APPEND_CHARACTER
+ 

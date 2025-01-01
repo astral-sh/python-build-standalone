@@ -253,6 +253,11 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i ${ROOT}/patch-pwd-remove-conditional.patch
 fi
 
+# Adjust BOLT flags to yield better behavior. See inline details in patch.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i ${ROOT}/patch-configure-bolt-flags.patch
+fi
+
 # The optimization make targets are both phony and non-phony. This leads
 # to PGO targets getting reevaluated after a build when you use multiple
 # make invocations. e.g. `make install` like we do below. Fix that.
@@ -285,6 +290,19 @@ autoconf
 # build system says we are cross-compiling.
 if [ -n "${CROSS_COMPILING}" ]; then
   patch -p1 -i ${ROOT}/patch-force-cross-compile.patch
+fi
+
+# BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
+# On 3.12 (minimum BOLT version), the segfault causes the test harness to
+# abort and BOLT optimization uses the partial test results. On 3.13, the segfault
+# is a fatal error.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
+    patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
+fi
+
+# Same as above but for an additional set of tests introduced in 3.14.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault-3.14.patch
 fi
 
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
@@ -387,12 +405,7 @@ fi
 
 if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-optimizations"
-    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && -n "${BOLT_CAPABLE}" ]]; then
-        # Due to a SEGFAULT when running `test_embed` with BOLT instrumented binaries, we can't use
-        # BOLT on Python 3.13+.
-        # TODO: Find a fix for this or consider skipping these tests specifically
-        echo "BOLT is disabled on Python 3.13+"
-    elif [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
     fi
 fi

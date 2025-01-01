@@ -1,0 +1,20 @@
+diff --git a/Lib/test/test_embed.py b/Lib/test/test_embed.py
+index 13713cf37b8..ba23880b15f 100644
+--- a/Lib/test/test_embed.py
++++ b/Lib/test/test_embed.py
+@@ -1615,6 +1615,7 @@ def test_getpath_abspath_win32(self):
+         for (_, expected), result in zip(CASES, results):
+             self.assertEqual(result, expected)
+ 
++    @unittest.skip("segfaults on BOLT instrumented binaries")
+     def test_global_pathconfig(self):
+         # Test C API functions getting the path configuration:
+         #
+@@ -1866,6 +1867,7 @@ def test_no_memleak(self):
+                 self.assertEqual(blocks, 0, out)
+ 
+ 
++@unittest.skip("segfaults on BOLT instrumented binaries")
+ class StdPrinterTests(EmbeddingTestsMixin, unittest.TestCase):
+     # Test PyStdPrinter_Type which is used by _PySys_SetPreliminaryStderr():
+     #   "Set up a preliminary stderr printer until we have enough

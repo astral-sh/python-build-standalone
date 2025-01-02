@@ -1,12 +1,12 @@
 diff --git a/Lib/test/test_embed.py b/Lib/test/test_embed.py
-index 7110fb889f3..61e4d0f6179 100644
+index 7110fb889f3..1b55cd156d7 100644
 --- a/Lib/test/test_embed.py
 +++ b/Lib/test/test_embed.py
 @@ -940,6 +940,7 @@ def check_all_configs(self, testname, expected_config=None,
          self.check_global_config(configs)
          return configs
  
-+    @unittest.skip("segfaults on BOLT instrumented binaries")
++    @unittest.skipIf(support.check_bolt_optimized, "segfaults on BOLT instrumented binaries")
      def test_init_default_config(self):
          self.check_all_configs("test_init_initialize_config", api=API_COMPAT)
  
@@ -14,7 +14,7 @@ index 7110fb889f3..61e4d0f6179 100644
          self.check_all_configs("test_init_from_config", config, preconfig,
                                 api=API_COMPAT)
  
-+    @unittest.skip("segfaults on BOLT instrumented binaries")
++    @unittest.skipIf(support.check_bolt_optimized, "segfaults on BOLT instrumented binaries")
      def test_init_compat_env(self):
          preconfig = {
              'allocator': ALLOCATOR_FOR_CONFIG,
@@ -22,7 +22,7 @@ index 7110fb889f3..61e4d0f6179 100644
          self.check_all_configs("test_init_compat_env", config, preconfig,
                                 api=API_COMPAT)
  
-+    @unittest.skip("segfaults on BOLT instrumented binaries")
++    @unittest.skipIf(support.check_bolt_optimized, "segfaults on BOLT instrumented binaries")
      def test_init_python_env(self):
          preconfig = {
              'allocator': ALLOCATOR_FOR_CONFIG,
@@ -30,7 +30,7 @@ index 7110fb889f3..61e4d0f6179 100644
          self.check_all_configs("test_init_set_config", config,
                                 api=API_ISOLATED)
  
-+    @unittest.skip("segfaults on BOLT instrumented binaries")
++    @unittest.skipIf(support.check_bolt_optimized, "segfaults on BOLT instrumented binaries")
      def test_initconfig_api(self):
          preconfig = {
              'configure_locale': True,

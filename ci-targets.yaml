@@ -218,14 +218,13 @@ linux:
       - "3.14"
     build_options:
       - debug
-      - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
-          - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
+    run: true
 
   x86_64-unknown-linux-musl:
     arch: x86_64
@@ -288,6 +287,7 @@ linux:
       - debug
       - noopt
       - lto
+    run: true
 
 windows:
   i686-pc-windows-msvc:

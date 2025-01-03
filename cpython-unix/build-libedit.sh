@@ -19,13 +19,13 @@ pushd libedit-${LIBEDIT_VERSION}
 # run-time. So we hack up the configure script instead.
 patch -p1 << "EOF"
 diff --git a/configure b/configure
-index 26dd8d0..4b6d47c 100755
+index 614795f..4671f1b 100755
 --- a/configure
 +++ b/configure
-@@ -12921,14 +12921,14 @@ test -n "$NROFF" || NROFF="/bin/false"
- 
- 
- 
+@@ -14154,14 +14154,14 @@ test -n "$NROFF" || NROFF="/bin/false"
+
+
+
 -{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lncurses" >&5
 -printf %s "checking for tgetent in -lncurses... " >&6; }
 -if test ${ac_cv_lib_ncurses_tgetent+y}
@@ -34,26 +34,28 @@ index 26dd8d0..4b6d47c 100755
 +if test ${ac_cv_lib_ncursesw_tgetent+y}
  then :
    printf %s "(cached) " >&6
- else $as_nop
-   ac_check_lib_save_LIBS=$LIBS
+ else case e in #(
+   e) ac_check_lib_save_LIBS=$LIBS
 -LIBS="-lncurses  $LIBS"
 +LIBS="-lncursesw  $LIBS"
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
- 
-@@ -12946,21 +12946,21 @@ return tgetent ();
+
+@@ -14185,9 +14185,9 @@ return tgetent ();
  _ACEOF
  if ac_fn_c_try_link "$LINENO"
  then :
 -  ac_cv_lib_ncurses_tgetent=yes
 +  ac_cv_lib_ncursesw_tgetent=yes
- else $as_nop
--  ac_cv_lib_ncurses_tgetent=no
-+  ac_cv_lib_ncursesw_tgetent=no
+ else case e in #(
+-  e) ac_cv_lib_ncurses_tgetent=no ;;
++  e) ac_cv_lib_ncursesw_tgetent=no ;;
+ esac
  fi
  rm -f core conftest.err conftest.$ac_objext conftest.beam \
-     conftest$ac_exeext conftest.$ac_ext
- LIBS=$ac_check_lib_save_LIBS
+@@ -14195,13 +14195,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
+ LIBS=$ac_check_lib_save_LIBS ;;
+ esac
  fi
 -{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ncurses_tgetent" >&5
 -printf "%s\n" "$ac_cv_lib_ncurses_tgetent" >&6; }
@@ -63,21 +65,21 @@ index 26dd8d0..4b6d47c 100755
 +if test "x$ac_cv_lib_ncursesw_tgetent" = xyes
  then :
    printf "%s\n" "#define HAVE_LIBNCURSES 1" >>confdefs.h
- 
+
 -  LIBS="-lncurses $LIBS"
 +  LIBS="-lncursesw $LIBS"
- 
- else $as_nop
-   { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lcurses" >&5
-@@ -13089,7 +13089,7 @@ then :
+
+ else case e in #(
+   e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lcurses" >&5
+@@ -14354,7 +14354,7 @@ then :
    LIBS="-ltinfo $LIBS"
- 
- else $as_nop
--  as_fn_error $? "libncurses, libcurses, libtermcap or libtinfo is required!" "$LINENO" 5
-+  as_fn_error $? "libncursesw, libcurses, libtermcap or libtinfo is required!" "$LINENO" 5
- 
+
+ else case e in #(
+-  e) as_fn_error $? "libncurses, libcurses, libtermcap or libtinfo is required!" "$LINENO" 5
++  e) as_fn_error $? "libncursesw, libcurses, libtermcap or libtinfo is required!" "$LINENO" 5
+        ;;
+ esac
  fi
- 
 EOF
 
 cflags="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

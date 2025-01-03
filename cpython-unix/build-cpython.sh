@@ -221,9 +221,17 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" ]; then
     patch -p1 -i ${ROOT}/patch-decimal-modern-mpdecimal.patch
 fi
 
+# We build against libedit instead of readline in all environments.
+#
+# On macOS, we use the system/SDK libedit, which is likely somewhat old.
+#
+# On Linux, we use our own libedit, which should be modern.
+#
 # CPython 3.10 added proper support for building against libedit outside of
-# macOS. On older versions, we need to patch readline.c.
-if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" ]; then
+# macOS. On older versions, we need to hack up readline.c to build against
+# libedit. This patch breaks older libedit (as seen on macOS) so don't apply
+# on macOS.
+if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
     # readline.c assumes that a modern readline API version has a free_history_entry().
     # but libedit does not. Change the #ifdef accordingly.
     #
@@ -231,7 +239,23 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" ]; then
     # HAVE_RL_COMPLETION_SUPPRESS_APPEND improperly. So hack that. This is a bug
     # in our build system, as we should probably be invoking configure again when
     # using libedit.
+    #
+    # Similar workaround for on_completion_display_matches_hook.
     patch -p1 -i ${ROOT}/patch-readline-libedit.patch
+fi
+
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
+    # Even though 3.10 is libedit aware, it isn't compatible with newer
+    # versions of libedit. We need to backport a 3.11 patch to teach the
+    # build system about completions.
+    # Backport of 9e9df93ffc6df5141843caf651d33d446676a414 from 3.11.
+    patch -p1 -i ${ROOT}/patch-readline-libedit-completions.patch
+
+    # 3.11 has a patch related to completer delims that closes a feature
+    # gap. Backport it as a quality of life enhancement.
+    #
+    # Backport of 42dd2613fe4bc61e1f633078560f2d84a0a16c3f from 3.11.
+    patch -p1 -i ${ROOT}/patch-readline-libedit-completer-delims.patch
 fi
 
 # iOS doesn't have system(). Teach posixmodule.c about that.

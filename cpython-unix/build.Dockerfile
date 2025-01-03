@@ -10,7 +10,7 @@
 # Compression packages are needed to extract archives.
 #
 # Various other build tools are needed for various building.
-RUN apt-get install \
+RUN ulimit -n 10000 && apt-get install \
     bzip2 \
     file \
     libc6-dev \

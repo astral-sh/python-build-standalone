@@ -33,4 +33,12 @@ RUN ( echo 'amd64'; \
       echo 'i386'; \
     ) > /var/lib/dpkg/arch
 
-RUN apt-get update
+# apt iterates all available file descriptors up to rlim_max and calls
+# fcntl(fd, F_SETFD, FD_CLOEXEC). This can result in millions of system calls
+# (we've seen 1B in the wild) and cause operations to take seconds to minutes.
+# Setting a fd limit mitigates.
+#
+# Attempts at enforcing the limit globally via /etc/security/limits.conf and
+# /root/.bashrc were not successful. Possibly because container image builds
+# don't perform a login or use a shell the way we expect.
+RUN ulimit -n 10000 && apt-get update

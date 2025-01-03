@@ -933,7 +933,7 @@ def main():
         client = None
     else:
         try:
-            client = docker.from_env()
+            client = docker.from_env(timeout=600)
             client.ping()
         except Exception as e:
             print("unable to connect to Docker: %s" % e, file=sys.stderr)

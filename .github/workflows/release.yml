@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The version to release (e.g., '20240414')."
+        description: "The version to release (e.g., '20250414')."
         type: string
       sha:
         description: "The full SHA of the commit to be released (e.g., 'd09ff921d92d6da8d8a608eaa850dc8c0f638194')."
         type: string
       dry-run:
-        description: "Whether to run the release process without actually releasing."
+        description: "Dry run? Tests the release process without publishing."
         default: false
         required: false
         type: boolean

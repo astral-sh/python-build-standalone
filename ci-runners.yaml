@@ -1,0 +1,37 @@
+# Describes the runners that the CI system can use
+
+depot-ubuntu-22.04:
+  arch: x86_64
+  platform: linux
+  free: false
+
+# TODO: Enable this runner to perform native builds for aarch64
+# depot-ubuntu-22.04-arm:
+#   arch: aarch64
+#   platform: linux
+#   free: false
+
+depot-macos-latest:
+  arch: x86_64
+  platform: darwin
+  free: false
+
+ubuntu-latest:
+  arch: x86_64
+  platform: linux
+  free: true
+
+macos-latest:
+  arch: x86_64
+  platform: darwin
+  free: true
+
+windows-latest-large:
+  arch: x86_64
+  platform: windows
+  free: false
+
+windows-latest:
+  arch: x86_64
+  platform: windows
+  free: true

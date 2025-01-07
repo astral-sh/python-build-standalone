@@ -168,7 +168,7 @@ jobs:
       - generate-matrix
       - pythonbuild
       - image
-    runs-on: depot-ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false

@@ -90,7 +90,7 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false
-    runs-on: depot-macos-latest
+    runs-on: ${{ matrix.runner }}
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
       - uses: actions/checkout@v4

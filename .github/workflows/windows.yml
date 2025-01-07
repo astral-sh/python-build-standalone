@@ -88,7 +88,7 @@ jobs:
     needs:
       - generate-matrix
       - pythonbuild
-    runs-on: windows-latest-large
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false

@@ -552,7 +552,7 @@ thumb7k-apple-watchos:
 
 # Intel macOS.
 #
-# We target compatibility with macOS 10.9+ for compatibility with older Apple
+# We target compatibility with macOS 10.15+ for compatibility with older Apple
 # machines.
 x86_64-apple-darwin:
   host_platforms:

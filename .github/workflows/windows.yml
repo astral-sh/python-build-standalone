@@ -51,7 +51,7 @@ jobs:
       pythonbuild_changed: ${{ steps.changed.outputs.pythonbuild_any_changed }}
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: astral-sh/setup-uv@v4
 
@@ -61,7 +61,7 @@ jobs:
           # Convert GitHub labels array to comma-separated string
           LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
-          
+
       - name: Generate build matrix
         id: set-matrix
         run: |
@@ -88,6 +88,10 @@ jobs:
     needs:
       - generate-matrix
       - pythonbuild
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
@@ -131,6 +135,12 @@ jobs:
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution --run $Dists
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
 
       - name: Upload Distributions
         uses: actions/upload-artifact@v4

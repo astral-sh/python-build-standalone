@@ -87,10 +87,14 @@ jobs:
     needs:
       - generate-matrix
       - pythonbuild
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false
-    runs-on: ${{ matrix.runner }}
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
       - uses: actions/checkout@v4
@@ -121,6 +125,12 @@ jobs:
           fi
 
           ./build-macos.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
 
       - name: Upload Distributions
         if: ${{ ! matrix.dry-run }}

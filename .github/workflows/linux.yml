@@ -224,7 +224,7 @@ jobs:
         run: |
           chmod +x build/pythonbuild
 
-          if [ -n "${{ matrix.run }}" ]; then
+          if [ "${{ matrix.run }}" == "true" ]; then
             EXTRA_ARGS="--run"
           fi
 

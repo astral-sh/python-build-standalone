@@ -26,6 +26,8 @@ pdb = "0.8.0"
 pep440_rs = "0.6.6"
 rayon = "1.8.1"
 reqwest = { version = "0.11.24", features = ["rustls", "stream"] }
+reqwest-middleware = "0.4.0"
+reqwest-retry = "0.7.0"
 scroll = "0.12.0"
 semver = "1.0.22"
 serde = { version = "1.0.197", features = ["derive"] }

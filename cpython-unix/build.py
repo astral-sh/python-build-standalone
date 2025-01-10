@@ -550,6 +550,13 @@ def python_build_info(
     if mips and version == "3.13":
         # See https://github.com/indygreg/python-build-standalone/issues/410
         linux_allowed_system_libraries.add("atomic")
+    riscv = target_triple.split("-")[0] in {"riscv64"}
+    if riscv:
+        # RISC-V binary often comes with libatomic on old GCC versions
+        # See https://github.com/riscvarchive/riscv-gcc/issues/12
+        # https://github.com/riscvarchive/riscv-gcc/issues/337
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86005
+        linux_allowed_system_libraries.add("atomic")
 
     # Add in core linking annotations.
     libs = extra_metadata["python_config_vars"].get("LIBS", "").split()

@@ -143,6 +143,27 @@ linux:
           - freethreaded+lto
         minimum-python-version: "3.13"
 
+  riscv64-unknown-linux-gnu:
+    arch: riscv64
+    libc: gnu
+    python_versions:
+      - "3.9"
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+    build_options:
+      - debug
+      - noopt
+      - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
+
   x86_64-unknown-linux-gnu:
     arch: x86_64
     libc: gnu

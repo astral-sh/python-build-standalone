@@ -259,6 +259,7 @@ _decimal:
       targets:
         - aarch64-.*
         - ppc64le-unknown-linux.*
+        - riscv64-unknown-linux.*
         - s390x-unknown-linux-.*
         - x86_64.*
   links:

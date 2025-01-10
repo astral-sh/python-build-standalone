@@ -470,6 +470,46 @@ ppc64le-unknown-linux-gnu:
     - zlib
   openssl_target: linux-ppc64le
 
+riscv64-unknown-linux-gnu:
+  host_platforms:
+    - linux64
+  pythons_supported:
+    - '3.9'
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+  docker_image_suffix: .cross-riscv64
+  host_cc: /usr/bin/x86_64-linux-gnu-gcc
+  host_cxx: /usr/bin/x86_64-linux-gnu-g++
+  target_cc: /usr/bin/riscv64-linux-gnu-gcc
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.0
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - tix
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+  openssl_target: linux64-riscv64
+
 s390x-unknown-linux-gnu:
   host_platforms:
     - linux64

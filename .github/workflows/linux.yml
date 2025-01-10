@@ -58,9 +58,11 @@ jobs:
         image:
           - build
           - build.cross
+          - build.cross-riscv64
           - gcc
           - xcb
           - xcb.cross
+          - xcb.cross-riscv64
     name: ${{ matrix.image }}
     runs-on: depot-ubuntu-22.04
     permissions:

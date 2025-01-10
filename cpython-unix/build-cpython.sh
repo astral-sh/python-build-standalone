@@ -936,6 +936,9 @@ mips64el-unknown-linux-gnuabi64)
 ppc64le-unknown-linux-gnu)
     PYTHON_ARCH="powerpc64le-linux-gnu"
     ;;
+riscv64-unknown-linux-gnu)
+    PYTHON_ARCH="riscv64-linux-gnu"
+    ;;
 s390x-unknown-linux-gnu)
     PYTHON_ARCH="s390x-linux-gnu"
     ;;

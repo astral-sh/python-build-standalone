@@ -134,6 +134,8 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "sqlite3.dll",
     "tcl86t.dll",
     "tk86t.dll",
+    // Bundled with tk
+    "zlib1.dll",
 ];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =

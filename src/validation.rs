@@ -139,6 +139,8 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "sqlite3.dll",
     "tcl86t.dll",
     "tk86t.dll",
+    // Bundled with tk
+    "zlib1.dll",
 ];
 
 // CPython 3.14 and ARM64 use a newer version of tcl/tk (8.6.14+) which includes a bundled zlib that

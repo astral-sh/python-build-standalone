@@ -689,6 +689,7 @@ _tkinter:
     - CoreGraphics
     - IOKit
     - QuartzCore
+    - UniformTypeIdentifiers
 
 _tokenize:
   minimum-python-version: "3.11"

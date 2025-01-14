@@ -566,15 +566,6 @@ def hack_project_files(
         rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
     )
 
-    # We're still on the pre-built tk-windows-bin 8.6.12 which doesn't have a
-    # standalone zlib DLL. So remove references to it from 3.12+.
-    if meets_python_minimum_version(python_version, "3.12"):
-        static_replace_in_file(
-            pcbuild_path / "_tkinter.vcxproj",
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
-            rb"",
-        )
-
     # We don't need to produce python_uwp.exe and its *w variant. Or the
     # python3.dll, pyshellext, or pylauncher.
     # Cut them from the build to save time and so their presence doesn't
@@ -1279,6 +1270,18 @@ def build_cpython(
             dest = openssl_lib_path / f
             log("copying %s to %s" % (source, dest))
             shutil.copyfile(source, dest)
+
+        # Delete the tk nmake helper, it's not needed and links msvc
+        tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
+        tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+        tcltk_arch = {"amd64": "amd64", "x86": "win32"}[arch]
+        (
+            tcltk_path
+            / tcltk_arch
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

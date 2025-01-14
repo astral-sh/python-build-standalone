@@ -99,6 +99,7 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "IPHLPAPI.DLL",
     "KERNEL32.dll",
     "msi.dll",
+    "msvcrt.dll",
     "NETAPI32.dll",
     "ole32.dll",
     "OLEAUT32.dll",
@@ -135,6 +136,8 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "sqlite3.dll",
     "tcl86t.dll",
     "tk86t.dll",
+    // Bundled with tk
+    "zlib1.dll",
 ];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
@@ -391,6 +394,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
             },
             MachOAllowedDylib {
                 name: "/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration".to_string(),
+                max_compatibility_version: "1.0.0".try_into().unwrap(),
+                required: true,
+            },
+            MachOAllowedDylib {
+                name: "/System/Library/Frameworks/UniformTypeIdentifiers.framework/Versions/A/UniformTypeIdentifiers".to_string(),
                 max_compatibility_version: "1.0.0".try_into().unwrap(),
                 required: true,
             },

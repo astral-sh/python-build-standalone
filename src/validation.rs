@@ -99,6 +99,7 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "IPHLPAPI.DLL",
     "KERNEL32.dll",
     "msi.dll",
+    "msvcrt.dll",
     "NETAPI32.dll",
     "ole32.dll",
     "OLEAUT32.dll",

@@ -257,6 +257,10 @@ jobs:
       - generate-matrix
       - pythonbuild
       - image
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-1) }}

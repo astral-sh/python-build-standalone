@@ -105,13 +105,12 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     );
 
     // Windows.
-    // TODO: Python 3.14 support on Windows
     h.insert(
         "i686-pc-windows-msvc",
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
@@ -123,7 +122,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
@@ -138,7 +137,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
@@ -150,7 +149,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],

@@ -114,7 +114,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_lzma": ["xz"],
     "_sqlite3": ["sqlite"],
     "_ssl": ["openssl"],
-    "_tkinter": ["tcl", "tk", "tix"],
+    "_tkinter": ["tcl-8612", "tk-8612", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
 }
@@ -355,7 +355,7 @@ def hack_props(
     sqlite_version = DOWNLOADS["sqlite"]["version"]
     xz_version = DOWNLOADS["xz"]["version"]
     zlib_version = DOWNLOADS["zlib"]["version"]
-    tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
+    tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
     sqlite_path = td / ("sqlite-autoconf-%s" % sqlite_version)
@@ -566,7 +566,7 @@ def hack_project_files(
         rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
     )
 
-    # We're still on the pre-built tk-windows-bin 8.6.14 which doesn't have a
+    # We're still on the pre-built tk-windows-bin 8.6.12 which doesn't have a
     # standalone zlib DLL. So remove references to it from 3.12+.
     if meets_python_minimum_version(python_version, "3.12"):
         static_replace_in_file(
@@ -1197,7 +1197,7 @@ def build_cpython(
     bzip2_archive = download_entry("bzip2", BUILD)
     sqlite_archive = download_entry("sqlite", BUILD)
     tk_bin_archive = download_entry(
-        "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
+        "tk-windows-bin-8612", BUILD, local_name="tk-windows-bin.tar.gz"
     )
     xz_archive = download_entry("xz", BUILD)
     zlib_archive = download_entry("zlib", BUILD)

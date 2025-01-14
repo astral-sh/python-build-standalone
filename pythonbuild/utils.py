@@ -214,6 +214,10 @@ def write_target_settings(targets, dest_path: pathlib.Path):
 class IntegrityError(Exception):
     """Represents an integrity error when downloading a URL."""
 
+    def __init__(self, *args, length: int):
+        self.length = length
+        super().__init__(*args)
+
 
 def secure_download_stream(url, size, sha256):
     """Securely download a URL to a stream of chunks.
@@ -291,9 +295,13 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
                         fh.write(chunk)
 
                 break
-            except IntegrityError:
+            except IntegrityError as e:
                 tmp.unlink()
-                raise
+                # If we didn't get most of the expected file, retry
+                if e.length > size * 0.75:
+                    raise
+                print(f"Integrity error on {url}; retrying: {e}")
+                time.sleep(2**attempt)
         except http.client.HTTPException as e:
             print(f"HTTP exception on {url}; retrying: {e}")
             time.sleep(2**attempt)

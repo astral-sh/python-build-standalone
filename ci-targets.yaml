@@ -320,6 +320,7 @@ windows:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - pgo
     build_options_conditional:
@@ -336,6 +337,7 @@ windows:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - pgo
     build_options_conditional:

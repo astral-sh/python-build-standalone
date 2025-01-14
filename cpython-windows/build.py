@@ -568,7 +568,8 @@ def hack_project_files(
 
     # We're still on the pre-built tk-windows-bin 8.6.12 which doesn't have a
     # standalone zlib DLL. So remove references to it from 3.12+.
-    if meets_python_minimum_version(python_version, "3.12"):
+    # On 3.14, something changed
+    if meets_python_minimum_version(python_version, "3.12") and meets_python_maximum_version(python_version, "3.13"):
         static_replace_in_file(
             pcbuild_path / "_tkinter.vcxproj",
             rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
@@ -1690,6 +1691,7 @@ def main() -> None:
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
+            "cpython-3.14",
         },
         default="cpython-3.11",
         help="Python distribution to build",

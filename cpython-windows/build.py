@@ -1307,7 +1307,13 @@ def build_cpython(
         tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
         tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
         tcltk_arch = {"amd64": "amd64", "x86": "win32"}[arch]
-        (tcltk_path / tcltk_arch / "lib" / "nmake" / "x86_64-w64-mingw32-nmakehlp.exe").unlink()
+        (
+            tcltk_path
+            / tcltk_arch
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

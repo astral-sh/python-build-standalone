@@ -798,6 +798,8 @@ const GLOBAL_EXTENSIONS_WINDOWS: &[&str] = &[
     "winsound",
 ];
 
+const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi"];
+
 const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 
 /// Extension modules not present in Windows static builds.
@@ -1540,6 +1542,10 @@ fn validate_extension_modules(
 
         if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13);
+        }
+
+        if matches!(python_major_minor, "3.14") {
+            wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_3_14);
         }
 
         if static_crt {

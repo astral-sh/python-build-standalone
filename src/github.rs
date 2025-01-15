@@ -16,8 +16,8 @@ use {
         Octocrab, OctocrabBuilder,
     },
     rayon::prelude::*,
-    reqwest::StatusCode,
-    reqwest_middleware::{reqwest, ClientBuilder, ClientWithMiddleware},
+    reqwest::{Client, StatusCode},
+    reqwest_middleware::{self, ClientWithMiddleware},
     reqwest_retry::{
         default_on_request_failure, policies::ExponentialBackoff, RetryTransientMiddleware,
         Retryable, RetryableStrategy,
@@ -473,7 +473,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
     let mut digests = BTreeMap::new();
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-    let raw_client = ClientBuilder::new(reqwest_middleware::reqwest::Client::new())
+    let raw_client = reqwest_middleware::ClientBuilder::new(Client::new())
         .with(RetryTransientMiddleware::new_with_policy_and_strategy(
             retry_policy,
             GitHubUploadRetryStrategy,

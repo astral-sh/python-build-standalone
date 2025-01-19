@@ -245,6 +245,12 @@ jobs:
 
           build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
 
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
+
       - name: Upload Distribution
         if: ${{ ! matrix.dry-run }}
         uses: actions/upload-artifact@v4

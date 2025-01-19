@@ -83,4 +83,4 @@ jobs:
         uses: actions/attest-build-provenance@v2
         if: ${{ github.event.inputs.dry-run == 'false' }}
         with:
-          subject-path: dist/*
+          subject-path: dist/*.tar.@(zst|gz)

@@ -17,6 +17,8 @@ if [ "${CC}" = "musl-clang" ]; then
     EXTRA_FLAGS="--disable-shared"
 fi
 
+EXTRA_TARGET_CFLAGS="${EXTRA_TARGET_CFLAGS//-fvisibility=hidden/}"
+
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC"  CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \

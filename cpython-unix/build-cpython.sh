@@ -288,7 +288,7 @@ CFLAGS=${CFLAGS//-fvisibility=hidden/}
 # But some symbols from some dependency libraries are still non-hidden for some
 # reason. We force the linker to do our bidding.
 if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
-    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
+    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,libbz2.so:libcrypto.so:libdb.so:libedit.so:libexpat.so:libffi.so:libformw.so:liblzma.so:libmenuw.so:libmpdec.so:libncursesw.so:libpanelw.so:libsqlite3.so:libssl.so:libtcl8.6.so:libtk8.6.so:libuuid.so:libX11.so:libXau.so:libz.so"
 fi
 
 EXTRA_CONFIGURE_FLAGS=

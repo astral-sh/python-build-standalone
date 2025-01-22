@@ -78,6 +78,8 @@ if [ -n "${CROSS_COMPILING}" ]; then
   esac
 fi
 
+EXTRA_TARGET_CFLAGS="${EXTRA_TARGET_CFLAGS//-fvisibility=hidden/}"
+
 # CC_FOR_BUILD is here because configure doesn't look for `clang` when
 # cross-compiling. So we force it.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \

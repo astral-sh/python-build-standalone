@@ -21,7 +21,7 @@ MAKE_DIR = ROOT / "cpython-unix"
 def bootstrap():
     BUILD.mkdir(exist_ok=True)
 
-    venv.create(VENV, with_pip=True)
+    venv.create(VENV, with_pip=True, symlinks=True)
 
     subprocess.run([str(PIP), "install", "-r", str(REQUIREMENTS)], check=True)
 

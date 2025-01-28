@@ -51,23 +51,6 @@ tar -xf Python-${PYTHON_VERSION}.tar.xz
 PIP_WHEEL="${ROOT}/pip-${PIP_VERSION}-py3-none-any.whl"
 SETUPTOOLS_WHEEL="${ROOT}/setuptools-${SETUPTOOLS_VERSION}-py3-none-any.whl"
 
-# pip and setuptools don't properly handle the case where the current executable
-# isn't dynamic. This is tracked by https://github.com/pypa/pip/issues/6543.
-# We need to patch both.
-#
-# Ideally we'd do this later in the build. However, since we use the pip
-# wheel to bootstrap itself, we need to patch the wheel before it is used.
-#
-# Wheels are zip files. So we simply unzip, patch, and rezip.
-mkdir pip-tmp
-pushd pip-tmp
-unzip "${PIP_WHEEL}"
-rm -f "${PIP_WHEEL}"
-
-zip -r "${PIP_WHEEL}" *
-popd
-rm -rf pip-tmp
-
 cat Setup.local
 mv Setup.local Python-${PYTHON_VERSION}/Modules/Setup.local
 

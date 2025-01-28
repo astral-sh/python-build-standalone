@@ -305,7 +305,6 @@ build-time configuration in a handful of files:
   ``lib/python3.10/_sysconfigdata__linux_x86_64-linux-gnu.py``.
 * In a ``Makefile`` under a ``config-*`` directory in the standard library.
   e.g. ``lib/python3.10/config-3.10-x86_64-linux-gnu/Makefile``.
-* In ``pkgconfig`` files. e.g. ``lib/pkgconfig/python3.pc``.
 * In ``python*-config`` files. e.g. ``bin/python3.10-config``.
 * In ``PYTHON.json`` (mostly reflected values from ``_sysconfigdata_*.py``.
 

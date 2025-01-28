@@ -1116,5 +1116,10 @@ else
     cp -av Tools/scripts/run_tests.py ${ROOT}/out/python/build/
 fi
 
+# Don't hard-code the build-time prefix into the pkg-config files. See
+# the description of `pcfiledir` in `man pkg-config`.
+find ${ROOT}/out/python/install/lib/pkgconfig -name \*.pc -type f -exec \
+    sed ${sed_args} 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
+
 mkdir ${ROOT}/out/python/licenses
 cp ${ROOT}/LICENSE.*.txt ${ROOT}/out/python/licenses/

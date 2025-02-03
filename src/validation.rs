@@ -40,7 +40,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "i686-pc-windows-msvc",
     "i686-unknown-linux-gnu",
     // Note there's build support for mips* targets but they are not tested
-    // See https://github.com/indygreg/python-build-standalone/issues/412
+    // See https://github.com/astral-sh/python-build-standalone/issues/412
     "mips-unknown-linux-gnu",
     "mipsel-unknown-linux-gnu",
     "mips64el-unknown-linux-gnuabi64",

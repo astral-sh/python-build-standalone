@@ -833,7 +833,7 @@ nis:
     # has a wonky history where it was once part of glibc and core system installs
     # but is slowly being phased away from base installations. There are potential
     # workarounds to adding nis support. See discussion in
-    # https://github.com/indygreg/python-build-standalone/issues/51.
+    # https://github.com/astral-sh/python-build-standalone/issues/51.
     - .*
 
   sources:

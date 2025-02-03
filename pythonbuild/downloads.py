@@ -416,7 +416,7 @@ DOWNLOADS = {
     # IMPORTANT: xz 5.6 has a backdoor. Be extremely cautious before taking any xz
     # upgrade since it isn't clear which versions are safe.
     "xz": {
-        "url": "https://github.com/indygreg/python-build-standalone/releases/download/20240224/xz-5.2.12.tar.gz",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20240224/xz-5.2.12.tar.gz",
         "size": 2190541,
         "sha256": "61bda930767dcb170a5328a895ec74cab0f5aac4558cdda561c83559db582a13",
         "version": "5.2.12",

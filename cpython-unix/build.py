@@ -548,7 +548,7 @@ def python_build_info(
     mips = target_triple.split("-")[0] in {"mips", "mipsel"}
     linux_allowed_system_libraries = LINUX_ALLOW_SYSTEM_LIBRARIES.copy()
     if mips and version == "3.13":
-        # See https://github.com/indygreg/python-build-standalone/issues/410
+        # See https://github.com/astral-sh/python-build-standalone/issues/410
         linux_allowed_system_libraries.add("atomic")
     riscv = target_triple.split("-")[0] in {"riscv64"}
     if riscv:

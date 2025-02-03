@@ -197,7 +197,7 @@ distributions aren't compatible with
 stipulates that Python and extension modules are linked against a
 dynamic musl. This is what you'll find in Alpine Linux, for example.
 
-See https://github.com/indygreg/python-build-standalone/issues/86 for
+See https://github.com/astral-sh/python-build-standalone/issues/86 for
 a tracking issue to improve the state of musl distributions.
 
 .. _quirk_linux_libx11:
@@ -249,7 +249,7 @@ The static linking of ``libX11`` and other libraries can cause problems when
 loaded into the process. For example, extension modules associated with ``PyQt``
 are known to link against a shared ``libX11.so.6``. If multiple versions of
 ``libX11`` are loaded into the same process, run-time crashes / segfaults can
-occur. See e.g. https://github.com/indygreg/python-build-standalone/issues/95.
+occur. See e.g. https://github.com/astral-sh/python-build-standalone/issues/95.
 
 The conceptual workaround is to not statically link ``libX11`` and similar
 libraries into ``libpython``. However, this requires re-linking a custom
@@ -289,8 +289,8 @@ on ``libcrypt.so.1`` and don't want to upgrade, you can instruct end-users
 to install a ``libxcrypt-compat`` (or comparable) package to provide the
 missing ``libcrypt.so.1``.
 
-See https://github.com/indygreg/python-build-standalone/issues/113 and
-https://github.com/indygreg/python-build-standalone/issues/173 for additional
+See https://github.com/astral-sh/python-build-standalone/issues/113 and
+https://github.com/astral-sh/python-build-standalone/issues/173 for additional
 context on this matter.
 
 .. _quirk_references_to_build_paths:

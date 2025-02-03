@@ -617,7 +617,7 @@ def validate_python_json(info, extension_modules):
 
 def release_download_statistics(mode="by_asset"):
     with urllib.request.urlopen(
-        "https://api.github.com/repos/indygreg/python-build-standalone/releases"
+        "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
     ) as fh:
         data = json.load(fh)
 

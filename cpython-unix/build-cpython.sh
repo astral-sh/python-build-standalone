@@ -267,17 +267,9 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
 fi
 
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    # On 3.14+, we upstreamed these changes and they are no longer needed
-    if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
-        # Adjust BOLT flags to yield better behavior. See inline details in patch.
-        patch -p1 -i ${ROOT}/patch-configure-bolt-flags.patch
-
-        # Adjust BOLT application flags to make use of modern LLVM features.
-        patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags.patch
-    else
-        # We are still upstreaming some additional optimization flags
-        patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags-3.14.patch
-    fi
+    # Additional BOLT optimizations, being upstreamed in
+    # https://github.com/python/cpython/issues/128514
+    patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags-128514.patch
 fi
 
 # The optimization make targets are both phony and non-phony. This leads

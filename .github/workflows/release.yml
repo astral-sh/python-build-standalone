@@ -78,9 +78,3 @@ jobs:
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}
         if: ${{ github.event.inputs.dry-run == 'false' }}
-
-      - name: Generate attestations
-        uses: actions/attest-build-provenance@v2
-        if: ${{ github.event.inputs.dry-run == 'false' }}
-        with:
-          subject-path: dist/*.tar.@(zst|gz)

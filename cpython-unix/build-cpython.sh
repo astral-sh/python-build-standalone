@@ -34,12 +34,12 @@ export trailer_m4=${TOOLS_PATH}/host/share/autoconf/autoconf/trailer.m4
 # The share/autoconf/autom4te.cfg file also hard-codes some paths. Rewrite
 # those to the real tools path.
 if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
-  sed_args="-i '' -e"
+    sed_args=(-i '' -e)
 else
-  sed_args="-i"
+    sed_args=(-i)
 fi
 
-sed ${sed_args} "s|/tools/host|${TOOLS_PATH}/host|g" ${TOOLS_PATH}/host/share/autoconf/autom4te.cfg
+sed "${sed_args[@]}" "s|/tools/host|${TOOLS_PATH}/host|g" ${TOOLS_PATH}/host/share/autoconf/autom4te.cfg
 
 # We force linking of external static libraries by removing the shared
 # libraries. This is hacky. But we're building in a temporary container
@@ -1094,7 +1094,7 @@ fi
 # Don't hard-code the build-time prefix into the pkg-config files. See
 # the description of `pcfiledir` in `man pkg-config`.
 find ${ROOT}/out/python/install/lib/pkgconfig -name \*.pc -type f -exec \
-    sed ${sed_args} 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
+    sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
 
 mkdir ${ROOT}/out/python/licenses
 cp ${ROOT}/LICENSE.*.txt ${ROOT}/out/python/licenses/

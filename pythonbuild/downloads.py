@@ -342,7 +342,7 @@ DOWNLOADS = {
         "size": 9497943,
         "sha256": "9b8e77d55f40ceaedd140ccca0daa804f0d43346d5abfcead9b547b5590f82f8",
         "version": "8.6.14",
-        "git_commit": "e3c3e9a2856124aa32b608632a52742d479eb7a9",
+        "git_commit": "c624cc881bd0e5071dec9de4b120cbe9985d8c14",
     },
     "uuid": {
         "url": "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz",

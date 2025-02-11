@@ -348,6 +348,12 @@ if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
     fi
 fi
 
+# On Python 3.14+, enable the tail calling interpreter which is more performant.
+# https://docs.python.org/3.14/using/configure.html#cmdoption-with-tail-call-interp
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-tail-call-interp"
+fi
+
 # On Python 3.12+ we need to link the special hacl library provided some SHA-256
 # implementations. Since we hack up the regular extension building mechanism, we
 # need to reinvent this wheel.

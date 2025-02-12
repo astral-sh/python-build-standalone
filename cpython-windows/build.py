@@ -1332,10 +1332,15 @@ def build_cpython(
                 and build_platform == "x64"
             ):
                 # On 3.14.0a5, PGO cannot be run on ceval so we disable it there
-                # See https://github.com/python/cpython/pull/130009
+                # See https://github.com/python/cpython/issues/130004
                 # We should be able to drop this patch in 3.14.0a6
                 exec_and_log(
-                    ["patch", "-p1", "-i", SUPPORT / "patch-disable-pgo-ceval-3.14.patch"],
+                    [
+                        "patch",
+                        "-p1",
+                        "-i",
+                        SUPPORT / "patch-disable-pgo-ceval-3.14.patch",
+                    ],
                     str(cpython_source_path),
                     env,
                     exit_on_error=False,

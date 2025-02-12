@@ -19,4 +19,54 @@ index c6a7a0f841f027..5f8f0ae69ef31b 100644
 +     defined(_Py_USING_PGO))
  #define DO_NOT_OPTIMIZE_INTERP_LOOP
  #endif
+diff --git a/PCbuild/pyproject.props b/PCbuild/pyproject.props
+index dbdb6b743bea37..17abfa85201a90 100644
+--- a/PCbuild/pyproject.props
++++ b/PCbuild/pyproject.props
+@@ -53,6 +53,7 @@
+     <ClCompile>
+       <AdditionalIncludeDirectories>$(PySourcePath)Include;$(PySourcePath)Include\internal;$(PySourcePath)Include\internal\mimalloc;$(GeneratedPyConfigDir);$(PySourcePath)PC;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+       <PreprocessorDefinitions>WIN32;$(_Py3NamePreprocessorDefinition);$(_PlatformPreprocessorDefinition)$(_DebugPreprocessorDefinition)$(_PyStatsPreprocessorDefinition)$(_PydPreprocessorDefinition)%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <PreprocessorDefinitions Condition="'$(SupportPGO)' and ($(Configuration) == 'PGInstrument' or $(Configuration) == 'PGUpdate')">_Py_USING_PGO=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
  
+       <Optimization>MaxSpeed</Optimization>
+       <IntrinsicFunctions>true</IntrinsicFunctions>
+diff --git a/Python/ceval.c b/Python/ceval.c
+index 1e4f1f3af20aca..c6a7a0f841f027 100644
+--- a/Python/ceval.c
++++ b/Python/ceval.c
+@@ -764,6 +764,23 @@ _PyObjectArray_Free(PyObject **array, PyObject **scratch)
+ #define PY_EVAL_C_STACK_UNITS 2
+ 
+ 
++/* _PyEval_EvalFrameDefault is too large to optimize for speed with PGO on MSVC
++   when the JIT is enabled or GIL is disabled. Disable that optimization around
++   this function only. If this is fixed upstream, we should gate this on the
++   version of MSVC.
++ */
++#if (defined(_MSC_VER) && \
++     defined(_Py_USING_PGO) && \
++     (defined(_Py_JIT) || \
++      defined(Py_GIL_DISABLED)))
++#define DO_NOT_OPTIMIZE_INTERP_LOOP
++#endif
++
++#ifdef DO_NOT_OPTIMIZE_INTERP_LOOP
++#  pragma optimize("t", off)
++/* This setting is reversed below following _PyEval_EvalFrameDefault */
++#endif
++
+ #ifdef Py_TAIL_CALL_INTERP
+ #include "opcode_targets.h"
+ #include "generated_cases.c.h"
+@@ -986,6 +1003,10 @@ _PyEval_EvalFrameDefault(PyThreadState *tstate, _PyInterpreterFrame *frame, int
+     return NULL;
+ }
+ 
++#ifdef DO_NOT_OPTIMIZE_INTERP_LOOP
++#  pragma optimize("", on)
++#endif
++
+ #if defined(__GNUC__)
+ #  pragma GCC diagnostic pop
+ #elif defined(_MSC_VER) /* MS_WINDOWS */

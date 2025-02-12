@@ -1327,6 +1327,20 @@ def build_cpython(
         )
 
         if pgo:
+            if (
+                meets_python_minimum_version(python_version, "3.14")
+                and build_platform == "x64"
+            ):
+                # On 3.14.0a5, PGO cannot be run on ceval so we disable it there
+                # See https://github.com/python/cpython/pull/130009
+                # We should be able to drop this patch in 3.14.0a6
+                exec_and_log(
+                    ["patch", "-p1", "-i", SUPPORT / "patch-disable-pgo-ceval-3.14.patch"],
+                    str(cpython_source_path),
+                    env,
+                    exit_on_error=False,
+                )
+
             run_msbuild(
                 msbuild,
                 pcbuild_path,

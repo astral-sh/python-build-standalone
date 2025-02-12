@@ -349,8 +349,9 @@ if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
 fi
 
 # On Python 3.14+, enable the tail calling interpreter which is more performant.
+# This is only available on Clang 19+
 # https://docs.python.org/3.14/using/configure.html#cmdoption-with-tail-call-interp
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+if [[ "${CC}" = "clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-tail-call-interp"
 fi
 

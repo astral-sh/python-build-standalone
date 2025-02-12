@@ -1342,7 +1342,7 @@ def build_cpython(
                         SUPPORT / "patch-disable-pgo-ceval-3.14.patch",
                     ],
                     str(cpython_source_path),
-                    env,
+                    env=os.environ,
                     exit_on_error=False,
                 )
 

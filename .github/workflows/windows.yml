@@ -96,7 +96,7 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false
-    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_option }}
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
       - uses: actions/checkout@v4
         with:

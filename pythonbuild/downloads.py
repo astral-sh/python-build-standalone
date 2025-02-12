@@ -81,8 +81,8 @@ DOWNLOADS = {
     },
     "cpython-3.14": {
         "url": "https://www.python.org/ftp/python/3.14.0/Python-3.14.0a5.tar.xz",
-        "size": 22850560,
-        "sha256": "e42d91d6dd3016bfc2f6f96c1129b40ca6d8f6e1bf3b30a11de146d930f43b32",
+        "size": 22859900,
+        "sha256": "74e83f26de1e4fb9eef1b56492cff92508834bb71ac13f5c580438ce9f093682",
         "version": "3.14.0a5",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",

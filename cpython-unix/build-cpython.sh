@@ -427,7 +427,11 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 fi
 
 if [ -n "${CPYTHON_LTO}" ]; then
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto"
+    # On Python 3.12 and 3.13, `--with-lto` enables ThinLTO by default, while on other versions it
+    # enables full LTO. We prefer runtime performance over build time, so force full on all
+    # versions.
+    # See https://docs.python.org/3.14/using/configure.html#cmdoption-with-lto
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto=full"
 fi
 
 # Python 3.11 introduces a --with-build-python to denote the host Python.

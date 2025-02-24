@@ -560,8 +560,18 @@ pub fn produce_install_only(tar_zst_path: &Path) -> Result<PathBuf> {
         .map(|x| x.to_string())
         .collect::<Vec<_>>();
     let parts_len = name_parts.len();
+    let flavor_idx = parts_len - 2;
 
-    name_parts[parts_len - 2] = "install_only".to_string();
+    if name_parts[flavor_idx].contains("freethreaded") {
+        name_parts
+            .splice(
+                flavor_idx..flavor_idx + 1,
+                ["freethreaded".to_string(), "install_only".to_string()],
+            )
+            .for_each(drop);
+    } else {
+        name_parts[flavor_idx] = "install_only".to_string();
+    }
 
     let install_only_name = name_parts.join("-");
     let install_only_name = install_only_name.replace(".tar.zst", ".tar.gz");

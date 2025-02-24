@@ -43,6 +43,8 @@ pub struct ConditionalSuffixes {
     pub python_version_requirement: VersionSpecifier,
     /// Build suffixes to release.
     pub suffixes: Vec<&'static str>,
+    /// Build suffix to use for the `install_only` artifact.
+    pub install_only_suffix: &'static str,
 }
 
 impl TripleRelease {
@@ -71,6 +73,20 @@ impl TripleRelease {
                     }),
             )
     }
+
+    pub fn install_only_suffix<'a>(
+        &'a self,
+        python_version: Option<&'a pep440_rs::Version>,
+    ) -> &'static str {
+        if let Some(version) = python_version {
+            for conditional in self.conditional_suffixes.iter() {
+                if conditional.python_version_requirement.contains(version) {
+                    return conditional.install_only_suffix;
+                }
+            }
+        }
+        self.install_only_suffix
+    }
 }
 
 pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::new(|| {
@@ -79,6 +95,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     // macOS.
     let macos_suffixes = vec!["debug", "pgo+lto"];
     let macos_suffixes_313 = vec!["freethreaded+debug", "freethreaded+pgo+lto"];
+    let macos_install_only_suffix_313 = "freethreaded+pgo+lto";
     h.insert(
         "aarch64-apple-darwin",
         TripleRelease {
@@ -88,6 +105,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13.0rc0").unwrap(),
                 suffixes: macos_suffixes_313.clone(),
+                install_only_suffix: macos_install_only_suffix_313,
             }],
         },
     );
@@ -100,6 +118,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13.0rc0").unwrap(),
                 suffixes: macos_suffixes_313.clone(),
+                install_only_suffix: macos_install_only_suffix_313,
             }],
         },
     );
@@ -114,6 +133,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
+                install_only_suffix: "freethreaded+pgo",
             }],
         },
     );
@@ -126,6 +146,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
+                install_only_suffix: "freethreaded+pgo",
             }],
         },
     );
@@ -141,6 +162,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
+                install_only_suffix: "freethreaded+pgo",
             }],
         },
     );
@@ -153,6 +175,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: vec!["freethreaded+pgo"],
+                install_only_suffix: "freethreaded+pgo",
             }],
         },
     );
@@ -161,11 +184,13 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     let linux_suffixes_pgo = vec!["debug", "pgo+lto"];
     let linux_suffixes_nopgo = vec!["debug", "lto", "noopt"];
     let linux_suffixes_pgo_freethreaded = vec!["freethreaded+debug", "freethreaded+pgo+lto"];
+    let linux_install_only_suffixes_pgo_freethreaded = "freethreaded+pgo+lto";
     let linux_suffixes_nopgo_freethreaded = vec![
         "freethreaded+debug",
         "freethreaded+lto",
         "freethreaded+noopt",
     ];
+    let linux_install_only_suffixes_nopgo_freethreaded = "freethreaded+lto";
 
     h.insert(
         "aarch64-unknown-linux-gnu",
@@ -176,6 +201,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -189,6 +215,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -202,6 +229,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -215,6 +243,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -228,6 +257,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -241,6 +271,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_nopgo_freethreaded,
             }],
         },
     );
@@ -254,6 +285,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_pgo_freethreaded,
             }],
         },
     );
@@ -266,6 +298,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_pgo_freethreaded,
             }],
         },
     );
@@ -278,6 +311,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_pgo_freethreaded,
             }],
         },
     );
@@ -290,6 +324,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
+                install_only_suffix: linux_install_only_suffixes_pgo_freethreaded,
             }],
         },
     );

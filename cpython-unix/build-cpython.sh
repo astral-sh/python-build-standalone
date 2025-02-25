@@ -408,6 +408,11 @@ else
     PYBUILD_SHARED=0
 fi
 
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && "${PYBUILD_SHARED}" = "0" ]]; then
+    # Patches for BOLT instrumentation of a static binary
+    patch -p1 -i ${ROOT}/patch-make-bolt-instrument-flags.patch
+fi
+
 if [ -n "${CPYTHON_DEBUG}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-pydebug"
 fi

@@ -1,0 +1,13 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 46a37ded970..9f9c7423ccf 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -797,7 +797,7 @@ profile-bolt-stamp: $(BUILDPYTHON)
+        done
+        # Instrument each binary.
+        for bin in $(BOLT_BINARIES); do \
+-         @LLVM_BOLT@ "$${bin}" -instrument -instrumentation-file-append-pid -instrumentation-file=$(abspath $${bin}.bolt) -o $${bin}.bolt_inst $(BOLT_INSTRUMENT_FLAGS); \
++         @LLVM_BOLT@ "$${bin}" -instrumentation-sleep-time=10 -instrument -instrumentation-file=$(abspath $${bin}.bolt) -o $${bin}.bolt_inst $(BOLT_INSTRUMENT_FLAGS); \
+          mv "$${bin}.bolt_inst" "$${bin}"; \
+        done
+        # Run instrumented binaries to collect data.

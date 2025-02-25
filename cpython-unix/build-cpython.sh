@@ -424,6 +424,9 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
     fi
+
+    # Enable computed-gotos
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-computed-gotos"
 fi
 
 if [ -n "${CPYTHON_LTO}" ]; then

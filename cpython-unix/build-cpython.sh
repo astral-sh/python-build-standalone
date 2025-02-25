@@ -401,8 +401,11 @@ if [ "${CC}" = "musl-clang" ]; then
         cp "$h" /tools/host/include/
     done
 else
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
-    PYBUILD_SHARED=1
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --disable-shared"
+    CFLAGS="${CFLAGS} -static"
+    CPPFLAGS="${CPPFLAGS} -static"
+    LDFLAGS="${LDFLAGS} -static"
+    PYBUILD_SHARED=0
 fi
 
 if [ -n "${CPYTHON_DEBUG}" ]; then

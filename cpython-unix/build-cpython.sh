@@ -618,9 +618,9 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
 
         if [ "${CC}" == "musl-clang" ]; then
             # musl does not support $ORIGIN in DT_NEEDED, so we use RPATH instead. This could be
-            # problematic, i.e., we could load the shared library from the wrong location — but
-            # there's not a clear alternative at this time. The longterm solution is likely to
-            # statically link to libpython instead.
+            # problematic, i.e., we could load the shared library from the wrong location if
+            # `LD_LIBRARY_PATH` is set, but there's not a clear alternative at this time. The
+            # long term solution is probably to statically link to libpython instead.
             patchelf --set-rpath "\$ORIGIN/../lib" \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 

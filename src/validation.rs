@@ -71,6 +71,8 @@ const ELF_ALLOWED_LIBRARIES: &[&str] = &[
     "libpthread.so.0",
     "librt.so.1",
     "libutil.so.1",
+    // musl libc
+    "libc.so",
 ];
 
 const PE_ALLOWED_LIBRARIES: &[&str] = &[
@@ -919,7 +921,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     }
 
     allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}.so.1.0",
+        "libpython{}.so.1.0",
         python_major_minor
     ));
     allowed_libraries.push(format!(
@@ -934,6 +936,26 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "$ORIGIN/../lib/libpython{}td.so.1.0",
         python_major_minor
     ));
+
+    // On musl, we don't use `$ORIGIN`
+    if target_triple.contains("-musl") {
+        allowed_libraries.push(format!(
+            "libpython{}.so.1.0",
+            python_major_minor
+        ));
+        allowed_libraries.push(format!(
+            "libpython{}d.so.1.0",
+            python_major_minor
+        ));
+        allowed_libraries.push(format!(
+            "libpython{}t.so.1.0",
+            python_major_minor
+        ));
+        allowed_libraries.push(format!(
+            "libpython{}td.so.1.0",
+            python_major_minor
+        ));
+    }
 
     // Allow the _crypt extension module - and only it - to link against libcrypt,
     // which is no longer universally present in Linux distros.
@@ -1720,7 +1742,8 @@ fn validate_distribution(
 
     let is_debug = dist_filename.contains("-debug-");
 
-    let is_static = triple.contains("unknown-linux-musl");
+    // For now, there are now static builds — this is historic
+    let is_static = false;
 
     let mut tf = crate::open_distribution_archive(dist_path)?;
 

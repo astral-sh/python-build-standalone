@@ -7,7 +7,9 @@ import fnmatch
 import io
 import os
 import pathlib
+import random
 import shutil
+import string
 import tarfile
 import tempfile
 
@@ -264,22 +266,25 @@ class TempdirContext(object):
 
 
 @contextlib.contextmanager
-def build_environment(client, image):
+def build_environment(client, image, name):
     if client is not None:
+        suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
         container = client.containers.run(
-            image, command=["/bin/sleep", "86400"], detach=True
+            image, command=["/bin/sleep", "86400"], name=f"{name}-{suffix}", detach=True
         )
         td = None
         context = ContainerContext(container)
     else:
         container = None
-        td = tempfile.TemporaryDirectory()
+        td = tempfile.TemporaryDirectory(prefix=f"{name}-", delete=False)
         context = TempdirContext(td.name)
 
     try:
         yield context
     finally:
-        if container:
+        if os.environ.get("PYBUILD_KEEP_ENV"):
+            pass
+        elif container:
             container.stop(timeout=0)
             container.remove()
         else:

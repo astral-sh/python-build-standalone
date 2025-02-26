@@ -248,7 +248,7 @@ def simple_build(
 ):
     archive = download_entry(entry, DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, entry) as build_env:
         if settings.get("needs_toolchain"):
             build_env.install_toolchain(
                 BUILD,
@@ -286,7 +286,7 @@ def build_binutils(client, image, host_platform):
     """Build binutils in the Docker image."""
     archive = download_entry("binutils", DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "binutils") as build_env:
         install_sccache(build_env)
 
         build_env.copy_file(archive)
@@ -325,7 +325,7 @@ def materialize_clang(host_platform: str, target_triple: str):
 def build_musl(client, image, host_platform: str, target_triple: str):
     musl_archive = download_entry("musl", DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "musl") as build_env:
         build_env.install_toolchain(
             BUILD, host_platform, target_triple, binutils=True, clang=True
         )
@@ -349,7 +349,7 @@ def build_libedit(
 ):
     libedit_archive = download_entry("libedit", DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "libedit") as build_env:
         if settings.get("needs_toolchain"):
             build_env.install_toolchain(
                 BUILD,
@@ -383,7 +383,7 @@ def build_tix(
     tk_archive = download_entry("tk", DOWNLOADS_PATH)
     tix_archive = download_entry("tix", DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "tix") as build_env:
         if settings.get("needs_toolchain"):
             build_env.install_toolchain(
                 BUILD,
@@ -429,7 +429,7 @@ def build_cpython_host(
     """Build binutils in the Docker image."""
     archive = download_entry(entry, DOWNLOADS_PATH)
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "cpython-host") as build_env:
         python_version = DOWNLOADS[entry]["version"]
 
         build_env.install_toolchain(
@@ -742,7 +742,7 @@ def build_cpython(
     setup_local_content = setup["setup_local"]
     extra_make_content = setup["make_data"]
 
-    with build_environment(client, image) as build_env:
+    with build_environment(client, image, "cpython") as build_env:
         if settings.get("needs_toolchain"):
             build_env.install_toolchain(
                 BUILD,

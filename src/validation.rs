@@ -2097,12 +2097,13 @@ fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
     std::fs::write(&test_file, PYTHON_VERIFICATIONS.as_bytes())?;
 
     eprintln!("  running interpreter tests (output should follow)");
-    let output = duct::cmd(python_exe, [test_file.display().to_string()])
+    let output = duct::cmd(&python_exe, [test_file.display().to_string()])
         .stdout_to_stderr()
         .unchecked()
         .env("TARGET_TRIPLE", &python_json.target_triple)
         .env("BUILD_OPTIONS", &python_json.build_options)
-        .run()?;
+        .run()
+        .context(format!("Failed to run `{} {}`", python_exe.display(), test_file.display()))?;
 
     if !output.status.success() {
         errors.push("errors running interpreter tests".to_string());

@@ -242,6 +242,9 @@ jobs:
           if [ "${{ matrix.run }}" == "true" ]; then
             if [ "${{ matrix.libc }}" == "musl" ]; then
               sudo apt install musl-dev
+
+              echo $LD_LIBRARY_PATH
+              unset LD_LIBRARY_PATH
             fi
             EXTRA_ARGS="--run"
           fi
@@ -329,6 +332,9 @@ jobs:
           if [ "${{ matrix.run }}" == "true" ]; then
             if [ "${{ matrix.libc }}" == "musl" ]; then
               sudo apt install musl-dev
+
+              echo $LD_LIBRARY_PATH
+              unset LD_LIBRARY_PATH
             fi
             EXTRA_ARGS="--run"
           fi

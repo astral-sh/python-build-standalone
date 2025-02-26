@@ -428,6 +428,12 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     # Allow users to enable the experimental JIT on 3.13+
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
+
+        if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
+            # On 3.13, LLVM 18 is hard-coded into the configure script. Override it to our toolchain
+            # version.
+            patch -p1 -i "${ROOT}/patch-jit-llvm-19.patch"
+        fi
     fi
 fi
 

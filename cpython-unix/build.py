@@ -506,12 +506,10 @@ def python_build_info(
             )
         )
 
-        # TODO: Update this for non-static musl
-        if not musl:
-            bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
-                version,
-                binary_suffix,
-            )
+        bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
+            version,
+            binary_suffix,
+        )
 
         if lto:
             llvm_version = DOWNLOADS[clang_toolchain(platform, target_triple)][
@@ -835,9 +833,11 @@ def build_cpython(
         crt_features = []
 
         if host_platform == "linux64":
-            # TODO: Update the musl target triple to reflect it is dynamic
             if "musl" in target_triple:
-                crt_features.append("static")
+                extension_module_loading.append("shared-library")
+                crt_features.append("musl-dynamic")
+
+                # TODO: Add musl version
             else:
                 extension_module_loading.append("shared-library")
                 crt_features.append("glibc-dynamic")
@@ -876,8 +876,7 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            # TODO: Update this for dynamic musl
-            "libpython_link_mode": "static" if "musl" in target_triple else "shared",
+            "libpython_link_mode": "shared",
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(

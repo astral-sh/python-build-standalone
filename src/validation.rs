@@ -920,10 +920,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
     }
 
-    allowed_libraries.push(format!(
-        "libpython{}.so.1.0",
-        python_major_minor
-    ));
+    allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
     allowed_libraries.push(format!(
         "$ORIGIN/../lib/libpython{}d.so.1.0",
         python_major_minor
@@ -939,22 +936,10 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
 
     // On musl, we don't use `$ORIGIN`
     if target_triple.contains("-musl") {
-        allowed_libraries.push(format!(
-            "libpython{}.so.1.0",
-            python_major_minor
-        ));
-        allowed_libraries.push(format!(
-            "libpython{}d.so.1.0",
-            python_major_minor
-        ));
-        allowed_libraries.push(format!(
-            "libpython{}t.so.1.0",
-            python_major_minor
-        ));
-        allowed_libraries.push(format!(
-            "libpython{}td.so.1.0",
-            python_major_minor
-        ));
+        allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
     }
 
     // Allow the _crypt extension module - and only it - to link against libcrypt,
@@ -2103,7 +2088,11 @@ fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
         .env("TARGET_TRIPLE", &python_json.target_triple)
         .env("BUILD_OPTIONS", &python_json.build_options)
         .run()
-        .context(format!("Failed to run `{} {}`", python_exe.display(), test_file.display()))?;
+        .context(format!(
+            "Failed to run `{} {}`",
+            python_exe.display(),
+            test_file.display()
+        ))?;
 
     if !output.status.success() {
         errors.push("errors running interpreter tests".to_string());

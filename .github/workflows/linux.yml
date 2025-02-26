@@ -240,6 +240,9 @@ jobs:
           chmod +x build/pythonbuild
 
           if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+            fi
             EXTRA_ARGS="--run"
           fi
 
@@ -324,6 +327,9 @@ jobs:
           chmod +x build/pythonbuild
 
           if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+            fi
             EXTRA_ARGS="--run"
           fi
 

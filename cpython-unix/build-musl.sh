@@ -20,20 +20,20 @@ pushd musl-${MUSL_VERSION}
 # symbol dependencies on clients using an older musl version.
 patch -p1 <<EOF
 diff --git a/include/stdlib.h b/include/stdlib.h
-index b507ca3..8259e27 100644
+index b54a051f..194c2033 100644
 --- a/include/stdlib.h
 +++ b/include/stdlib.h
-@@ -147,7 +147,6 @@ int getloadavg(double *, int);
+@@ -145,7 +145,6 @@ int getloadavg(double *, int);
  int clearenv(void);
  #define WCOREDUMP(s) ((s) & 0x80)
  #define WIFCONTINUED(s) ((s) == 0xffff)
 -void *reallocarray (void *, size_t, size_t);
- void qsort_r (void *, size_t, size_t, int (*)(const void *, const void *, void *), void *);
  #endif
  
+ #ifdef _GNU_SOURCE
 diff --git a/src/malloc/reallocarray.c b/src/malloc/reallocarray.c
 deleted file mode 100644
-index 4a6ebe4..0000000
+index 4a6ebe46..00000000
 --- a/src/malloc/reallocarray.c
 +++ /dev/null
 @@ -1,13 +0,0 @@

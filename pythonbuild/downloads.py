@@ -220,10 +220,10 @@ DOWNLOADS = {
         "license_file": "LICENSE.mpdecimal.txt",
     },
     "musl": {
-        "url": "https://musl.libc.org/releases/musl-1.2.5.tar.gz",
-        "size": 1080786,
-        "sha256": "a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4",
-        "version": "1.2.5",
+        "url": "https://musl.libc.org/releases/musl-1.2.2.tar.gz",
+        "size": 1055220,
+        "sha256": "9b969322012d796dc23dda27a35866034fa67d8fb67e0e2c45c913c3d43219dd",
+        "version": "1.2.2",
     },
     "ncurses": {
         "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz",

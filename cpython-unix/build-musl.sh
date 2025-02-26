@@ -52,9 +52,10 @@ index 4a6ebe4..0000000
 -}
 EOF
 
-./configure \
+
+CFLAGS="${CFLAGS} -fPIC" CPPFLAGS="${CPPFLAGS} -fPIC" ./configure \
     --prefix=/tools/host \
-    --disable-shared
+    --enable-shared
 
 make -j `nproc`
 make -j `nproc` install DESTDIR=/build/out

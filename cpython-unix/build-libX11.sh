@@ -75,6 +75,30 @@ if [ -n "${CROSS_COMPILING}" ]; then
     s390x-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
+    x86_64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    aarch64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    i686-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    mips-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    mipsel-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    ppc64le-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    riscv64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    s390x-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
     *)
       echo "cross-compiling but malloc(0) override not set; failures possible"
       ;;

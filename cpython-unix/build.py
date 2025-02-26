@@ -121,7 +121,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
             # TODO should the musl target be normalized?
-            .replace("-unknown-linux-musl", "-unknown-linux-gnu")
+            # .replace("-unknown-linux-musl", "-unknown-linux-gnu")
         )
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
@@ -506,6 +506,7 @@ def python_build_info(
             )
         )
 
+        # TODO: Update this for non-static musl
         if not musl:
             bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
                 version,
@@ -834,6 +835,7 @@ def build_cpython(
         crt_features = []
 
         if host_platform == "linux64":
+            # TODO: Update the musl target triple to reflect it is dynamic
             if "musl" in target_triple:
                 crt_features.append("static")
             else:
@@ -874,6 +876,7 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
+            # TODO: Update this for dynamic musl
             "libpython_link_mode": "static" if "musl" in target_triple else "shared",
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",

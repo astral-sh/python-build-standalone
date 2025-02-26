@@ -382,10 +382,8 @@ CONFIGURE_FLAGS="
     ${EXTRA_CONFIGURE_FLAGS}"
 
 if [ "${CC}" = "musl-clang" ]; then
-    CFLAGS="${CFLAGS} -static"
-    CPPFLAGS="${CPPFLAGS} -static"
-    LDFLAGS="${LDFLAGS} -static"
-    PYBUILD_SHARED=0
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
+    PYBUILD_SHARED=1
 
     # In order to build the _blake2 extension module with SSE3+ instructions, we need
     # musl-clang to find headers that provide access to the intrinsics, as they are not
@@ -874,6 +872,7 @@ EOF
 ${BUILD_PYTHON} ${ROOT}/generate_metadata.py ${ROOT}/metadata.json
 cat ${ROOT}/metadata.json
 
+# TODO: Output a dynamic library version for musl
 if [ "${CC}" != "musl-clang" ]; then
     objdump -T ${LIBPYTHON_SHARED_LIBRARY} | grep GLIBC_ | awk '{print $5}' | awk -F_ '{print $2}' | sort -V | tail -n 1 > ${ROOT}/glibc_version.txt
     cat ${ROOT}/glibc_version.txt

@@ -273,9 +273,16 @@ def build_environment(client, image, name):
         td = tempfile.TemporaryDirectory(prefix=name)
         context = TempdirContext(td.name)
 
+    failed = False
     try:
         yield context
+    except Exception as exc:
+        failed = True
+        raise
     finally:
+        if os.environ.get("PYBUILD_KEEP_ENV_ON_FAIL") and failed:
+            return
+
         if container:
             container.stop(timeout=0)
             container.remove()

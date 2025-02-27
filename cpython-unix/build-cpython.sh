@@ -428,9 +428,9 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     # Allow users to enable the experimental JIT on 3.13+
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
 
-        # The JIT build is failing on macOS and 3.14+ due to compiler errors
+        # The JIT build is failing on macOS due to compiler errors
         # Only enable on Linux / 3.13 until that's fixed upstream
-        if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+        if [[ "${PYBUILD_PLATFORM}" != "macos" ]]; then
             CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
         fi
 
@@ -438,6 +438,12 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
             # On 3.13, LLVM 18 is hard-coded into the configure script. Override it to our toolchain
             # version.
             patch -p1 -i "${ROOT}/patch-jit-llvm-19.patch"
+        fi
+
+         if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+            # On 3.14, we also use the tail calling interpreter which was incompatible with the JIT
+            # until https://github.com/python/cpython/pull/129820 — backport that
+            patch -p1 -i "${ROOT}/patch-jit-tail-call-compat-314-129820.patch"
         fi
     fi
 fi

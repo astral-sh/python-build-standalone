@@ -240,6 +240,13 @@ jobs:
           chmod +x build/pythonbuild
 
           if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+
+              # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
+              # as used in the musl builds.
+              unset LD_LIBRARY_PATH
+            fi
             EXTRA_ARGS="--run"
           fi
 
@@ -324,6 +331,13 @@ jobs:
           chmod +x build/pythonbuild
 
           if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+
+              # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
+              # as used in the musl builds.
+              unset LD_LIBRARY_PATH
+            fi
             EXTRA_ARGS="--run"
           fi
 

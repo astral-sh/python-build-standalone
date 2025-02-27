@@ -71,6 +71,8 @@ const ELF_ALLOWED_LIBRARIES: &[&str] = &[
     "libpthread.so.0",
     "librt.so.1",
     "libutil.so.1",
+    // musl libc
+    "libc.so",
 ];
 
 const PE_ALLOWED_LIBRARIES: &[&str] = &[
@@ -918,10 +920,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
     }
 
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}.so.1.0",
-        python_major_minor
-    ));
+    allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
     allowed_libraries.push(format!(
         "$ORIGIN/../lib/libpython{}d.so.1.0",
         python_major_minor
@@ -934,6 +933,14 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "$ORIGIN/../lib/libpython{}td.so.1.0",
         python_major_minor
     ));
+
+    // On musl, we don't use `$ORIGIN`
+    if target_triple.contains("-musl") {
+        allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
+        allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+    }
 
     // Allow the _crypt extension module - and only it - to link against libcrypt,
     // which is no longer universally present in Linux distros.
@@ -1720,7 +1727,8 @@ fn validate_distribution(
 
     let is_debug = dist_filename.contains("-debug-");
 
-    let is_static = triple.contains("unknown-linux-musl");
+    // For now, there are now static builds — this is historic
+    let is_static = false;
 
     let mut tf = crate::open_distribution_archive(dist_path)?;
 
@@ -2074,12 +2082,17 @@ fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
     std::fs::write(&test_file, PYTHON_VERIFICATIONS.as_bytes())?;
 
     eprintln!("  running interpreter tests (output should follow)");
-    let output = duct::cmd(python_exe, [test_file.display().to_string()])
+    let output = duct::cmd(&python_exe, [test_file.display().to_string()])
         .stdout_to_stderr()
         .unchecked()
         .env("TARGET_TRIPLE", &python_json.target_triple)
         .env("BUILD_OPTIONS", &python_json.build_options)
-        .run()?;
+        .run()
+        .context(format!(
+            "Failed to run `{} {}`",
+            python_exe.display(),
+            test_file.display()
+        ))?;
 
     if !output.status.success() {
         errors.push("errors running interpreter tests".to_string());

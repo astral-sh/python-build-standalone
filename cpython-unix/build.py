@@ -121,7 +121,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
             # TODO should the musl target be normalized?
-            .replace("-unknown-linux-musl", "-unknown-linux-gnu")
+            # .replace("-unknown-linux-musl", "-unknown-linux-gnu")
         )
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
@@ -506,11 +506,10 @@ def python_build_info(
             )
         )
 
-        if not musl:
-            bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
-                version,
-                binary_suffix,
-            )
+        bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
+            version,
+            binary_suffix,
+        )
 
         if lto:
             llvm_version = DOWNLOADS[clang_toolchain(platform, target_triple)][
@@ -835,7 +834,10 @@ def build_cpython(
 
         if host_platform == "linux64":
             if "musl" in target_triple:
-                crt_features.append("static")
+                extension_module_loading.append("shared-library")
+                crt_features.append("musl-dynamic")
+
+                # TODO: Add musl version
             else:
                 extension_module_loading.append("shared-library")
                 crt_features.append("glibc-dynamic")
@@ -874,7 +876,7 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            "libpython_link_mode": "static" if "musl" in target_triple else "shared",
+            "libpython_link_mode": "shared",
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(

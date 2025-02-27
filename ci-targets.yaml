@@ -247,7 +247,7 @@ linux:
         minimum-python-version: "3.13"
     run: true
 
-  x86_64-unknown-linux-musl:
+  x86_64-unknown-linux-musl-static:
     arch: x86_64
     libc: musl
     python_versions:
@@ -262,7 +262,7 @@ linux:
       - lto
     run: true
 
-  x86_64_v2-unknown-linux-musl:
+  x86_64_v2-unknown-linux-musl-static:
     arch: x86_64
     arch_variant: v2
     libc: musl
@@ -278,7 +278,7 @@ linux:
       - lto
     run: true
 
-  x86_64_v3-unknown-linux-musl:
+  x86_64_v3-unknown-linux-musl-static:
     arch: x86_64
     arch_variant: v3
     libc: musl
@@ -294,7 +294,7 @@ linux:
       - lto
     run: true
 
-  x86_64_v4-unknown-linux-musl:
+  x86_64_v4-unknown-linux-musl-static:
     arch: x86_64
     arch_variant: v4
     libc: musl

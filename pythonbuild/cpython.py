@@ -466,12 +466,13 @@ def derive_setup_local(
             enabled_extensions[name]["setup_line"] = name.encode("ascii")
             continue
 
-        # musl is static only. Ignore build-mode override.
-        if "musl" in target_triple:
-            section = "static"
-        else:
-            section = info.get("build-mode", "static")
-
+        section = (
+            # If performing a static build, always use static
+            "static"
+            if target_triple.endswith("-static")
+            # Otherwise, use the build mode (falling back to static)
+            else info.get("build-mode", "static")
+        )
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's

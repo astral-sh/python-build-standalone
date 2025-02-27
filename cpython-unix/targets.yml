@@ -947,7 +947,7 @@ x86_64_v4-unknown-linux-gnu:
   openssl_target: linux-x86_64
   bolt_capable: true
 
-x86_64-unknown-linux-musl:
+x86_64-unknown-linux-musl-static:
   host_platforms:
     - linux64
   pythons_supported:
@@ -990,7 +990,7 @@ x86_64-unknown-linux-musl:
     - zlib
   openssl_target: linux-x86_64
 
-x86_64_v2-unknown-linux-musl:
+x86_64_v2-unknown-linux-musl-static:
   host_platforms:
     - linux64
   pythons_supported:
@@ -1034,7 +1034,7 @@ x86_64_v2-unknown-linux-musl:
     - zlib
   openssl_target: linux-x86_64
 
-x86_64_v3-unknown-linux-musl:
+x86_64_v3-unknown-linux-musl-static:
   host_platforms:
     - linux64
   pythons_supported:
@@ -1078,7 +1078,7 @@ x86_64_v3-unknown-linux-musl:
     - zlib
   openssl_target: linux-x86_64
 
-x86_64_v4-unknown-linux-musl:
+x86_64_v4-unknown-linux-musl-static:
   host_platforms:
     - linux64
   pythons_supported:

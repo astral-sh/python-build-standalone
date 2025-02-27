@@ -486,7 +486,6 @@ def python_build_info(
     version,
     platform,
     target_triple,
-    musl,
     lto,
     extensions,
     extra_metadata,
@@ -506,7 +505,7 @@ def python_build_info(
             )
         )
 
-        if not musl:
+        if not target_triple.endswith("-static"):
             bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
                 version,
                 binary_suffix,
@@ -825,6 +824,8 @@ def build_cpython(
             env["CPYTHON_OPTIMIZED"] = "1"
         if "lto" in parsed_build_options:
             env["CPYTHON_LTO"] = "1"
+        if target_triple.endswith("-static"):
+            env["CPYTHON_STATIC"] = "1"
 
         add_target_env(env, host_platform, target_triple, build_env)
 
@@ -834,19 +835,26 @@ def build_cpython(
         crt_features = []
 
         if host_platform == "linux64":
-            if "musl" in target_triple:
+            if target_triple.endswith("-static"):
                 crt_features.append("static")
             else:
                 extension_module_loading.append("shared-library")
-                crt_features.append("glibc-dynamic")
 
-                glibc_max_version = build_env.get_file("glibc_version.txt").strip()
-                if not glibc_max_version:
-                    raise Exception("failed to retrieve glibc max symbol version")
+                if "musl" in target_triple:
+                    crt_features.append("musl-dynamic")
+                    # TODO: Determine the dynamic musl libc version
 
-                crt_features.append(
-                    "glibc-max-symbol-version:%s" % glibc_max_version.decode("ascii")
-                )
+                else:
+                    crt_features.append("glibc-dynamic")
+
+                    glibc_max_version = build_env.get_file("glibc_version.txt").strip()
+                    if not glibc_max_version:
+                        raise Exception("failed to retrieve glibc max symbol version")
+
+                    crt_features.append(
+                        "glibc-max-symbol-version:%s"
+                        % glibc_max_version.decode("ascii")
+                    )
 
             python_symbol_visibility = "global-default"
 
@@ -874,7 +882,9 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            "libpython_link_mode": "static" if "musl" in target_triple else "shared",
+            "libpython_link_mode": (
+                "static" if target_triple.endswith("-static") else "shared"
+            ),
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(
@@ -946,6 +956,7 @@ def main():
             print("unable to connect to Docker: %s" % e, file=sys.stderr)
             return 1
 
+    # Note these arguments must be synced with `build-main.py`
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--host-platform", required=True, help="Platform we are building from"
@@ -962,6 +973,7 @@ def main():
         default="noopt",
         help="Build options to apply when compiling Python",
     )
+
     parser.add_argument(
         "--toolchain",
         action="store_true",

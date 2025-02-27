@@ -454,11 +454,13 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 
     # Allow users to enable the experimental JIT on 3.13+
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
 
-        # The JIT build is failing on macOS due to compiler errors
-        # Only enable on Linux / 3.13 until that's fixed upstream
-        if [[ "${PYBUILD_PLATFORM}" != "macos" ]]; then
-            CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
+        # The JIT build process is separate from the normal build and doesn't read our standard
+        # compiler flags so we need to patch our Clang toolchain into the includes.
+        # This is only necessary on macOS.
+        if [[ "${PYBUILD_PLATFORM}" = "macos" ]]; then
+            patch -p1 -i "${ROOT}/patch-jit-include-flags.patch"
         fi
 
         if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then

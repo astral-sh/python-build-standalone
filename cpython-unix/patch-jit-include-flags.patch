@@ -1,0 +1,12 @@
+diff --git a/Tools/jit/_targets.py b/Tools/jit/_targets.py
+index 7eb433e2a5b..cd838daa8c5 100644
+--- a/Tools/jit/_targets.py
++++ b/Tools/jit/_targets.py
+@@ -113,6 +113,7 @@ async def _compile(
+             "-D_PyJIT_ACTIVE",
+             "-D_Py_JIT",
+             "-I.",
++            f"-I${os.environ['TOOLS_PATH']}/deps/include",
+             f"-I{CPYTHON / 'Include'}",
+             f"-I{CPYTHON / 'Include' / 'internal'}",
+             f"-I{CPYTHON / 'Include' / 'internal' / 'mimalloc'}",

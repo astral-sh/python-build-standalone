@@ -257,9 +257,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
-      - debug
-      - noopt
-      - lto
+      - debug+static
+      - noopt+static
+      - lto+static
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -273,9 +273,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
-      - debug
-      - noopt
-      - lto
+      - debug+static
+      - noopt+static
+      - lto+static
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -289,9 +289,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
-      - debug
-      - noopt
-      - lto
+      - debug+static
+      - noopt+static
+      - lto+static
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -305,9 +305,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
-      - debug
-      - noopt
-      - lto
+      - debug+static
+      - noopt+static
+      - lto+static
     run: true
 
 windows:

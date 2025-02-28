@@ -293,7 +293,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
 
             println!("prepared {} for release", name);
 
-            if build_suffix == release.install_only_suffix {
+            if build_suffix == release.install_only_suffix(Some(&python_version)) {
                 install_paths.push(dest_path);
             }
         }

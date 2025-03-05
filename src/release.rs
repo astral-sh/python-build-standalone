@@ -166,6 +166,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         "freethreaded+lto",
         "freethreaded+noopt",
     ];
+    let linux_suffixes_nopgo_static = vec!["debug+static", "lto+static", "noopt+static"];
 
     h.insert(
         "aarch64-unknown-linux-gnu",
@@ -297,8 +298,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
-            install_only_suffix: "lto",
+            suffixes: linux_suffixes_nopgo_static.clone(),
+            install_only_suffix: "lto+static",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
         },
@@ -306,8 +307,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v2-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
-            install_only_suffix: "lto",
+            suffixes: linux_suffixes_nopgo_static.clone(),
+            install_only_suffix: "lto+static",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
         },
@@ -315,8 +316,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v3-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
-            install_only_suffix: "lto",
+            suffixes: linux_suffixes_nopgo_static.clone(),
+            install_only_suffix: "lto+static",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
         },
@@ -324,8 +325,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v4-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
-            install_only_suffix: "lto",
+            suffixes: linux_suffixes_nopgo_static.clone(),
+            install_only_suffix: "lto+static",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
         },

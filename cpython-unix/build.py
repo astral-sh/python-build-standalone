@@ -845,7 +845,12 @@ def build_cpython(
 
                 if "musl" in target_triple:
                     crt_features.append("musl-dynamic")
-                    # TODO: Determine the dynamic musl libc version
+
+                    musl_version = DOWNLOADS["musl"]["version"]
+                    crt_features.append(
+                        "musl-version:%s"
+                        % musl_version
+                    )
 
                 else:
                     crt_features.append("glibc-dynamic")

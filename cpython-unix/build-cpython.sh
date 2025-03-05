@@ -916,7 +916,6 @@ EOF
 ${BUILD_PYTHON} ${ROOT}/generate_metadata.py ${ROOT}/metadata.json
 cat ${ROOT}/metadata.json
 
-# TODO: Output a dynamic library version for musl
 if [ "${CC}" != "musl-clang" ]; then
     objdump -T ${LIBPYTHON_SHARED_LIBRARY} | grep GLIBC_ | awk '{print $5}' | awk -F_ '{print $2}' | sort -V | tail -n 1 > ${ROOT}/glibc_version.txt
     cat ${ROOT}/glibc_version.txt

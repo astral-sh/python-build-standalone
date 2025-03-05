@@ -488,6 +488,7 @@ def python_build_info(
     target_triple,
     musl,
     lto,
+    static,
     extensions,
     extra_metadata,
 ):
@@ -506,10 +507,11 @@ def python_build_info(
             )
         )
 
-        bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
-            version,
-            binary_suffix,
-        )
+        if not static:
+            bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
+                version,
+                binary_suffix,
+            )
 
         if lto:
             llvm_version = DOWNLOADS[clang_toolchain(platform, target_triple)][
@@ -734,6 +736,7 @@ def build_cpython(
         python_archive,
         python_version=python_version,
         target_triple=target_triple,
+        build_options=parsed_build_options,
         extension_modules=ems,
     )
 
@@ -824,6 +827,8 @@ def build_cpython(
             env["CPYTHON_OPTIMIZED"] = "1"
         if "lto" in parsed_build_options:
             env["CPYTHON_LTO"] = "1"
+        if "static" in parsed_build_options:
+            env["CPYTHON_STATIC"] = "1"
 
         add_target_env(env, host_platform, target_triple, build_env)
 
@@ -833,22 +838,26 @@ def build_cpython(
         crt_features = []
 
         if host_platform == "linux64":
-            if "musl" in target_triple:
-                extension_module_loading.append("shared-library")
-                crt_features.append("musl-dynamic")
-
-                # TODO: Add musl version
+            if "static" in parsed_build_options:
+                crt_features.append("static")
             else:
                 extension_module_loading.append("shared-library")
-                crt_features.append("glibc-dynamic")
 
-                glibc_max_version = build_env.get_file("glibc_version.txt").strip()
-                if not glibc_max_version:
-                    raise Exception("failed to retrieve glibc max symbol version")
+                if "musl" in target_triple:
+                    crt_features.append("musl-dynamic")
+                    # TODO: Determine the dynamic musl libc version
 
-                crt_features.append(
-                    "glibc-max-symbol-version:%s" % glibc_max_version.decode("ascii")
-                )
+                else:
+                    crt_features.append("glibc-dynamic")
+
+                    glibc_max_version = build_env.get_file("glibc_version.txt").strip()
+                    if not glibc_max_version:
+                        raise Exception("failed to retrieve glibc max symbol version")
+
+                    crt_features.append(
+                        "glibc-max-symbol-version:%s"
+                        % glibc_max_version.decode("ascii")
+                    )
 
             python_symbol_visibility = "global-default"
 
@@ -876,7 +885,9 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            "libpython_link_mode": "shared",
+            "libpython_link_mode": (
+                "static" if "static" in parsed_build_options else "shared"
+            ),
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(
@@ -886,6 +897,7 @@ def build_cpython(
                 target_triple,
                 "musl" in target_triple,
                 "lto" in parsed_build_options,
+                "static" in parsed_build_options,
                 enabled_extensions,
                 extra_metadata,
             ),
@@ -948,6 +960,7 @@ def main():
             print("unable to connect to Docker: %s" % e, file=sys.stderr)
             return 1
 
+    # Note these arguments must be synced with `build-main.py`
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--host-platform", required=True, help="Platform we are building from"
@@ -957,13 +970,25 @@ def main():
         required=True,
         help="Host triple that we are building Python for",
     )
-    optimizations = {"debug", "noopt", "pgo", "lto", "pgo+lto"}
+
+    # Construct possible options
+    options = set()
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({f"freethreaded+{option}" for option in options})
+    options.update(
+        {
+            f"{option}+{link_mode}"
+            for link_mode in {"static", "shared"}
+            for option in options
+        }
+    )
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
     )
+
     parser.add_argument(
         "--toolchain",
         action="store_true",

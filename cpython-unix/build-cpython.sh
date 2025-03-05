@@ -381,9 +381,11 @@ CONFIGURE_FLAGS="
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
 
-if [ "${CC}" = "musl-clang" ]; then
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
-    PYBUILD_SHARED=1
+if [ -n "${CPYTHON_STATIC}" ]; then
+    CFLAGS="${CFLAGS} -static"
+    CPPFLAGS="${CPPFLAGS} -static"
+    LDFLAGS="${LDFLAGS} -static"
+    PYBUILD_SHARED=0
 
     # In order to build the _blake2 extension module with SSE3+ instructions, we need
     # musl-clang to find headers that provide access to the intrinsics, as they are not
@@ -421,6 +423,28 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-optimizations"
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
+    fi
+
+    # Allow users to enable the experimental JIT on 3.13+
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+
+        # The JIT build is failing on macOS due to compiler errors
+        # Only enable on Linux / 3.13 until that's fixed upstream
+        if [[ "${PYBUILD_PLATFORM}" != "macos" ]]; then
+            CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
+        fi
+
+        if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
+            # On 3.13, LLVM 18 is hard-coded into the configure script. Override it to our toolchain
+            # version.
+            patch -p1 -i "${ROOT}/patch-jit-llvm-19.patch"
+        fi
+
+         if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+            # On 3.14, we also use the tail calling interpreter which was incompatible with the JIT
+            # until https://github.com/python/cpython/pull/129820 — backport that
+            patch -p1 -i "${ROOT}/patch-jit-tail-call-compat-314-129820.patch"
+        fi
     fi
 fi
 

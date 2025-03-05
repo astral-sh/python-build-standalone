@@ -1,0 +1,227 @@
+diff --git a/configure b/configure
+index 65b8e711cdccae..ee47feafc73fc1 100755
+--- a/configure
++++ b/configure
+@@ -29281,18 +29281,6 @@ esac
+ fi
+ 
+ 
+-# Do not enable tail-calling interpreter if tier 2 is enabled.
+-if ${tier2_flags:+false} :
+-then :
+-
+-    case "$ac_cv_tail_call" in yes*)
+-
+-printf "%s\n" "#define Py_TAIL_CALL_INTERP 1" >>confdefs.h
+-
+-    esac
+-
+-fi
+-
+ 
+ case $ac_sys_system in
+ AIX*)
+diff --git a/configure.ac b/configure.ac
+index 0c6063d87d654a..c68938ba9e168d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -7041,19 +7041,6 @@ fi
+ ],
+ [AC_MSG_RESULT([no value specified])])
+ 
+-# Do not enable tail-calling interpreter if tier 2 is enabled.
+-AS_VAR_IF(
+-  [tier2_flags],
+-  [],
+-  [
+-    case "$ac_cv_tail_call" in yes*)
+-      AC_DEFINE([Py_TAIL_CALL_INTERP], [1],
+-      [Define if the C compiler supports efficient proper tail calls.])
+-    esac
+-  ],
+-  []
+-)
+-
+ 
+ case $ac_sys_system in
+ AIX*)
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 9ea01ad3fc0a31..4295b4f5ea5fbd 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -1718,7 +1718,7 @@
+ /* The version of SunOS/Solaris as reported by `uname -r' without the dot. */
+ #undef Py_SUNOS_VERSION
+ 
+-/* Define if the C compiler supports efficient proper tail calls. */
++/* Define if you want to use tail-calling interpreters in CPython. */
+ #undef Py_TAIL_CALL_INTERP
+ 
+ /* Define if you want to enable tracing references for debugging purpose */
+
+From dae88e3ca730576256a0b8d2bc9e78b8cacab645 Mon Sep 17 00:00:00 2001
+From: Ken Jin <28750310+Fidget-Spinner@users.noreply.github.com>
+Date: Sat, 8 Feb 2025 01:32:05 +0800
+Subject: [PATCH 2/6] Get JIT working minimally with tailcalling interpreter
+
+---
+ Python/ceval_macros.h | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/Python/ceval_macros.h b/Python/ceval_macros.h
+index 44bb52a09aab5f..2c7729743b1705 100644
+--- a/Python/ceval_macros.h
++++ b/Python/ceval_macros.h
+@@ -384,6 +384,24 @@ _PyFrame_SetStackPointer(frame, stack_pointer)
+ /* Tier-switching macros. */
+ 
+ #ifdef _Py_JIT
++#ifdef Py_TAIL_CALL_INTERP
++#define GOTO_TIER_TWO(EXECUTOR)                        \
++do {                                                   \
++    OPT_STAT_INC(traces_executed);                     \
++    jit_func jitted = (EXECUTOR)->jit_code;            \
++    next_instr = jitted(frame, stack_pointer, tstate); \
++    Py_DECREF(tstate->previous_executor);              \
++    tstate->previous_executor = NULL;                  \
++    frame = tstate->current_frame;                     \
++    if (next_instr == NULL) {                          \
++        next_instr = frame->instr_ptr;                 \
++        stack_pointer = _PyFrame_GetStackPointer(frame); \
++        return _TAIL_CALL_error(TAIL_CALL_ARGS);       \
++    }                                                  \
++    stack_pointer = _PyFrame_GetStackPointer(frame);   \
++    DISPATCH();                                        \
++} while (0)
++#else
+ #define GOTO_TIER_TWO(EXECUTOR)                        \
+ do {                                                   \
+     OPT_STAT_INC(traces_executed);                     \
+@@ -400,6 +418,7 @@ do {                                                   \
+     stack_pointer = _PyFrame_GetStackPointer(frame);   \
+     DISPATCH();                                        \
+ } while (0)
++#endif
+ #else
+ #define GOTO_TIER_TWO(EXECUTOR) \
+ do { \
+
+From 230d497620d73e17a099326f7e54078e91254e5a Mon Sep 17 00:00:00 2001
+From: Ken Jin <28750310+Fidget-Spinner@users.noreply.github.com>
+Date: Tue, 11 Feb 2025 16:05:57 +0800
+Subject: [PATCH 3/6] Update ceval_macros.h
+
+---
+ Python/ceval_macros.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Python/ceval_macros.h b/Python/ceval_macros.h
+index 2c7729743b1705..0f4dd61f367dbb 100644
+--- a/Python/ceval_macros.h
++++ b/Python/ceval_macros.h
+@@ -384,7 +384,7 @@ _PyFrame_SetStackPointer(frame, stack_pointer)
+ /* Tier-switching macros. */
+ 
+ #ifdef _Py_JIT
+-#ifdef Py_TAIL_CALL_INTERP
++#if Py_TAIL_CALL_INTERP
+ #define GOTO_TIER_TWO(EXECUTOR)                        \
+ do {                                                   \
+     OPT_STAT_INC(traces_executed);                     \
+
+From c46391470ca8b4d6a4b9c0d9f75c7fcce6ac303a Mon Sep 17 00:00:00 2001
+From: "blurb-it[bot]" <43283697+blurb-it[bot]@users.noreply.github.com>
+Date: Tue, 11 Feb 2025 08:06:47 +0000
+Subject: [PATCH 4/6] =?UTF-8?q?=F0=9F=93=9C=F0=9F=A4=96=20Added=20by=20blu?=
+ =?UTF-8?q?rb=5Fit.?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../next/Build/2025-02-11-08-06-44.gh-issue-129819.7rn4dY.rst    | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 Misc/NEWS.d/next/Build/2025-02-11-08-06-44.gh-issue-129819.7rn4dY.rst
+
+diff --git a/Misc/NEWS.d/next/Build/2025-02-11-08-06-44.gh-issue-129819.7rn4dY.rst b/Misc/NEWS.d/next/Build/2025-02-11-08-06-44.gh-issue-129819.7rn4dY.rst
+new file mode 100644
+index 00000000000000..2463e4dba24ae9
+--- /dev/null
++++ b/Misc/NEWS.d/next/Build/2025-02-11-08-06-44.gh-issue-129819.7rn4dY.rst
+@@ -0,0 +1 @@
++Allow building the JIT with the tailcall interpreter.
+
+From 105ab11ce4fcc3d659ccaf36197ea281b853e23a Mon Sep 17 00:00:00 2001
+From: Ken Jin <28750310+Fidget-Spinner@users.noreply.github.com>
+Date: Wed, 12 Feb 2025 16:14:23 +0800
+Subject: [PATCH 5/6] Address review
+
+---
+ Python/ceval_macros.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Python/ceval_macros.h b/Python/ceval_macros.h
+index 0f4dd61f367dbb..9562ad9d349a11 100644
+--- a/Python/ceval_macros.h
++++ b/Python/ceval_macros.h
+@@ -396,7 +396,7 @@ do {                                                   \
+     if (next_instr == NULL) {                          \
+         next_instr = frame->instr_ptr;                 \
+         stack_pointer = _PyFrame_GetStackPointer(frame); \
+-        return _TAIL_CALL_error(TAIL_CALL_ARGS);       \
++        return JUMP_TO_LABEL(error);                   \
+     }                                                  \
+     stack_pointer = _PyFrame_GetStackPointer(frame);   \
+     DISPATCH();                                        \
+
+From 76c2c96fed4abc68e8879f3d65755d5cba8a4b16 Mon Sep 17 00:00:00 2001
+From: Ken Jin <28750310+Fidget-Spinner@users.noreply.github.com>
+Date: Thu, 13 Feb 2025 01:06:07 +0800
+Subject: [PATCH 6/6] one-liner
+
+---
+ Python/ceval_macros.h | 21 +--------------------
+ 1 file changed, 1 insertion(+), 20 deletions(-)
+
+diff --git a/Python/ceval_macros.h b/Python/ceval_macros.h
+index 2422bf3bcf38f1..4f0071d5e1a09f 100644
+--- a/Python/ceval_macros.h
++++ b/Python/ceval_macros.h
+@@ -381,24 +381,6 @@ _PyFrame_SetStackPointer(frame, stack_pointer)
+ /* Tier-switching macros. */
+ 
+ #ifdef _Py_JIT
+-#if Py_TAIL_CALL_INTERP
+-#define GOTO_TIER_TWO(EXECUTOR)                        \
+-do {                                                   \
+-    OPT_STAT_INC(traces_executed);                     \
+-    jit_func jitted = (EXECUTOR)->jit_code;            \
+-    next_instr = jitted(frame, stack_pointer, tstate); \
+-    Py_DECREF(tstate->previous_executor);              \
+-    tstate->previous_executor = NULL;                  \
+-    frame = tstate->current_frame;                     \
+-    if (next_instr == NULL) {                          \
+-        next_instr = frame->instr_ptr;                 \
+-        stack_pointer = _PyFrame_GetStackPointer(frame); \
+-        return JUMP_TO_LABEL(error);                   \
+-    }                                                  \
+-    stack_pointer = _PyFrame_GetStackPointer(frame);   \
+-    DISPATCH();                                        \
+-} while (0)
+-#else
+ #define GOTO_TIER_TWO(EXECUTOR)                        \
+ do {                                                   \
+     OPT_STAT_INC(traces_executed);                     \
+@@ -413,11 +395,10 @@ do {                                                   \
+     stack_pointer = _PyFrame_GetStackPointer(frame);   \
+     if (next_instr == NULL) {                          \
+         next_instr = frame->instr_ptr;                 \
+-        goto error;                                    \
++        JUMP_TO_LABEL(error);                          \
+     }                                                  \
+     DISPATCH();                                        \
+ } while (0)
+-#endif
+ #else
+ #define GOTO_TIER_TWO(EXECUTOR) \
+ do { \

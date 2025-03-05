@@ -260,6 +260,9 @@ linux:
       - debug+static
       - noopt+static
       - lto+static
+      - debug
+      - noopt
+      - lto
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -276,6 +279,9 @@ linux:
       - debug+static
       - noopt+static
       - lto+static
+      - debug
+      - noopt
+      - lto
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -292,6 +298,9 @@ linux:
       - debug+static
       - noopt+static
       - lto+static
+      - debug
+      - noopt
+      - lto
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -308,6 +317,9 @@ linux:
       - debug+static
       - noopt+static
       - lto+static
+      - debug
+      - noopt
+      - lto
     run: true
 
 windows:

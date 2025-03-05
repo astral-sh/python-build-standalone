@@ -975,13 +975,7 @@ def main():
     options = set()
     options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
     options.update({f"freethreaded+{option}" for option in options})
-    options.update(
-        {
-            f"{option}+{link_mode}"
-            for link_mode in {"static", "shared"}
-            for option in options
-        }
-    )
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
         choices=options,

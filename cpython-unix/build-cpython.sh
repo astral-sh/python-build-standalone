@@ -381,12 +381,8 @@ CONFIGURE_FLAGS="
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
 
-if [ -n "${CPYTHON_STATIC}" ]; then
-    CFLAGS="${CFLAGS} -static"
-    CPPFLAGS="${CPPFLAGS} -static"
-    LDFLAGS="${LDFLAGS} -static"
-    PYBUILD_SHARED=0
 
+if [ "${CC}" = "musl-clang" ]; then
     # In order to build the _blake2 extension module with SSE3+ instructions, we need
     # musl-clang to find headers that provide access to the intrinsics, as they are not
     # provided by musl. These are part of the include files that are part of clang.
@@ -400,6 +396,13 @@ if [ -n "${CPYTHON_STATIC}" ]; then
         fi
         cp "$h" /tools/host/include/
     done
+fi
+
+if [ -n "${CPYTHON_STATIC}" ]; then
+    CFLAGS="${CFLAGS} -static"
+    CPPFLAGS="${CPPFLAGS} -static"
+    LDFLAGS="${LDFLAGS} -static"
+    PYBUILD_SHARED=0 
 else
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
     PYBUILD_SHARED=1

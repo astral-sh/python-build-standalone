@@ -59,10 +59,7 @@ def main():
     options = set()
     options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
     options.update({f"freethreaded+{option}" for option in options})
-    link_modes = {"static", "shared"}
-    options.update(
-        {f"{option}+{link_mode}" for link_mode in link_modes for option in options}
-    )
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
         choices=options,
@@ -145,10 +142,6 @@ def main():
     musl = "musl" in target_triple
 
     env = dict(os.environ)
-
-    # Default to dynamic linking if no link mode is specified
-    if not any(link_mode in args.options for link_mode in link_modes):
-        args.options += "+shared"
 
     env["PYBUILD_HOST_PLATFORM"] = host_platform
     env["PYBUILD_TARGET_TRIPLE"] = target_triple

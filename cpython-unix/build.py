@@ -255,6 +255,7 @@ def simple_build(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         for a in extra_archives or []:
@@ -320,25 +321,26 @@ def materialize_clang(host_platform: str, target_triple: str):
             dctx.copy_stream(ifh, ofh)
 
 
-def build_musl(client, image, host_platform: str, target_triple: str):
-    musl_archive = download_entry("musl", DOWNLOADS_PATH)
+def build_musl(client, image, host_platform: str, target_triple: str, build_options):
+    musl = "musl-static" if "static" in build_options else "msul"
+    musl_archive = download_entry(musl, DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
         build_env.install_toolchain(
-            BUILD, host_platform, target_triple, binutils=True, clang=True
+            BUILD, host_platform, target_triple, binutils=True, clang=True, static=False,
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
 
         env = {
-            "MUSL_VERSION": DOWNLOADS["musl"]["version"],
+            "MUSL_VERSION": DOWNLOADS[musl]["version"],
             "TOOLCHAIN": "llvm",
         }
 
         build_env.run("build-musl.sh", environment=env)
 
         build_env.get_tools_archive(
-            toolchain_archive_path("musl", host_platform), "host"
+            toolchain_archive_path(musl, host_platform), "host"
         )
 
 
@@ -356,6 +358,7 @@ def build_libedit(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         build_env.install_artifact_archive(
@@ -390,6 +393,7 @@ def build_tix(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         depends = {"tcl", "tk"}
@@ -436,6 +440,7 @@ def build_cpython_host(
             target_triple,
             binutils=install_binutils(host_platform),
             clang=True,
+            static="static" in build_options,
         )
 
         build_env.copy_file(archive)
@@ -751,6 +756,7 @@ def build_cpython(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         packages = target_needs(TARGETS_CONFIG, target_triple, python_version)
@@ -1071,6 +1077,7 @@ def main():
                 get_image(client, ROOT, BUILD, "gcc"),
                 host_platform,
                 target_triple,
+                build_options,
             )
 
         elif action == "autoconf":

@@ -16,8 +16,6 @@ tar -xf xextproto-${XEXTPROTO_VERSION}.tar.gz
 pushd xextproto-${XEXTPROTO_VERSION}
 
 EXTRA_CONFIGURE_FLAGS=
-
-
 if [ -n "${CROSS_COMPILING}" ]; then
     if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
     # xextproto does not support configuration of musl targets so we pretend the target matches the

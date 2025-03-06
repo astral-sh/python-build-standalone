@@ -16,8 +16,6 @@ tar -xf xproto-${XPROTO_VERSION}.tar.gz
 pushd xproto-${XPROTO_VERSION}
 
 EXTRA_CONFIGURE_FLAGS=
-
-
 if [ -n "${CROSS_COMPILING}" ]; then
     if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
     # xproto does not support configuration of musl targets so we pretend the target matches the

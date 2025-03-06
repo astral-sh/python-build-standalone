@@ -89,10 +89,16 @@ index 4a6ebe4..0000000
 EOF
 fi
 
+SHARED=
+if [ -n "${STATIC}" ]; then
+    SHARED="--disable-shared"
+else
+    SHARED="--enable-shared"
+fi
 
 CFLAGS="${CFLAGS} -fPIC" CPPFLAGS="${CPPFLAGS} -fPIC" ./configure \
     --prefix=/tools/host \
-    --enable-shared
+    "${SHARED}"
 
 make -j `nproc`
 make -j `nproc` install DESTDIR=/build/out

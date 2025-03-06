@@ -322,7 +322,8 @@ def materialize_clang(host_platform: str, target_triple: str):
 
 
 def build_musl(client, image, host_platform: str, target_triple: str, build_options):
-    musl = "musl-static" if "static" in build_options else "msul"
+    static = "static" in build_options
+    musl = "musl-static" if static else "msul"
     musl_archive = download_entry(musl, DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
@@ -336,6 +337,9 @@ def build_musl(client, image, host_platform: str, target_triple: str, build_opti
             "MUSL_VERSION": DOWNLOADS[musl]["version"],
             "TOOLCHAIN": "llvm",
         }
+
+        if static:
+            env["STATIC"] = 1
 
         build_env.run("build-musl.sh", environment=env)
 

@@ -200,6 +200,7 @@ class TempdirContext(object):
         binutils=False,
         musl=False,
         clang=False,
+        static=False,
     ):
         if binutils:
             self.install_toolchain_archive(build_dir, "binutils", platform)

@@ -94,9 +94,11 @@ if [ -n "${STATIC}" ]; then
     SHARED="--disable-shared"
 else
     SHARED="--enable-shared"
+    CFLAGS="${CFLAGS} -fPIC" CPPFLAGS="${CPPFLAGS} -fPIC"
 fi
 
-CFLAGS="${CFLAGS} -fPIC" CPPFLAGS="${CPPFLAGS} -fPIC" ./configure \
+
+CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
     --prefix=/tools/host \
     "${SHARED}"
 

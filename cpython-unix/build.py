@@ -328,7 +328,12 @@ def build_musl(client, image, host_platform: str, target_triple: str, build_opti
 
     with build_environment(client, image) as build_env:
         build_env.install_toolchain(
-            BUILD, host_platform, target_triple, binutils=True, clang=True, static=False,
+            BUILD,
+            host_platform,
+            target_triple,
+            binutils=True,
+            clang=True,
+            static=False,
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
@@ -343,9 +348,7 @@ def build_musl(client, image, host_platform: str, target_triple: str, build_opti
 
         build_env.run("build-musl.sh", environment=env)
 
-        build_env.get_tools_archive(
-            toolchain_archive_path(musl, host_platform), "host"
-        )
+        build_env.get_tools_archive(toolchain_archive_path(musl, host_platform), "host")
 
 
 def build_libedit(

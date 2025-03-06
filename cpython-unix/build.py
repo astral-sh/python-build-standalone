@@ -417,6 +417,9 @@ def build_tix(
             "TK_VERSION": DOWNLOADS["tk"]["version"],
         }
 
+        if "static" in build_options:
+            env["STATIC"] = 1
+
         add_target_env(env, host_platform, target_triple, build_env)
 
         build_env.run("build-tix.sh", environment=env)

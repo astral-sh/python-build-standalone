@@ -18,7 +18,7 @@ pushd musl-${MUSL_VERSION}
 # added reallocarray(), which gets used by at least OpenSSL.
 # Here, we disable this single function so as to not introduce
 # symbol dependencies on clients using an older musl version.
-if [ "${MUSL_VERSION}" = "1.2.2"]; then
+if [ "${MUSL_VERSION}" = "1.2.2" ]; then
     patch -p1 <<EOF
 diff --git a/include/stdlib.h b/include/stdlib.h
 index b54a051f..194c2033 100644

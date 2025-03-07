@@ -270,6 +270,9 @@ def simple_build(
             ]["version"],
         }
 
+        if "static" in build_options:
+            env["STATIC"] = 1
+
         add_target_env(env, host_platform, target_triple, build_env)
 
         if entry in ("openssl-1.1", "openssl-3.0"):
@@ -419,9 +422,6 @@ def build_tix(
             "TIX_VERSION": DOWNLOADS["tix"]["version"],
             "TK_VERSION": DOWNLOADS["tk"]["version"],
         }
-
-        if "static" in build_options:
-            env["STATIC"] = 1
 
         add_target_env(env, host_platform, target_triple, build_env)
 

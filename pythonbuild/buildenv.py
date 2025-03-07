@@ -76,6 +76,7 @@ class ContainerContext(object):
         binutils=False,
         musl=False,
         clang=False,
+        static=False,
     ):
         if binutils:
             self.install_toolchain_archive(build_dir, "binutils", host_platform)
@@ -86,7 +87,9 @@ class ContainerContext(object):
             )
 
         if musl:
-            self.install_toolchain_archive(build_dir, "musl", host_platform)
+            self.install_toolchain_archive(
+                build_dir, "musl-static" if static else "musl", host_platform
+            )
 
     def run(self, program, user="build", environment=None):
         if isinstance(program, str) and not program.startswith("/"):
@@ -197,6 +200,7 @@ class TempdirContext(object):
         binutils=False,
         musl=False,
         clang=False,
+        static=False,
     ):
         if binutils:
             self.install_toolchain_archive(build_dir, "binutils", platform)
@@ -207,7 +211,9 @@ class TempdirContext(object):
             )
 
         if musl:
-            self.install_toolchain_archive(build_dir, "musl", platform)
+            self.install_toolchain_archive(
+                build_dir, "musl-static" if static else "musl", platform
+            )
 
     def run(self, program, user="build", environment=None):
         if user != "build":

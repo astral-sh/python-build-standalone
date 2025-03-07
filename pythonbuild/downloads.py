@@ -219,7 +219,15 @@ DOWNLOADS = {
         "licenses": ["BSD-2-Clause"],
         "license_file": "LICENSE.mpdecimal.txt",
     },
+    # The musl toolchain for shared / dynamically linked builds
     "musl": {
+        "url": "https://musl.libc.org/releases/musl-1.2.2.tar.gz",
+        "size": 1055220,
+        "sha256": "9b969322012d796dc23dda27a35866034fa67d8fb67e0e2c45c913c3d43219dd",
+        "version": "1.2.2",
+    },
+    # The musl toolchain for static builds
+    "musl-static": {
         "url": "https://musl.libc.org/releases/musl-1.2.5.tar.gz",
         "size": 1080786,
         "sha256": "a9a118bbe84d8764da0ea0d28b3ab3fae8477fc7e4085d90102b8596fc7c75e4",

@@ -257,6 +257,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
@@ -273,6 +276,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
@@ -289,6 +295,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
@@ -305,6 +314,9 @@ linux:
       - "3.12"
       - "3.13"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto

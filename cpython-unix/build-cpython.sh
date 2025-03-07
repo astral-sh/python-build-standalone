@@ -381,12 +381,8 @@ CONFIGURE_FLAGS="
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
 
-if [ "${CC}" = "musl-clang" ]; then
-    CFLAGS="${CFLAGS} -static"
-    CPPFLAGS="${CPPFLAGS} -static"
-    LDFLAGS="${LDFLAGS} -static"
-    PYBUILD_SHARED=0
 
+if [ "${CC}" = "musl-clang" ]; then
     # In order to build the _blake2 extension module with SSE3+ instructions, we need
     # musl-clang to find headers that provide access to the intrinsics, as they are not
     # provided by musl. These are part of the include files that are part of clang.
@@ -400,6 +396,13 @@ if [ "${CC}" = "musl-clang" ]; then
         fi
         cp "$h" /tools/host/include/
     done
+fi
+
+if [ -n "${CPYTHON_STATIC}" ]; then
+    CFLAGS="${CFLAGS} -static"
+    CPPFLAGS="${CPPFLAGS} -static"
+    LDFLAGS="${LDFLAGS} -static"
+    PYBUILD_SHARED=0 
 else
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
     PYBUILD_SHARED=1
@@ -640,21 +643,41 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
-        # If we simply set DT_RUNPATH via --set-rpath, LD_LIBRARY_PATH would be used before
-        # DT_RUNPATH, which could result in confusion at run-time. But if DT_NEEDED
-        # contains a slash, the explicit path is used.
-        patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-            ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
+        if [ "${CC}" == "musl-clang" ]; then
+            # musl does not support $ORIGIN in DT_NEEDED, so we use RPATH instead. This could be
+            # problematic, i.e., we could load the shared library from the wrong location if
+            # `LD_LIBRARY_PATH` is set, but there's not a clear alternative at this time. The
+            # long term solution is probably to statically link to libpython instead.
+            patchelf --set-rpath "\$ORIGIN/../lib" \
+                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 
-        # libpython3.so isn't present in debug builds.
-        if [ -z "${CPYTHON_DEBUG}" ]; then
-            patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-                ${ROOT}/out/python/install/lib/libpython3.so
-        fi
+            # libpython3.so isn't present in debug builds.
+            if [ -z "${CPYTHON_DEBUG}" ]; then
+                patchelf --set-rpath "\$ORIGIN/../lib" \
+                    ${ROOT}/out/python/install/lib/libpython3.so
+            fi
 
-        if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+                patchelf --set-rpath "\$ORIGIN/../lib" \
+                    ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
+            fi
+        else
+            # If we simply set DT_RUNPATH via --set-rpath, LD_LIBRARY_PATH would be used before
+            # DT_RUNPATH, which could result in confusion at run-time. But if DT_NEEDED contains a
+            # slash, the explicit path is used.
             patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
+                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
+
+            # libpython3.so isn't present in debug builds.
+            if [ -z "${CPYTHON_DEBUG}" ]; then
+                patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
+                    ${ROOT}/out/python/install/lib/libpython3.so
+            fi
+
+            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+                patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
+                    ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
+            fi
         fi
     fi
 fi

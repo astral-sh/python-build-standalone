@@ -53,7 +53,8 @@ class TestPythonInterpreter(unittest.TestCase):
         import ctypes
 
         # pythonapi will be None on statically linked binaries.
-        if os.environ["TARGET_TRIPLE"].endswith("-unknown-linux-musl"):
+        is_static = "static" in os.environ["BUILD_OPTIONS"]
+        if is_static:
             self.assertIsNone(ctypes.pythonapi)
         else:
             self.assertIsNotNone(ctypes.pythonapi)

@@ -53,7 +53,7 @@ class TestPythonInterpreter(unittest.TestCase):
         import ctypes
 
         # pythonapi will be None on statically linked binaries.
-        is_static = False  # TODO: Populate if we have statically linked binaries again
+        is_static = "static" in os.environ["BUILD_OPTIONS"]
         if is_static:
             self.assertIsNone(ctypes.pythonapi)
         else:

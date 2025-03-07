@@ -1726,9 +1726,7 @@ fn validate_distribution(
     };
 
     let is_debug = dist_filename.contains("-debug-");
-
-    // For now, there are now static builds — this is historic
-    let is_static = false;
+    let is_static = dist_filename.contains("+static");
 
     let mut tf = crate::open_distribution_archive(dist_path)?;
 

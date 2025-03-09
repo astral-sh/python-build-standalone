@@ -270,6 +270,9 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     # Additional BOLT optimizations, being upstreamed in
     # https://github.com/python/cpython/issues/128514
     patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags-128514.patch
+
+    # Tweak --skip-funcs to work with our toolchain.
+    patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs.patch
 fi
 
 # The optimization make targets are both phony and non-phony. This leads
@@ -437,10 +440,11 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
             # On 3.13, LLVM 18 is hard-coded into the configure script. Override it to our toolchain
             # version.
-            patch -p1 -i "${ROOT}/patch-jit-llvm-19.patch"
+            patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.13.patch"
         fi
 
          if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+            patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.14.patch"
             # On 3.14, we also use the tail calling interpreter which was incompatible with the JIT
             # until https://github.com/python/cpython/pull/129820 — backport that
             patch -p1 -i "${ROOT}/patch-jit-tail-call-compat-314-129820.patch"

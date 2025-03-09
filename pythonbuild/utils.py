@@ -434,7 +434,7 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
         if "musl" in target_triple:
             return "llvm-14-x86_64-linux"
         else:
-            return "llvm-19-x86_64-linux"
+            return "llvm-20-x86_64-linux"
     elif host_platform == "macos":
         if platform.mac_ver()[2] == "arm64":
             return "llvm-aarch64-macos"

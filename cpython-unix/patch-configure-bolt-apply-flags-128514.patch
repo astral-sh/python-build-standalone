@@ -1,10 +1,8 @@
 diff --git a/configure.ac b/configure.ac
-index ee034e5a962..f1a69b7d4a7 100644
+index 3fcb18922c5..3be45c99c41 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2183,8 +2183,9 @@ then
-     [m4_normalize("
-      -update-debug-sections
+@@ -2260,6 +2260,7 @@ then
       -reorder-blocks=ext-tsp
       -reorder-functions=cdsort
       -split-functions
@@ -12,7 +10,11 @@ index ee034e5a962..f1a69b7d4a7 100644
       -icf=1
       -inline-all
       -split-eh
-@@ -2196,6 +2197,7 @@ then
+@@ -2268,9 +2269,11 @@ then
+      -jump-tables=aggressive
+      -inline-ap
+      -indirect-call-promotion=all
++     -plt=all
       -dyno-stats
       -use-gnu-stack
       -frame-opt=hot

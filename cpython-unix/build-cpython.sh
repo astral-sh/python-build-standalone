@@ -320,7 +320,7 @@ fi
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
-LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib"
+LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib -Wl,-znow"
 
 # Some target configurations use `-fvisibility=hidden`. Python's configure handles
 # symbol visibility properly itself. So let it do its thing.

@@ -71,8 +71,6 @@ const ELF_ALLOWED_LIBRARIES: &[&str] = &[
     "libpthread.so.0",
     "librt.so.1",
     "libutil.so.1",
-    // musl libc
-    "libc.so",
 ];
 
 const PE_ALLOWED_LIBRARIES: &[&str] = &[
@@ -920,26 +918,37 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
     }
 
-    allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}d.so.1.0",
-        python_major_minor
-    ));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}t.so.1.0",
-        python_major_minor
-    ));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}td.so.1.0",
-        python_major_minor
-    ));
+    if json.libpython_link_mode == "shared" {
+        if target_triple.contains("-musl") {
+            // On musl, we link to `libpython` and rely on `RUN PATH`
+            allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+        } else {
+            // On glibc, we can use `$ORIGIN` for relative, reloctable linking
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}d.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}t.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}td.so.1.0",
+                python_major_minor
+            ));
+        }
+    }
 
-    // On musl, we don't use `$ORIGIN`
-    if target_triple.contains("-musl") {
-        allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
-        allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
-        allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
-        allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+    if !json.build_options.contains("static") && target_triple.contains("-musl") {
+        // Allow linking musl `libc`
+        allowed_libraries.push("libc.so".to_string());
     }
 
     // Allow the _crypt extension module - and only it - to link against libcrypt,

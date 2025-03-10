@@ -29,7 +29,7 @@ CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LD
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \
-    "${EXTRA_CONFIGURE_FLAGS}"
+    ${EXTRA_CONFIGURE_FLAGS}
 
 make -j `nproc`
 make -j `nproc` install DESTDIR=${ROOT}/out

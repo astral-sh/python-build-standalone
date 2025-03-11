@@ -133,6 +133,14 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     // Linux.
     let linux_suffixes_pgo = vec!["debug", "pgo+lto"];
     let linux_suffixes_nopgo = vec!["debug", "lto", "noopt"];
+    let linux_suffixes_musl = vec![
+        "debug",
+        "lto",
+        "noopt",
+        "debug+static",
+        "lto+static",
+        "noopt+static",
+    ];
     let linux_suffixes_pgo_freethreaded = vec!["freethreaded+debug", "freethreaded+pgo+lto"];
     let linux_suffixes_nopgo_freethreaded = vec![
         "freethreaded+debug",
@@ -270,7 +278,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
+            suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
@@ -279,7 +287,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v2-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
+            suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
@@ -288,7 +296,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v3-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
+            suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],
@@ -297,7 +305,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "x86_64_v4-unknown-linux-musl",
         TripleRelease {
-            suffixes: linux_suffixes_nopgo.clone(),
+            suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
             python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
             conditional_suffixes: vec![],

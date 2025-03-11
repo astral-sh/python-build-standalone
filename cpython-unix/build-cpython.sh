@@ -407,8 +407,8 @@ if [ -n "${CPYTHON_STATIC}" ]; then
     LDFLAGS="${LDFLAGS} -static"
     PYBUILD_SHARED=0 
 else
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared"
-    PYBUILD_SHARED=1
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-shared=no"
+    PYBUILD_SHARED=0
 fi
 
 if [ -n "${CPYTHON_DEBUG}" ]; then

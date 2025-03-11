@@ -48,6 +48,8 @@ familiar with LLVM target triples, here is an overview:
    Python and extensions. These builds behave like the official Python
    for Windows distributions.
 
+   These builds are now published without the `-shared` suffix.
+
 ``*-windows-msvc-static``
    These builds of Python are statically linked.
 
@@ -56,6 +58,8 @@ familiar with LLVM target triples, here is an overview:
    have confidence they work for your use case.
 
    See :ref:`quirk_windows_static_distributions` for more.
+
+   These builds are no longer published.
 
 ``x86_64-unknown-linux-gnu``
    Linux 64-bit Intel/AMD CPUs linking against GNU libc.

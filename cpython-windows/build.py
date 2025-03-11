@@ -1801,21 +1801,11 @@ def main() -> None:
             release_tag = release_tag_from_git()
 
         # Create, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
-        dest_path = compress_python_archive(
+        compress_python_archive(
             tar_path,
             DIST,
             "%s-%s" % (tar_path.stem, release_tag),
         )
-
-        # Copy to, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-shared-pgo.tar.zst`.
-        # The 'shared-' prefix is no longer needed, but we're double-publishing under
-        # both names during the transition period.
-        filename: str = dest_path.name
-        if not filename.endswith("-%s-%s.tar.zst" % (args.options, release_tag)):
-            raise ValueError("expected filename to end with profile: %s" % filename)
-        filename = filename.removesuffix("-%s-%s.tar.zst" % (args.options, release_tag))
-        filename = filename + "-shared-%s-%s.tar.zst" % (args.options, release_tag)
-        shutil.copy2(dest_path, dest_path.with_name(filename))
 
 
 if __name__ == "__main__":

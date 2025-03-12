@@ -653,6 +653,9 @@ def run_msbuild(
         # This can also work around known incompatibilities with the Windows 11
         # SDK as of at least CPython 3.9.7.
         f"/property:DefaultWindowsSDKVersion={windows_sdk_version}",
+        # Use ClangCL for better build and runtime performance
+        # https://github.com/python/cpython/issues/130090
+        "/p:PlatformToolset=ClangCL",
     ]
 
     if freethreaded:

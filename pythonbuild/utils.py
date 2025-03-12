@@ -287,7 +287,7 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
         )
     )
 
-    for attempt in range(5):
+    for attempt in range(8):
         try:
             try:
                 with tmp.open("wb") as fh:

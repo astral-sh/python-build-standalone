@@ -103,7 +103,7 @@ jobs:
           fetch-depth: 0
 
       - name: Install Cygwin Environment
-        uses: cygwin/cygwin-install-action@49f298a7ebb00d4b3ddf58000c3e78eff5fbd6b9
+        uses: cygwin/cygwin-install-action@49f298a7ebb00d4b3ddf58000c3e78eff5fbd6b9 # v2
         with:
           packages: autoconf automake libtool
 

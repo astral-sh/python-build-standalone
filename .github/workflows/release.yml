@@ -35,7 +35,7 @@ jobs:
         with:
           submodules: recursive
 
-      - uses: extractions/setup-just@v2
+      - uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
 
       # Perform a release in dry-run mode.
       - run: just release-dry-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}

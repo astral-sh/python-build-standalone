@@ -48,9 +48,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
-      pythonbuild_changed: ${{ steps.changed.outputs.pythonbuild_any_changed }}
+      pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # fetch history for subsequent `git diff`
 
       - name: Set up Python
         uses: astral-sh/setup-uv@v4
@@ -77,12 +79,14 @@ jobs:
             echo "any_builds=false" >> $GITHUB_OUTPUT
           fi
 
-      - uses: tj-actions/changed-files@v45
-        id: changed
-        with:
-          files_yaml: |
-            pythonbuild:
-              - "src/*.rs"
+      - name: Check if the `pythonbuild` crate changed
+        id: check-pythonbuild
+        run: |
+          if git diff --quiet ${{ github.event.pull_request.base.sha || 'origin/main' }}...HEAD -- ':src/*.rs'; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
   build:
     needs:
       - generate-matrix

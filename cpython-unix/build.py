@@ -103,7 +103,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["CC"] = settings["target_cc"]
     # We always set CXX, otherwise a build could bypass our toolchain
     # accidentally, e.g., on macOS where `g++` links to the system clang.
-    env["CXX"] = settings.get("target_cxx", settings.get("host_cxx"))
+    env["CXX"] = settings["target_cxx"]
 
     if settings.get("bolt_capable"):
         env["BOLT_CAPABLE"] = "1"

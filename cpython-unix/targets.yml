@@ -986,7 +986,7 @@ x86_64-unknown-linux-musl:
   host_cc: clang
   host_cxx: clang++
   target_cc: musl-clang
-  target_cxx: musl-clang++
+  target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-fvisibility=hidden'
   needs:
@@ -1030,7 +1030,7 @@ x86_64_v2-unknown-linux-musl:
   host_cc: clang
   host_cxx: clang++
   target_cc: musl-clang
-  target_cxx: musl-clang++
+  target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
@@ -1075,7 +1075,7 @@ x86_64_v3-unknown-linux-musl:
   host_cc: clang
   host_cxx: clang++
   target_cc: musl-clang
-  target_cxx: musl-clang++
+  target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
@@ -1120,7 +1120,7 @@ x86_64_v4-unknown-linux-musl:
   host_cc: clang
   host_cxx: clang++
   target_cc: musl-clang
-  target_cxx: musl-clang++
+  target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'

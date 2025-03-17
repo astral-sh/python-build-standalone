@@ -448,9 +448,6 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 
          if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
             patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.14.patch"
-            # On 3.14, we also use the tail calling interpreter which was incompatible with the JIT
-            # until https://github.com/python/cpython/pull/129820 — backport that
-            patch -p1 -i "${ROOT}/patch-jit-tail-call-compat-314-129820.patch"
         fi
     fi
 fi

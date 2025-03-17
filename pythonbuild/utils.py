@@ -307,8 +307,12 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
             print(f"HTTP exception on {url}; retrying: {e}")
             time.sleep(2**attempt)
         except urllib.error.URLError as e:
-            print(f"urllib error on {url}; retrying: {e}")
-            time.sleep(2**attempt)
+            if e.errno in {403, 429}:
+                print(f"possible rate limit error on {url}; retrying: {e}")
+                time.sleep(2 ** (attempt + 2))
+            else:
+                print(f"urllib error on {url}; retrying: {e}")
+                time.sleep(2**attempt)
     else:
         raise Exception(f"download failed after {attempt} retries: {url}")
 

@@ -247,7 +247,8 @@ def secure_download_stream(url, size, sha256):
     if length != size or digest != sha256:
         raise IntegrityError(
             "integrity mismatch on %s: wanted size=%d, sha256=%s; got size=%d, sha256=%s"
-            % (url, size, sha256, length, digest)
+            % (url, size, sha256, length, digest),
+            length=length,
         )
 
 

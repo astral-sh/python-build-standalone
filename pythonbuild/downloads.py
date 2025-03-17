@@ -26,7 +26,9 @@ DOWNLOADS = {
         "version": "2.43",
     },
     "bzip2": {
-        "url": "https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz",
+        # Mirror of `https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz` due to
+        # rate limiting
+        "url": "https://astral-sh.github.io/mirror/files/bzip2-1.0.8.tar.gz",
         "size": 810029,
         "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
         "version": "1.0.8",

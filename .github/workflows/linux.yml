@@ -216,6 +216,15 @@ jobs:
           path: build
           merge-multiple: true
 
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: build/downloads
+          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+          restore-keys: |
+            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+            ${{ matrix.target_triple }}-
+
       - name: Load Docker Images
         run: |
           for f in build/image-*.tar.zst; do
@@ -306,6 +315,15 @@ jobs:
           pattern: image-*
           path: build
           merge-multiple: true
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: build/downloads
+          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+          restore-keys: |
+            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+            ${{ matrix.target_triple }}-
 
       - name: Load Docker Images
         run: |

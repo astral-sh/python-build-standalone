@@ -1073,6 +1073,13 @@ def collect_python_build_artifacts(
     exts = ("lib", "exp")
 
     for ext in exts:
+        # On 3.14+, we're building with ClangCL which does not produce `.exp`
+        # files.
+        if ext == "exp" and python_majmin == "314":
+            # TODO(zanieb): Scope this specifically to use of ClangCL instead of
+            # MSVC / determine if it's a bug that this file is missing.
+            continue
+
         source = outputs_path / ("python%s%s.%s" % (python_majmin, lib_suffix, ext))
         dest = core_dir / ("python%s%s.%s" % (python_majmin, lib_suffix, ext))
         log("copying %s" % source)

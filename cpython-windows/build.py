@@ -656,6 +656,7 @@ def run_msbuild(
         # Use ClangCL for better build and runtime performance
         # https://github.com/python/cpython/issues/130090
         "/p:PlatformToolset=ClangCL",
+        "/p:AdditionalOptions=/clang:-fms-compatibility-version=19.29 /clang:-Wno-ignored-attributes"
     ]
 
     if freethreaded:

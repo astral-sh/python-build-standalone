@@ -1,0 +1,12 @@
+diff --git a/Modules/blake2module.c b/Modules/blake2module.c
+--- a/Modules/blake2module.c
++++ b/Modules/blake2module.c
+@@ -33,7 +33,7 @@
+ // pulled into the build automatically, and then only the CPU autodetection will
+ // need to be updated here.
+ 
+-#if defined(__x86_64__) && defined(__GNUC__)
++#if defined(__x86_64__) && defined(__GLIBC__)
+ #include <cpuid.h>
+ #elif defined(_M_X64)
+ #include <intrin.h>

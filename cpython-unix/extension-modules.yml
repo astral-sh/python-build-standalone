@@ -49,11 +49,6 @@ _blake2:
     # Disable `explicit_bzero`, it requires glib 2.25+
     - define: LINUX_NO_EXPLICIT_BZERO
       minimum-python-version: "3.14"
-    # Disable cpuid.h requirement for musl builds
-    - define: NO_CPUID
-      targets:
-        - .*-unknown-linux-musl
-      minimum-python-version: "3.14"
 
 _bz2:
   sources:

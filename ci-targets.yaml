@@ -256,6 +256,7 @@ linux:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - debug+static
       - noopt+static
@@ -263,6 +264,12 @@ linux:
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -275,6 +282,7 @@ linux:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - debug+static
       - noopt+static
@@ -282,6 +290,12 @@ linux:
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -294,6 +308,7 @@ linux:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - debug+static
       - noopt+static
@@ -301,6 +316,12 @@ linux:
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -313,6 +334,7 @@ linux:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - debug+static
       - noopt+static
@@ -320,6 +342,12 @@ linux:
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
 windows:

@@ -1131,3 +1131,50 @@ x86_64_v4-unknown-linux-musl:
     - zlib
     - zstd
   openssl_target: linux-x86_64
+
+aarch64-unknown-linux-musl:
+  host_platforms:
+    - linux_x86_64
+    - linux_aarch64
+  pythons_supported:
+    - '3.9'
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+  needs_toolchain: true
+  docker_image_suffix: .debian9
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: musl-clang
+  target_cxx: clang++
+  target_cflags:
+    - '-fvisibility=hidden'
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi-3.3
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - musl
+    - ncurses
+    - openssl-3.0
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - tix
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+  openssl_target: linux-aarch64

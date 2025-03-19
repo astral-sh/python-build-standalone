@@ -466,8 +466,8 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
     fi
 
-    # Allow users to enable the experimental JIT on 3.13+
-    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+    # Allow users to enable the experimental JIT on 3.13+ (but not on musl)
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && ! "${CC}" = "musl-clang" ]]; then
 
         # Do not enable on x86-64 macOS because the JIT requires macOS 11+ and we are currently
         # using 10.15 as a minimum version.

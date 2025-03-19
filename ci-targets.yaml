@@ -51,7 +51,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -72,7 +72,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -93,7 +93,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -114,7 +114,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -135,7 +135,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -156,7 +156,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -262,7 +262,7 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -281,7 +281,7 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -300,7 +300,7 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -319,7 +319,7 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     run: true
 
 windows:

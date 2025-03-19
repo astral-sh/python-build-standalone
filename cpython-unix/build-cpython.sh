@@ -318,7 +318,7 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
 fi
 
 
-# For Python 3.14+, the include for `cpuid.h` is improperly guarded
+# For Python 3.14+, use of `cpuid` is improperly guarded
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${CC}" = "musl-clang" ]]; then
     patch -p1 -i ${ROOT}/patch-blake-musl-314.patch
 fi

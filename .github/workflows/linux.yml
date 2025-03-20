@@ -208,6 +208,14 @@ jobs:
             docker load --input $f
           done
 
+      - name: Debug docker
+        run: |
+          docker info
+          docker ps
+          sudo systemctl status docker
+          docker run --rm hello-world
+          exit 1
+
       - name: Build
         if: ${{ ! matrix.dry-run }}
         run: |

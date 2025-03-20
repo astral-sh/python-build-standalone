@@ -401,6 +401,22 @@ if [ "${CC}" = "musl-clang" ]; then
     done
 fi
 
+# To enable mimalloc (which is hard requirement for free-threaded versions, but preferred in
+# general), we need `stdatomic.h` which is not provided by musl. It's are part of the include files
+# that are part of clang. But musl-clang eliminates them from the default include path. So copy it
+# into place.
+if [[ "${CC}" = "musl-clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+    for h in /tools/${TOOLCHAIN}/lib/clang/*/include/stdatomic.h; do
+        filename=$(basename "$h")
+        if [ -e "/tools/host/include/${filename}" ]; then
+            echo "${filename} already exists; don't need to copy!"
+            exit 1
+        fi
+        cp "$h" /tools/host/include/
+    done
+fi
+
+
 if [ -n "${CPYTHON_STATIC}" ]; then
     CFLAGS="${CFLAGS} -static"
     CPPFLAGS="${CPPFLAGS} -static"

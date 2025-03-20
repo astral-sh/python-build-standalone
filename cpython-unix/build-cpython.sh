@@ -422,7 +422,7 @@ if [ -n "${CPYTHON_DEBUG}" ]; then
 fi
 
 # Explicitly enable mimalloc on 3.13+, it's already included by default but with this it'll fail
-# if it's missing from the system. The MUSL builds do not supprt mimalloc yet.
+# if it's missing from the system. The musl builds do not supprt mimalloc yet.
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && "${CC}" != "musl-clang" ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-mimalloc"
 fi

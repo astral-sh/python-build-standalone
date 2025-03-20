@@ -8,6 +8,7 @@ import operator
 import os
 import pathlib
 import tarfile
+import time
 
 import docker  # type: ignore
 import jinja2
@@ -109,6 +110,25 @@ def run_container(client, image):
     container = client.containers.run(
         image, command=["/bin/sleep", "86400"], detach=True
     )
+
+    # Check if container is actually running
+    for _ in range(10):
+        container.reload()
+
+        if container.status in ("created", "starting"):
+            time.sleep(1)
+            continue
+
+        if container.status == "running":
+            break
+
+        state = container.attrs.get("State", {})
+        exit_code = state.get("ExitCode")
+        error = state.get("Error", "")
+        raise RuntimeError(
+            f"Container failed to start (status {container.status}) with exit code {exit_code}: {error}"
+        )
+
     try:
         yield container
     finally:

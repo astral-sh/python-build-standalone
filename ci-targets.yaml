@@ -264,13 +264,12 @@ linux:
       - debug
       - noopt
       - lto
-    # freethreaded builds require mimalloc which is not available on musl yet
-    # build_options_conditional:
-    #   - options:
-    #       - freethreaded+debug
-    #       - freethreaded+noopt
-    #       - freethreaded+lto
-    #     minimum-python-version: "3.13"
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -291,13 +290,12 @@ linux:
       - debug
       - noopt
       - lto
-    # freethreaded builds require mimalloc which is not available on musl yet
-    # build_options_conditional:
-    #   - options:
-    #       - freethreaded+debug
-    #       - freethreaded+noopt
-    #       - freethreaded+lto
-    #     minimum-python-version: "3.13"
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -318,13 +316,12 @@ linux:
       - debug
       - noopt
       - lto
-    # freethreaded builds require mimalloc which is not available on musl yet
-    # build_options_conditional:
-    #   - options:
-    #       - freethreaded+debug
-    #       - freethreaded+noopt
-    #       - freethreaded+lto
-    #     minimum-python-version: "3.13"
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -345,13 +342,12 @@ linux:
       - debug
       - noopt
       - lto
-    # freethreaded builds require mimalloc which is not available on musl yet
-    # build_options_conditional:
-    #   - options:
-    #       - freethreaded+debug
-    #       - freethreaded+noopt
-    #       - freethreaded+lto
-    #     minimum-python-version: "3.13"
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
 windows:

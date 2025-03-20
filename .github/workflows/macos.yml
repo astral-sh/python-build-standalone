@@ -81,12 +81,16 @@ jobs:
 
       - name: Check if the `pythonbuild` crate changed
         id: check-pythonbuild
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
         run: |
-          if git diff --quiet ${{ github.event.pull_request.base.sha || 'origin/main' }}...HEAD -- ':src/*.rs'; then
+          merge_base=$(git merge-base HEAD "origin/${BASE_REF}")
+          if git diff --quiet "${merge_base}...HEAD" -- ':src/*.rs'; then
               echo "changed=false" >> "$GITHUB_OUTPUT"
           else
               echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
+
   build:
     needs:
       - generate-matrix

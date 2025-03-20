@@ -161,7 +161,7 @@ aarch64-unknown-linux-gnu:
     - '3.12'
     - '3.13'
     - '3.14'
-  docker_image_suffix: .aarch64
+  # docker_image_suffix: .aarch64
   host_cc: clang
   host_cxx: clang++
   target_cc: clang

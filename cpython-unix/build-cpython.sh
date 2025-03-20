@@ -402,7 +402,7 @@ if [ "${CC}" = "musl-clang" ]; then
 fi
 
 # To enable mimalloc (which is hard requirement for free-threaded versions, but preferred in
-# general), we need `stdatomic.h` which is not provided by musl. It's are part of the include files
+# general), we need `stdatomic.h` which is not provided by musl. It's a part of the include files
 # that are part of clang. But musl-clang eliminates them from the default include path. So copy it
 # into place.
 if [[ "${CC}" = "musl-clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then

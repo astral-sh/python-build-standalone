@@ -139,10 +139,21 @@ def run_container(client, image):
 def container_exec(container, command, user="build", environment=None):
     # docker-py's exec_run() won't return the exit code. So we reinvent the
     # wheel.
-    create_res = container.client.api.exec_create(
-        container.id, command, user=user, environment=environment
-    )
-
+    try:
+        create_res = container.client.api.exec_create(
+            container.id, command, user=user, environment=environment
+        )
+    except Exception as exc:
+        if container.status != "running":
+            state = container.attrs.get("State", {})
+            exit_code = state.get("ExitCode")
+            error = state.get("Error", "")
+            raise RuntimeError(
+                f"Container is not running (status {container.status}) with exit code {exit_code}: {error}"
+            ) from exc
+        else:
+            raise
+        
     exec_output = container.client.api.exec_start(create_res["Id"], stream=True)
 
     for chunk in exec_output:

@@ -51,8 +51,8 @@ release-set-latest-release tag:
   {
     "version": 1,
     "tag": "{{tag}}",
-    "release_url": "https://github.com/indygreg/python-build-standalone/releases/tag/{{tag}}",
-    "asset_url_prefix": "https://github.com/indygreg/python-build-standalone/releases/download/{{tag}}"
+    "release_url": "https://github.com/astral-sh/python-build-standalone/releases/tag/{{tag}}",
+    "asset_url_prefix": "https://github.com/astral-sh/python-build-standalone/releases/download/{{tag}}"
   }
   EOF
 

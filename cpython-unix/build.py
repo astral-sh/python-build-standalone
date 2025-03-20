@@ -101,6 +101,9 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["HOST_CC"] = settings["host_cc"]
     env["HOST_CXX"] = settings["host_cxx"]
     env["CC"] = settings["target_cc"]
+    # We always set CXX, otherwise a build could bypass our toolchain
+    # accidentally, e.g., on macOS where `g++` links to the system clang.
+    env["CXX"] = settings["target_cxx"]
 
     if settings.get("bolt_capable"):
         env["BOLT_CAPABLE"] = "1"
@@ -120,8 +123,6 @@ def add_target_env(env, build_platform, target_triple, build_env):
             target_triple.replace("x86_64_v2-", "x86_64-")
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
-            # TODO should the musl target be normalized?
-            .replace("-unknown-linux-musl", "-unknown-linux-gnu")
         )
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
@@ -257,6 +258,7 @@ def simple_build(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         for a in extra_archives or []:
@@ -270,6 +272,9 @@ def simple_build(
                 entry
             ]["version"],
         }
+
+        if "static" in build_options:
+            env["STATIC"] = 1
 
         add_target_env(env, host_platform, target_triple, build_env)
 
@@ -322,26 +327,34 @@ def materialize_clang(host_platform: str, target_triple: str):
             dctx.copy_stream(ifh, ofh)
 
 
-def build_musl(client, image, host_platform: str, target_triple: str):
-    musl_archive = download_entry("musl", DOWNLOADS_PATH)
+def build_musl(client, image, host_platform: str, target_triple: str, build_options):
+    static = "static" in build_options
+    musl = "musl-static" if static else "musl"
+    musl_archive = download_entry(musl, DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
         build_env.install_toolchain(
-            BUILD, host_platform, target_triple, binutils=True, clang=True
+            BUILD,
+            host_platform,
+            target_triple,
+            binutils=True,
+            clang=True,
+            static=False,
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
 
         env = {
-            "MUSL_VERSION": DOWNLOADS["musl"]["version"],
+            "MUSL_VERSION": DOWNLOADS[musl]["version"],
             "TOOLCHAIN": "llvm",
         }
 
+        if static:
+            env["STATIC"] = 1
+
         build_env.run("build-musl.sh", environment=env)
 
-        build_env.get_tools_archive(
-            toolchain_archive_path("musl", host_platform), "host"
-        )
+        build_env.get_tools_archive(toolchain_archive_path(musl, host_platform), "host")
 
 
 def build_libedit(
@@ -358,6 +371,7 @@ def build_libedit(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         build_env.install_artifact_archive(
@@ -392,6 +406,7 @@ def build_tix(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         depends = {"tcl", "tk"}
@@ -438,6 +453,7 @@ def build_cpython_host(
             target_triple,
             binutils=install_binutils(host_platform),
             clang=True,
+            static="static" in build_options,
         )
 
         build_env.copy_file(archive)
@@ -488,6 +504,7 @@ def python_build_info(
     target_triple,
     musl,
     lto,
+    static,
     extensions,
     extra_metadata,
 ):
@@ -506,7 +523,7 @@ def python_build_info(
             )
         )
 
-        if not musl:
+        if not static:
             bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
                 version,
                 binary_suffix,
@@ -548,7 +565,14 @@ def python_build_info(
     mips = target_triple.split("-")[0] in {"mips", "mipsel"}
     linux_allowed_system_libraries = LINUX_ALLOW_SYSTEM_LIBRARIES.copy()
     if mips and version == "3.13":
-        # See https://github.com/indygreg/python-build-standalone/issues/410
+        # See https://github.com/astral-sh/python-build-standalone/issues/410
+        linux_allowed_system_libraries.add("atomic")
+    riscv = target_triple.split("-")[0] in {"riscv64"}
+    if riscv:
+        # RISC-V binary often comes with libatomic on old GCC versions
+        # See https://github.com/riscvarchive/riscv-gcc/issues/12
+        # https://github.com/riscvarchive/riscv-gcc/issues/337
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86005
         linux_allowed_system_libraries.add("atomic")
 
     # Add in core linking annotations.
@@ -728,6 +752,7 @@ def build_cpython(
         python_archive,
         python_version=python_version,
         target_triple=target_triple,
+        build_options=parsed_build_options,
         extension_modules=ems,
     )
 
@@ -744,6 +769,7 @@ def build_cpython(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         packages = target_needs(TARGETS_CONFIG, target_triple, python_version)
@@ -818,6 +844,8 @@ def build_cpython(
             env["CPYTHON_OPTIMIZED"] = "1"
         if "lto" in parsed_build_options:
             env["CPYTHON_LTO"] = "1"
+        if "static" in parsed_build_options:
+            env["CPYTHON_STATIC"] = "1"
 
         add_target_env(env, host_platform, target_triple, build_env)
 
@@ -827,19 +855,28 @@ def build_cpython(
         crt_features = []
 
         if host_platform == "linux64":
-            if "musl" in target_triple:
+            if "static" in parsed_build_options:
                 crt_features.append("static")
             else:
                 extension_module_loading.append("shared-library")
-                crt_features.append("glibc-dynamic")
 
-                glibc_max_version = build_env.get_file("glibc_version.txt").strip()
-                if not glibc_max_version:
-                    raise Exception("failed to retrieve glibc max symbol version")
+                if "musl" in target_triple:
+                    crt_features.append("musl-dynamic")
 
-                crt_features.append(
-                    "glibc-max-symbol-version:%s" % glibc_max_version.decode("ascii")
-                )
+                    musl_version = DOWNLOADS["musl"]["version"]
+                    crt_features.append("musl-version:%s" % musl_version)
+
+                else:
+                    crt_features.append("glibc-dynamic")
+
+                    glibc_max_version = build_env.get_file("glibc_version.txt").strip()
+                    if not glibc_max_version:
+                        raise Exception("failed to retrieve glibc max symbol version")
+
+                    crt_features.append(
+                        "glibc-max-symbol-version:%s"
+                        % glibc_max_version.decode("ascii")
+                    )
 
             python_symbol_visibility = "global-default"
 
@@ -867,7 +904,9 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            "libpython_link_mode": "static" if "musl" in target_triple else "shared",
+            "libpython_link_mode": (
+                "static" if "static" in parsed_build_options else "shared"
+            ),
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(
@@ -877,6 +916,7 @@ def build_cpython(
                 target_triple,
                 "musl" in target_triple,
                 "lto" in parsed_build_options,
+                "static" in parsed_build_options,
                 enabled_extensions,
                 extra_metadata,
             ),
@@ -886,7 +926,7 @@ def build_cpython(
 
         python_info["tcl_library_path"] = "install/lib"
         python_info["tcl_library_paths"] = [
-            "itcl4.2.2",
+            "itcl4.2.4",
             "tcl8",
             "tcl8.6",
             "thread2.8.7",
@@ -939,6 +979,7 @@ def main():
             print("unable to connect to Docker: %s" % e, file=sys.stderr)
             return 1
 
+    # Note these arguments must be synced with `build-main.py`
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--host-platform", required=True, help="Platform we are building from"
@@ -948,13 +989,19 @@ def main():
         required=True,
         help="Host triple that we are building Python for",
     )
-    optimizations = {"debug", "noopt", "pgo", "lto", "pgo+lto"}
+
+    # Construct possible options
+    options = set()
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({f"freethreaded+{option}" for option in options})
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
     )
+
     parser.add_argument(
         "--toolchain",
         action="store_true",
@@ -1043,6 +1090,7 @@ def main():
                 get_image(client, ROOT, BUILD, "gcc"),
                 host_platform,
                 target_triple,
+                build_options,
             )
 
         elif action == "autoconf":

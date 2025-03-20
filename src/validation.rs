@@ -40,11 +40,12 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "i686-pc-windows-msvc",
     "i686-unknown-linux-gnu",
     // Note there's build support for mips* targets but they are not tested
-    // See https://github.com/indygreg/python-build-standalone/issues/412
+    // See https://github.com/astral-sh/python-build-standalone/issues/412
     "mips-unknown-linux-gnu",
     "mipsel-unknown-linux-gnu",
     "mips64el-unknown-linux-gnuabi64",
     "ppc64le-unknown-linux-gnu",
+    "riscv64-unknown-linux-gnu",
     "s390x-unknown-linux-gnu",
     "thumbv7k-apple-watchos",
     "x86_64-apple-darwin",
@@ -136,6 +137,9 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "tk86t.dll",
 ];
 
+// CPython 3.14 uses tcl/tk 8.6.14+ which includes a bundled zlib and dynamically links to msvcrt.
+const PE_ALLOWED_LIBRARIES_314: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
     Lazy::new(|| {
         let mut versions = HashMap::new();
@@ -171,6 +175,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
         versions.insert(
             "ppc64le-unknown-linux-gnu",
             version_compare::Version::from("2.17").unwrap(),
+        );
+        versions.insert(
+            "riscv64-unknown-linux-gnu",
+            version_compare::Version::from("2.28").unwrap(),
         );
         versions.insert(
             "s390x-unknown-linux-gnu",
@@ -233,6 +241,10 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
             ),
             ("mips64el-unknown-linux-gnuabi64", vec![]),
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
+            (
+                "riscv64-unknown-linux-gnu",
+                vec!["ld-linux-riscv64-lp64d.so.1", "libatomic.so.1"],
+            ),
             ("s390x-unknown-linux-gnu", vec!["ld64.so.1"]),
             ("x86_64-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
             ("x86_64_v2-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
@@ -389,6 +401,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: true,
             },
             MachOAllowedDylib {
+                name: "/System/Library/Frameworks/UniformTypeIdentifiers.framework/Versions/A/UniformTypeIdentifiers".to_string(),
+                max_compatibility_version: "1.0.0".try_into().unwrap(),
+                required: true,
+            },
+            MachOAllowedDylib {
                 name: "/usr/lib/libedit.3.dylib".to_string(),
                 max_compatibility_version: "2.0.0".try_into().unwrap(),
                 required: true,
@@ -488,6 +505,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("mipsel-unknown-linux-gnu", "linux-mipsel"),
         ("mips64el-unknown-linux-gnuabi64", "todo"),
         ("ppc64le-unknown-linux-gnu", "linux-powerpc64le"),
+        ("riscv64-unknown-linux-gnu", "linux-riscv64"),
         ("s390x-unknown-linux-gnu", "linux-s390x"),
         ("x86_64-apple-darwin", "macosx-10.15-x86_64"),
         ("x86_64-apple-ios", "iOS-x86_64"),
@@ -780,6 +798,8 @@ const GLOBAL_EXTENSIONS_WINDOWS: &[&str] = &[
     "winsound",
 ];
 
+const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi"];
+
 const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 
 /// Extension modules not present in Windows static builds.
@@ -866,6 +886,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "mipsel-unknown-linux-gnu" => object::elf::EM_MIPS,
         "mips64el-unknown-linux-gnuabi64" => 0,
         "ppc64le-unknown-linux-gnu" => object::elf::EM_PPC64,
+        "riscv64-unknown-linux-gnu" => object::elf::EM_RISCV,
         "s390x-unknown-linux-gnu" => object::elf::EM_S390,
         "x86_64-unknown-linux-gnu" => object::elf::EM_X86_64,
         "x86_64_v2-unknown-linux-gnu" => object::elf::EM_X86_64,
@@ -897,22 +918,38 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
     }
 
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}.so.1.0",
-        python_major_minor
-    ));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}d.so.1.0",
-        python_major_minor
-    ));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}t.so.1.0",
-        python_major_minor
-    ));
-    allowed_libraries.push(format!(
-        "$ORIGIN/../lib/libpython{}td.so.1.0",
-        python_major_minor
-    ));
+    if json.libpython_link_mode == "shared" {
+        if target_triple.contains("-musl") {
+            // On musl, we link to `libpython` and rely on `RUN PATH`
+            allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+        } else {
+            // On glibc, we can use `$ORIGIN` for relative, reloctable linking
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}d.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}t.so.1.0",
+                python_major_minor
+            ));
+            allowed_libraries.push(format!(
+                "$ORIGIN/../lib/libpython{}td.so.1.0",
+                python_major_minor
+            ));
+        }
+    }
+
+    if !json.build_options.contains("static") && target_triple.contains("-musl") {
+        // Allow linking musl `libc`
+        allowed_libraries.push("libc.so".to_string());
+    }
 
     // Allow the _crypt extension module - and only it - to link against libcrypt,
     // which is no longer universally present in Linux distros.
@@ -1315,6 +1352,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
 fn validate_pe<'data, Pe: ImageNtHeaders>(
     context: &mut ValidationContext,
+    python_major_minor: &str,
     path: &Path,
     pe: &PeFile<'data, Pe, &'data [u8]>,
 ) -> Result<()> {
@@ -1329,6 +1367,18 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
         while let Some(descriptor) = descriptors.next()? {
             let lib = import_table.name(descriptor.name.get(object::LittleEndian))?;
             let lib = String::from_utf8(lib.to_vec())?;
+
+            match python_major_minor {
+                "3.9" | "3.10" | "3.11" | "3.12" | "3.13" => {}
+                "3.14" => {
+                    if PE_ALLOWED_LIBRARIES_314.contains(&lib.as_str()) {
+                        continue;
+                    }
+                }
+                _ => {
+                    panic!("unhandled Python version: {}", python_major_minor);
+                }
+            }
 
             if !PE_ALLOWED_LIBRARIES.contains(&lib.as_str()) {
                 context
@@ -1435,11 +1485,11 @@ fn validate_possible_object_file(
             }
             FileKind::Pe32 => {
                 let file = PeFile32::parse(data)?;
-                validate_pe(&mut context, path, &file)?;
+                validate_pe(&mut context, python_major_minor, path, &file)?;
             }
             FileKind::Pe64 => {
                 let file = PeFile64::parse(data)?;
-                validate_pe(&mut context, path, &file)?;
+                validate_pe(&mut context, python_major_minor, path, &file)?;
             }
             _ => {}
         }
@@ -1508,6 +1558,10 @@ fn validate_extension_modules(
 
         if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13);
+        }
+
+        if matches!(python_major_minor, "3.14") {
+            wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_3_14);
         }
 
         if static_crt {
@@ -1681,8 +1735,7 @@ fn validate_distribution(
     };
 
     let is_debug = dist_filename.contains("-debug-");
-
-    let is_static = triple.contains("unknown-linux-musl");
+    let is_static = dist_filename.contains("+static");
 
     let mut tf = crate::open_distribution_archive(dist_path)?;
 
@@ -2036,12 +2089,17 @@ fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
     std::fs::write(&test_file, PYTHON_VERIFICATIONS.as_bytes())?;
 
     eprintln!("  running interpreter tests (output should follow)");
-    let output = duct::cmd(python_exe, [test_file.display().to_string()])
+    let output = duct::cmd(&python_exe, [test_file.display().to_string()])
         .stdout_to_stderr()
         .unchecked()
         .env("TARGET_TRIPLE", &python_json.target_triple)
         .env("BUILD_OPTIONS", &python_json.build_options)
-        .run()?;
+        .run()
+        .context(format!(
+            "Failed to run `{} {}`",
+            python_exe.display(),
+            test_file.display()
+        ))?;
 
     if !output.status.success() {
         errors.push("errors running interpreter tests".to_string());

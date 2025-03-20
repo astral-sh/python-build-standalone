@@ -58,9 +58,11 @@ jobs:
         image:
           - build
           - build.cross
+          - build.cross-riscv64
           - gcc
           - xcb
           - xcb.cross
+          - xcb.cross-riscv64
     name: ${{ matrix.image }}
     runs-on: depot-ubuntu-22.04
     permissions:
@@ -74,10 +76,10 @@ jobs:
           python-version: '3.11'
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -105,7 +107,7 @@ jobs:
           cache-from: |
             type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }}
             type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-main
-            type=registry,ref=ghcr.io/indygreg/python-build-standalone:${{ matrix.image }}-main
+            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.image }}-main
           cache-to: |
             type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }},ignore-error=true
           outputs: |
@@ -125,12 +127,15 @@ jobs:
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix-0: ${{ steps.set-matrix.outputs.matrix-0 }}
+      matrix-1: ${{ steps.set-matrix.outputs.matrix-1 }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
-      pythonbuild_changed: ${{ steps.changed.outputs.pythonbuild_any_changed }}
+      pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
-      
+        with:
+          fetch-depth: 0  # fetch history for subsequent `git diff`
+
       - name: Set up Python
         uses: astral-sh/setup-uv@v4
 
@@ -140,15 +145,23 @@ jobs:
           # Convert GitHub labels array to comma-separated string
           LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
-          
+
       - name: Generate build matrix
         id: set-matrix
         run: |
-          uv run ci-matrix.py --platform linux --labels '${{ steps.get-labels.outputs.labels }}' > matrix.json && echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+          uv run ci-matrix.py \
+            --platform linux \
+            --labels '${{ steps.get-labels.outputs.labels }}' \
+            --max-shards 2 \
+            > matrix.json
+
+          echo "matrix-0=$(jq -c '.["0"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "matrix-1=$(jq -c '.["1"]' matrix.json)" >> $GITHUB_OUTPUT
+
           # Display the matrix for debugging too
           cat matrix.json | jq
 
-          if jq -e '.include | length > 0' matrix.json > /dev/null; then
+          if jq -e '.["0"].include | length > 0' matrix.json > /dev/null; then
             # Build matrix has entries
             echo "any_builds=true" >> $GITHUB_OUTPUT
           else
@@ -156,21 +169,30 @@ jobs:
             echo "any_builds=false" >> $GITHUB_OUTPUT
           fi
 
-      - uses: tj-actions/changed-files@v45
-        id: changed
-        with:
-          files_yaml: |
-            pythonbuild:
-              - "src/*.rs"
+      - name: Check if the `pythonbuild` crate changed
+        id: check-pythonbuild
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+        run: |
+          merge_base=$(git merge-base HEAD "origin/${BASE_REF}")
+          if git diff --quiet "${merge_base}...HEAD" -- ':src/*.rs'; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
 
-  build:
+  build-0:
     needs:
       - generate-matrix
       - pythonbuild
       - image
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-0) }}
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
@@ -202,11 +224,19 @@ jobs:
       #       echo "decompressing $f"
       #       zstd -d --rm ${f}
       #     done
-
       #     for f in build/image-*.tar; do
       #       echo "loading $f"
       #       docker load --input $f
       #     done
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: build/downloads
+          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+          restore-keys: |
+            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+            ${{ matrix.target_triple }}-
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
@@ -224,11 +254,124 @@ jobs:
         run: |
           chmod +x build/pythonbuild
 
-          if [ -n "${{ matrix.run }}" ]; then
+          if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+
+              # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
+              # as used in the musl builds.
+              unset LD_LIBRARY_PATH
+            fi
             EXTRA_ARGS="--run"
           fi
 
           build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
+
+      - name: Upload Distribution
+        if: ${{ ! matrix.dry-run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist/*
+
+  build-1:
+    needs:
+      - generate-matrix
+      - pythonbuild
+      - image
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-1) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Download pythonbuild
+        uses: actions/download-artifact@v4
+        with:
+          name: pythonbuild
+          path: build
+
+      - name: Download images
+        uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          path: build
+          merge-multiple: true
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: build/downloads
+          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+          restore-keys: |
+            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
+            ${{ matrix.target_triple }}-
+
+      - name: Load Docker Images
+        run: |
+          for f in build/image-*.tar.zst; do
+            echo "decompressing $f"
+            zstd -d --rm ${f}
+          done
+
+          for f in build/image-*.tar; do
+            echo "loading $f"
+            docker load --input $f
+          done
+
+      - name: Build
+        if: ${{ ! matrix.dry-run }}
+        run: |
+          # Do empty target so all generated files are touched.
+          ./build-linux.py --make-target empty
+
+          # Touch mtimes of all images so they are newer than autogenerated files above.
+          touch build/image-*
+
+          ./build-linux.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
+
+      - name: Validate Distribution
+        if: ${{ ! matrix.dry-run }}
+        run: |
+          chmod +x build/pythonbuild
+
+          if [ "${{ matrix.run }}" == "true" ]; then
+            if [ "${{ matrix.libc }}" == "musl" ]; then
+              sudo apt install musl-dev
+
+              # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
+              # as used in the musl builds.
+              unset LD_LIBRARY_PATH
+            fi
+            EXTRA_ARGS="--run"
+          fi
+
+          build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
 
       - name: Upload Distribution
         if: ${{ ! matrix.dry-run }}

@@ -8,6 +8,7 @@
 
 import argparse
 import json
+import sys
 from typing import Any, Optional
 
 import yaml
@@ -16,6 +17,7 @@ from packaging.version import Version
 CI_TARGETS_YAML = "ci-targets.yaml"
 CI_RUNNERS_YAML = "ci-runners.yaml"
 CI_EXTRA_SKIP_LABELS = ["documentation"]
+CI_MATRIX_SIZE_LIMIT = 256  # The maximum size of a matrix in GitHub Actions
 
 
 def meets_conditional_version(version: str, min_version: str) -> bool:
@@ -217,6 +219,12 @@ def parse_args() -> argparse.Namespace:
         help="Filter matrix entries by platform",
     )
     parser.add_argument(
+        "--max-shards",
+        type=int,
+        default=0,
+        help="The maximum number of shards allowed; set to zero to disable ",
+    )
+    parser.add_argument(
         "--labels",
         help="Comma-separated list of labels to filter by (e.g., 'platform:darwin,python:3.13,build:debug'), all must match.",
     )
@@ -246,14 +254,34 @@ def main() -> None:
             if runner_config.get("free")
         }
 
-    matrix = {
-        "include": generate_matrix_entries(
-            config,
-            runners,
-            args.platform,
-            labels,
-        )
-    }
+    entries = generate_matrix_entries(
+        config,
+        runners,
+        args.platform,
+        labels,
+    )
+
+    if args.max_shards:
+        matrix = {}
+        shards = (len(entries) // CI_MATRIX_SIZE_LIMIT) + 1
+        if shards > args.max_shards:
+            print(
+                f"error: matrix of size {len(entries)} requires {shards} shards, but the maximum is {args.max_shards}; consider increasing `--max-shards`",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        for shard in range(args.max_shards):
+            shard_entries = entries[
+                shard * CI_MATRIX_SIZE_LIMIT : (shard + 1) * CI_MATRIX_SIZE_LIMIT
+            ]
+            matrix[str(shard)] = {"include": shard_entries}
+    else:
+        if len(entries) > CI_MATRIX_SIZE_LIMIT:
+            print(
+                f"warning: matrix of size {len(entries)} exceeds limit of {CI_MATRIX_SIZE_LIMIT} but sharding is not enabled; consider setting `--max-shards`",
+                file=sys.stderr,
+            )
+        matrix = {"include": entries}
 
     print(json.dumps(matrix))
 

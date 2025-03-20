@@ -48,9 +48,11 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
-      pythonbuild_changed: ${{ steps.changed.outputs.pythonbuild_any_changed }}
+      pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # fetch history for subsequent `git diff`
 
       - name: Set up Python
         uses: astral-sh/setup-uv@v4
@@ -77,20 +79,30 @@ jobs:
             echo "any_builds=false" >> $GITHUB_OUTPUT
           fi
 
-      - uses: tj-actions/changed-files@v45
-        id: changed
-        with:
-          files_yaml: |
-            pythonbuild:
-              - "src/*.rs"
+      - name: Check if the `pythonbuild` crate changed
+        id: check-pythonbuild
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
+        run: |
+          merge_base=$(git merge-base HEAD "origin/${BASE_REF}")
+          if git diff --quiet "${merge_base}...HEAD" -- ':src/*.rs'; then
+              echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+              echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
   build:
     needs:
       - generate-matrix
       - pythonbuild
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
       fail-fast: false
-    runs-on: ${{ matrix.runner }}
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
       - uses: actions/checkout@v4
@@ -121,6 +133,12 @@ jobs:
           fi
 
           ./build-macos.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
 
       - name: Upload Distributions
         if: ${{ ! matrix.dry-run }}

@@ -45,6 +45,7 @@ def main():
         print("Unsupported build platform: %s" % sys.platform)
         return 1
 
+    # Note these arguments must be synced with `build.py`
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
@@ -54,10 +55,14 @@ def main():
         help="Target host triple to build for",
     )
 
-    optimizations = {"debug", "noopt", "pgo", "lto", "pgo+lto"}
+    # Construct possible options, we use a set here for canonical ordering
+    options = set()
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({f"freethreaded+{option}" for option in options})
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
     )
@@ -103,9 +108,11 @@ def main():
             "toolchain",
             "toolchain-image-build",
             "toolchain-image-build.cross",
+            "toolchain-image-build.cross-riscv64",
             "toolchain-image-gcc",
             "toolchain-image-xcb",
             "toolchain-image-xcb.cross",
+            "toolchain-image-xcb.cross-riscv64",
         },
         default="default",
         help="The make target to evaluate",

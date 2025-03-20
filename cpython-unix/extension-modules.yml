@@ -259,6 +259,7 @@ _decimal:
       targets:
         - aarch64-.*
         - ppc64le-unknown-linux.*
+        - riscv64-unknown-linux.*
         - s390x-unknown-linux-.*
         - x86_64.*
   links:
@@ -688,6 +689,7 @@ _tkinter:
     - CoreGraphics
     - IOKit
     - QuartzCore
+    - UniformTypeIdentifiers
 
 _tokenize:
   minimum-python-version: "3.11"
@@ -831,7 +833,7 @@ nis:
     # has a wonky history where it was once part of glibc and core system installs
     # but is slowly being phased away from base installations. There are potential
     # workarounds to adding nis support. See discussion in
-    # https://github.com/indygreg/python-build-standalone/issues/51.
+    # https://github.com/astral-sh/python-build-standalone/issues/51.
     - .*
 
   sources:

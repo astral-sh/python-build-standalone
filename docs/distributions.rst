@@ -38,7 +38,7 @@ without having to resort to heuristics.
 The file contains a JSON map. This map has the following keys:
 
 version
-   Version number of the file format. Currently ``7``.
+   Version number of the file format. Currently ``8``.
 
 target_triple
    A target triple defining the platform and architecture of the machine

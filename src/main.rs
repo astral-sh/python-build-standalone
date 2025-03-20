@@ -61,7 +61,7 @@ fn main_impl() -> Result<()> {
                 Arg::new("organization")
                     .long("org")
                     .action(ArgAction::Set)
-                    .default_value("indygreg")
+                    .default_value("astral-sh")
                     .help("GitHub organization"),
             )
             .arg(
@@ -145,7 +145,7 @@ fn main_impl() -> Result<()> {
                 Arg::new("organization")
                     .long("org")
                     .action(ArgAction::Set)
-                    .default_value("indygreg")
+                    .default_value("astral-sh")
                     .help("GitHub organization"),
             )
             .arg(

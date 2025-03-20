@@ -120,7 +120,7 @@ versions of Fedora and RHEL.
 Because the ``nis`` extension is perceived to be likely unused functionality,
 we've decided to not build it instead of adding complexity to deal with
 the ``libnsl`` dependency. See further discussion in
-https://github.com/indygreg/python-build-standalone/issues/51.
+https://github.com/astral-sh/python-build-standalone/issues/51.
 
 If ``nis`` functionality is important to you, please file a GitHub issue
 to request it.

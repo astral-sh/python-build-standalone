@@ -10,11 +10,3 @@ index 13713cf37b8..40ee4837bfe 100644
      def test_global_pathconfig(self):
          # Test C API functions getting the path configuration:
          #
-@@ -1866,6 +1867,7 @@ def test_no_memleak(self):
-                 self.assertEqual(blocks, 0, out)
- 
- 
-+@unittest.skipIf(support.check_bolt_optimized, "segfaults on BOLT instrumented binaries")
- class StdPrinterTests(EmbeddingTestsMixin, unittest.TestCase):
-     # Test PyStdPrinter_Type which is used by _PySys_SetPreliminaryStderr():
-     #   "Set up a preliminary stderr printer until we have enough

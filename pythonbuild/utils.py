@@ -214,6 +214,10 @@ def write_target_settings(targets, dest_path: pathlib.Path):
 class IntegrityError(Exception):
     """Represents an integrity error when downloading a URL."""
 
+    def __init__(self, *args, length: int):
+        self.length = length
+        super().__init__(*args)
+
 
 def secure_download_stream(url, size, sha256):
     """Securely download a URL to a stream of chunks.
@@ -243,7 +247,8 @@ def secure_download_stream(url, size, sha256):
     if length != size or digest != sha256:
         raise IntegrityError(
             "integrity mismatch on %s: wanted size=%d, sha256=%s; got size=%d, sha256=%s"
-            % (url, size, sha256, length, digest)
+            % (url, size, sha256, length, digest),
+            length=length,
         )
 
 
@@ -283,7 +288,7 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
         )
     )
 
-    for attempt in range(5):
+    for attempt in range(8):
         try:
             try:
                 with tmp.open("wb") as fh:
@@ -291,9 +296,13 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
                         fh.write(chunk)
 
                 break
-            except IntegrityError:
+            except IntegrityError as e:
                 tmp.unlink()
-                raise
+                # If we didn't get most of the expected file, retry
+                if e.length > size * 0.75:
+                    raise
+                print(f"Integrity error on {url}; retrying: {e}")
+                time.sleep(2**attempt)
         except http.client.HTTPException as e:
             print(f"HTTP exception on {url}; retrying: {e}")
             time.sleep(2**attempt)
@@ -426,7 +435,7 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
         if "musl" in target_triple:
             return "llvm-14-x86_64-linux"
         else:
-            return "llvm-19-x86_64-linux"
+            return "llvm-20-x86_64-linux"
     elif host_platform == "macos":
         if platform.mac_ver()[2] == "arm64":
             return "llvm-aarch64-macos"
@@ -609,7 +618,7 @@ def validate_python_json(info, extension_modules):
 
 def release_download_statistics(mode="by_asset"):
     with urllib.request.urlopen(
-        "https://api.github.com/repos/indygreg/python-build-standalone/releases"
+        "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
     ) as fh:
         data = json.load(fh)
 

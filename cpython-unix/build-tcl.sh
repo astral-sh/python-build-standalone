@@ -13,6 +13,15 @@ export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib
 tar -xf tcl${TCL_VERSION}-src.tar.gz
 pushd tcl${TCL_VERSION}
 
+
+if [ -n "${STATIC}" ]; then
+	if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
+		# tcl misbehaves when performing static musl builds
+		# `checking whether musl-clang accepts -g...` fails with a duplicate definition error
+		TARGET_TRIPLE="$(echo "${TARGET_TRIPLE}" | sed -e 's/-unknown-linux-musl/-unknown-linux-gnu/g')"
+	fi
+fi
+
 patch -p1 << 'EOF'
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in

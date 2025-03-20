@@ -42,6 +42,7 @@ As are various other targets::
     $ ./build-linux.py --target mips-unknown-linux-gnu
     $ ./build-linux.py --target mipsel-unknown-linux-gnu
     $ ./build-linux.py --target ppc64le-unknown-linux-gnu
+    $ ./build-linux.py --target riscv64-unknown-linux-gnu
     $ ./build-linux.py --target s390x-unknown-linux-gnu
 
 macOS

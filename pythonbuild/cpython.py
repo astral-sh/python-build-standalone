@@ -227,6 +227,7 @@ def derive_setup_local(
     cpython_source_archive,
     python_version,
     target_triple,
+    build_options,
     extension_modules,
 ):
     """Derive the content of the Modules/Setup.local file."""
@@ -466,12 +467,11 @@ def derive_setup_local(
             enabled_extensions[name]["setup_line"] = name.encode("ascii")
             continue
 
-        # musl is static only. Ignore build-mode override.
-        if "musl" in target_triple:
-            section = "static"
-        else:
-            section = info.get("build-mode", "static")
-
+        # Force static linking if we're doing a fully static build, otherwise,
+        # respect the `build-mode` falling back to `static` if not defined.
+        section = (
+            "static" if "static" in build_options else info.get("build-mode", "static")
+        )
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's

@@ -317,12 +317,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
 fi
 
-
-# For Python 3.14+, use of `cpuid` is improperly guarded
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${CC}" = "musl-clang" ]]; then
-    patch -p1 -i ${ROOT}/patch-blake-musl-314.patch
-fi
-
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
@@ -397,7 +391,7 @@ if [ "${CC}" = "musl-clang" ]; then
     # provided by musl. These are part of the include files that are part of clang.
     # But musl-clang eliminates them from the default include path. So copy them into
     # place.
-    for h in /tools/${TOOLCHAIN}/lib/clang/*/include/*intrin.h /tools/${TOOLCHAIN}/lib/clang/*/include/{__wmmintrin_aes.h,__wmmintrin_pclmul.h,mm_malloc.h}; do
+    for h in /tools/${TOOLCHAIN}/lib/clang/*/include/*intrin.h /tools/${TOOLCHAIN}/lib/clang/*/include/{__wmmintrin_aes.h,__wmmintrin_pclmul.h,mm_malloc.h,cpuid.h}; do
         filename=$(basename "$h")
         if [ -e "/tools/host/include/${filename}" ]; then
             echo "${filename} already exists; don't need to copy!"

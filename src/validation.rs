@@ -99,6 +99,7 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "IPHLPAPI.DLL",
     "KERNEL32.dll",
     "msi.dll",
+    "msvcrt.dll",
     "NETAPI32.dll",
     "ole32.dll",
     "OLEAUT32.dll",
@@ -135,6 +136,8 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "sqlite3.dll",
     "tcl86t.dll",
     "tk86t.dll",
+    // Bundled with tk
+    "zlib1.dll",
 ];
 
 // CPython 3.14 uses tcl/tk 8.6.14+ which includes a bundled zlib and dynamically links to msvcrt.

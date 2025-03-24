@@ -114,7 +114,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_lzma": ["xz"],
     "_sqlite3": ["sqlite"],
     "_ssl": ["openssl"],
-    "_tkinter": ["tcl-8612", "tk-8612", "tix"],
+    "_tkinter": ["tcl", "tk", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
 }
@@ -362,7 +362,7 @@ def hack_props(
     if meets_python_minimum_version(python_version, "3.14"):
         tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
     else:
-        tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
+        tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
 
     sqlite_path = td / ("sqlite-autoconf-%s" % sqlite_version)
     bzip2_path = td / ("bzip2-%s" % bzip2_version)
@@ -1138,10 +1138,6 @@ def collect_python_build_artifacts(
                 if name == "openssl":
                     name = openssl_entry
 
-                # On 3.14+, we use the latest tcl/tk version
-                if ext == "_tkinter" and python_majmin == "314":
-                    name = name.replace("-8612", "")
-
                 download_entry = DOWNLOADS[name]
 
                 # This will raise if no license metadata defined. This is
@@ -1230,7 +1226,7 @@ def build_cpython(
         )
     else:
         tk_bin_archive = download_entry(
-            "tk-windows-bin-8612", BUILD, local_name="tk-windows-bin.tar.gz"
+            "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
         )
 
     # CPython 3.13+ no longer uses a bundled `mpdecimal` version so we build it
@@ -1302,6 +1298,18 @@ def build_cpython(
             dest = openssl_lib_path / f
             log("copying %s to %s" % (source, dest))
             shutil.copyfile(source, dest)
+
+        # Delete the tk nmake helper, it's not needed and links msvc
+        tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
+        tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+        tcltk_arch = {"amd64": "amd64", "x86": "win32"}[arch]
+        (
+            tcltk_path
+            / tcltk_arch
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

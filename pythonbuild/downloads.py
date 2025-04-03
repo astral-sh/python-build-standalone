@@ -392,10 +392,10 @@ DOWNLOADS = {
         "version": "1.20.1",
     },
     "xcb-proto": {
-        "url": "https://www.x.org/archive/individual/proto/xcb-proto-1.14.1.tar.gz",
-        "size": 194674,
-        "sha256": "85cd21e9d9fbc341d0dbf11eace98d55d7db89fda724b0e598855fcddf0944fd",
-        "version": "1.14.1",
+        "url": "https://www.x.org/archive/individual/proto/xcb-proto-1.17.0.tar.gz",
+        "size": 206094,
+        "sha256": "392d3c9690f8c8202a68fdb89c16fd55159ab8d65000a6da213f4a1576e97a16",
+        "version": "1.17.0",
     },
     "xextproto": {
         "url": "https://www.x.org/archive/individual/proto/xextproto-7.3.0.tar.gz",

@@ -564,14 +564,18 @@ def hack_project_files(
     except NoSearchStringError:
         pass
 
-    # Our custom OpenSSL build has applink.c in a different location
-    # from the binary OpenSSL distribution. Update it.
-    ssl_proj = pcbuild_path / "_ssl.vcxproj"
-    static_replace_in_file(
-        ssl_proj,
-        rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
-        rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
-    )
+    # Our custom OpenSSL build has applink.c in a different location from the
+    # binary OpenSSL distribution. This is no longer relevant for 3.12+ per
+    # https://github.com/python/cpython/pull/131839, so we allow it to fail.swe
+    try:
+        ssl_proj = pcbuild_path / "_ssl.vcxproj"
+        static_replace_in_file(
+            ssl_proj,
+            rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
+            rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
+        )
+    except NoSearchStringError:
+        pass
 
     # Python 3.12+ uses the the pre-built tk-windows-bin 8.6.12 which doesn't
     # have a standalone zlib DLL, so we remove references to it. For Python

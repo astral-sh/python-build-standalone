@@ -1596,6 +1596,10 @@ fn validate_extension_modules(
         ]);
     }
 
+    if is_windows && matches!(python_major_minor, "3.13") {
+        wanted.extend(["_suggestions"]);
+    }
+
     if (is_linux || is_macos) && matches!(python_major_minor, "3.13" | "3.14") {
         wanted.extend(["_suggestions", "_testexternalinspection"]);
     }

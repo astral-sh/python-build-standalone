@@ -709,6 +709,7 @@ _tracemalloc:
 
 _types:
   minimum-python-version: "3.14"
+  setup-enabled: true
   sources:
     - _typesmodule.c
 

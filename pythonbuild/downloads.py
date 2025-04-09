@@ -446,4 +446,13 @@ DOWNLOADS = {
         "licenses": ["Zlib"],
         "license_file": "LICENSE.zlib.txt",
     },
+    "zlib-ng": {
+        "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/zlib-ng-2.2.4.tar.gz",
+         "size": 2415819,
+        "sha256": "00bbd88709bc416cb96160ab61d3e1c8f76e106799af7328d0fe434dc7dd5004",
+        "version": "2.2.4",
+        "library_names": ["z"],
+        "licenses": ["Zlib"],
+        "license_file": "LICENSE.zlib-ng.txt",
+    }
 }

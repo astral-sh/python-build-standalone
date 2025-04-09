@@ -316,7 +316,9 @@ _hmac:
   sources:
     - hmacmodule.c
   includes:
-    - Modules/_hacl/include
+    - Modules/_hacl
+  links:
+    - :libHacl_Hash_Blake2.a
 
 _imp:
   config-c-only: true

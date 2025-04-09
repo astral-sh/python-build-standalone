@@ -1221,17 +1221,16 @@ def build_cpython(
     # The python.props file keys off MSBUILD, so it needs to be set.
     os.environ["MSBUILD"] = str(msbuild)
 
-    zlib_entry = "zlib-ng" if meets_python_minimum_version("3.14") else "zlib"
+    python_archive = download_entry(python_entry_name, BUILD)
+    entry = DOWNLOADS[python_entry_name]
+    python_version = entry["version"]
+
+    zlib_entry = "zlib-ng" if meets_python_minimum_version(python_version, "3.14") else "zlib"
 
     bzip2_archive = download_entry("bzip2", BUILD)
     sqlite_archive = download_entry("sqlite", BUILD)
     xz_archive = download_entry("xz", BUILD)
     zlib_archive = download_entry(zlib_entry, BUILD)
-
-    python_archive = download_entry(python_entry_name, BUILD)
-    entry = DOWNLOADS[python_entry_name]
-
-    python_version = entry["version"]
 
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)

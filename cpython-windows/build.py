@@ -346,16 +346,18 @@ def hack_props(
     pcbuild_path: pathlib.Path,
     arch: str,
     python_version: str,
+    zlib_entry: str
 ):
     # TODO can we pass props into msbuild.exe?
 
     # Our dependencies are in different directories from what CPython's
     # build system expects. Modify the config file appropriately.
 
+
     bzip2_version = DOWNLOADS["bzip2"]["version"]
     sqlite_version = DOWNLOADS["sqlite"]["version"]
     xz_version = DOWNLOADS["xz"]["version"]
-    zlib_version = DOWNLOADS["zlib"]["version"]
+    zlib_version = DOWNLOADS[zlib_entry]["version"]
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
@@ -369,7 +371,7 @@ def hack_props(
     libffi_path = td / "libffi"
     tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
     xz_path = td / ("xz-%s" % xz_version)
-    zlib_path = td / ("zlib-%s" % zlib_version)
+    zlib_path = td / ("%s-%s" % (zlib_entry, zlib_version))
     mpdecimal_path = td / ("mpdecimal-%s" % mpdecimal_version)
 
     openssl_root = td / "openssl" / arch
@@ -484,6 +486,7 @@ def hack_project_files(
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
+    zlib_entry: str
 ):
     """Hacks Visual Studio project files to work with our build."""
 
@@ -494,6 +497,7 @@ def hack_project_files(
         pcbuild_path,
         build_directory,
         python_version,
+        zlib_entry,
     )
 
     # Our SQLite directory is named weirdly. This throws off version detection
@@ -913,6 +917,7 @@ def collect_python_build_artifacts(
     arch: str,
     config: str,
     openssl_entry: str,
+    zlib_entry: str,
     freethreaded: bool,
 ):
     """Collect build artifacts from Python.
@@ -1142,6 +1147,9 @@ def collect_python_build_artifacts(
                 if name == "openssl":
                     name = openssl_entry
 
+                if name == "zlib":
+                    name = zlib_entry
+
                 # On 3.14+, we use the latest tcl/tk version
                 if ext == "_tkinter" and python_majmin == "314":
                     name = name.replace("-8612", "")
@@ -1213,10 +1221,12 @@ def build_cpython(
     # The python.props file keys off MSBUILD, so it needs to be set.
     os.environ["MSBUILD"] = str(msbuild)
 
+    zlib_entry = "zlib-ng" if meets_python_minimum_version("3.14") else "zlib"
+
     bzip2_archive = download_entry("bzip2", BUILD)
     sqlite_archive = download_entry("sqlite", BUILD)
     xz_archive = download_entry("xz", BUILD)
-    zlib_archive = download_entry("zlib", BUILD)
+    zlib_archive = download_entry(zlib_entry, BUILD)
 
     python_archive = download_entry(python_entry_name, BUILD)
     entry = DOWNLOADS[python_entry_name]
@@ -1328,6 +1338,7 @@ def build_cpython(
             cpython_source_path,
             build_directory,
             python_version=python_version,
+            zlib_entry=zlib_entry,
         )
 
         if pgo:
@@ -1528,6 +1539,7 @@ def build_cpython(
             build_directory,
             artifact_config,
             openssl_entry=openssl_entry,
+            zlib_entry=zlib_entry,
             freethreaded=freethreaded,
         )
 

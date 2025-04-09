@@ -346,13 +346,12 @@ def hack_props(
     pcbuild_path: pathlib.Path,
     arch: str,
     python_version: str,
-    zlib_entry: str
+    zlib_entry: str,
 ):
     # TODO can we pass props into msbuild.exe?
 
     # Our dependencies are in different directories from what CPython's
     # build system expects. Modify the config file appropriately.
-
 
     bzip2_version = DOWNLOADS["bzip2"]["version"]
     sqlite_version = DOWNLOADS["sqlite"]["version"]
@@ -486,7 +485,7 @@ def hack_project_files(
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
-    zlib_entry: str
+    zlib_entry: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
 
@@ -1225,7 +1224,9 @@ def build_cpython(
     entry = DOWNLOADS[python_entry_name]
     python_version = entry["version"]
 
-    zlib_entry = "zlib-ng" if meets_python_minimum_version(python_version, "3.14") else "zlib"
+    zlib_entry = (
+        "zlib-ng" if meets_python_minimum_version(python_version, "3.14") else "zlib"
+    )
 
     bzip2_archive = download_entry("bzip2", BUILD)
     sqlite_archive = download_entry("sqlite", BUILD)

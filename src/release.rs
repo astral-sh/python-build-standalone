@@ -274,13 +274,12 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             }],
         },
     );
-    // TODO: Python 3.14 support on musl
     h.insert(
         "x86_64-unknown-linux-musl",
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![],
         },
     );
@@ -289,7 +288,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![],
         },
     );
@@ -298,7 +297,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![],
         },
     );
@@ -307,7 +306,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str("<3.14").unwrap()),
+            python_version_requirement: None,
             conditional_suffixes: vec![],
         },
     );

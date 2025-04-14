@@ -464,6 +464,8 @@ def hack_props(
         suffix = b"-x64"
     elif arch == "win32":
         suffix = b""
+    elif arch == "arm64":
+        suffix = b""
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
@@ -730,9 +732,11 @@ def build_openssl_for_arch(
     elif arch == "amd64":
         configure = "VC-WIN64A"
         prefix = "64"
+    elif arch == "arm64":
+        configure = "VC-WIN64-ARM"
+        prefix = "arm64"
     else:
-        print("invalid architecture: %s" % arch)
-        sys.exit(1)
+        raise Exception("unhandled architecture: %s" % arch)
 
     # The official CPython OpenSSL builds hack ms/uplink.c to change the
     # ``GetModuleHandle(NULL)`` invocation to load things from _ssl.pyd
@@ -780,6 +784,12 @@ def build_openssl_for_arch(
         log("copying %s to %s" % (source, dest))
         shutil.copyfile(source, dest)
 
+    # Copy `applink.c` to the include directory.
+    source_applink = source_root / "ms" / "applink.c"
+    dest_applink = install_root / "include" / "openssl" / "applink.c"
+    log("copying %s to %s" % (source_applink, dest_applink))
+    shutil.copyfile(source_applink, dest_applink)
+
 
 def build_openssl(
     entry: str,
@@ -801,6 +811,7 @@ def build_openssl(
 
         root_32 = td / "x86"
         root_64 = td / "x64"
+        root_arm64 = td / "arm64"
 
         if arch == "x86":
             root_32.mkdir()
@@ -824,13 +835,28 @@ def build_openssl(
                 root_64,
                 jom_archive=jom_archive,
             )
+        elif arch == "arm64":
+            root_arm64.mkdir()
+            build_openssl_for_arch(
+                perl_path,
+                "arm64",
+                openssl_archive,
+                openssl_version,
+                nasm_archive,
+                root_arm64,
+                jom_archive=jom_archive,
+            )
         else:
-            raise ValueError("unhandled arch: %s" % arch)
+            raise Exception("unhandled architecture: %s" % arch)
 
         install = td / "out"
 
         if arch == "x86":
             shutil.copytree(root_32 / "install" / "32", install / "openssl" / "win32")
+        elif arch == "arm64":
+            shutil.copytree(
+                root_arm64 / "install" / "arm64", install / "openssl" / "arm64"
+            )
         else:
             shutil.copytree(root_64 / "install" / "64", install / "openssl" / "amd64")
 
@@ -901,9 +927,14 @@ def build_libffi(
         if arch == "x86":
             args.append("-x86")
             artifacts_path = ffi_source_path / "i686-pc-cygwin"
-        else:
+        elif arch == "arm64":
+            args.append("-arm64")
+            artifacts_path = ffi_source_path / "aarch64-w64-cygwin"
+        elif arch == "amd64":
             args.append("-x64")
             artifacts_path = ffi_source_path / "x86_64-w64-cygwin"
+        else:
+            raise Exception("unhandled architecture: %s" % arch)
 
         subprocess.run(args, env=env, check=True)
 
@@ -1297,8 +1328,11 @@ def build_cpython(
     elif arch == "x86":
         build_platform = "win32"
         build_directory = "win32"
+    elif arch == "arm64":
+        build_platform = "arm64"
+        build_directory = "arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
@@ -1332,7 +1366,7 @@ def build_cpython(
 
         # We need all the OpenSSL library files in the same directory to appease
         # install rules.
-        openssl_arch = {"amd64": "amd64", "x86": "win32"}[arch]
+        openssl_arch = {"amd64": "amd64", "x86": "win32", "arm64": "arm64"}[arch]
         openssl_root = td / "openssl" / openssl_arch
         openssl_bin_path = openssl_root / "bin"
         openssl_lib_path = openssl_root / "lib"
@@ -1790,9 +1824,14 @@ def main() -> None:
         if os.environ.get("Platform") == "x86":
             target_triple = "i686-pc-windows-msvc"
             arch = "x86"
-        else:
+        elif os.environ.get("Platform") == "arm64":
+            target_triple = "aarch64-pc-windows-msvc"
+            arch = "arm64"
+        elif os.environ.get("Platform") == "x64":
             target_triple = "x86_64-pc-windows-msvc"
             arch = "amd64"
+        else:
+            raise Exception("unhandled architecture: %s" % os.environ.get("Platform"))
 
         # TODO need better dependency checking.
 

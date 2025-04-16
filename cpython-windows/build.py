@@ -610,11 +610,14 @@ def hack_project_files(
     if meets_python_minimum_version(python_version, "3.12") and (
         meets_python_maximum_version(python_version, "3.13") or arch == "arm64"
     ):
-        static_replace_in_file(
-            pcbuild_path / "_tkinter.vcxproj",
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
-            rb"",
-        )
+        try:
+            static_replace_in_file(
+                pcbuild_path / "_tkinter.vcxproj",
+                rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
+                rb"",
+            )
+        except NoSearchStringError:
+            pass
 
     # We don't need to produce python_uwp.exe and its *w variant. Or the
     # python3.dll, pyshellext, or pylauncher.

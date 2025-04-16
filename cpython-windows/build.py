@@ -1080,7 +1080,7 @@ def collect_python_build_artifacts(
     elif arch == "win32":
         abi_platform = "win32"
     elif arch == "arm64":
-        abi_platform = "arm64"
+        abi_platform = "win__arm64"
     else:
         raise ValueError("unhandled arch: %s" % arch)
 

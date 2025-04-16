@@ -359,7 +359,7 @@ def hack_props(
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.14"):
+    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
     else:
         tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
@@ -486,6 +486,7 @@ def hack_project_files(
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
+    arch: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
 
@@ -583,9 +584,10 @@ def hack_project_files(
     # have a standalone zlib DLL, so we remove references to it. For Python
     # 3.14+, we're using tk-windows-bin 8.6.14 which includes a prebuilt zlib
     # DLL, so we skip this patch there.
-    if meets_python_minimum_version(
-        python_version, "3.12"
-    ) and meets_python_maximum_version(python_version, "3.13"):
+    # On arm64, we use the new version of tk-windows-bin for all versions.
+    if meets_python_minimum_version(python_version, "3.12") and (
+        meets_python_maximum_version(python_version, "3.13") or arch == "arm64"
+    ):
         static_replace_in_file(
             pcbuild_path / "_tkinter.vcxproj",
             rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
@@ -1175,8 +1177,8 @@ def collect_python_build_artifacts(
                 if name == "openssl":
                     name = openssl_entry
 
-                # On 3.14+, we use the latest tcl/tk version
-                if ext == "_tkinter" and python_majmin == "314":
+                # On 3.14+ and aarch64, we use the latest tcl/tk version
+                if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
                     name = name.replace("-8612", "")
 
                 download_entry = DOWNLOADS[name]
@@ -1259,9 +1261,11 @@ def build_cpython(
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)
 
-    # On CPython 3.14+, we use the latest tcl/tk version which has additional runtime
-    # dependencies, so we are conservative and use the old version elsewhere.
-    if meets_python_minimum_version(python_version, "3.14"):
+    # On CPython 3.14+, we use the latest tcl/tk version which has additional
+    # runtime dependencies, so we are conservative and use the old version
+    # elsewhere. The old version isn't built for arm64, so we use the new
+    # version there too
+    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tk_bin_archive = download_entry(
             "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
         )
@@ -1364,6 +1368,7 @@ def build_cpython(
             cpython_source_path,
             build_directory,
             python_version=python_version,
+            arch=arch,
         )
 
         if pgo:

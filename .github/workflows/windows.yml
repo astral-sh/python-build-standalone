@@ -92,6 +92,7 @@ jobs:
           fi
 
   build:
+    timeout-minutes: 60
     needs:
       - generate-matrix
       - pythonbuild

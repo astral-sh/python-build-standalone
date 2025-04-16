@@ -124,6 +124,7 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "libssl-1_1.dll",
     "libssl-1_1-x64.dll",
     "libssl-3.dll",
+    "libssl-3-arm64.dll",
     "libssl-3-x64.dll",
     "python3.dll",
     "python39.dll",

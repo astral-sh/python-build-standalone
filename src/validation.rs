@@ -497,6 +497,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
     [
         ("aarch64-apple-darwin", "macosx-11.0-arm64"),
         ("aarch64-apple-ios", "iOS-aarch64"),
+        ("aarch64-pc-windows-msvc", "win-arm64"),
         ("aarch64-unknown-linux-gnu", "linux-aarch64"),
         ("armv7-unknown-linux-gnueabi", "linux-arm"),
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),

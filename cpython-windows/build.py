@@ -521,6 +521,14 @@ def hack_project_files(
         zlib_entry,
     )
 
+    # `--include-tcltk` is forced off on arm64, undo that
+    # See https://github.com/python/cpython/pull/132650
+    static_replace_in_file(
+        cpython_source_path / "PC" / "layout" / "main.py",
+        rb'if ns.arch in ("arm32", "arm64"):',
+        rb'if ns.arch == "arm32":',
+    )
+
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
     sqlite3_version = DOWNLOADS["sqlite"]["actual_version"].encode("ascii")

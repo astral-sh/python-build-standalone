@@ -1,0 +1,86 @@
+From 439f6e6bb62482a98fb6765d723cedea12f3b10f Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Sat, 19 Apr 2025 11:13:40 -0400
+Subject: [PATCH 1/1] configure: add --enable-static-libpython-for-interpreter
+
+This option changes the behavior of --enable-shared to continue to build
+the libpython3.x.so shared library, but not use it for linking the
+python3 interpreter executable. Instead, the executable is linked
+directly against the libpython .o files as it would be with
+--disable-shared.
+
+There are two benefits of this change. First, libpython uses
+thread-local storage, which is noticeably slower when used in a loaded
+module instead of in the main program, because the main program can take
+advantage of constant offsets from the thread state pointer but loaded
+modules have to dynamically call a function __tls_get_addr() to
+potentially allocate their thread-local storage area. (There is another
+thread-local storage model for dynamic libraries which mitigates most of
+this performance hit, but it comes at the cost of preventing
+dlopen("libpython3.x.so"), which is a use case we want to preserve.)
+
+Second, this improves the user experience around relocatable Python a
+little bit, in that we don't need to use an $ORIGIN-relative path to
+locate libpython3.x.so, which has some mild benefits around musl (which
+does not support $ORIGIN-relative DT_NEEDED, only $ORIGIN-relative
+DT_RPATH/DT_RUNPATH), users who want to make the interpreter setuid or
+setcap (which prevents processing $ORIGIN), etc.
+---
+ configure.ac | 24 +++++++++++++++++++++---
+ 1 file changed, 21 insertions(+), 3 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 004797b5233..a3a5ac1cdce 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1502,6 +1502,17 @@ fi],
+ [AC_MSG_RESULT([yes])])
+ AC_SUBST([STATIC_LIBPYTHON])
+ 
++AC_MSG_CHECKING([for --enable-static-libpython-for-interpreter])
++AC_ARG_ENABLE([static-libpython-for-interpreter],
++   AS_HELP_STRING([--enable-static-libpython-for-interpreter],
++                  [even with --enable-shared, statically link libpython into the interpreter (default is to use the shared library)]))
++
++if test -z "$enable_static_libpython_for_interpreter"
++then
++  enable_static_libpython_for_interpreter="no"
++fi
++AC_MSG_RESULT([$enable_static_libpython_for_interpreter])
++
+ AC_MSG_CHECKING([for --enable-profiling])
+ AC_ARG_ENABLE([profiling],
+               AS_HELP_STRING([--enable-profiling], [enable C-level code profiling with gprof (default is no)]))
+@@ -1660,7 +1671,11 @@ if test "$PY_ENABLE_SHARED" = 1 || test "$enable_framework" ; then
+         LIBRARY_DEPS="\$(LIBRARY) $LIBRARY_DEPS"
+     fi
+     # Link Python program to the shared library
+-    LINK_PYTHON_OBJS='$(BLDLIBRARY)'
++    if test "$enable_static_libpython_for_interpreter" = "yes"; then
++        LINK_PYTHON_OBJS='$(LIBRARY_OBJS)'
++    else
++        LINK_PYTHON_OBJS='$(BLDLIBRARY)'
++    fi
+ else
+     if test "$STATIC_LIBPYTHON" = 0; then
+         # Build Python needs object files but don't need to build
+@@ -2166,11 +2181,14 @@ if test "$Py_BOLT" = 'true' ; then
+   fi
+ fi
+ 
+-dnl Enable BOLT of libpython if built.
++dnl Enable BOLT of libpython if built and used by the python3 binary.
++dnl (If it is built but not used, we cannot profile it.)
+ AC_SUBST([BOLT_BINARIES])
+ BOLT_BINARIES='$(BUILDPYTHON)'
+ AS_VAR_IF([enable_shared], [yes], [
+-  BOLT_BINARIES="${BOLT_BINARIES} \$(INSTSONAME)"
++  AS_VAR_IF([enable_static_libpython_for_interpreter], [no], [
++    BOLT_BINARIES="${BOLT_BINARIES} \$(INSTSONAME)"
++  ])
+ ])
+ 
+ AC_ARG_VAR(
+-- 
+2.39.5 (Apple Git-154)
+

@@ -140,8 +140,13 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "tk86t.dll",
 ];
 
-// CPython 3.14 and ARM64 use tcl/tk 8.6.14+ which includes a bundled zlib and dynamically links to msvcrt.
-const PE_ALLOWED_LIBRARIES_314: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+// CPython 3.14 and ARM64 use a newer version of tcl/tk (8.6.14+) which includes a bundled zlib that
+// dynamically links some system libraries
+const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
+    "zlib1.dll",
+    "api-ms-win-crt-private-l1-1-0.dll", // zlib loads this library on arm64, 3.14+
+    "msvcrt.dll",                        // zlib loads this library
+];
 const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =

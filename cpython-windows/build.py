@@ -359,7 +359,7 @@ def hack_props(
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.14"):
+    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
     else:
         tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
@@ -444,6 +444,8 @@ def hack_props(
         suffix = b"-x64"
     elif arch == "win32":
         suffix = b""
+    elif arch == "arm64":
+        suffix = b""
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
@@ -484,6 +486,7 @@ def hack_project_files(
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
+    arch: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
 
@@ -494,6 +497,14 @@ def hack_project_files(
         pcbuild_path,
         build_directory,
         python_version,
+    )
+
+    # `--include-tcltk` is forced off on arm64, undo that
+    # See https://github.com/python/cpython/pull/132650
+    static_replace_in_file(
+        cpython_source_path / "PC" / "layout" / "main.py",
+        rb'if ns.arch in ("arm32", "arm64"):',
+        rb'if ns.arch == "arm32":',
     )
 
     # Our SQLite directory is named weirdly. This throws off version detection
@@ -581,14 +592,18 @@ def hack_project_files(
     # have a standalone zlib DLL, so we remove references to it. For Python
     # 3.14+, we're using tk-windows-bin 8.6.14 which includes a prebuilt zlib
     # DLL, so we skip this patch there.
-    if meets_python_minimum_version(
-        python_version, "3.12"
-    ) and meets_python_maximum_version(python_version, "3.13"):
-        static_replace_in_file(
-            pcbuild_path / "_tkinter.vcxproj",
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
-            rb"",
-        )
+    # On arm64, we use the new version of tk-windows-bin for all versions.
+    if meets_python_minimum_version(python_version, "3.12") and (
+        meets_python_maximum_version(python_version, "3.13") or arch == "arm64"
+    ):
+        try:
+            static_replace_in_file(
+                pcbuild_path / "_tkinter.vcxproj",
+                rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
+                rb"",
+            )
+        except NoSearchStringError:
+            pass
 
     # We don't need to produce python_uwp.exe and its *w variant. Or the
     # python3.dll, pyshellext, or pylauncher.
@@ -708,9 +723,11 @@ def build_openssl_for_arch(
     elif arch == "amd64":
         configure = "VC-WIN64A"
         prefix = "64"
+    elif arch == "arm64":
+        configure = "VC-WIN64-ARM"
+        prefix = "arm64"
     else:
-        print("invalid architecture: %s" % arch)
-        sys.exit(1)
+        raise Exception("unhandled architecture: %s" % arch)
 
     # The official CPython OpenSSL builds hack ms/uplink.c to change the
     # ``GetModuleHandle(NULL)`` invocation to load things from _ssl.pyd
@@ -758,6 +775,12 @@ def build_openssl_for_arch(
         log("copying %s to %s" % (source, dest))
         shutil.copyfile(source, dest)
 
+    # Copy `applink.c` to the include directory.
+    source_applink = source_root / "ms" / "applink.c"
+    dest_applink = install_root / "include" / "openssl" / "applink.c"
+    log("copying %s to %s" % (source_applink, dest_applink))
+    shutil.copyfile(source_applink, dest_applink)
+
 
 def build_openssl(
     entry: str,
@@ -779,6 +802,7 @@ def build_openssl(
 
         root_32 = td / "x86"
         root_64 = td / "x64"
+        root_arm64 = td / "arm64"
 
         if arch == "x86":
             root_32.mkdir()
@@ -802,13 +826,28 @@ def build_openssl(
                 root_64,
                 jom_archive=jom_archive,
             )
+        elif arch == "arm64":
+            root_arm64.mkdir()
+            build_openssl_for_arch(
+                perl_path,
+                "arm64",
+                openssl_archive,
+                openssl_version,
+                nasm_archive,
+                root_arm64,
+                jom_archive=jom_archive,
+            )
         else:
-            raise ValueError("unhandled arch: %s" % arch)
+            raise Exception("unhandled architecture: %s" % arch)
 
         install = td / "out"
 
         if arch == "x86":
             shutil.copytree(root_32 / "install" / "32", install / "openssl" / "win32")
+        elif arch == "arm64":
+            shutil.copytree(
+                root_arm64 / "install" / "arm64", install / "openssl" / "arm64"
+            )
         else:
             shutil.copytree(root_64 / "install" / "64", install / "openssl" / "amd64")
 
@@ -879,9 +918,14 @@ def build_libffi(
         if arch == "x86":
             args.append("-x86")
             artifacts_path = ffi_source_path / "i686-pc-cygwin"
-        else:
+        elif arch == "arm64":
+            args.append("-arm64")
+            artifacts_path = ffi_source_path / "aarch64-w64-cygwin"
+        elif arch == "amd64":
             args.append("-x64")
             artifacts_path = ffi_source_path / "x86_64-w64-cygwin"
+        else:
+            raise Exception("unhandled architecture: %s" % arch)
 
         subprocess.run(args, env=env, check=True)
 
@@ -1043,6 +1087,8 @@ def collect_python_build_artifacts(
         abi_platform = "win_amd64"
     elif arch == "win32":
         abi_platform = "win32"
+    elif arch == "arm64":
+        abi_platform = "win_arm64"
     else:
         raise ValueError("unhandled arch: %s" % arch)
 
@@ -1142,8 +1188,8 @@ def collect_python_build_artifacts(
                 if name == "openssl":
                     name = openssl_entry
 
-                # On 3.14+, we use the latest tcl/tk version
-                if ext == "_tkinter" and python_majmin == "314":
+                # On 3.14+ and aarch64, we use the latest tcl/tk version
+                if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
                     name = name.replace("-8612", "")
 
                 download_entry = DOWNLOADS[name]
@@ -1226,16 +1272,14 @@ def build_cpython(
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)
 
-    # On CPython 3.14+, we use the latest tcl/tk version which has additional runtime
-    # dependencies, so we are conservative and use the old version elsewhere.
-    if meets_python_minimum_version(python_version, "3.14"):
-        tk_bin_archive = download_entry(
-            "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
-        )
-    else:
-        tk_bin_archive = download_entry(
-            "tk-windows-bin-8612", BUILD, local_name="tk-windows-bin.tar.gz"
-        )
+    # On CPython 3.14+, we use the latest tcl/tk version which has additional
+    # runtime dependencies, so we are conservative and use the old version
+    # elsewhere. The old version isn't built for arm64, so we use the new
+    # version there too
+    tk_bin_entry = "tk-windows-bin" if meets_python_minimum_version(python_version, "3.14") or arch == "arm64" else "tk-windows-bin-8612"
+    tk_bin_archive = download_entry(
+        tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
+    )
 
     # CPython 3.13+ no longer uses a bundled `mpdecimal` version so we build it
     if meets_python_minimum_version(python_version, "3.13"):
@@ -1259,8 +1303,11 @@ def build_cpython(
     elif arch == "x86":
         build_platform = "win32"
         build_directory = "win32"
+    elif arch == "arm64":
+        build_platform = "arm64"
+        build_directory = "arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
@@ -1293,7 +1340,7 @@ def build_cpython(
 
         # We need all the OpenSSL library files in the same directory to appease
         # install rules.
-        openssl_arch = {"amd64": "amd64", "x86": "win32"}[arch]
+        openssl_arch = {"amd64": "amd64", "x86": "win32", "arm64": "arm64"}[arch]
         openssl_root = td / "openssl" / openssl_arch
         openssl_bin_path = openssl_root / "bin"
         openssl_lib_path = openssl_root / "lib"
@@ -1306,6 +1353,11 @@ def build_cpython(
             dest = openssl_lib_path / f
             log("copying %s to %s" % (source, dest))
             shutil.copyfile(source, dest)
+
+        # Delete the tk nmake helper, it's not needed and links msvc
+        tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
+        tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+        (tcltk_path / build_directory / "lib" / "nmake" / "x86_64-w64-mingw32-nmakehlp.exe").unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
@@ -1328,6 +1380,7 @@ def build_cpython(
             cpython_source_path,
             build_directory,
             python_version=python_version,
+            arch=arch,
         )
 
         if pgo:
@@ -1749,9 +1802,14 @@ def main() -> None:
         if os.environ.get("Platform") == "x86":
             target_triple = "i686-pc-windows-msvc"
             arch = "x86"
-        else:
+        elif os.environ.get("Platform") == "arm64":
+            target_triple = "aarch64-pc-windows-msvc"
+            arch = "arm64"
+        elif os.environ.get("Platform") == "x64":
             target_triple = "x86_64-pc-windows-msvc"
             arch = "amd64"
+        else:
+            raise Exception("unhandled architecture: %s" % os.environ.get("Platform"))
 
         # TODO need better dependency checking.
 

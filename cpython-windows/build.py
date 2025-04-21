@@ -1090,7 +1090,7 @@ def collect_python_build_artifacts(
     elif arch == "arm64":
         abi_platform = "win_arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     if freethreaded:
         abi_tag = ".cp%st-%s" % (python_majmin, abi_platform)
@@ -1276,7 +1276,11 @@ def build_cpython(
     # runtime dependencies, so we are conservative and use the old version
     # elsewhere. The old version isn't built for arm64, so we use the new
     # version there too
-    tk_bin_entry = "tk-windows-bin" if meets_python_minimum_version(python_version, "3.14") or arch == "arm64" else "tk-windows-bin-8612"
+    tk_bin_entry = (
+        "tk-windows-bin"
+        if meets_python_minimum_version(python_version, "3.14") or arch == "arm64"
+        else "tk-windows-bin-8612"
+    )
     tk_bin_archive = download_entry(
         tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
     )
@@ -1357,7 +1361,13 @@ def build_cpython(
         # Delete the tk nmake helper, it's not needed and links msvc
         tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
         tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
-        (tcltk_path / build_directory / "lib" / "nmake" / "x86_64-w64-mingw32-nmakehlp.exe").unlink()
+        (
+            tcltk_path
+            / build_directory
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

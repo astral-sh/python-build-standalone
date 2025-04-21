@@ -523,11 +523,14 @@ def hack_project_files(
 
     # `--include-tcltk` is forced off on arm64, undo that
     # See https://github.com/python/cpython/pull/132650
-    static_replace_in_file(
-        cpython_source_path / "PC" / "layout" / "main.py",
-        rb'if ns.arch in ("arm32", "arm64"):',
-        rb'if ns.arch == "arm32":',
-    )
+    try:
+        static_replace_in_file(
+            cpython_source_path / "PC" / "layout" / "main.py",
+            rb'if ns.arch in ("arm32", "arm64"):',
+            rb'if ns.arch == "arm32":',
+        )
+    except NoSearchStringError:
+        pass
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -1116,7 +1119,7 @@ def collect_python_build_artifacts(
     elif arch == "arm64":
         abi_platform = "win_arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     if freethreaded:
         abi_tag = ".cp%st-%s" % (python_majmin, abi_platform)
@@ -1216,7 +1219,7 @@ def collect_python_build_artifacts(
 
                 if name == "zlib":
                     name = zlib_entry
-:
+
                 # On 3.14+ and aarch64, we use the latest tcl/tk version
                 if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
                     name = name.replace("-8612", "")
@@ -1308,7 +1311,11 @@ def build_cpython(
     # runtime dependencies, so we are conservative and use the old version
     # elsewhere. The old version isn't built for arm64, so we use the new
     # version there too
-    tk_bin_entry = "tk-windows-bin" if meets_python_minimum_version(python_version, "3.14") or arch == "arm64" else "tk-windows-bin-8612"
+    tk_bin_entry = (
+        "tk-windows-bin"
+        if meets_python_minimum_version(python_version, "3.14") or arch == "arm64"
+        else "tk-windows-bin-8612"
+    )
     tk_bin_archive = download_entry(
         tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
     )
@@ -1396,7 +1403,13 @@ def build_cpython(
         # Delete the tk nmake helper, it's not needed and links msvc
         tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
         tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
-        (tcltk_path / build_directory / "lib" / "nmake" / "x86_64-w64-mingw32-nmakehlp.exe").unlink()
+        (
+            tcltk_path
+            / build_directory
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

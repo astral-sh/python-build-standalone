@@ -155,6 +155,12 @@ else
     patch -p1 -i ${ROOT}/patch-macos-link-extension-modules.patch
 fi
 
+# `libuuid` does not build with support for determining MAC addresses, which makes `uuid.get_node`
+# unstable. The upstream has other methods to determine the MAC address, which we can force fallback
+# to.
+# See https://github.com/python/cpython/pull/132901
+patch -p1 -i ${ROOT}/patch-uuid-get-node-unstable.patch
+
 # Also on macOS, the `python` executable is linked against libraries defined by statically
 # linked modules. But those libraries should only get linked into libpython, not the
 # executable. This behavior is kinda suspect on all platforms, as it could be adding

@@ -109,33 +109,6 @@ To use pip, run ``python.exe -m pip``. (It is generally a best practice to
 invoke pip via ``python -m pip`` on all platforms so you can be explicit
 about the ``python`` executable that pip uses.)
 
-.. _quirk_windows_static_distributions:
-
-Windows Static Distributions are Extremely Brittle
-==================================================
-
-This project produces statically linked CPython distributions for Windows.
-
-Building these distributions requires extensive patching of CPython's build
-system. There are many aspects of CPython, the standard library, and 3rd party
-libraries that make assumptions that things will be built as dynamic libraries
-and break in these static builds.
-
-Here is a list of known problems:
-
-* Most Windows extension modules link against ``pythonXY.dll`` (e.g.
-  ``python39.dll``) or ``python3.dll`` and will fail to load on the static
-  distributions. Extension modules will need to be explicitly recompiled
-  against the static distribution.
-* There is no supported *platform tag* for Windows static distributions and
-  therefore there is no supported way to distribute binary wheels targeting
-  the Python static distributions.
-* Aspects of OpenSSL (and therefore Python's ``ssl`` module) don't work when
-  OpenSSL is compiled/linked statically. You will get opaque run-time errors.
-
-It is **highly** recommended to extensively test your application against the
-static Windows distributions to ensure it works.
-
 .. _quirk_macos_linking:
 
 Linking Static Library on macOS

@@ -562,6 +562,7 @@ def python_build_info(
     bi["object_file_format"] = object_file_format
 
     # Determine allowed libaries on Linux
+    libs = extra_metadata["python_config_vars"].get("LIBS", "").split()
     mips = target_triple.split("-")[0] in {"mips", "mipsel"}
     linux_allowed_system_libraries = LINUX_ALLOW_SYSTEM_LIBRARIES.copy()
     if mips and version == "3.13":
@@ -569,14 +570,26 @@ def python_build_info(
         linux_allowed_system_libraries.add("atomic")
     riscv = target_triple.split("-")[0] in {"riscv64"}
     if riscv:
-        # RISC-V binary often comes with libatomic on old GCC versions
+        # On older GCC versions, RISC-V sub-word atomic operations require a
+        # helper function found in libatomic. To facilitate this, GCC <15 adds
+        # "-latomic" to the definition of "-pthread". We think it's generally
+        # reasonable on RISC-V systems (but not all Linux systems in general)
+        # to expect a libatomic system library is installed.
+        #
+        # Because "-latomic" is implicitly added by "-pthread", it may not be
+        # found in the LIBS sysconfig variable, but we need to pretend it is so
+        # that it gets into PYTHON.json (in particular, so that the validation
+        # script accepts this dependency).
+        #
         # See https://github.com/riscvarchive/riscv-gcc/issues/12
         # https://github.com/riscvarchive/riscv-gcc/issues/337
         # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86005
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104338
+        # https://github.com/gcc-mirror/gcc/commit/203f3060dd363361b172f7295f42bb6bf5ac0b3b
         linux_allowed_system_libraries.add("atomic")
+        libs.append("-latomic")
 
     # Add in core linking annotations.
-    libs = extra_metadata["python_config_vars"].get("LIBS", "").split()
     skip = False
     for i, lib in enumerate(libs):
         if skip:

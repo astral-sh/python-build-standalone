@@ -306,17 +306,6 @@ else
     patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
 fi
 
-# We patched configure.ac above. Reflect those changes.
-autoconf
-
-# configure assumes cross compiling when host != target and doesn't provide a way to
-# override. Our target triple normalization may lead configure into thinking we
-# aren't cross-compiling when we are. So force a static "yes" value when our
-# build system says we are cross-compiling.
-if [ -n "${CROSS_COMPILING}" ]; then
-  patch -p1 -i ${ROOT}/patch-force-cross-compile.patch
-fi
-
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault
@@ -582,6 +571,14 @@ else
 fi
 
 if [ -n "${CROSS_COMPILING}" ]; then
+    # configure assumes cross compiling when host != target and doesn't
+    # provide a way to override. Our target triple normalization may
+    # lead configure into thinking we aren't cross-compiling when we
+    # are. So force a static "yes" value when our build system says we
+    # are cross-compiling.
+    # See also https://savannah.gnu.org/support/?110348
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} cross_compiling=yes"
+
     # configure doesn't like a handful of scenarios when cross-compiling.
     #
     # getaddrinfo buggy test fails for some reason. So we short-circuit it.
@@ -598,7 +595,17 @@ if [ -n "${CROSS_COMPILING}" ]; then
     if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_working_tzset=yes"
     fi
+
+    # Also, it cannot detect whether the compiler supports -pthread or
+    # not, and conservatively defaults to no, which is not the right
+    # default on relatively modern compilers.
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_pthread=yes"
+
+    # TODO: There are probably more of these, see #399.
 fi
+
+# We patched configure.ac above. Reflect those changes.
+autoconf
 
 CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}

@@ -21,6 +21,7 @@ env:
 permissions:
   contents: write
   packages: write
+  releases: wrte
   # Permissions used for actions/attest-build-provenance
   id-token: write
   attestations: write

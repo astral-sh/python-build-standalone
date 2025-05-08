@@ -311,6 +311,15 @@ _heapq:
   sources:
     - _heapqmodule.c
 
+_hmac:
+  minimum-python-version: '3.14'
+  sources:
+    - hmacmodule.c
+  includes:
+    - Modules/_hacl
+  links:
+    - :libHacl_Hash_Blake2.a
+
 _imp:
   config-c-only: true
 
@@ -699,6 +708,12 @@ _tracemalloc:
   setup-enabled: true
   required-targets:
     - .*
+
+_types:
+  minimum-python-version: "3.14"
+  setup-enabled: true
+  sources:
+    - _typesmodule.c
 
 _typing:
   minimum-python-version: "3.11"

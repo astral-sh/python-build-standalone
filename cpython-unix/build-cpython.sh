@@ -298,14 +298,6 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-crypt-no-modify-libs.patch
 fi
 
-# Build a libpython3.x.so, but statically link the interpreter against
-# libpython.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
-else
-    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
-fi
-
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault
@@ -379,9 +371,24 @@ CONFIGURE_FLAGS="
     --with-system-expat
     --with-system-libmpdec
     --without-ensurepip
-    --enable-static-libpython-for-interpreter
     ${EXTRA_CONFIGURE_FLAGS}"
 
+
+# Build a libpython3.x.so, but statically link the interpreter against
+# libpython.
+#
+# For now skip this on macos, because it causes some linker failures. Note that
+# this patch mildly conflicts with the macos-only patch-python-link-modules
+# applied above, so you will need to resolve that conflict if you re-enable
+# this for macos.
+if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
+    fi
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
+fi
 
 if [ "${CC}" = "musl-clang" ]; then
     # In order to build the _blake2 extension module with SSE3+ instructions, we need

@@ -326,6 +326,9 @@ _hmac:
     - :libHacl_Hash_SHA2.a
     - :libHacl_Hash_SHA3.a
     - :libHacl_Hash_MD5.a
+  defines:
+    - _BSD_SOURCE
+    - _DEFAULT_SOURCE
 
 _imp:
   config-c-only: true

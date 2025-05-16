@@ -320,7 +320,6 @@ _hmac:
   includes:
     - Modules/_hacl/
     - Modules/_hacl/include/
-    - Modules/_hacl/include/krml/
   links:
     - :libHacl_Hash_Blake2.a
     - :libHacl_Hash_SHA1.a

@@ -763,6 +763,8 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_tokenize",
     "_typing",
     "_zoneinfo",
+    "_hmac",
+    "_types",
 ];
 
 const GLOBAL_EXTENSIONS_MACOS: &[&str] = &["_scproxy"];

@@ -315,10 +315,18 @@ _hmac:
   minimum-python-version: '3.14'
   sources:
     - hmacmodule.c
+    - _hacl/Hacl_HMAC.c
+    - _hacl/Hacl_Streaming_HMAC.c
   includes:
-    - Modules/_hacl
+    - Modules/_hacl/
+    - Modules/_hacl/include/
+    - Modules/_hacl/include/krml/
   links:
     - :libHacl_Hash_Blake2.a
+    - :libHacl_Hash_SHA1.a
+    - :libHacl_Hash_SHA2.a
+    - :libHacl_Hash_SHA3.a
+    - :libHacl_Hash_MD5.a
 
 _imp:
   config-c-only: true
@@ -371,6 +379,10 @@ _md5:
   sources-conditional:
     - source: _hacl/Hacl_Hash_MD5.c
       minimum-python-version: "3.12"
+      maximum-python-version: "3.13"
+  links-conditional:
+    - name: :libHacl_Hash_MD5.a
+      minimum-python-version: "3.14"
   defines-conditional:
     - define: _BSD_SOURCE
       minimum-python-version: "3.12"
@@ -447,6 +459,10 @@ _sha1:
   sources-conditional:
     - source: _hacl/Hacl_Hash_SHA1.c
       minimum-python-version: "3.12"
+      maximum-python-version: "3.13"
+  links-conditional:
+    - name: :libHacl_Hash_SHA1.a
+      minimum-python-version: "3.14"
   includes:
     - Modules/_hacl/include
   defines-conditional:
@@ -466,7 +482,12 @@ _sha2:
   minimum-python-version: "3.12"
   sources:
     - sha2module.c
-    - _hacl/Hacl_Hash_SHA2.c
+  sources-conditional:
+    - source: _hacl/Hacl_Hash_SHA2.c
+      maximum-python-version: "3.13"
+  links-conditional:
+    - name: :libHacl_Hash_SHA2.a
+      minimum-python-version: "3.14"
   includes:
     - Modules/_hacl/include
   defines:
@@ -480,9 +501,12 @@ _sha3:
       maximum-python-version: "3.11"
     - source: sha3module.c
       minimum-python-version: "3.12"
-
     - source: _hacl/Hacl_Hash_SHA3.c
       minimum-python-version: "3.12"
+      maximum-python-version: "3.13"
+  links-conditional:
+    - name: :libHacl_Hash_SHA3.a
+      minimum-python-version: "3.14"
   includes:
     - Modules/_hacl/include
   defines-conditional:

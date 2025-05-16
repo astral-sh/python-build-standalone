@@ -411,6 +411,10 @@ def hack_props(
             elif b"<zlibDir" in line:
                 line = b"<zlibDir>%s\\</zlibDir>" % zlib_path
 
+            # On 3.14+, it's zlib-ng and the name changed
+            elif b"<zlibNgDir" in line:
+                line = b"<zlibNgDir>%s\\</zlibNgDir>" % zlib_path
+
             elif b"<mpdecimalDir" in line:
                 line = b"<mpdecimalDir>%s\\</mpdecimalDir>" % mpdecimal_path
 

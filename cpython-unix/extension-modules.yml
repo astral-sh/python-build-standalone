@@ -629,6 +629,7 @@ _testcapi:
 
 _testexternalinspection:
   minimum-python-version: '3.13'
+  maximum-python-version: '3.13'
   sources:
     - _testexternalinspection.c
 

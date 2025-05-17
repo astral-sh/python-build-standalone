@@ -370,7 +370,7 @@ def hack_props(
     libffi_path = td / "libffi"
     tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
     xz_path = td / ("xz-%s" % xz_version)
-    zlib_prefix = "cpython-bin-deps-" if zlib_entry == "zlib-ng" else ""
+    zlib_prefix = "cpython-source-deps-" if zlib_entry == "zlib-ng" else ""
     zlib_path = td / ("%s%s-%s" % (zlib_prefix, zlib_entry, zlib_version))
     mpdecimal_path = td / ("mpdecimal-%s" % mpdecimal_version)
 

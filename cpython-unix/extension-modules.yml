@@ -435,6 +435,11 @@ _random:
   sources:
     - _randommodule.c
 
+
+_remote_debugging:
+  sources:
+    - remote_debugging.c
+
 _scproxy:
   # _scproxy is Apple OS only.
   # APIs required by _scproxy not available on iOS.

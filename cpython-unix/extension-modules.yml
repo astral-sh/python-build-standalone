@@ -437,6 +437,7 @@ _random:
 
 
 _remote_debugging:
+  minimum-python-version: "3.14"
   sources:
     - remote_debugging.c
 
@@ -773,6 +774,14 @@ _xxtestfuzz:
   sources:
     - _xxtestfuzz/_xxtestfuzz.c
     - _xxtestfuzz/fuzzer.c
+
+_zstd:
+  minimum-python-version: '3.14'
+  sources:
+    - _zstd/_zstdmodule.c
+    - _zstd/zdict.c
+    - _zstd/compressor.c
+    - _zstd/decompressor.c
 
 _zoneinfo:
   minimum-python-version: "3.9"

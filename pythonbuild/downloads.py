@@ -392,10 +392,10 @@ DOWNLOADS = {
         "version": "2019.1",
     },
     "xtrans": {
-        "url": "https://www.x.org/archive/individual/lib/xtrans-1.5.0.tar.gz",
-        "size": 230197,
-        "sha256": "a806f8a92f879dcd0146f3f1153fdffe845f2fc0df9b1a26c19312b7b0a29c86",
-        "version": "1.5.0",
+        "url": "https://www.x.org/archive/individual/lib/xtrans-1.6.0.tar.gz",
+        "size": 239113,
+        "sha256": "936b74c60b19c317c3f3cb1b114575032528dbdaf428740483200ea874c2ca0a",
+        "version": "1.6.0",
     },
     # IMPORTANT: xz 5.6 has a backdoor. Be extremely cautious before taking any xz
     # upgrade since it isn't clear which versions are safe.

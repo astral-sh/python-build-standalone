@@ -99,23 +99,11 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.expat.txt",
     },
-    "inputproto": {
-        "url": "https://www.x.org/archive/individual/proto/inputproto-2.3.2.tar.gz",
-        "size": 244334,
-        "sha256": "10eaadd531f38f7c92ab59ef0708ca195caf3164a75c4ed99f0c04f2913f6ef3",
-        "version": "2.3.2",
-    },
     "jom-windows-bin": {
         "url": "http://download.qt.io/official_releases/jom/jom_1_1_4.zip",
         "size": 1696930,
         "sha256": "d533c1ef49214229681e90196ed2094691e8c4a0a0bef0b2c901debcb562682b",
         "version": "1.1.4",
-    },
-    "kbproto": {
-        "url": "https://www.x.org/archive/individual/proto/kbproto-1.0.7.tar.gz",
-        "size": 325858,
-        "sha256": "828cb275b91268b1a3ea950d5c0c5eb076c678fdf005d517411f89cc8c3bb416",
-        "version": "1.0.7",
     },
     "libedit": {
         "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz",
@@ -184,6 +172,13 @@ DOWNLOADS = {
         "size": 158614671,
         "sha256": "04cb77c660f09df017a57738ae9635ef23a506024789f2f18da1304b45af2023",
         "version": "14.0.3+20220508",
+    },
+    # Remember to update LLVM_URL in src/release.rs whenever upgrading.
+    "llvm-20-aarch64-linux": {
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
+        "size": 255946687,
+        "sha256": "e70753f294b8f83fffbaf07af36857c27ceaef0291cb10f724ada6af11b0a5bc",
+        "version": "20.1.4+20250511",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-20-x86_64-linux": {
@@ -386,10 +381,10 @@ DOWNLOADS = {
         "license_file": "LICENSE.libuuid.txt",
     },
     "x11-util-macros": {
-        "url": "https://www.x.org/archive/individual/util/util-macros-1.20.1.tar.gz",
-        "size": 105481,
-        "sha256": "b373f72887b1394ce2193180a60cb0d1fb8b17bc96ddd770cfd7a808cb489a15",
-        "version": "1.20.1",
+        "url": "https://www.x.org/archive/individual/util/util-macros-1.20.2.tar.gz",
+        "size": 105410,
+        "sha256": "f642f8964d81acdf06653fdf9dbc210c43ce4bd308bd644a8d573148d0ced76b",
+        "version": "1.20.2",
     },
     "xcb-proto": {
         "url": "https://www.x.org/archive/individual/proto/xcb-proto-1.14.1.tar.gz",
@@ -397,31 +392,17 @@ DOWNLOADS = {
         "sha256": "85cd21e9d9fbc341d0dbf11eace98d55d7db89fda724b0e598855fcddf0944fd",
         "version": "1.14.1",
     },
-    "xextproto": {
-        "url": "https://www.x.org/archive/individual/proto/xextproto-7.3.0.tar.gz",
-        "size": 290814,
-        "sha256": "1b1bcdf91221e78c6c33738667a57bd9aaa63d5953174ad8ed9929296741c9f5",
-        "version": "7.3.0",
-    },
-    # Newer versions from at least 2023 have build failures for reasons we haven't
-    # fully investigated.
     "xorgproto": {
-        "url": "https://www.x.org/archive/individual/proto/xorgproto-2019.1.tar.gz",
-        "size": 1119813,
-        "sha256": "38ad1d8316515785d53c5162b4b7022918e03c11d72a5bd9df0a176607f42bca",
-        "version": "2019.1",
-    },
-    "xproto": {
-        "url": "https://www.x.org/archive/individual/proto/xproto-7.0.31.tar.gz",
-        "size": 367979,
-        "sha256": "6d755eaae27b45c5cc75529a12855fed5de5969b367ed05003944cf901ed43c7",
-        "version": "7.0.31",
+        "url": "https://www.x.org/archive/individual/proto/xorgproto-2024.1.tar.gz",
+        "size": 1115486,
+        "sha256": "4f6b9b4faf91e5df8265b71843a91fc73dc895be6210c84117a996545df296ce",
+        "version": "2024.1",
     },
     "xtrans": {
-        "url": "https://www.x.org/archive/individual/lib/xtrans-1.5.0.tar.gz",
-        "size": 230197,
-        "sha256": "a806f8a92f879dcd0146f3f1153fdffe845f2fc0df9b1a26c19312b7b0a29c86",
-        "version": "1.5.0",
+        "url": "https://www.x.org/archive/individual/lib/xtrans-1.6.0.tar.gz",
+        "size": 239113,
+        "sha256": "936b74c60b19c317c3f3cb1b114575032528dbdaf428740483200ea874c2ca0a",
+        "version": "1.6.0",
     },
     # IMPORTANT: xz 5.6 has a backdoor. Be extremely cautious before taking any xz
     # upgrade since it isn't clear which versions are safe.

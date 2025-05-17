@@ -385,13 +385,11 @@ DOWNLOADS = {
         "sha256": "85cd21e9d9fbc341d0dbf11eace98d55d7db89fda724b0e598855fcddf0944fd",
         "version": "1.14.1",
     },
-    # Newer versions from at least 2023 have build failures for reasons we haven't
-    # fully investigated.
     "xorgproto": {
-        "url": "https://www.x.org/archive/individual/proto/xorgproto-2019.1.tar.gz",
-        "size": 1119813,
-        "sha256": "38ad1d8316515785d53c5162b4b7022918e03c11d72a5bd9df0a176607f42bca",
-        "version": "2019.1",
+        "url": "https://www.x.org/archive/individual/proto/xorgproto-2024.1.tar.gz",
+        "size": 1115486,
+        "sha256": "4f6b9b4faf91e5df8265b71843a91fc73dc895be6210c84117a996545df296ce",
+        "version": "2024.1",
     },
     "xtrans": {
         "url": "https://www.x.org/archive/individual/lib/xtrans-1.6.0.tar.gz",

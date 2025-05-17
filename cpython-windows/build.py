@@ -1002,6 +1002,7 @@ def collect_python_build_artifacts(
     depends_projects |= {
         "liblzma",
         "sqlite3",
+        "zlib-ng",
     }
 
     known_projects = (

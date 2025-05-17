@@ -758,6 +758,7 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_interpchannels",
     "_interpqueues",
     "_interpreters",
+    "_remote_debugging",
     "_sha2",
     "_sysconfig",
     "_tokenize",

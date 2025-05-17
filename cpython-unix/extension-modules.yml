@@ -38,9 +38,6 @@ _blake2:
       - Modules/_hacl/include
       - Modules/_hacl/internal
       minimum-python-version: "3.14"
-  links-conditional:
-    - name: :libHacl_Hash_Blake2.a
-      minimum-python-version: "3.14"
   defines-conditional:
     - define: _BSD_SOURCE
       minimum-python-version: "3.14"

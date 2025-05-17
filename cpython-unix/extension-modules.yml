@@ -88,6 +88,9 @@ _collections:
 _contextvars:
   sources:
     - _contextvarsmodule.c
+  config-c-only-conditional:
+    - config-c-only: true
+      minimum-python-version: "3.14"
 
 _crypt:
   maximum-python-version: "3.12"
@@ -439,7 +442,7 @@ _random:
 _remote_debugging:
   minimum-python-version: "3.14"
   sources:
-    - remote_debugging.c
+    - _remote_debugging_module.c
 
 _scproxy:
   # _scproxy is Apple OS only.

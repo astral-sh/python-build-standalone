@@ -99,23 +99,11 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.expat.txt",
     },
-    "inputproto": {
-        "url": "https://www.x.org/archive/individual/proto/inputproto-2.3.2.tar.gz",
-        "size": 244334,
-        "sha256": "10eaadd531f38f7c92ab59ef0708ca195caf3164a75c4ed99f0c04f2913f6ef3",
-        "version": "2.3.2",
-    },
     "jom-windows-bin": {
         "url": "http://download.qt.io/official_releases/jom/jom_1_1_4.zip",
         "size": 1696930,
         "sha256": "d533c1ef49214229681e90196ed2094691e8c4a0a0bef0b2c901debcb562682b",
         "version": "1.1.4",
-    },
-    "kbproto": {
-        "url": "https://www.x.org/archive/individual/proto/kbproto-1.0.7.tar.gz",
-        "size": 325858,
-        "sha256": "828cb275b91268b1a3ea950d5c0c5eb076c678fdf005d517411f89cc8c3bb416",
-        "version": "1.0.7",
     },
     "libedit": {
         "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz",
@@ -397,12 +385,6 @@ DOWNLOADS = {
         "sha256": "85cd21e9d9fbc341d0dbf11eace98d55d7db89fda724b0e598855fcddf0944fd",
         "version": "1.14.1",
     },
-    "xextproto": {
-        "url": "https://www.x.org/archive/individual/proto/xextproto-7.3.0.tar.gz",
-        "size": 290814,
-        "sha256": "1b1bcdf91221e78c6c33738667a57bd9aaa63d5953174ad8ed9929296741c9f5",
-        "version": "7.3.0",
-    },
     # Newer versions from at least 2023 have build failures for reasons we haven't
     # fully investigated.
     "xorgproto": {
@@ -410,12 +392,6 @@ DOWNLOADS = {
         "size": 1119813,
         "sha256": "38ad1d8316515785d53c5162b4b7022918e03c11d72a5bd9df0a176607f42bca",
         "version": "2019.1",
-    },
-    "xproto": {
-        "url": "https://www.x.org/archive/individual/proto/xproto-7.0.31.tar.gz",
-        "size": 367979,
-        "sha256": "6d755eaae27b45c5cc75529a12855fed5de5969b367ed05003944cf901ed43c7",
-        "version": "7.0.31",
     },
     "xtrans": {
         "url": "https://www.x.org/archive/individual/lib/xtrans-1.5.0.tar.gz",

@@ -1135,8 +1135,6 @@ def main():
             "bdb",
             "bzip2",
             "expat",
-            "inputproto",
-            "kbproto",
             "libffi-3.3",
             "libffi",
             "libpthread-stubs",
@@ -1150,9 +1148,7 @@ def main():
             "tcl",
             "uuid",
             "x11-util-macros",
-            "xextproto",
             "xorgproto",
-            "xproto",
             "xtrans",
             "xz",
             "zlib",
@@ -1182,15 +1178,11 @@ def main():
                 build_options=build_options,
                 dest_archive=dest_archive,
                 extra_archives={
-                    "inputproto",
-                    "kbproto",
                     "libpthread-stubs",
                     "libXau",
                     "libxcb",
                     "x11-util-macros",
-                    "xextproto",
                     "xorgproto",
-                    "xproto",
                     "xtrans",
                 },
             )
@@ -1205,7 +1197,7 @@ def main():
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
-                extra_archives={"x11-util-macros", "xproto"},
+                extra_archives={"x11-util-macros", "xorgproto"},
             )
 
         elif action == "xcb-proto":
@@ -1230,7 +1222,7 @@ def main():
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
-                extra_archives={"libpthread-stubs", "libXau", "xcb-proto", "xproto"},
+                extra_archives={"libpthread-stubs", "libXau", "xcb-proto", "xorgproto"},
             )
 
         elif action == "tix":

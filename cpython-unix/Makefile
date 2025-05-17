@@ -117,12 +117,6 @@ $(OUTDIR)/bzip2-$(BZIP2_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(
 $(OUTDIR)/expat-$(EXPAT_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-expat.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) expat
 
-$(OUTDIR)/inputproto-$(INPUTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-inputproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) inputproto
-
-$(OUTDIR)/kbproto-$(KBPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-kbproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) kbproto
-
 $(OUTDIR)/libffi-3.3-$(LIBFFI_3.3_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libffi-3.3.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libffi-3.3
 
@@ -135,10 +129,6 @@ $(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar: $(
 LIBX11_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
     $(HERE)/build-libX11.sh \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xextproto-$(XEXTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/kbproto-$(KBPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/inputproto-$(INPUTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libxcb-$(LIBXCB_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/xtrans-$(XTRANS_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
@@ -151,7 +141,7 @@ LIBXAU_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
     $(HERE)/build-libXau.sh \
     $(OUTDIR)/x11-util-macros-$(X11_UTIL_MACROS_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(NULL)
 
 $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXAU_DEPENDS)
@@ -163,7 +153,7 @@ LIBXCB_DEPENDS = \
     $(OUTDIR)/image-$(DOCKER_IMAGE_XCB).tar \
     $(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(NULL)
 
@@ -231,14 +221,8 @@ $(OUTDIR)/x11-util-macros-$(X11_UTIL_MACROS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PY
 $(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xcb-proto.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) xcb-proto
 
-$(OUTDIR)/xextproto-$(XEXTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xextproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xextproto
-
 $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xorgproto.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xorgproto
-
-$(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xproto
 
 $(OUTDIR)/xtrans-$(XTRANS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xtrans.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xtrans

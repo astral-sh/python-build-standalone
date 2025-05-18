@@ -331,6 +331,7 @@ _hmac:
     - _DEFAULT_SOURCE
   linker-args:
     - args: ["-LModules/_hacl"]
+      targets: []
 
 _imp:
   config-c-only: true

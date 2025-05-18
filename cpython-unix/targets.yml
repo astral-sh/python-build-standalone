@@ -61,7 +61,8 @@
 # 11.0+.
 aarch64-apple-darwin:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -111,7 +112,8 @@ aarch64-apple-darwin:
 
 aarch64-apple-ios:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -153,7 +155,7 @@ aarch64-apple-ios:
 
 aarch64-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -194,7 +196,8 @@ aarch64-unknown-linux-gnu:
 
 arm64-apple-tvos:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -235,7 +238,7 @@ arm64-apple-tvos:
 
 armv7-unknown-linux-gnueabi:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -276,7 +279,7 @@ armv7-unknown-linux-gnueabi:
 
 armv7-unknown-linux-gnueabihf:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -317,7 +320,7 @@ armv7-unknown-linux-gnueabihf:
 
 i686-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -363,7 +366,7 @@ i686-unknown-linux-gnu:
 
 mips-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -404,7 +407,7 @@ mips-unknown-linux-gnu:
 
 mipsel-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -445,7 +448,7 @@ mipsel-unknown-linux-gnu:
 
 ppc64le-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -486,7 +489,7 @@ ppc64le-unknown-linux-gnu:
 
 riscv64-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -527,7 +530,7 @@ riscv64-unknown-linux-gnu:
 
 s390x-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -568,7 +571,8 @@ s390x-unknown-linux-gnu:
 
 thumb7k-apple-watchos:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -613,7 +617,8 @@ thumb7k-apple-watchos:
 # machines.
 x86_64-apple-darwin:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -663,7 +668,8 @@ x86_64-apple-darwin:
 
 x86_64-apple-ios:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -705,7 +711,8 @@ x86_64-apple-ios:
 
 x86_64-apple-tvos:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -746,7 +753,8 @@ x86_64-apple-tvos:
 
 x86_64-apple-watchos:
   host_platforms:
-    - macos
+    - macos_arm64
+    - macos_x86_64
   pythons_supported:
     - '3.9'
   needs_toolchain: true
@@ -787,7 +795,7 @@ x86_64-apple-watchos:
 
 x86_64-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -833,7 +841,7 @@ x86_64-unknown-linux-gnu:
 
 x86_64_v2-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -880,7 +888,7 @@ x86_64_v2-unknown-linux-gnu:
 
 x86_64_v3-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -927,7 +935,7 @@ x86_64_v3-unknown-linux-gnu:
 
 x86_64_v4-unknown-linux-gnu:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -974,7 +982,7 @@ x86_64_v4-unknown-linux-gnu:
 
 x86_64-unknown-linux-musl:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -1018,7 +1026,7 @@ x86_64-unknown-linux-musl:
 
 x86_64_v2-unknown-linux-musl:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -1063,7 +1071,7 @@ x86_64_v2-unknown-linux-musl:
 
 x86_64_v3-unknown-linux-musl:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -1108,7 +1116,7 @@ x86_64_v3-unknown-linux-musl:
 
 x86_64_v4-unknown-linux-musl:
   host_platforms:
-    - linux64
+    - linux_x86_64
   pythons_supported:
     - '3.9'
     - '3.10'

@@ -86,7 +86,7 @@ $(OUTDIR)/$(CLANG_FILENAME):
 $(OUTDIR)/musl-$(MUSL_VERSION)-$(HOST_PLATFORM).tar: $(BASE_TOOLCHAIN_DEPENDS) $(HERE)/build-musl.sh
 	$(RUN_BUILD) --toolchain musl
 
-ifeq ($(HOST_PLATFORM),linux64)
+ifeq ($(HOST_PLATFORM),linux_x86_64)
     TOOLCHAIN_TARGET := $(OUTDIR)/musl-$(MUSL_VERSION)-$(HOST_PLATFORM).tar
 else
     TOOLCHAIN_TARGET :=

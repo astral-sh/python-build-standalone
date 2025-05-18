@@ -22,7 +22,7 @@ export trailer_m4=${TOOLS_PATH}/host/share/autoconf/autoconf/trailer.m4
 
 # The share/autoconf/autom4te.cfg file also hard-codes some paths. Rewrite
 # those to the real tools path.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
   sed_args="-i '' -e"
 else
   sed_args="-i"

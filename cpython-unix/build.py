@@ -116,7 +116,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
     extra_host_cflags = []
     extra_host_ldflags = []
 
-    if build_platform == "linux64":
+    if build_platform == "linux_x86_64":
         env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
 
         env["TARGET_TRIPLE"] = (
@@ -133,7 +133,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
         ):
             env["CROSS_COMPILING"] = "1"
 
-    if build_platform == "macos":
+    if build_platform.startswith("macos_"):
         machine = platform.machine()
 
         if machine == "arm64":
@@ -232,7 +232,7 @@ def toolchain_archive_path(package_name, host_platform):
 
 
 def install_binutils(platform):
-    return platform != "macos"
+    return not platform.startswith("macos_")
 
 
 def simple_build(
@@ -410,7 +410,7 @@ def build_tix(
             )
 
         depends = {"tcl", "tk"}
-        if host_platform != "macos":
+        if not host_platform.startswith("macos_"):
             depends |= {"libX11", "xorgproto"}
 
         for p in sorted(depends):
@@ -516,7 +516,7 @@ def python_build_info(
 
     binary_suffix = ""
 
-    if platform == "linux64":
+    if platform == "linux_x86_64":
         bi["core"]["static_lib"] = (
             "install/lib/python{version}/config-{version}{binary_suffix}-x86_64-linux-gnu/libpython{version}{binary_suffix}.a".format(
                 version=version, binary_suffix=binary_suffix
@@ -539,7 +539,7 @@ def python_build_info(
             object_file_format = f"llvm-bitcode:%{llvm_version}"
         else:
             object_file_format = "elf"
-    elif platform == "macos":
+    elif platform.startswith("macos_"):
         bi["core"]["static_lib"] = (
             "install/lib/python{version}/config-{version}{binary_suffix}-darwin/libpython{version}{binary_suffix}.a".format(
                 version=version, binary_suffix=binary_suffix
@@ -599,9 +599,12 @@ def python_build_info(
         if lib.startswith("-l"):
             lib = lib[2:]
 
-            if platform == "linux64" and lib not in linux_allowed_system_libraries:
+            if platform == "linux_x86_64" and lib not in linux_allowed_system_libraries:
                 raise Exception("unexpected library in LIBS (%s): %s" % (libs, lib))
-            elif platform == "macos" and lib not in MACOS_ALLOW_SYSTEM_LIBRARIES:
+            elif (
+                platform.startswith("macos_")
+                and lib not in MACOS_ALLOW_SYSTEM_LIBRARIES
+            ):
                 raise Exception("unexpected library in LIBS (%s): %s" % (libs, lib))
 
             log("adding core system link library: %s" % lib)
@@ -867,7 +870,7 @@ def build_cpython(
         extension_module_loading = ["builtin"]
         crt_features = []
 
-        if host_platform == "linux64":
+        if host_platform == "linux_x86_64":
             if "static" in parsed_build_options:
                 crt_features.append("static")
             else:
@@ -893,7 +896,7 @@ def build_cpython(
 
             python_symbol_visibility = "global-default"
 
-        elif host_platform == "macos":
+        elif host_platform.startswith("macos_"):
             python_symbol_visibility = "global-default"
             extension_module_loading.append("shared-library")
             crt_features.append("libSystem")
@@ -1238,7 +1241,7 @@ def main():
 
         elif action == "tk":
             extra_archives = {"tcl"}
-            if host_platform != "macos":
+            if not host_platform.startswith("macos_"):
                 extra_archives |= {
                     "libX11",
                     "libXau",

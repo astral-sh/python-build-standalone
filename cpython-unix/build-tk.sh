@@ -17,7 +17,7 @@ pushd tk*/unix
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC"
 LDFLAGS="${EXTRA_TARGET_LDFLAGS}"
 
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include -Wno-availability"
     CFLAGS="${CFLAGS} -Wno-deprecated-declarations -Wno-unknown-attributes -Wno-typedef-redefinition"
     LDFLAGS="-L${TOOLS_PATH}/deps/lib"
@@ -36,7 +36,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     ${EXTRA_CONFIGURE_FLAGS}
 
 # Remove wish, since we don't need it.
-if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     sed -i 's/all: binaries libraries doc/all: libraries/' Makefile
     sed -i 's/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE) ${WISH_EXE}/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE)/' Makefile
 fi

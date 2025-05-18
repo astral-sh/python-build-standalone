@@ -16,7 +16,7 @@ tar -xf ncurses-${NCURSES_VERSION}.tar.gz
 # ncurses version. Our workaround is to build ncurses for the host when
 # cross-compiling then make its `tic` available to the target ncurses
 # build.
-if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
   echo "building host ncurses to provide modern tic for cross-compile"
 
   pushd ncurses-${NCURSES_VERSION}
@@ -65,7 +65,7 @@ CONFIGURE_FLAGS="
 # ncurses wants --with-build-cc when cross-compiling. But it insists on CC
 # and this value not being equal, even though using the same binary with
 # different compiler flags is doable!
-if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
   CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-cc=$(which "${HOST_CC}")"
 fi
 
@@ -91,7 +91,7 @@ fi
 # binary. So we provide a suitable runtime value and then move files at install
 # time.
 
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
   CONFIGURE_FLAGS="${CONFIGURE_FLAGS}
     --datadir=/usr/share
     --sysconfdir=/etc

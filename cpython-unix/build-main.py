@@ -7,7 +7,6 @@ import argparse
 import multiprocessing
 import os
 import pathlib
-import platform
 import subprocess
 import sys
 
@@ -15,6 +14,8 @@ from pythonbuild.cpython import meets_python_minimum_version
 from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.utils import (
     compress_python_archive,
+    current_host_platform,
+    default_target_triple,
     get_target_settings,
     release_tag_from_git,
     supported_targets,
@@ -28,29 +29,14 @@ TARGETS_CONFIG = SUPPORT / "targets.yml"
 
 
 def main():
-    if sys.platform == "linux":
-        host_platform = "linux64"
-        default_target_triple = "x86_64-unknown-linux-gnu"
-    elif sys.platform == "darwin":
-        host_platform = "macos"
-        machine = platform.machine()
-
-        if machine == "arm64":
-            default_target_triple = "aarch64-apple-darwin"
-        elif machine == "x86_64":
-            default_target_triple = "x86_64-apple-darwin"
-        else:
-            raise Exception("unhandled macOS machine value: %s" % machine)
-    else:
-        print("Unsupported build platform: %s" % sys.platform)
-        return 1
+    host_platform = current_host_platform()
 
     # Note these arguments must be synced with `build.py`
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "--target-triple",
-        default=default_target_triple,
+        default=default_target_triple(),
         choices=supported_targets(TARGETS_CONFIG),
         help="Target host triple to build for",
     )

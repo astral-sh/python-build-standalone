@@ -30,6 +30,41 @@ from .downloads import DOWNLOADS
 from .logging import log
 
 
+def current_host_platform() -> str:
+    """Resolve the name of the current machine's host platform.
+
+    This is conceptually a simplified machine triple.
+    """
+    machine = platform.machine()
+    if sys.platform == "linux":
+        if machine == "x86_64":
+            return "linux_x86_64"
+        else:
+            raise Exception(f"unsupported Linux host platform: {machine}")
+    elif sys.platform == "darwin":
+        if machine == "arm64":
+            return "macos_arm64"
+        elif machine == "x86_64":
+            return "macos_x86_64"
+        else:
+            raise Exception(f"unhanded macOS machine type: {machine}")
+    else:
+        raise Exception(f"unsupported host platform: {sys.platform}")
+
+
+def default_target_triple() -> str:
+    """Resolve the default target triple to build for."""
+    host = current_host_platform()
+    if host == "linux_x86_64":
+        return "x86_64-unknown-linux-gnu"
+    elif host == "macos_arm64":
+        return "aarch64-apple-darwin"
+    elif host == "macos_x86_64":
+        return "x86_64-apple-darwin"
+    else:
+        raise Exception(f"unrecognized host platform: {host}")
+
+
 def get_targets(yaml_path: pathlib.Path):
     """Obtain the parsed targets YAML file."""
     with yaml_path.open("rb") as fh:
@@ -47,9 +82,9 @@ def supported_targets(yaml_path: pathlib.Path):
 
     for target, settings in get_targets(yaml_path).items():
         for host_platform in settings["host_platforms"]:
-            if sys.platform == "linux" and host_platform == "linux64":
+            if sys.platform == "linux" and host_platform == "linux_x86_64":
                 targets.add(target)
-            elif sys.platform == "darwin" and host_platform == "macos":
+            elif sys.platform == "darwin" and host_platform.startswith("macos_"):
                 targets.add(target)
 
     return targets
@@ -430,17 +465,16 @@ def normalize_tar_archive(data: io.BytesIO) -> io.BytesIO:
 
 
 def clang_toolchain(host_platform: str, target_triple: str) -> str:
-    if host_platform == "linux64":
+    if host_platform == "linux_x86_64":
         # musl currently has issues with LLVM 15+.
         if "musl" in target_triple:
             return "llvm-14-x86_64-linux"
         else:
             return "llvm-20-x86_64-linux"
-    elif host_platform == "macos":
-        if platform.mac_ver()[2] == "arm64":
-            return "llvm-aarch64-macos"
-        else:
-            return "llvm-x86_64-macos"
+    elif host_platform == "macos_arm64":
+        return "llvm-aarch64-macos"
+    elif host_platform == "macos_x86_64":
+        return "llvm-x86_64-macos"
     else:
         raise Exception("unhandled host platform")
 

@@ -33,7 +33,7 @@ export trailer_m4=${TOOLS_PATH}/host/share/autoconf/autoconf/trailer.m4
 
 # The share/autoconf/autom4te.cfg file also hard-codes some paths. Rewrite
 # those to the real tools path.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     sed_args=(-i '' -e)
 else
     sed_args=(-i)
@@ -59,7 +59,7 @@ cat Makefile.extra
 pushd Python-${PYTHON_VERSION}
 
 # configure doesn't support cross-compiling on Apple. Teach it.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
         patch -p1 -i ${ROOT}/patch-apple-cross-3.13.patch
     elif [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
@@ -159,7 +159,7 @@ fi
 # linked modules. But those libraries should only get linked into libpython, not the
 # executable. This behavior is kinda suspect on all platforms, as it could be adding
 # library dependencies that shouldn't need to be there.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     if [ "${PYTHON_MAJMIN_VERSION}" = "3.9" ]; then
         patch -p1 -i ${ROOT}/patch-python-link-modules-3.9.patch
     elif [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
@@ -214,7 +214,7 @@ fi
 # macOS. On older versions, we need to hack up readline.c to build against
 # libedit. This patch breaks older libedit (as seen on macOS) so don't apply
 # on macOS.
-if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_9}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
     # readline.c assumes that a modern readline API version has a free_history_entry().
     # but libedit does not. Change the #ifdef accordingly.
     #
@@ -317,13 +317,13 @@ CFLAGS=${CFLAGS//-fvisibility=hidden/}
 
 # But some symbols from some dependency libraries are still non-hidden for some
 # reason. We force the linker to do our bidding.
-if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
 fi
 
 EXTRA_CONFIGURE_FLAGS=
 
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include/uuid"
 
     # Prevent using symbols not supported by current macOS SDK target.
@@ -332,7 +332,7 @@ fi
 
 # Always build against libedit instead of the default of readline.
 # macOS always uses the system libedit, so no tweaks are needed.
-if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     # CPython 3.10 introduced proper configure support for libedit, so add configure
     # flag there.
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
@@ -381,7 +381,7 @@ CONFIGURE_FLAGS="
 # this patch mildly conflicts with the macos-only patch-python-link-modules
 # applied above, so you will need to resolve that conflict if you re-enable
 # this for macos.
-if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
     else
@@ -493,7 +493,7 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-python=${TOOLS_PATH}/host/bin/python${PYTHON_MAJMIN_VERSION}"
 fi
 
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     # Configure may detect libintl from non-system sources, such
     # as Homebrew or MacPorts. So nerf the check to prevent this.
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_lib_intl_textdomain=no"
@@ -563,7 +563,7 @@ if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
 fi
 
 # ptsrname_r is only available in SDK 13.4+, but we target a lower version for compatibility.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_ptsname_r=no"
 fi
 
@@ -575,12 +575,12 @@ fi
 
 # On 3.14+ `test_strftime_y2k` fails when cross-compiling for `x86_64_v2` and `x86_64_v3` targets on
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
     export PROFILE_TASK='-m test --pgo --ignore test_strftime_y2k'
 fi
 
 # We use ndbm on macOS and BerkeleyDB elsewhere.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"
 else
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=bdb"
@@ -608,7 +608,7 @@ if [ -n "${CROSS_COMPILING}" ]; then
     # python will end up with the time.tzset function or not. All linux targets,
     # however, should have a working tzset function via libc. So we manually
     # indicate this to the configure script.
-    if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+    if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_working_tzset=yes"
     fi
 
@@ -660,7 +660,7 @@ fi
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
 if [ "${PYBUILD_SHARED}" = "1" ]; then
-    if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+    if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
@@ -1143,7 +1143,7 @@ cp -av ${TOOLS_PATH}/deps/lib/*.a ${ROOT}/out/python/build/lib/
 #
 # We copy the libclang_rt.<platform>.a library from our clang into the
 # distribution so it is available. See documentation in quirks.rst for more.
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
   cp -av $(dirname $(which clang))/../lib/clang/*/lib/darwin/libclang_rt.osx.a ${ROOT}/out/python/build/lib/
 fi
 
@@ -1158,7 +1158,7 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
         cp -av $source ${ROOT}/out/python/install/lib/
     done
 
-    if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+    if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
         cp -av ${TOOLS_PATH}/deps/lib/Tix8.4.3 ${ROOT}/out/python/install/lib/
     fi
 fi

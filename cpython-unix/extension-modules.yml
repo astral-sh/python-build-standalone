@@ -329,6 +329,8 @@ _hmac:
   defines:
     - _BSD_SOURCE
     - _DEFAULT_SOURCE
+  linker-args:
+    - args: ["-LModules/_hacl"]
 
 _imp:
   config-c-only: true

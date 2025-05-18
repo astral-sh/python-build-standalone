@@ -58,6 +58,12 @@ cat Makefile.extra
 
 pushd Python-${PYTHON_VERSION}
 
+if [ -n PYTHON_MEETS_MINIMUM_VERSION_3_14 ]; then
+    # CPython only allows HACL* to be statically linked on WASI by default, undo that
+    # See https://github.com/python/cpython/pull/132438
+    patch -p1 -i ${ROOT}/patch-static-hacl-3.14.patch
+fi
+
 # configure doesn't support cross-compiling on Apple. Teach it.
 if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then

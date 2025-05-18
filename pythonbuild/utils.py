@@ -49,6 +49,8 @@ def supported_targets(yaml_path: pathlib.Path):
         for host_platform in settings["host_platforms"]:
             if sys.platform == "linux" and host_platform == "linux64":
                 targets.add(target)
+            elif sys.platform == "linux" and host_platform == "linux_aarch64":
+                targets.add(target)
             elif sys.platform == "darwin" and host_platform == "macos":
                 targets.add(target)
 
@@ -160,6 +162,7 @@ def write_triples_makefiles(
             image_suffix = settings.get("docker_image_suffix", "")
 
             lines.append("DOCKER_IMAGE_BUILD := build%s\n" % image_suffix)
+            lines.append("DOCKER_IMAGE_GCC := gcc%s\n" % image_suffix)
             lines.append("DOCKER_IMAGE_XCB := xcb%s\n" % image_suffix)
 
             entry = clang_toolchain(host_platform, triple)
@@ -436,6 +439,8 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
             return "llvm-14-x86_64-linux"
         else:
             return "llvm-20-x86_64-linux"
+    elif host_platform == "linux_aarch64":
+        return "llvm-20-aarch64-linux"
     elif host_platform == "macos":
         if platform.mac_ver()[2] == "arm64":
             return "llvm-aarch64-macos"

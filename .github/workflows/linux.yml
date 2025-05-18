@@ -2,7 +2,7 @@ name: linux
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 concurrency:
@@ -56,15 +56,28 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - build
-          - build.cross
-          - build.cross-riscv64
-          - gcc
-          - xcb
-          - xcb.cross
-          - xcb.cross-riscv64
-    name: ${{ matrix.image }}
-    runs-on: depot-ubuntu-22.04
+          - name: build
+            platform: linux64
+          - name: build.cross
+            platform: linux64
+          - name: build.cross-riscv64
+            platform: linux64
+          - name: build.debian9
+            platform: linux_aarch64
+          - name: gcc
+            platform: linux64
+          - name: gcc.debian9
+            platform: linux_aarch64
+          - name: xcb
+            platform: linux64
+          - name: xcb.cross
+            platform: linux64
+          - name: xcb.cross-riscv64
+            platform: linux64
+          - name: xcb.debian9
+            platform: linux_aarch64
+    name: ${{ matrix.image.name }}
+    runs-on: ${{ matrix.image.platform == 'linux_aarch64' && 'depot-ubuntu-22.04-arm' || 'depot-ubuntu-22.04' }}
     permissions:
       packages: write
     steps:
@@ -98,30 +111,30 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: build/${{ matrix.image }}.Dockerfile
+          file: build/${{ matrix.image.name }}.Dockerfile
           labels: org.opencontainers.image.source=https://github.com/${{ env.REPO_NAME }}
           # Cache from/to the current branch of the current repo as the primary cache key.
           # Cache from the default branch of the current repo so branches can have cache hits.
           # Cache from the default branch of the canonical repo so forks can have cache hits.
           # Ignore errors on cache writes so CI of forks works without a valid GHCR config.
           cache-from: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }}
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-main
-            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.image }}-main
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image.name }}-${{ matrix.image.platform }}-${{ env.GIT_REF_NAME }}
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image.name }}-${{ matrix.image.platform }}-main
+            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.image.name }}-${{ matrix.image.platform }}-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }},ignore-error=true
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image.name }}-${{ matrix.image.platform }}-${{ env.GIT_REF_NAME }},ignore-error=true
           outputs: |
-            type=docker,dest=build/image-${{ matrix.image }}.tar
+            type=docker,dest=build/image-${{ matrix.image.name }}.${{ matrix.image.platform }}.tar
 
       - name: Compress Image
         run: |
-          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.image }}
+          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.image.name }}.${{ matrix.image.platform }}
           zstd -v -T0 -6 --rm build/image-*.tar
 
       - name: Upload Docker Image
         uses: actions/upload-artifact@v4
         with:
-          name: image-${{ matrix.image }}
+          name: image-${{ matrix.image.name }}-${{ matrix.image.platform }}
           path: build/image-*
 
   generate-matrix:

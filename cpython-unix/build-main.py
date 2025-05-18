@@ -29,8 +29,13 @@ TARGETS_CONFIG = SUPPORT / "targets.yml"
 
 def main():
     if sys.platform == "linux":
-        host_platform = "linux64"
-        default_target_triple = "x86_64-unknown-linux-gnu"
+        machine = platform.machine()
+        if machine == "aarch64":
+            host_platform = "linux_aarch64"
+            default_target_triple = "aarch64-unknown-linux-gnu"
+        else:
+            host_platform = "linux64"
+            default_target_triple = "x86_64-unknown-linux-gnu"
     elif sys.platform == "darwin":
         host_platform = "macos"
         machine = platform.machine()
@@ -109,10 +114,12 @@ def main():
             "toolchain-image-build",
             "toolchain-image-build.cross",
             "toolchain-image-build.cross-riscv64",
+            "toolchain-image-build.debian9",
             "toolchain-image-gcc",
             "toolchain-image-xcb",
             "toolchain-image-xcb.cross",
             "toolchain-image-xcb.cross-riscv64",
+            "toolchain-image-xcb.debian9",
         },
         default="default",
         help="The make target to evaluate",

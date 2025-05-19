@@ -83,15 +83,6 @@ else
     patch -p1 -i ${ROOT}/patch-xopen-source-ios-legacy.patch
 fi
 
-# Respect CFLAGS during JIT compilation.
-# Backports https://github.com/python/cpython/pull/134276
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-   patch -p1 -i ${ROOT}/patch-jit-cflags-314.patch
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-   patch -p1 -i ${ROOT}/patch-jit-cflags-313.patch
-
-fi
-
 # LIBTOOL_CRUFT is unused and breaks cross-compiling on macOS. Nuke it.
 # Submitted upstream at https://github.com/python/cpython/pull/101048.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
@@ -463,14 +454,21 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 
     # Allow users to enable the experimental JIT on 3.13+
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
-        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
 
-        # The JIT build process is separate from the normal build and doesn't read our standard
-        # compiler flags so we need to patch our Clang toolchain into the includes.
-        # This is only necessary on macOS.
-        if [[ "${PYBUILD_PLATFORM}" = "macos" ]]; then
-            patch -p1 -i "${ROOT}/patch-jit-include-flags.patch"
+        # Do not enable on x86-64 macOS because the JIT requires macOS 11+ and we are currently
+        # using 10.15 as a miniumum version.
+        if [ "${TARGET_TRIPLE}" != "x86_64-apple-darwin" ]; then
+            CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
         fi
+
+        # Respect CFLAGS during JIT compilation.
+        # Backports https://github.com/python/cpython/pull/134276
+        if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+            patch -p1 -i ${ROOT}/patch-jit-cflags-314.patch
+        elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+            patch -p1 -i ${ROOT}/patch-jit-cflags-313.patch
+        fi
+
 
         if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
             # On 3.13, LLVM 18 is hard-coded into the configure script. Override it to our toolchain

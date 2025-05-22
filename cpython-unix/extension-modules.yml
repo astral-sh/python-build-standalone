@@ -318,12 +318,6 @@ _hmac:
   includes:
     - Modules/_hacl/
     - Modules/_hacl/include/
-  links:
-    - :libHacl_Hash_Blake2.a
-    - :libHacl_Hash_SHA1.a
-    - :libHacl_Hash_SHA2.a
-    - :libHacl_Hash_SHA3.a
-    - :libHacl_Hash_MD5.a
   defines:
     - _BSD_SOURCE
     - _DEFAULT_SOURCE
@@ -379,7 +373,6 @@ _md5:
   sources-conditional:
     - source: _hacl/Hacl_Hash_MD5.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   defines-conditional:
     - define: _BSD_SOURCE
       minimum-python-version: "3.12"
@@ -462,7 +455,6 @@ _sha1:
   sources-conditional:
     - source: _hacl/Hacl_Hash_SHA1.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines-conditional:
@@ -484,7 +476,6 @@ _sha2:
     - sha2module.c
   sources-conditional:
     - source: _hacl/Hacl_Hash_SHA2.c
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines:
@@ -500,7 +491,6 @@ _sha3:
       minimum-python-version: "3.12"
     - source: _hacl/Hacl_Hash_SHA3.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines-conditional:

@@ -688,44 +688,104 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                 -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
         fi
-    else
+    else # (not macos)
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
-        if [ "${CC}" == "musl-clang" ]; then
-            # musl does not support $ORIGIN in DT_NEEDED, so we use RPATH instead. This could be
-            # problematic, i.e., we could load the shared library from the wrong location if
-            # `LD_LIBRARY_PATH` is set, but there's not a clear alternative at this time. The
-            # long term solution is probably to statically link to libpython instead.
-            patchelf --set-rpath "\$ORIGIN/../lib" \
-                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
+        # Although we are statically linking libpython, some extension
+        # modules link against libpython.so even though they are not
+        # supposed to do that. If you try to import them on an
+        # interpreter statically linking libpython, all the symbols they
+        # need are resolved from the main program (because neither glibc
+        # nor musl has two-level namespaces), so there is hopefully no
+        # correctness risk, but they need to be able to successfully
+        # find libpython.so in order to load the module.  To allow such
+        # extensions to load, we set an rpath to point at our lib
+        # directory, so that if anyone ever tries to find a libpython,
+        # they successfully find one. See
+        # https://github.com/astral-sh/python-build-standalone/issues/619
+        # for some reports of extensions that need this workaround.
+        #
+        # Note that this matches the behavior of Debian/Ubuntu/etc.'s
+        # interpreter (if package libpython3.x is installed, which it
+        # usually is thanks to gdb, vim, etc.), because libpython is in
+        # the system lib directory, as well as the behavior in practice
+        # on conda-forge miniconda and probably other Conda-family
+        # Python distributions, which too set an rpath.
+        #
+        # There is a downside of making this libpython locatable: some user
+        # code might do e.g.
+        #     ctypes.CDLL(f"libpython3.{sys.version_info.minor}.so.1.0")
+        # to get at things in the CPython API not exposed to pure
+        # Python. This code may _silently misbehave_ on a
+        # static-libpython interpreter, because you are actually using
+        # the second copy of libpython. For loading static data or using
+        # accessors, you might get lucky and things will work, with the
+        # full set of dangers of C undefined behavior being possible.
+        # However, there are a few reasons we think this risk is
+        # tolerable.  First, we can't actually fix it by not setting the
+        # rpath - user code may well find a system libpython3.x.so or
+        # something which is even more likely to break. Second, this
+        # exact problem happens with Debian, Conda, etc., so it is very
+        # unlikely (compared to the extension modules case above) that
+        # any widely-used code has this problem; the risk is largely
+        # backwards incompatibility of our own builds. Also, it's quite
+        # easy for users to fix: simply do
+        #    ctypes.CDLL(None)
+        # (i.e., dlopen(NULL)), to use symbols already in the process;
+        # this will work reliably on all interpreters regardless of
+        # whether they statically or dynamically link libpython. Finally,
+        # we can (and should, at some point) add a warning, error, or
+        # silent fix to ctypes for user code that does this, which will
+        # also cover the case of other libpython3.x.so files on the
+        # library search path that we cannot suppress.
+        #
+        # In the past, when we dynamically linked libpython, we avoided
+        # using an rpath and instead used a DT_NEEDED entry with
+        # $ORIGIN/../lib/libpython.so, because LD_LIBRARY_PATH takes
+        # precedence over DT_RUNPATH, and it's not uncommon to have an
+        # LD_LIBRARY_PATH that points to some sort of unwanted libpython
+        # (e.g., actions/setup-python does this as of May 2025).
+        # Now, though, because we're not actually using code from the
+        # libpython that's loaded and just need _any_ file of that name
+        # to satisfy the link, that's not a problem. (This also implies
+        # another approach to the problem: ensure that libraries find an
+        # empty dummy libpython.so, which allows the link to succeed but
+        # ensures they do not use any unwanted symbols. That might be
+        # worth doing at some point.)
+        patchelf --set-rpath "\$ORIGIN/../lib" \
+            ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 
+        if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+            patchelf --set-rpath "\$ORIGIN/../lib" \
+                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
+        fi
+
+        # For libpython3.so (the ABI3 library for embedders), we do
+        # still dynamically link libpython3.x.so.1.0 (the
+        # version-specific library), because there is no particular
+        # speedup/benefit in statically linking libpython into
+        # libpython3.so, and we'd just be shipping a third copy of the
+        # libpython code. Therefore we use the old logic for that and
+        # set an $ORIGIN-relative DT_NEEDED, at least for glibc.
+        # Unfortunately, musl does not (as of May 2025) support $ORIGIN
+        # in DT_NEEDED, only in DT_RUNPATH/RPATH, so we did set an rpath
+        # for bin/python3, and still do for libpython3.so. In both
+        # cases, we have no concerns/need no workarounds for code
+        # referencing libpython3.x.so.1.0, because we are actually
+        # dynamically linking it and so all code will get the real
+        # libpython3.x.so.1.0 that they want.
+        if [ "${CC}" == "musl-clang" ]; then
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then
                 patchelf --set-rpath "\$ORIGIN/../lib" \
                     ${ROOT}/out/python/install/lib/libpython3.so
-            fi
-
-            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
-                patchelf --set-rpath "\$ORIGIN/../lib" \
-                    ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
             fi
         else
-            # If we simply set DT_RUNPATH via --set-rpath, LD_LIBRARY_PATH would be used before
-            # DT_RUNPATH, which could result in confusion at run-time. But if DT_NEEDED contains a
-            # slash, the explicit path is used.
-            patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-                ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
-
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then
                 patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
                     ${ROOT}/out/python/install/lib/libpython3.so
-            fi
-
-            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
-                patchelf --replace-needed ${LIBPYTHON_SHARED_LIBRARY_BASENAME} "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-                    ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
             fi
         fi
     fi

@@ -1,0 +1,13 @@
+diff --git a/configure.ac b/configure.ac
+index 902f425cf87..8001d0deb07 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2261,7 +2261,7 @@ then
+      -reorder-functions=cdsort
+      -split-functions
+      -split-strategy=cdsplit
+-     -icf=1
++     -icf=safe
+      -inline-all
+      -split-eh
+      -reorder-functions-use-hot-size

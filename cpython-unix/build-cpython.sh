@@ -387,7 +387,7 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     else
         patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
     fi
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
+    #CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
 fi
 
 if [ "${CC}" = "musl-clang" ]; then

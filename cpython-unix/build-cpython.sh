@@ -753,11 +753,11 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # empty dummy libpython.so, which allows the link to succeed but
         # ensures they do not use any unwanted symbols. That might be
         # worth doing at some point.)
-        patchelf --set-rpath "\$ORIGIN/../lib" \
+        patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
             ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 
         if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
-            patchelf --set-rpath "\$ORIGIN/../lib" \
+            patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
         fi
 
@@ -774,7 +774,8 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # cases, we have no concerns/need no workarounds for code
         # referencing libpython3.x.so.1.0, because we are actually
         # dynamically linking it and so all code will get the real
-        # libpython3.x.so.1.0 that they want.
+	# libpython3.x.so.1.0 that they want (and it's fine to use
+	# DT_RUNPATH instead of DT_RPATH).
         if [ "${CC}" == "musl-clang" ]; then
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then

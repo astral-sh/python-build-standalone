@@ -4,17 +4,21 @@
 Behavior Quirks
 ===============
 
+While these Python distributions are intended to be broadly compatible
+with the Python ecosystem, there are a few known behavior quirks that
+affect specific environments, packages, or use cases.
+
 .. _quirk_backspace_key:
 
-Backspace Key Doesn't work in Python REPL
-=========================================
+If special keys do not work in the Python REPL
+==============================================
 
 If you attempt to run ``python`` and the backspace key doesn't
 erase characters or the arrow keys don't work as expected, this
 is because the executable can't find the *terminfo database*.
 
-A telltale sign of this is the Python REPL printing the following
-on startup::
+If this happens, the Python REPL will print the following warning
+message on startup::
 
    Cannot read termcap database;
    using dumb terminal settings.
@@ -35,42 +39,27 @@ you build a program (like Python) locally, you link against
 ``readline`` or ``libedit`` and get these default locations
 *for free*.
 
-Because python-build-standalone Python distributions compile
-and use their own version of ``libedit`` and because the build
-environment is different from your machine, the default search
-locations for the *terminfo database* built into binaries
-distributed with this project may point to a path that doesn't
-exist. The *terminfo database* cannot be located and ``libedit``
-does not know how to convert special key presses to special behavior.
+These Python distributions compile and use their own version of
+``libedit`` to avoid a dependency on what is (or isn't) installed on
+your system. This means that they do not use your system-provided
+libraries for reading the *terminfo database*.  This version of
+``libedit`` is configured to look for in locations that should work for
+most OSes (specifically, ``/usr/share/terminfo`` on macOS, and
+``/etc/terminfo``, ``/lib/terminfo``, and ``/usr/share/terminfo`` on
+Linux, which should cover all major Linux distributions), but it is
+possible that your environment has it somewhere else. If your OS stores
+the *terminfo database* in an uncommon location, you can set the
+``TERMINFO_DIRS`` environment variable so that ``libedit`` can find it.
 
-The solution to this is to set an environment variable
-with the location of the *terminfo database*.
+For instance, you may need to do something like:
 
-If running a Debian based Linux distribution (including Ubuntu)::
+   $ TERMINFO_DIRS=/uncommon/place/terminfo install/bin/python3.9
 
-   $ TERMINFO_DIRS=/etc/terminfo:/lib/terminfo:/usr/share/terminfo
+If you are running on a relatively standard OS and this does not work
+out of the box, please file a bug report so we can add the location of
+the *terminfo database* to the build.
 
-If running a RedHat based Linux distribution::
-
-   $ TERMINFO_DIRS=/etc/terminfo:/usr/share/terminfo
-
-If running macOS::
-
-   $ TERMINFO_DIRS=/usr/share/terminfo
-
-e.g.::
-
-   $ TERMINFO_DIRS=/etc/terminfo:/lib/terminfo:/usr/share/terminfo install/bin/python3.9
-
-The macOS distributions built with this project should automatically
-use the terminfo database in ``/usr/share/terminfo``. Please file
-a bug report if the macOS distributions do not behave as expected.
-
-Starting in the first release after 20240107, the Linux distributions are
-configured to automatically use the terminfo database in ``/etc/terminfo``,
-``/lib/terminfo``, and ``/usr/share/terminfo``.
-
-Also starting in the first release after 20240107, the terminfo database
+For convenience, a relatively recent copy of the terminfo database
 is distributed in the ``share/terminfo`` directory (``../../share/terminfo``
 relative to the ``bin/python3`` executable) in Linux distributions. Note
 that ncurses and derived libraries don't know how to find this directory
@@ -150,29 +139,6 @@ Some functionality may behave subtly differently as a result of our choice
 to link ``libedit`` by default. (We choose ``libedit`` by default to
 avoid GPL licensing requirements of ``readline``.)
 
-Static Linking of musl libc Prevents Extension Module Library Loading
-=====================================================================
-
-Our musl libc linked Linux builds link musl libc statically and the resulting
-binaries are completely static and don't have any external dependencies.
-
-Due to how Linux/ELF works, a static/non-dynamic binary cannot call
-``dlopen()`` and therefore it cannot load shared library based Python
-extension modules (``.so`` based extension modules). This significantly
-limits the utility of these Python distributions. (If you want to use
-additional extension modules you can use the build artifacts in the
-distributions to construct a new ``libpython`` with the additional
-extension modules configured as builtin extension modules.)
-
-Another consequence of statically linking musl libc is that our musl
-distributions aren't compatible with
-`PEP 656 <https://www.python.org/dev/peps/pep-0656/>`_. PEP 656
-stipulates that Python and extension modules are linked against a
-dynamic musl. This is what you'll find in Alpine Linux, for example.
-
-See https://github.com/astral-sh/python-build-standalone/issues/86 for
-a tracking issue to improve the state of musl distributions.
-
 .. _quirk_linux_libx11:
 
 Static Linking of ``libX11`` / Incompatibility with PyQt on Linux
@@ -232,40 +198,6 @@ And you can't easily remove ``_tkinter`` and its symbols from the pre-built
 and ready-to-use Python install included in this project's distribution
 artifacts.
 
-.. _quirk_missing_libcrypt:
-
-Missing ``libcrypt.so.1``
-=========================
-
-Linux distributions in the 20230507 release and earlier had a hard dependency
-on ``libcrypt.so.1`` due to static linking of the ``_crypt`` extension module,
-which imports it.
-
-Presence of ``libcrypt.so.1`` is mandated as part of the Linux Standard Base
-Core Specification and therefore should be present in Linux environments
-conforming to this specification. Most Linux distributions historically
-attempted to conform to this specification.
-
-In 2022, various Linux distributions stopped shipping ``libcrypt.so.1``
-(it appears glibc is ceasing to provide this functionality and Linux
-distributions aren't backfilling ``libcrypt.so.1`` in the base install
-to remain compatible with the Linux Standard Base Core Specification).
-
-In reaction to Linux distributions no longer providing ``libcrypt.so.1`` by
-default, we changed the configuration of the ``_crypt`` extension module so
-it is compiled/distributed as a standalone shared library and not compiled
-into libpython. This means a missing ``libcrypt.so.1`` is only relevant if
-the Python interpreter imports the ``crypt`` / ``_crypt`` modules.
-
-If you are using an older release of this project with a hard dependency
-on ``libcrypt.so.1`` and don't want to upgrade, you can instruct end-users
-to install a ``libxcrypt-compat`` (or comparable) package to provide the
-missing ``libcrypt.so.1``.
-
-See https://github.com/astral-sh/python-build-standalone/issues/113 and
-https://github.com/astral-sh/python-build-standalone/issues/173 for additional
-context on this matter.
-
 .. _quirk_references_to_build_paths:
 
 References to Build-Time Paths
@@ -278,8 +210,8 @@ build-time configuration in a handful of files:
   ``lib/python3.10/_sysconfigdata__linux_x86_64-linux-gnu.py``.
 * In a ``Makefile`` under a ``config-*`` directory in the standard library.
   e.g. ``lib/python3.10/config-3.10-x86_64-linux-gnu/Makefile``.
-* In ``python*-config`` files. e.g. ``bin/python3.10-config``.
-* In ``PYTHON.json`` (mostly reflected values from ``_sysconfigdata_*.py``.
+* In python-build-standalone's metadata file ``PYTHON.json`` (mostly
+  reflected values from ``_sysconfigdata_*.py``).
 
 Each of these serves a different use case. But the general theme is various
 aspects of the Python distribution attempt to capture how Python was built.
@@ -290,47 +222,62 @@ module. ``sysconfig`` in turn is used by packaging tools like ``setuptools``
 and ``pip`` to figure out how to invoke a compiler for e.g. compiling C
 extensions from source.
 
-On Linux, our distributions are built in containers. The container has a
-custom build of Clang in a custom filesystem location. And Python is
-installed to the prefix ``/install``. So you may see references to
-``/install`` in Linux distributions.
+When installed by `uv <https://docs.astral.sh/uv/>`_, these absolute
+paths are fixed up to point to the actual location on your system where
+the distribution was installed, so **this quirk generally does not
+affect uv users**.  The third-party tool `sysconfigpatcher
+<https://github.com/bluss/sysconfigpatcher>`_ also does this and might
+be helpful to use or reference if you are installing these distributions
+on your own.
 
-On macOS, most distributions are built from GitHub Actions runners. They
-use a specific macOS SDK. So you may see references to SDK paths that don't
-exist on your machine. e.g.
-``/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.3.sdk``.
+In particular, you may see references to our install-time paths on the
+build infrastructure, e.g., ``/build`` and ``/install`` on Linux, a
+particular SDK in ``/Applications/Xcode.app`` on macOS, and temporary
+directories on Windows.
 
-On Windows, builds are performed from a temporary directory. So you may
-see references to temporary directories in Windows distributions.
-
-**The existence of hard-coded paths in our produced distributions can confuse
-consumers of these values and break common workflows, like compiling C
-extensions.**
-
-We don't currently have a great idea for how to solve this problem. We
-can't hardcode values that will work on every machine because every machine
-has different filesystem layouts. For example, if we hardcode ``gcc`` as
-the compiler, someone with only ``clang`` installed will complain. And
-we certainly don't know where end-users will extract their Python
-distribution to!
-
-To solve this problem requires executing dynamic code after extracting
-our custom distributions in order to patch these hardcoded values into
-conformance with the new machine. We're unsure how to actually do this
-because figuring out what values to set is essentially equivalent to
-reinventing autoconf / configure! Perhaps we could implement something
-that works in common system layouts (e.g. hardcoded defaults for common
-distros like Debian/Ubuntu and RedHat).
-
-Until we have a better solution here, just understand that anything looking
-at ``sysconfig`` could resolve non-existent paths or names of binaries that
-don't exist on the current machine.
-
-Starting with the Linux and macOS distributions released in 2024, we do
-normalize some values in these files at build time. Normalizations include:
-
-* Removing compiler flags that are non-portable.
-* Removing references to build paths (e.g. ``/tools`` on Linux).
+Also, Python reports the compiler and flags in use, just in case it is
+needed to make binary-compatible extensions. On Linux, for instance, we
+use our own builds of Clang and potentially some flags (warnings,
+optimizations, locations of the build environment) that do not work or
+apply in other environments.  We try to configure Python to remove
+unneeded flags and absolute paths to files in the build environment.
+references to build-time paths.  Python's ``sysconfig`` system requires
+listing a compiler, so we leave it set to ``clang`` without the absolute
+path, but you should be able to use another compiler like ``gcc`` to
+compile extensions, too.
 
 If there is a build time normalization that you think should be performed to
 make distributions more portable, please file a GitHub issue.
+
+.. _quirk_former:
+.. _quirk_missing_libcrypt:
+
+Former quirks
+=============
+
+The following quirks were previously listed on this page but have since
+been resolved.
+
+* "Static Linking of musl libc Prevents Extension Module Library
+  Loading": Starting with the 20250311 release, the default musl
+  distributions are dynamically linked by default, so extension modules
+  should work properly. Note that these now require a system-wide
+  installation of the musl C library. (This is present by default on
+  musl-based OSes like Alpine, and many glibc-based distros have a
+  ``musl`` package you can safely co-install with glibc, too.) If you
+  specifically need a statically-linked binary, variants with the
+  ``+static`` build option are available, but these retain the quirk
+  that compiled extension modules (e.g., ``musllinux`` wheels) cannot be
+  loaded.
+
+* "Missing ``libcrypt.so.1``": The 20230507 release and earlier required
+  the system library ``libcrypt.so.1``, which stopped being shipped by
+  default in several Linux distributions around 2022. Starting with the
+  20230726 release, this dependency is now only needed by the deprecated
+  ``crypt`` module, which only exists on Python 3.12 and lower. If you
+  still need this module, your OS may offer a ``libxcrypt`` package to
+  provide this library. Alternatively, there are suggestions in `What's
+  New in Python 3.13`_ about third-party replacements for the ``crypt``
+  module.
+
+.. _What's New in Python 3.13: https://docs.python.org/3/whatsnew/3.13.html#whatsnew313-pep594

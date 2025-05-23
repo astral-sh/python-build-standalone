@@ -271,6 +271,12 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     # https://github.com/python/cpython/issues/128514
     patch -p1 -i ${ROOT}/patch-configure-bolt-apply-flags-128514.patch
 
+    # Disable unsafe identical code folding. Objects/typeobject.c
+    # update_one_slot requires that wrap_binaryfunc != wrap_binaryfunc_l,
+    # despite the functions being identical.
+    # https://github.com/python/cpython/pull/134642
+    patch -p1 -i ${ROOT}/patch-configure-bolt-icf-safe.patch
+
     # Tweak --skip-funcs to work with our toolchain.
     patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs.patch
 fi

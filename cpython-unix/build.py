@@ -64,34 +64,6 @@ MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 
-def install_sccache(build_env):
-    """Attempt to install sccache into the build environment.
-
-    This will attempt to locate a sccache executable and copy it
-    into the root directory of the build environment.
-    """
-    candidates = [
-        # Prefer a binary in the project itself.
-        ROOT / "sccache",
-    ]
-
-    # Look for sccache in $PATH, but only if the build environment
-    # isn't isolated, as copying binaries into an isolated environment
-    # may not run. And running sccache in an isolated environment won't
-    # do anything meaningful unless an external cache is being used.
-    if not build_env.is_isolated:
-        for path in os.environ.get("PATH", "").split(":"):
-            if not path:
-                continue
-
-            candidates.append(pathlib.Path(path) / "sccache")
-
-    for candidate in candidates:
-        if candidate.exists():
-            build_env.copy_file(candidate)
-            return
-
-
 def add_target_env(env, build_platform, target_triple, build_env):
     add_env_common(env)
 
@@ -302,8 +274,6 @@ def build_binutils(client, image, host_platform):
     archive = download_entry("binutils", DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
-        install_sccache(build_env)
-
         build_env.copy_file(archive)
         build_env.copy_file(SUPPORT / "build-binutils.sh")
 

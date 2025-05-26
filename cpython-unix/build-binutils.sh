@@ -5,22 +5,11 @@
 
 set -ex
 
-ROOT=$(pwd)
-SCCACHE="${ROOT}/sccache"
-
 cd /build
 
 tar -xf binutils-${BINUTILS_VERSION}.tar.xz
 mkdir binutils-objdir
 pushd binutils-objdir
-
-EXTRA_VARS=
-
-if [ -x "${SCCACHE}" ]; then
-  "${SCCACHE}" --start-server
-  export CC="${SCCACHE} /usr/bin/gcc"
-  export STAGE_CC_WRAPPER="${SCCACHE}"
-fi
 
 # gprofng requires a bison newer than what we have. So just disable it.
 ../binutils-${BINUTILS_VERSION}/configure \

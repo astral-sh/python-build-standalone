@@ -570,17 +570,6 @@ def add_env_common(env):
     except FileNotFoundError:
         pass
 
-    # Proxy sccache settings.
-    for k, v in os.environ.items():
-        if k.startswith("SCCACHE_"):
-            env[k] = v
-
-    # Proxy cloud provider credentials variables to enable sccache to
-    # use stores in those providers.
-    for k in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
-        if k in os.environ:
-            env[k] = os.environ[k]
-
 
 def exec_and_log(args, cwd, env):
     p = subprocess.Popen(

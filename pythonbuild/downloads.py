@@ -156,13 +156,11 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.libXau.txt",
     },
-    # Newer versions of libxcb require a modern Python to build. We can take this
-    # dependency once we feel like doing the work.
     "libxcb": {
-        "url": "https://xcb.freedesktop.org/dist/libxcb-1.14.tar.gz",
-        "size": 640322,
-        "sha256": "2c7fcddd1da34d9b238c9caeda20d3bd7486456fc50b3cc6567185dbd5b0ad02",
-        "version": "1.14",
+        "url": "https://xcb.freedesktop.org/dist/libxcb-1.17.0.tar.gz",
+        "size": 661593,
+        "sha256": "2c69287424c9e2128cb47ffe92171e10417041ec2963bceafb65cb3fcf8f0b85",
+        "version": "1.17.0",
         "library_names": ["xcb"],
         "licenses": ["MIT"],
         "license_file": "LICENSE.libxcb.txt",
@@ -380,10 +378,10 @@ DOWNLOADS = {
         "version": "1.20.1",
     },
     "xcb-proto": {
-        "url": "https://www.x.org/archive/individual/proto/xcb-proto-1.14.1.tar.gz",
-        "size": 194674,
-        "sha256": "85cd21e9d9fbc341d0dbf11eace98d55d7db89fda724b0e598855fcddf0944fd",
-        "version": "1.14.1",
+        "url": "https://xcb.freedesktop.org/dist/xcb-proto-1.17.0.tar.xz",
+        "size": 151748,
+        "sha256": "2c1bacd2110f4799f74de6ebb714b94cf6f80fb112316b1219480fd22562148c",
+        "version": "1.17.0",
     },
     # Newer versions from at least 2023 have build failures for reasons we haven't
     # fully investigated.

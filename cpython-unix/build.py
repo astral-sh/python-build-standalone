@@ -246,6 +246,7 @@ def simple_build(
     dest_archive,
     extra_archives=None,
     tools_path="deps",
+    python_host_version=None,
 ):
     archive = download_entry(entry, DOWNLOADS_PATH)
 
@@ -263,6 +264,15 @@ def simple_build(
 
         for a in extra_archives or []:
             build_env.install_artifact_archive(BUILD, a, target_triple, build_options)
+
+        if python_host_version:
+            majmin = ".".join(python_host_version.split(".")[0:2])
+            build_env.install_toolchain_archive(
+                BUILD,
+                f"cpython-{majmin}",
+                host_platform,
+                version=python_host_version,
+            )
 
         build_env.copy_file(archive)
         build_env.copy_file(SUPPORT / ("build-%s.sh" % entry))
@@ -796,6 +806,7 @@ def build_cpython(
         for p in sorted(packages):
             build_env.install_artifact_archive(BUILD, p, target_triple, build_options)
 
+        # Install the host CPython.
         build_env.install_toolchain_archive(
             BUILD, entry_name, host_platform, version=python_version
         )
@@ -1032,6 +1043,11 @@ def main():
         default=None,
         help="A custom path to CPython source files to use",
     )
+    parser.add_argument(
+        "--python-host-version",
+        default=None,
+        help="Python X.Y version for host Python installation",
+    )
     parser.add_argument("action")
 
     args = parser.parse_args()
@@ -1046,6 +1062,8 @@ def main():
     )
     dest_archive = pathlib.Path(args.dest_archive)
     docker_image = args.docker_image
+
+    python_host_version = args.python_host_version
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
 
@@ -1213,6 +1231,7 @@ def main():
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                python_host_version=python_host_version,
             )
 
         elif action == "libxcb":
@@ -1226,6 +1245,7 @@ def main():
                 build_options=build_options,
                 dest_archive=dest_archive,
                 extra_archives={"libpthread-stubs", "libXau", "xcb-proto", "xorgproto"},
+                python_host_version=python_host_version,
             )
 
         elif action == "tix":
@@ -1260,6 +1280,7 @@ def main():
                 build_options=build_options,
                 dest_archive=dest_archive,
                 extra_archives=extra_archives,
+                python_host_version=python_host_version,
             )
 
         elif action.startswith("cpython-") and action.endswith("-host"):

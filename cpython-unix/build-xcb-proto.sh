@@ -12,7 +12,7 @@ pkg-config --version
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig
 
-tar -xf xcb-proto-${XCB_PROTO_VERSION}.tar.gz
+tar -xf xcb-proto-${XCB_PROTO_VERSION}.tar.xz
 pushd xcb-proto-${XCB_PROTO_VERSION}
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \

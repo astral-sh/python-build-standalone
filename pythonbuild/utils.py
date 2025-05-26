@@ -195,7 +195,6 @@ def write_triples_makefiles(
             image_suffix = settings.get("docker_image_suffix", "")
 
             lines.append("DOCKER_IMAGE_BUILD := build%s\n" % image_suffix)
-            lines.append("DOCKER_IMAGE_XCB := xcb%s\n" % image_suffix)
 
             entry = clang_toolchain(host_platform, triple)
             lines.append(

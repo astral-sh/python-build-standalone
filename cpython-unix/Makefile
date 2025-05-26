@@ -70,6 +70,8 @@ PYTHON_DEP_DEPENDS := \
     $(TOOLCHAIN_DEPENDS) \
     $(NULL)
 
+HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(HOST_PLATFORM).tar
+
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
 ifndef PYBUILD_NO_DOCKER
@@ -149,8 +151,8 @@ $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXAU_DEPENDS)
 
 LIBXCB_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
+    $(HOST_PYTHON_DEPENDS) \
     $(HERE)/build-libxcb.sh \
-    $(OUTDIR)/image-$(DOCKER_IMAGE_XCB).tar \
     $(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
@@ -158,7 +160,7 @@ LIBXCB_DEPENDS = \
     $(NULL)
 
 $(OUTDIR)/libxcb-$(LIBXCB_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXCB_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) libxcb
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) libxcb
 
 $(OUTDIR)/m4-$(M4_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-m4.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) m4
@@ -204,13 +206,14 @@ $(OUTDIR)/tix-$(TIX_VERSION)-$(PACKAGE_SUFFIX).tar: $(TIX_DEPENDS)
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tix
 
 TK_DEPENDS = \
+    $(HOST_PYTHON_DEPENDS) \
     $(HERE)/build-tk.sh \
     $(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(if $(NEED_LIBX11),$(OUTDIR)/libX11-$(LIBX11_VERSION)-$(PACKAGE_SUFFIX).tar) \
     $(NULL)
 
 $(OUTDIR)/tk-$(TK_VERSION)-$(PACKAGE_SUFFIX).tar: $(TK_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) tk
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) tk
 
 $(OUTDIR)/uuid-$(UUID_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-uuid.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) uuid
@@ -218,8 +221,8 @@ $(OUTDIR)/uuid-$(UUID_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HE
 $(OUTDIR)/x11-util-macros-$(X11_UTIL_MACROS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-x11-util-macros.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) x11-util-macros
 
-$(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xcb-proto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) xcb-proto
+$(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HOST_PYTHON_DEPENDS) $(HERE)/build-xcb-proto.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) xcb-proto
 
 $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xorgproto.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xorgproto

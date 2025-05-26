@@ -249,7 +249,6 @@ _decimal:
     - define: CONFIG_32=1
       targets:
         - armv7-.*
-        - i686-.*
         - mips-.*
         - mipsel-.*
     - define: CONFIG_64=1
@@ -299,7 +298,6 @@ _hashlib:
     # a static library so there isn't a runtime dependency.
     - name: ':libatomic.a'
       targets:
-        - i686-unknown-linux-gnu
         - mips-unknown-linux-gnu
         - mipsel-unknown-linux-gnu
         - x86_64.*-unknown-linux-gnu
@@ -570,7 +568,6 @@ _ssl:
     # a static library so there isn't a runtime dependency.
     - name: ':libatomic.a'
       targets:
-        - i686-unknown-linux-gnu
         - mips-unknown-linux-gnu
         - mipsel-unknown-linux-gnu
         - x86_64.*-unknown-linux-gnu

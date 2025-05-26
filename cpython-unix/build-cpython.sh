@@ -91,6 +91,9 @@ fi
 
 # Configure nerfs RUNSHARED when cross-compiling, which prevents PGO from running when
 # we can in fact run the target binaries (e.g. x86_64 host and i686 target). Undo that.
+# TODO this may not be needed after removing support for i686 builds. But it
+# may still be useful since CPython's definition of cross-compiling has historically
+# been very liberal and kicks in when it arguably shouldn't.
 if [ -n "${CROSS_COMPILING}" ]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
         patch -p1 -i ${ROOT}/patch-dont-clear-runshared-14.patch
@@ -1057,9 +1060,6 @@ armv7-unknown-linux-gnueabi)
     ;;
 armv7-unknown-linux-gnueabihf)
     PYTHON_ARCH="arm-linux-gnueabihf"
-    ;;
-i686-unknown-linux-gnu)
-    PYTHON_ARCH="i386-linux-gnu"
     ;;
 mips-unknown-linux-gnu)
     PYTHON_ARCH="mips-linux-gnu"

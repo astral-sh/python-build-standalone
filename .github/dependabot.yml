@@ -1,0 +1,18 @@
+version: 2
+updates:
+- package-ecosystem: "pip
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  groups:
+    python:
+      patterns:
+        - "*"
+- package-ecosystem: "cargo"
+  directory: "/"
+  schedule:
+    interval: "weekly"
+  groups:
+    rust:
+      patterns:
+        - "*"

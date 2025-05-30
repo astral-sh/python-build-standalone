@@ -748,6 +748,7 @@ const GLOBAL_EXTENSIONS_PYTHON_3_13: &[&str] = &[
     "_interpqueues",
     "_interpreters",
     "_sha2",
+    "_suggestions",
     "_sysconfig",
     "_tokenize",
     "_typing",
@@ -760,6 +761,7 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_interpreters",
     "_remote_debugging",
     "_sha2",
+    "_suggestions",
     "_sysconfig",
     "_tokenize",
     "_typing",
@@ -1599,12 +1601,8 @@ fn validate_extension_modules(
         ]);
     }
 
-    if is_windows && matches!(python_major_minor, "3.13" | "3.14") {
-        wanted.extend(["_suggestions"]);
-    }
-
-    if (is_linux || is_macos) && matches!(python_major_minor, "3.13" | "3.14") {
-        wanted.extend(["_suggestions", "_testexternalinspection"]);
+    if (is_linux || is_macos) && matches!(python_major_minor, "3.13") {
+        wanted.insert("_testexternalinspection");
     }
 
     if (is_linux || is_macos) && matches!(python_major_minor, "3.12" | "3.13" | "3.14") {

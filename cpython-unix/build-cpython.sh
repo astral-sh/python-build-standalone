@@ -588,6 +588,13 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "$
     export PROFILE_TASK='-m test --pgo --ignore test_strftime_y2k'
 fi
 
+# ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,
+# but on x86-64 that requires v2 and v3 respectively, and on arm64 the performance is bad as noted
+# in the comments, so just don't even try. (We should check if we can make this conditional)
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+    patch -p1 -i "${ROOT}/patch-python-configure-hacl-no-simd.patch"
+fi
+
 # We use ndbm on macOS and BerkeleyDB elsewhere.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"

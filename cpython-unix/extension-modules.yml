@@ -43,7 +43,7 @@ _blake2:
       minimum-python-version: "3.14"
     - define: _DEFAULT_SOURCE
       minimum-python-version: "3.14"
-    # Disable `explicit_bzero`, it requires glib 2.25+
+    # Disable `explicit_bzero`, it requires glibc 2.25+
     - define: LINUX_NO_EXPLICIT_BZERO
       minimum-python-version: "3.14"
 
@@ -655,6 +655,8 @@ _testinternalcapi:
       minimum-python-version: "3.13"
     - source: _testinternalcapi/test_lock.c
       minimum-python-version: "3.13"
+    - source: _testinternalcapi/complex.c
+      minimum-python-version: "3.14"
 
 _testmultiphase:
   minimum-python-version: '3.9'

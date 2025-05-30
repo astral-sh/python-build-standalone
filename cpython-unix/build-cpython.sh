@@ -466,7 +466,8 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 
         # Do not enable on x86-64 macOS because the JIT requires macOS 11+ and we are currently
         # using 10.15 as a miniumum version.
-        if [ "${TARGET_TRIPLE}" != "x86_64-apple-darwin" ]; then
+        # Do not enable when free-threading, because they're not compatible yet.
+        if [[ ! ( "${TARGET_TRIPLE}" == "x86_64-apple-darwin" || -n "${CPYTHON_FREETHREADED}" ) ]]; then
             CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"
         fi
 
@@ -586,6 +587,13 @@ fi
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
     export PROFILE_TASK='-m test --pgo --ignore test_strftime_y2k'
+fi
+
+# ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,
+# but on x86-64 that requires v2 and v3 respectively, and on arm64 the performance is bad as noted
+# in the comments, so just don't even try. (We should check if we can make this conditional)
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+    patch -p1 -i "${ROOT}/patch-python-configure-hacl-no-simd.patch"
 fi
 
 # We use ndbm on macOS and BerkeleyDB elsewhere.

@@ -16,6 +16,19 @@ EXTENSION_MODULE_SCHEMA = {
     "properties": {
         "build-mode": {"type": "string"},
         "config-c-only": {"type": "boolean"},
+        "config-c-only-conditional": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "config-c-only": {"type": "boolean"},
+                    "minimum-python-version": {"type": "string"},
+                    "maximum-python-version": {"type": "string"},
+                },
+                "additionalProperties": False,
+                "required": ["config-c-only"],
+            },
+        },
         "defines": {"type": "array", "items": {"type": "string"}},
         "defines-conditional": {
             "type": "array",
@@ -285,6 +298,18 @@ def derive_setup_local(
 
         if info.get("config-c-only"):
             config_c_only_wanted.add(name)
+
+        for entry in info.get("config-c-only-conditional", []):
+            python_min_match_setup = meets_python_minimum_version(
+                python_version, entry.get("minimum-python-version", "1.0")
+            )
+            python_max_match_setup = meets_python_maximum_version(
+                python_version, entry.get("maximum-python-version", "100.0")
+            )
+            if entry.get("config-c-only", False) and (
+                python_min_match_setup and python_max_match_setup
+            ):
+                config_c_only_wanted.add(name)
 
     # Parse more files in the distribution for their metadata.
 

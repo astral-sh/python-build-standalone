@@ -72,6 +72,10 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     },
     "_overlapped": {},
     "_multiprocessing": {},
+    "_remote_debugging": {
+        # Added in 3.14
+        "ignore_missing": True
+    },
     "_socket": {},
     "_sqlite3": {"shared_depends": ["sqlite3"]},
     # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
@@ -90,6 +94,10 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
         "ignore_missing": True,
     },
     "_zoneinfo": {"ignore_missing": True},
+    "_zstd": {
+        # Added in 3.14
+        "ignore_missing": True
+    },
     "pyexpat": {},
     "select": {},
     "unicodedata": {},
@@ -117,6 +125,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_tkinter": ["tcl-8612", "tk-8612", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
+    "_zstd": ["zstd"],
 }
 
 
@@ -357,6 +366,7 @@ def hack_props(
     sqlite_version = DOWNLOADS["sqlite"]["version"]
     xz_version = DOWNLOADS["xz"]["version"]
     zlib_version = DOWNLOADS[zlib_entry]["version"]
+    zstd_version = DOWNLOADS["zstd"]["version"]
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
@@ -372,6 +382,7 @@ def hack_props(
     xz_path = td / ("xz-%s" % xz_version)
     zlib_prefix = "cpython-source-deps-" if zlib_entry == "zlib-ng" else ""
     zlib_path = td / ("%s%s-%s" % (zlib_prefix, zlib_entry, zlib_version))
+    zstd_path = td / ("cpython-source-deps-zstd-%s" % zstd_version)
     mpdecimal_path = td / ("mpdecimal-%s" % mpdecimal_version)
 
     openssl_root = td / "openssl" / arch
@@ -415,6 +426,9 @@ def hack_props(
             # On 3.14+, it's zlib-ng and the name changed
             elif b"<zlibNgDir" in line:
                 line = b"<zlibNgDir>%s\\</zlibNgDir>" % zlib_path
+
+            elif b"<zstdDir" in line:
+                line = b"<zstdDir>%s\\</zstdDir>" % zstd_path
 
             elif b"<mpdecimalDir" in line:
                 line = b"<mpdecimalDir>%s\\</mpdecimalDir>" % mpdecimal_path
@@ -1255,6 +1269,12 @@ def build_cpython(
             "tk-windows-bin-8612", BUILD, local_name="tk-windows-bin.tar.gz"
         )
 
+    # On CPython 3.14+, zstd is included
+    if meets_python_minimum_version(python_version, "3.14"):
+        zstd_archive = download_entry("zstd", BUILD)
+    else:
+        zstd_archive = None
+
     # CPython 3.13+ no longer uses a bundled `mpdecimal` version so we build it
     if meets_python_minimum_version(python_version, "3.13"):
         mpdecimal_archive = download_entry("mpdecimal", BUILD)
@@ -1297,6 +1317,7 @@ def build_cpython(
                 tk_bin_archive,
                 xz_archive,
                 zlib_archive,
+                zstd_archive,
             ):
                 if a is None:
                     continue

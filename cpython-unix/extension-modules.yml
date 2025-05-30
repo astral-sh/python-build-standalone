@@ -43,7 +43,7 @@ _blake2:
       minimum-python-version: "3.14"
     - define: _DEFAULT_SOURCE
       minimum-python-version: "3.14"
-    # Disable `explicit_bzero`, it requires glib 2.25+
+    # Disable `explicit_bzero`, it requires glibc 2.25+
     - define: LINUX_NO_EXPLICIT_BZERO
       minimum-python-version: "3.14"
 
@@ -88,6 +88,9 @@ _collections:
 _contextvars:
   sources:
     - _contextvarsmodule.c
+  config-c-only-conditional:
+    - config-c-only: true
+      minimum-python-version: "3.14"
 
 _crypt:
   maximum-python-version: "3.12"
@@ -315,12 +318,6 @@ _hmac:
   includes:
     - Modules/_hacl/
     - Modules/_hacl/include/
-  links:
-    - :libHacl_Hash_Blake2.a
-    - :libHacl_Hash_SHA1.a
-    - :libHacl_Hash_SHA2.a
-    - :libHacl_Hash_SHA3.a
-    - :libHacl_Hash_MD5.a
   defines:
     - _BSD_SOURCE
     - _DEFAULT_SOURCE
@@ -376,7 +373,6 @@ _md5:
   sources-conditional:
     - source: _hacl/Hacl_Hash_MD5.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   defines-conditional:
     - define: _BSD_SOURCE
       minimum-python-version: "3.12"
@@ -435,6 +431,12 @@ _random:
   sources:
     - _randommodule.c
 
+
+_remote_debugging:
+  minimum-python-version: "3.14"
+  sources:
+    - _remote_debugging_module.c
+
 _scproxy:
   # _scproxy is Apple OS only.
   # APIs required by _scproxy not available on iOS.
@@ -453,7 +455,6 @@ _sha1:
   sources-conditional:
     - source: _hacl/Hacl_Hash_SHA1.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines-conditional:
@@ -475,7 +476,6 @@ _sha2:
     - sha2module.c
   sources-conditional:
     - source: _hacl/Hacl_Hash_SHA2.c
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines:
@@ -491,7 +491,6 @@ _sha3:
       minimum-python-version: "3.12"
     - source: _hacl/Hacl_Hash_SHA3.c
       minimum-python-version: "3.12"
-      maximum-python-version: "3.13"
   includes:
     - Modules/_hacl/include
   defines-conditional:
@@ -617,6 +616,7 @@ _testcapi:
 
 _testexternalinspection:
   minimum-python-version: '3.13'
+  maximum-python-version: '3.13'
   sources:
     - _testexternalinspection.c
 
@@ -645,6 +645,8 @@ _testinternalcapi:
       minimum-python-version: "3.13"
     - source: _testinternalcapi/test_lock.c
       minimum-python-version: "3.13"
+    - source: _testinternalcapi/complex.c
+      minimum-python-version: "3.14"
 
 _testmultiphase:
   minimum-python-version: '3.9'
@@ -768,6 +770,17 @@ _xxtestfuzz:
   sources:
     - _xxtestfuzz/_xxtestfuzz.c
     - _xxtestfuzz/fuzzer.c
+
+_zstd:
+  # Disable on all targets until we add a zstd library
+  disabled-targets:
+    - .*
+  minimum-python-version: '3.14'
+  sources:
+    - _zstd/_zstdmodule.c
+    - _zstd/zdict.c
+    - _zstd/compressor.c
+    - _zstd/decompressor.c
 
 _zoneinfo:
   minimum-python-version: "3.9"

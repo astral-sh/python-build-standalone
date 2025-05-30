@@ -41,7 +41,7 @@ jobs:
       - run: just release-dry-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}
         if: ${{ github.event.inputs.dry-run == 'true' }}
 
-      # Create the release itself.
+      # Set our identity for git operations (on the latest-release branch).
       - name: Configure Git identity
         if: ${{ github.event.inputs.dry-run == 'false' }}
         run: |
@@ -66,14 +66,7 @@ jobs:
       # Create a GitHub release.
       - name: Create GitHub Release
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        uses: ncipollo/release-action@v1
-        with:
-          tag: ${{ github.event.inputs.tag }}
-          name: ${{ github.event.inputs.tag }}
-          prerelease: true
-          body: TBD
-          allowUpdates: true
-          updateOnlyUnreleased: true
+        run: just release-create ${{ github.events.input.tag }}
 
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}

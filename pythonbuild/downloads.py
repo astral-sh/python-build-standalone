@@ -429,4 +429,13 @@ DOWNLOADS = {
         "licenses": ["Zlib"],
         "license_file": "LICENSE.zlib-ng.txt",
     },
+    "zstd": {
+        "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/zstd-1.5.7.tar.gz",
+        "size": 2440298,
+        "sha256": "f24b52470d12f466e9fa4fcc94e6c530625ada51d7b36de7fdc6ed7e6f499c8e",
+        "version": "1.5.7",
+        "library_names": ["zstd"],
+        "licenses": ["BSD-3-Clause"],
+        "license_file": "LICENSE.zstd.txt",
+    },
 }

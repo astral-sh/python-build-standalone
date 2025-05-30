@@ -72,6 +72,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     },
     "_overlapped": {},
     "_multiprocessing": {},
+    # Added in 3.14
+    "_remote_debugging": {},
     "_socket": {},
     "_sqlite3": {"shared_depends": ["sqlite3"]},
     # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
@@ -117,6 +119,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_tkinter": ["tcl-8612", "tk-8612", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
+    "_zstd": ["zstd"],
 }
 
 
@@ -1011,6 +1014,10 @@ def collect_python_build_artifacts(
 
     if zlib_entry == "zlib-ng":
         depends_projects |= {"zlib-ng"}
+
+    # zstd is a dependency for Python 3.14+.
+    if python_majmin == "314":
+        depends_projects |= {"_zstd"}
 
     known_projects = (
         ignore_projects | other_projects | depends_projects | extension_projects

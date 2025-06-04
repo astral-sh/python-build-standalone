@@ -803,7 +803,8 @@ const GLOBAL_EXTENSIONS_WINDOWS: &[&str] = &[
     "winsound",
 ];
 
-const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi"];
+// TODO(zanieb): Move `_zstd` to non-Windows specific once we add support on Unix.
+const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi", "_zstd"];
 
 const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 

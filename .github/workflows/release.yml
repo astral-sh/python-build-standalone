@@ -66,7 +66,7 @@ jobs:
       # Create a GitHub release.
       - name: Create GitHub Release
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: just release-create ${{ github.events.input.tag }}
+        run: just release-create ${{ github.event.inputs.tag }}
 
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}

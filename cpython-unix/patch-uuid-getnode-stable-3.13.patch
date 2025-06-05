@@ -20,7 +20,7 @@ index e7e44c6413c2e2..ce396aa942b6ed 100755
      uuid = c_uuid
  
 +    def check_has_stable_libuuid_extractable_node(self):
-+        if not self.uuid._has_stable_extractable_node:
++        if not self.uuid.has_stable_extractable_node:
 +            self.skipTest("libuuid cannot deduce MAC address")
 +
 +    @unittest.skipUnless(os.name == 'posix', 'POSIX only')

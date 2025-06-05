@@ -20,7 +20,7 @@ index e7e44c6413c2e2..ce396aa942b6ed 100755
      uuid = c_uuid
  
 +    def check_has_stable_libuuid_extractable_node(self):
-+        if not self.uuid.has_stable_extractable_node:
++        if not self.uuid._has_stable_extractable_node:
 +            self.skipTest("libuuid cannot deduce MAC address")
 +
 +    @unittest.skipUnless(os.name == 'posix', 'POSIX only')
@@ -56,7 +56,7 @@ index c286eac38e1ef4..6ab1658cc5249a 100644
  try:
      import _uuid
      _generate_time_safe = getattr(_uuid, "generate_time_safe", None)
-+    _has_stable_extractable_node = _uuid.has_stable_extractable_node
++    _has_stable_extractable_node = getattr(_uuid, "has_stable_extractable_node", False)
      _UuidCreate = getattr(_uuid, "UuidCreate", None)
  except ImportError:
      _uuid = None

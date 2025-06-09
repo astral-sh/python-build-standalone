@@ -79,7 +79,7 @@ fi
 # `uuid.getnode()` is not stable on our libuuid, CPython should fallback to another method
 # Cherry-pick https://github.com/python/cpython/pull/134704 until it is released
 # We could backport this to more versions too, it won't be done by the upstream
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
     patch -p1 -i ${ROOT}/patch-uuid-getnode-stable-3.13.patch
 fi
 

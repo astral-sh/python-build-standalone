@@ -59,6 +59,7 @@ jobs:
           - build
           - build.cross
           - build.cross-riscv64
+          - build.cross-loongarch64
           - gcc
     name: ${{ matrix.image }}
     runs-on: depot-ubuntu-22.04

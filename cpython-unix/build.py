@@ -946,7 +946,7 @@ def build_cpython(
             "tk8.6",
         ]
 
-        if "-apple" not in target_triple:
+        if not all(s in target_triple for s in ("-apple", "loongarch64-")):
             python_info["tcl_library_paths"].append("Tix8.4.3")
 
         if "-apple" in target_triple:

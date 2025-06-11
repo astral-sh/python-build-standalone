@@ -42,6 +42,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "i686-unknown-linux-gnu",
     // Note there's build support for mips* targets but they are not tested
     // See https://github.com/astral-sh/python-build-standalone/issues/412
+    "loongarch64-unknown-linux-gnu",
     "mips-unknown-linux-gnu",
     "mipsel-unknown-linux-gnu",
     "mips64el-unknown-linux-gnuabi64",
@@ -170,6 +171,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
+            "loongarch64-unknown-linux-gnu",
+            version_compare::Version::from("2.38").unwrap(),
+        );
+        versions.insert(
             "mips-unknown-linux-gnu",
             version_compare::Version::from("2.19").unwrap(),
         );
@@ -243,6 +248,7 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
                 vec!["ld-linux-armhf.so.3", "libgcc_s.so.1"],
             ),
             ("i686-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
+            ("loongarch64-unknown-linux-gnu", vec!["ld-linux-loongarch-lp64d.so.1"]),
             ("mips-unknown-linux-gnu", vec!["ld.so.1", "libatomic.so.1"]),
             (
                 "mipsel-unknown-linux-gnu",
@@ -511,6 +517,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),
         ("i686-pc-windows-msvc", "win32"),
         ("i686-unknown-linux-gnu", "linux-i686"),
+        ("loongarch64-unknown-linux-gnu", "linux-loongarch64"),
         ("mips-unknown-linux-gnu", "linux-mips"),
         ("mipsel-unknown-linux-gnu", "linux-mipsel"),
         ("mips64el-unknown-linux-gnuabi64", "todo"),
@@ -898,6 +905,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "armv7-unknown-linux-gnueabi" => object::elf::EM_ARM,
         "armv7-unknown-linux-gnueabihf" => object::elf::EM_ARM,
         "i686-unknown-linux-gnu" => object::elf::EM_386,
+        "loongarch64-unknown-linux-gnu" => object::elf::EM_LOONGARCH,
         "mips-unknown-linux-gnu" => object::elf::EM_MIPS,
         "mipsel-unknown-linux-gnu" => object::elf::EM_MIPS,
         "mips64el-unknown-linux-gnuabi64" => 0,

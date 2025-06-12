@@ -653,7 +653,8 @@ fi
 # We patched configure.ac above. Reflect those changes.
 autoconf
 
-CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS LDFLAGS=$LDFLAGS \
+# Ensure `CFLAGS` are propagated to JIT compilation for 3.13+
+CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS JIT_CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
 
 # Supplement produced Makefile with our modifications.

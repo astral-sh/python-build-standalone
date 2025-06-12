@@ -28,15 +28,15 @@ cat-python-json archive:
 # Download release artifacts from GitHub Actions
 release-download-distributions token commit:
   mkdir -p dist
-  cargo run --release -- fetch-release-distributions --token {{token}} --commit {{commit}} --dest dist
+  cargo run --release -- fetch-release-distributions --org verkada --token {{token}} --commit {{commit}} --dest dist
 
 # Upload release artifacts to a GitHub release.
 release-upload-distributions token datetime tag:
-  cargo run --release -- upload-release-distributions --token {{token}} --datetime {{datetime}} --tag {{tag}} --dist dist
+  cargo run --release -- upload-release-distributions --org verkada --token {{token}} --datetime {{datetime}} --tag {{tag}} --dist dist
 
 # "Upload" release artifacts to a GitHub release in dry-run mode (skip upload).
 release-upload-distributions-dry-run token datetime tag:
-  cargo run --release -- upload-release-distributions --token {{token}} --datetime {{datetime}} --tag {{tag}} --dist dist -n
+  cargo run --release -- upload-release-distributions --org verkada --token {{token}} --datetime {{datetime}} --tag {{tag}} --dist dist -n
 
 # Promote a tag to "latest" by pushing to the `latest-release` branch.
 release-set-latest-release tag:

@@ -318,6 +318,46 @@ armv7-unknown-linux-gnueabihf:
     - zlib
   openssl_target: linux-armv4
 
+loongarch64-unknown-linux-gnu:
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.9'
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+  docker_image_suffix: .cross-loongarch64
+  host_cc: /usr/bin/x86_64-linux-gnu-gcc
+  host_cxx: /usr/bin/x86_64-linux-gnu-g++
+  target_cc: /usr/bin/loongarch64-linux-gnu-gcc
+  target_cxx: /usr/bin/loongarch64-linux-gnu-g++
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.0
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+  openssl_target: linux64-loongarch64
+
 mips-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64

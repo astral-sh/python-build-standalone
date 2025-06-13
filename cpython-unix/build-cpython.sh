@@ -654,7 +654,7 @@ fi
 autoconf
 
 # Ensure `CFLAGS` are propagated to JIT compilation for 3.13+
-CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS JIT_CFLAGS=$CFLAGS LDFLAGS=$LDFLAGS \
+CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
 
 # Supplement produced Makefile with our modifications.

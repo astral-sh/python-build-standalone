@@ -90,12 +90,6 @@ else
     patch -p1 -i ${ROOT}/patch-xopen-source-ios-legacy.patch
 fi
 
-# See https://github.com/python/cpython/pull/135146
-# TODO(zanieb): Drop in 3.14b3
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-    patch -p1 -i ${ROOT}/patch-static-remote-debug-3.14.patch
-fi
-
 # LIBTOOL_CRUFT is unused and breaks cross-compiling on macOS. Nuke it.
 # Submitted upstream at https://github.com/python/cpython/pull/101048.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
@@ -485,7 +479,9 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         fi
 
         # Respect CFLAGS during JIT compilation.
-        # Backports https://github.com/python/cpython/pull/134276
+        #
+        # Backports https://github.com/python/cpython/pull/134276 which we're trying to get released
+        # in 3.14, but is currently only in 3.15+.
         if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
             patch -p1 -i ${ROOT}/patch-jit-cflags-314.patch
         elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then

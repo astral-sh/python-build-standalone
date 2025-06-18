@@ -384,3 +384,21 @@ windows:
       - options:
           - freethreaded+pgo
         minimum-python-version: "3.13"
+
+  aarch64-pc-windows-msvc:
+    arch: aarch64
+    vcvars: vcvarsamd64_arm64.bat
+    python_versions:
+      # On 3.9 / 3.10, `_tkinter` is failing to be included in the build
+      # - "3.9"
+      # - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+    build_options:
+      - pgo
+    build_options_conditional:
+      - options:
+          - freethreaded+pgo
+        minimum-python-version: "3.13"

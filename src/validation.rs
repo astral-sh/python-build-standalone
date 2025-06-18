@@ -18,7 +18,7 @@ use {
             macho::{LoadCommandVariant, MachHeader, Nlist},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
-        Endianness, FileKind, Object, SectionIndex, SymbolScope,
+        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
     },
     once_cell::sync::Lazy,
     std::{
@@ -33,6 +33,7 @@ use {
 const RECOGNIZED_TRIPLES: &[&str] = &[
     "aarch64-apple-darwin",
     "aarch64-apple-ios",
+    "aarch64-pc-windows-msvc",
     "aarch64-unknown-linux-gnu",
     "armv7-unknown-linux-gnueabi",
     "armv7-unknown-linux-gnueabihf",
@@ -117,11 +118,13 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "libcrypto-1_1.dll",
     "libcrypto-1_1-x64.dll",
     "libcrypto-3.dll",
+    "libcrypto-3-arm64.dll",
     "libcrypto-3-x64.dll",
     "libffi-8.dll",
     "libssl-1_1.dll",
     "libssl-1_1-x64.dll",
     "libssl-3.dll",
+    "libssl-3-arm64.dll",
     "libssl-3-x64.dll",
     "python3.dll",
     "python39.dll",
@@ -137,8 +140,14 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "tk86t.dll",
 ];
 
-// CPython 3.14 uses tcl/tk 8.6.14+ which includes a bundled zlib and dynamically links to msvcrt.
-const PE_ALLOWED_LIBRARIES_314: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+// CPython 3.14 and ARM64 use a newer version of tcl/tk (8.6.14+) which includes a bundled zlib that
+// dynamically links some system libraries
+const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
+    "zlib1.dll",
+    "api-ms-win-crt-private-l1-1-0.dll", // zlib loads this library on arm64, 3.14+
+    "msvcrt.dll",                        // zlib loads this library
+];
+const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
     Lazy::new(|| {
@@ -496,6 +505,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
     [
         ("aarch64-apple-darwin", "macosx-11.0-arm64"),
         ("aarch64-apple-ios", "iOS-aarch64"),
+        ("aarch64-pc-windows-msvc", "win-arm64"),
         ("aarch64-unknown-linux-gnu", "linux-aarch64"),
         ("armv7-unknown-linux-gnueabi", "linux-arm"),
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),
@@ -1375,15 +1385,17 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
             let lib = String::from_utf8(lib.to_vec())?;
 
             match python_major_minor {
-                "3.9" | "3.10" | "3.11" | "3.12" | "3.13" => {}
+                "3.11" | "3.12" | "3.13" if pe.architecture() == Architecture::Aarch64 => {
+                    if PE_ALLOWED_LIBRARIES_ARM64.contains(&lib.as_str()) {
+                        continue;
+                    }
+                }
                 "3.14" => {
                     if PE_ALLOWED_LIBRARIES_314.contains(&lib.as_str()) {
                         continue;
                     }
                 }
-                _ => {
-                    panic!("unhandled Python version: {}", python_major_minor);
-                }
+                _ => {}
             }
 
             if !PE_ALLOWED_LIBRARIES.contains(&lib.as_str()) {

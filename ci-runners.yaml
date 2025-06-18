@@ -40,3 +40,8 @@ windows-latest:
   arch: x86_64
   platform: windows
   free: true
+
+windows-11-arm:
+  arch: aarch64
+  platform: windows
+  free: false

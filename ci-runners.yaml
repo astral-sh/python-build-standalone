@@ -26,6 +26,11 @@ macos-latest:
   platform: darwin
   free: true
 
+depot-windows-2022-8:
+  arch: x86_64
+  platform: windows
+  free: false
+
 windows-latest-large:
   arch: x86_64
   platform: windows

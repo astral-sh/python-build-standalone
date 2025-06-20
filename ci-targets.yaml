@@ -101,6 +101,27 @@ linux:
           - freethreaded+lto
         minimum-python-version: "3.13"
 
+  loongarch64-unknown-linux-gnu:
+    arch: loongarch64
+    libc: gnu
+    python_versions:
+      - "3.9"
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+    build_options:
+      - debug
+      - noopt
+      - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
+
   s390x-unknown-linux-gnu:
     arch: s390x
     libc: gnu

@@ -257,6 +257,7 @@ _decimal:
     - define: CONFIG_64=1
       targets:
         - aarch64-.*
+        - loongarch64-unknown-linux.*
         - ppc64le-unknown-linux.*
         - riscv64-unknown-linux.*
         - s390x-unknown-linux-.*

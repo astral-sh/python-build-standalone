@@ -649,8 +649,19 @@ fi
 # We patched configure.ac above. Reflect those changes.
 autoconf
 
-# Ensure `CFLAGS` are propagated to JIT compilation for 3.13+
-CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS LDFLAGS=$LDFLAGS \
+# Ensure `CFLAGS` are propagated to JIT compilation for 3.13+ (note this variable has no effect on
+# 3.12 and earlier)
+CFLAGS_JIT="${CFLAGS}"
+
+# In 3.14+, the JIT compiler on x86-64 Linux uses a model that conflicts with `-fPIC`, so strip it
+# from the flags. See:
+# - https://github.com/python/cpython/issues/135690
+# - https://github.com/python/cpython/pull/130097
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${TARGET_TRIPLE}" == x86_64* ]]; then
+    CFLAGS_JIT="${CFLAGS_JIT//-fPIC/}"
+fi
+
+CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
 
 # Supplement produced Makefile with our modifications.

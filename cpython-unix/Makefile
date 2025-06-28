@@ -66,7 +66,7 @@ TOOLCHAIN_DEPENDS := \
 
 PYTHON_DEP_DEPENDS := \
     $(OUTDIR)/targets/$(TARGET_TRIPLE) \
-    $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).tar) \
+    $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).$(HOST_PLATFORM).tar) \
     $(TOOLCHAIN_DEPENDS) \
     $(NULL)
 
@@ -75,12 +75,12 @@ HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYT
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
 ifndef PYBUILD_NO_DOCKER
-$(OUTDIR)/image-%.tar: $(OUTDIR)/%.Dockerfile
+$(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
 
-$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(OUTDIR)/image-gcc.tar $(HERE)/build-binutils.sh
-	$(RUN_BUILD) --toolchain binutils
+$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(HERE)/build-binutils.sh
+	$(RUN_BUILD) --toolchain --docker-image $(DOCKER_IMAGE_GCC) binutils
 
 $(OUTDIR)/$(CLANG_FILENAME):
 	$(RUN_BUILD) --toolchain clang --target-triple $(TARGET_TRIPLE)
@@ -125,7 +125,7 @@ $(OUTDIR)/libffi-3.3-$(LIBFFI_3.3_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_D
 $(OUTDIR)/libffi-$(LIBFFI_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libffi.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libffi
 
-$(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libpthread-stubs.sh $(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).tar
+$(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libpthread-stubs.sh $(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).$(HOST_PLATFORM).tar
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libpthread-stubs
 
 LIBX11_DEPENDS = \

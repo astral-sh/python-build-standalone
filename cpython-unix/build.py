@@ -89,13 +89,17 @@ def add_target_env(env, build_platform, target_triple, build_env):
     extra_host_ldflags = []
 
     if build_platform == "linux_x86_64":
-        env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
+        machine = platform.machine()
 
-        env["TARGET_TRIPLE"] = (
-            target_triple.replace("x86_64_v2-", "x86_64-")
-            .replace("x86_64_v3-", "x86_64-")
-            .replace("x86_64_v4-", "x86_64-")
-        )
+        if machine == "aarch64":
+            env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
+        else:
+            env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            env["TARGET_TRIPLE"] = (
+                target_triple.replace("x86_64_v2-", "x86_64-")
+                .replace("x86_64_v3-", "x86_64-")
+                .replace("x86_64_v4-", "x86_64-")
+            )
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
         # semantically correct, since the current machine may not support
@@ -105,7 +109,11 @@ def add_target_env(env, build_platform, target_triple, build_env):
         ):
             env["CROSS_COMPILING"] = "1"
 
-    if build_platform.startswith("macos_"):
+    elif build_platform == "linux_aarch64":
+        env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
+        env["TARGET_TRIPLE"] = "aarch64-unknown-linux-gnu"
+
+    elif build_platform.startswith("macos_"):
         machine = platform.machine()
 
         if machine == "arm64":
@@ -496,10 +504,14 @@ def python_build_info(
 
     binary_suffix = ""
 
-    if platform == "linux_x86_64":
+    if platform in ("linux_x86_64", "linux_aarch64"):
+        arch = "aarch64" if platform == "linux_aarch64" else "x86_64"
+
         bi["core"]["static_lib"] = (
-            "install/lib/python{version}/config-{version}{binary_suffix}-x86_64-linux-gnu/libpython{version}{binary_suffix}.a".format(
-                version=version, binary_suffix=binary_suffix
+            "install/lib/python{version}/config-{version}{binary_suffix}-{arch}-linux-gnu/libpython{version}{binary_suffix}.a".format(
+                version=version,
+                binary_suffix=binary_suffix,
+                arch=arch,
             )
         )
 
@@ -579,7 +591,10 @@ def python_build_info(
         if lib.startswith("-l"):
             lib = lib[2:]
 
-            if platform == "linux_x86_64" and lib not in linux_allowed_system_libraries:
+            if (
+                platform in ("linux_x86_64", "linux_aarch64")
+                and lib not in linux_allowed_system_libraries
+            ):
                 raise Exception("unexpected library in LIBS (%s): %s" % (libs, lib))
             elif (
                 platform.startswith("macos_")
@@ -851,7 +866,7 @@ def build_cpython(
         extension_module_loading = ["builtin"]
         crt_features = []
 
-        if host_platform == "linux_x86_64":
+        if host_platform in ("linux_x86_64", "linux_aarch64"):
             if "static" in parsed_build_options:
                 crt_features.append("static")
             else:
@@ -1080,10 +1095,14 @@ def main():
             with image_path.open("rb") as fh:
                 image_data = fh.read()
 
-            build_docker_image(client, image_data, BUILD, image_name)
+            build_docker_image(client, image_data, BUILD, image_name, host_platform)
 
         elif action == "binutils":
-            build_binutils(client, get_image(client, ROOT, BUILD, "gcc"), host_platform)
+            build_binutils(
+                client,
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                host_platform,
+            )
 
         elif action == "clang":
             materialize_clang(host_platform, target_triple)
@@ -1091,7 +1110,7 @@ def main():
         elif action == "musl":
             build_musl(
                 client,
-                get_image(client, ROOT, BUILD, "gcc"),
+                get_image(client, ROOT, BUILD, "gcc", host_platform),
                 host_platform,
                 target_triple,
                 build_options,
@@ -1101,7 +1120,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1115,7 +1134,7 @@ def main():
             build_libedit(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
@@ -1149,7 +1168,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1162,7 +1181,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1182,7 +1201,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1195,7 +1214,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1208,7 +1227,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1222,7 +1241,7 @@ def main():
             build_tix(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
@@ -1243,7 +1262,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1256,7 +1275,7 @@ def main():
         elif action.startswith("cpython-") and action.endswith("-host"):
             build_cpython_host(
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action[:-5],
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1275,7 +1294,7 @@ def main():
             build_cpython(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,

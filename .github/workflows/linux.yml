@@ -2,7 +2,7 @@ name: linux
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 concurrency:
@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.docker-build-matrix) }}
-    name: image / ${{ matrix.name }}
+    name: image / ${{ matrix.arch }} / ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
@@ -100,23 +100,23 @@ jobs:
           # Cache from the default branch of the canonical repo so forks can have cache hits.
           # Ignore errors on cache writes so CI of forks works without a valid GHCR config.
           cache-from: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-${{ env.GIT_REF_NAME }}
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-main
-            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.name }}-main
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-${{ env.GIT_REF_NAME }}
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-main
+            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.name }}-linux_${{ matrix.arch }}-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-${{ env.GIT_REF_NAME }},ignore-error=true
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-linux_${{ matrix.arch }}-${{ env.GIT_REF_NAME }},ignore-error=true
           outputs: |
-            type=docker,dest=build/image-${{ matrix.name }}.tar
+            type=docker,dest=build/image-${{ matrix.name }}.linux_${{ matrix.arch }}.tar
 
       - name: Compress Image
         run: |
-          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.name }}
+          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.name }}.linux_${{ matrix.arch }}
           zstd -v -T0 -6 --rm build/image-*.tar
 
       - name: Upload Docker Image
         uses: actions/upload-artifact@v4
         with:
-          name: image-${{ matrix.name }}
+          name: image-${{ matrix.name }}-linux_${{ matrix.arch }}
           path: build/image-*
 
   generate-matrix:

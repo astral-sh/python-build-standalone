@@ -1401,15 +1401,16 @@ def build_cpython(
             shutil.copyfile(source, dest)
 
         # Delete the tk nmake helper, it's not needed and links msvc
-        tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
-        tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
-        (
-            tcltk_path
-            / build_directory
-            / "lib"
-            / "nmake"
-            / "x86_64-w64-mingw32-nmakehlp.exe"
-        ).unlink()
+        if tk_bin_entry == "tk-windows-bin":
+            tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
+            tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+            (
+                tcltk_path
+                / build_directory
+                / "lib"
+                / "nmake"
+                / "x86_64-w64-mingw32-nmakehlp.exe"
+            ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

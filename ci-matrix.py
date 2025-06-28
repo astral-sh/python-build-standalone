@@ -19,6 +19,7 @@ CI_RUNNERS_YAML = "ci-runners.yaml"
 CI_EXTRA_SKIP_LABELS = ["documentation"]
 CI_MATRIX_SIZE_LIMIT = 256  # The maximum size of a matrix in GitHub Actions
 
+
 # Docker images for building toolchains and dependencies
 DOCKER_BUILD_IMAGES = [
     {"name": "build", "arch": "x86_64"},
@@ -26,6 +27,10 @@ DOCKER_BUILD_IMAGES = [
     {"name": "build.cross-riscv64", "arch": "x86_64"},
     {"name": "gcc", "arch": "x86_64"},
 ]
+
+
+def crate_artifact_name(platform: str, arch: str) -> str:
+    return f"crate-{platform}-{arch}"
 
 
 def meets_conditional_version(version: str, min_version: str) -> bool:
@@ -108,7 +113,7 @@ def generate_docker_matrix_entries(
     matrix_entries = []
     for image in DOCKER_BUILD_IMAGES:
         # Find appropriate runner for Linux platform with the specified architecture
-        runner = find_runner(runners, "linux", image["arch"])
+        runner = find_runner(runners, "linux", image["arch"], False)
 
         entry = {
             "name": image["name"],
@@ -118,6 +123,51 @@ def generate_docker_matrix_entries(
         matrix_entries.append(entry)
 
     return matrix_entries
+
+
+def generate_crate_build_matrix_entries(
+    python_entries: list[dict[str, str]],
+    runners: dict[str, Any],
+    config: dict[str, Any],
+    force_crate_build: bool = False,
+    platform_filter: Optional[str] = None,
+) -> list[dict[str, str]]:
+    """Generate matrix entries for crate builds based on python build matrix."""
+    needed_builds = set()
+    for entry in python_entries:
+        # The crate build will need to match the runner's architecture
+        runner = runners[entry["runner"]]
+        needed_builds.add((entry["platform"], runner["arch"]))
+
+    # If forcing crate build, also include all possible native builds
+    if force_crate_build:
+        for platform, platform_config in config.items():
+            # Filter by platform if specified
+            if platform_filter and platform != platform_filter:
+                continue
+
+            for target_config in platform_config.values():
+                # Only include if native (run: true means native)
+                if not target_config.get("run"):
+                    continue
+
+                arch = target_config["arch"]
+                needed_builds.add((platform, arch))
+
+    # Create matrix entries for each needed build
+    return [
+        {
+            "platform": platform,
+            "arch": arch,
+            "runner": find_runner(runners, platform, arch, True),
+            "crate_artifact_name": crate_artifact_name(
+                platform,
+                arch,
+            ),
+        }
+        for platform, arch in needed_builds
+        if not platform_filter or platform == platform_filter
+    ]
 
 
 def generate_python_build_matrix_entries(
@@ -154,10 +204,12 @@ def generate_python_build_matrix_entries(
     return matrix_entries
 
 
-def find_runner(runners: dict[str, Any], platform: str, arch: str) -> str:
+def find_runner(runners: dict[str, Any], platform: str, arch: str, free: bool) -> str:
     # Find a matching platform first
     match_platform = [
-        runner for runner in runners if runners[runner]["platform"] == platform
+        runner
+        for runner in runners
+        if runners[runner]["platform"] == platform and runners[runner]["free"] == free
     ]
 
     # Then, find a matching architecture
@@ -173,7 +225,9 @@ def find_runner(runners: dict[str, Any], platform: str, arch: str) -> str:
     if match_platform:
         return match_platform[0]
 
-    raise RuntimeError(f"No runner found for platform {platform!r} and arch {arch!r}")
+    raise RuntimeError(
+        f"No runner found for platform {platform!r} and arch {arch!r} with free={free}"
+    )
 
 
 def add_python_build_entries_for_config(
@@ -188,7 +242,7 @@ def add_python_build_entries_for_config(
     python_versions = config["python_versions"]
     build_options = config["build_options"]
     arch = config["arch"]
-    runner = find_runner(runners, platform, arch)
+    runner = find_runner(runners, platform, arch, False)
 
     # Create base entry that will be used for all variants
     base_entry = {
@@ -199,6 +253,8 @@ def add_python_build_entries_for_config(
         # If `run` is in the config, use that — otherwise, default to if the
         # runner architecture matches the build architecture
         "run": str(config.get("run", runners[runner]["arch"] == arch)).lower(),
+        # Use the crate artifact built for the runner's architecture
+        "crate_artifact_name": crate_artifact_name(platform, runners[runner]["arch"]),
     }
 
     # Add optional fields if they exist
@@ -267,8 +323,13 @@ def parse_args() -> argparse.Namespace:
         help="If only free runners should be used.",
     )
     parser.add_argument(
+        "--force-crate-build",
+        action="store_true",
+        help="Force crate builds to be included even without python builds.",
+    )
+    parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "all"],
+        choices=["python-build", "docker-build", "crate-build", "all"],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -295,16 +356,16 @@ def main() -> None:
 
     result = {}
 
-    # Generate python-build matrix if requested
-    python_entries = []
-    if args.matrix_type in ["python-build", "all"]:
-        python_entries = generate_python_build_matrix_entries(
-            config,
-            runners,
-            args.platform,
-            labels,
-        )
+    # Generate python build entries
+    python_entries = generate_python_build_matrix_entries(
+        config,
+        runners,
+        args.platform,
+        labels,
+    )
 
+    # Output python-build matrix if requested
+    if args.matrix_type in ["python-build", "all"]:
         if args.max_shards:
             python_build_matrix = {}
             shards = (len(python_entries) // CI_MATRIX_SIZE_LIMIT) + 1
@@ -344,6 +405,17 @@ def main() -> None:
                 args.platform,
             )
             result["docker-build"] = {"include": docker_entries}
+
+    # Generate crate-build matrix if requested
+    if args.matrix_type in ["crate-build", "all"]:
+        crate_entries = generate_crate_build_matrix_entries(
+            python_entries,
+            runners,
+            config,
+            args.force_crate_build,
+            args.platform,
+        )
+        result["crate-build"] = {"include": crate_entries}
 
     print(json.dumps(result))
 

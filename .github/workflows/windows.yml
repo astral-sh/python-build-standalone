@@ -13,11 +13,14 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  pythonbuild:
-    if: ${{ needs.generate-matrix.outputs.pythonbuild_changed == 'true' || needs.generate-matrix.outputs.any_builds == 'true' || github.ref == 'refs/heads/main' }}
+  crate-build:
     needs:
       - generate-matrix
-    runs-on: 'windows-2022'
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.crate-build-matrix) }}
+      fail-fast: false
+    name: crate / ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
 
@@ -40,15 +43,15 @@ jobs:
       - name: Upload executable
         uses: actions/upload-artifact@v4
         with:
-          name: pythonbuild
+          name: ${{ matrix.crate_artifact_name }}
           path: target/release/pythonbuild.exe
 
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
-      pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -64,25 +67,6 @@ jobs:
           LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
 
-      - name: Generate build matrix
-        id: set-matrix
-        run: |
-          uv run ci-matrix.py --platform windows --labels '${{ steps.get-labels.outputs.labels }}' > matrix.json
-          
-          # Extract python-build matrix
-          echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
-          
-          # Display the matrix for debugging too
-          cat matrix.json | jq
-
-          if jq -e '."python-build".include | length > 0' matrix.json > /dev/null; then
-            # Build matrix has entries
-            echo "any_builds=true" >> $GITHUB_OUTPUT
-          else
-            # Build matrix is empty
-            echo "any_builds=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Check if the `pythonbuild` crate changed
         id: check-pythonbuild
         env:
@@ -95,11 +79,31 @@ jobs:
               echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          uv run ci-matrix.py --platform windows --labels '${{ steps.get-labels.outputs.labels }}' ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
+          
+          # Extract python-build matrix
+          echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
+          
+          # Display the matrix for debugging too
+          cat matrix.json | jq
+
+          if jq -e '."python-build".include | length > 0' matrix.json > /dev/null; then
+            # Build matrix has entries
+            echo "any_builds=true" >> $GITHUB_OUTPUT
+          else
+            # Build matrix is empty
+            echo "any_builds=false" >> $GITHUB_OUTPUT
+          fi
+
   build:
     timeout-minutes: 60
     needs:
       - generate-matrix
-      - pythonbuild
+      - crate-build
     # Permissions used for actions/attest-build-provenance
     permissions:
       id-token: write
@@ -127,7 +131,7 @@ jobs:
       - name: Download pythonbuild Executable
         uses: actions/download-artifact@v4
         with:
-          name: pythonbuild
+          name: ${{ matrix.crate_artifact_name }}
 
       # We need to do this before we activate the VC++ environment or else binary packages
       # don't get compiled properly.

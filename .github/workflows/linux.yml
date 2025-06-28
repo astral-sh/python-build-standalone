@@ -13,11 +13,14 @@ env:
   FORCE_COLOR: 1
 
 jobs:
-  pythonbuild:
-    if: ${{ needs.generate-matrix.outputs.pythonbuild_changed == 'true' || needs.generate-matrix.outputs.any_builds == 'true' || github.ref == 'refs/heads/main' }}
+  crate-build:
     needs:
       - generate-matrix
-    runs-on: depot-ubuntu-22.04
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.crate-build-matrix) }}
+      fail-fast: false
+    name: crate / ${{ matrix.arch }}
     steps:
       - name: Install System Dependencies
         run: |
@@ -45,7 +48,7 @@ jobs:
       - name: Upload pythonbuild Executable
         uses: actions/upload-artifact@v4
         with:
-          name: pythonbuild
+          name: ${{ matrix.crate_artifact_name }}
           path: target/release/pythonbuild
 
   image:
@@ -55,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.generate-matrix.outputs.docker-build-matrix) }}
-    name: ${{ matrix.name }}
+    name: image / ${{ matrix.name }}
     runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
@@ -122,8 +125,8 @@ jobs:
       python-build-matrix-0: ${{ steps.set-matrix.outputs.python-build-matrix-0 }}
       python-build-matrix-1: ${{ steps.set-matrix.outputs.python-build-matrix-1 }}
       docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
+      crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
-      pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -139,30 +142,6 @@ jobs:
           LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
 
-      - name: Generate build matrix
-        id: set-matrix
-        run: |
-          uv run ci-matrix.py \
-            --platform linux \
-            --labels '${{ steps.get-labels.outputs.labels }}' \
-            --max-shards 2 \
-            > matrix.json
-
-          echo "python-build-matrix-0=$(jq -c '."python-build"["0"]' matrix.json)" >> $GITHUB_OUTPUT
-          echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
-          echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
-
-          # Display the matrix for debugging too
-          cat matrix.json | jq
-
-          if jq -e '."python-build"["0"].include | length > 0' matrix.json > /dev/null; then
-            # Build matrix has entries
-            echo "any_builds=true" >> $GITHUB_OUTPUT
-          else
-            # Build matrix is empty
-            echo "any_builds=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Check if the `pythonbuild` crate changed
         id: check-pythonbuild
         env:
@@ -175,10 +154,36 @@ jobs:
               echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Generate build matrix
+        id: set-matrix
+        run: |
+          uv run ci-matrix.py \
+            --platform linux \
+            --labels '${{ steps.get-labels.outputs.labels }}' \
+            --max-shards 2 \
+            ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} \
+            > matrix.json
+
+          echo "python-build-matrix-0=$(jq -c '."python-build"["0"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
+
+          # Display the matrix for debugging too
+          cat matrix.json | jq
+
+          if jq -e '."python-build"["0"].include | length > 0' matrix.json > /dev/null; then
+            # Build matrix has entries
+            echo "any_builds=true" >> $GITHUB_OUTPUT
+          else
+            # Build matrix is empty
+            echo "any_builds=false" >> $GITHUB_OUTPUT
+          fi
+
   build-0:
     needs:
       - generate-matrix
-      - pythonbuild
+      - crate-build
       - image
     # Permissions used for actions/attest-build-provenance
     permissions:
@@ -202,7 +207,7 @@ jobs:
       - name: Download pythonbuild
         uses: actions/download-artifact@v4
         with:
-          name: pythonbuild
+          name: ${{ matrix.crate_artifact_name }}
           path: build
 
       - name: Download images
@@ -278,7 +283,7 @@ jobs:
   build-1:
     needs:
       - generate-matrix
-      - pythonbuild
+      - crate-build
       - image
     # Permissions used for actions/attest-build-provenance
     permissions:
@@ -302,7 +307,7 @@ jobs:
       - name: Download pythonbuild
         uses: actions/download-artifact@v4
         with:
-          name: pythonbuild
+          name: ${{ matrix.crate_artifact_name }}
           path: build
 
       - name: Download images

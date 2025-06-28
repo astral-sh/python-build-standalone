@@ -54,14 +54,9 @@ jobs:
       - generate-matrix
     strategy:
       fail-fast: false
-      matrix:
-        image:
-          - build
-          - build.cross
-          - build.cross-riscv64
-          - gcc
-    name: ${{ matrix.image }}
-    runs-on: depot-ubuntu-22.04
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.docker-build-matrix) }}
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
     steps:
@@ -95,37 +90,38 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: build/${{ matrix.image }}.Dockerfile
+          file: build/${{ matrix.name }}.Dockerfile
           labels: org.opencontainers.image.source=https://github.com/${{ env.REPO_NAME }}
           # Cache from/to the current branch of the current repo as the primary cache key.
           # Cache from the default branch of the current repo so branches can have cache hits.
           # Cache from the default branch of the canonical repo so forks can have cache hits.
           # Ignore errors on cache writes so CI of forks works without a valid GHCR config.
           cache-from: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }}
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-main
-            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.image }}-main
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-${{ env.GIT_REF_NAME }}
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-main
+            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:${{ matrix.name }}-main
           cache-to: |
-            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.image }}-${{ env.GIT_REF_NAME }},ignore-error=true
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:${{ matrix.name }}-${{ env.GIT_REF_NAME }},ignore-error=true
           outputs: |
-            type=docker,dest=build/image-${{ matrix.image }}.tar
+            type=docker,dest=build/image-${{ matrix.name }}.tar
 
       - name: Compress Image
         run: |
-          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.image }}
+          echo ${{ steps.build-image.outputs.imageid }} > build/image-${{ matrix.name }}
           zstd -v -T0 -6 --rm build/image-*.tar
 
       - name: Upload Docker Image
         uses: actions/upload-artifact@v4
         with:
-          name: image-${{ matrix.image }}
+          name: image-${{ matrix.name }}
           path: build/image-*
 
   generate-matrix:
     runs-on: ubuntu-latest
     outputs:
-      matrix-0: ${{ steps.set-matrix.outputs.matrix-0 }}
-      matrix-1: ${{ steps.set-matrix.outputs.matrix-1 }}
+      python-build-matrix-0: ${{ steps.set-matrix.outputs.python-build-matrix-0 }}
+      python-build-matrix-1: ${{ steps.set-matrix.outputs.python-build-matrix-1 }}
+      docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
       pythonbuild_changed: ${{ steps.check-pythonbuild.outputs.changed }}
     steps:
@@ -152,13 +148,14 @@ jobs:
             --max-shards 2 \
             > matrix.json
 
-          echo "matrix-0=$(jq -c '.["0"]' matrix.json)" >> $GITHUB_OUTPUT
-          echo "matrix-1=$(jq -c '.["1"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "python-build-matrix-0=$(jq -c '."python-build"["0"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
           cat matrix.json | jq
 
-          if jq -e '.["0"].include | length > 0' matrix.json > /dev/null; then
+          if jq -e '."python-build"["0"].include | length > 0' matrix.json > /dev/null; then
             # Build matrix has entries
             echo "any_builds=true" >> $GITHUB_OUTPUT
           else
@@ -189,7 +186,7 @@ jobs:
       attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-0) }}
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-0) }}
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
@@ -289,7 +286,7 @@ jobs:
       attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-1) }}
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-1) }}
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:

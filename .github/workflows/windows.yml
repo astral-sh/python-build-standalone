@@ -67,11 +67,15 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          uv run ci-matrix.py --platform windows --labels '${{ steps.get-labels.outputs.labels }}' > matrix.json && echo "matrix=$(cat matrix.json)" >> $GITHUB_OUTPUT
+          uv run ci-matrix.py --platform windows --labels '${{ steps.get-labels.outputs.labels }}' > matrix.json
+          
+          # Extract python-build matrix
+          echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
+          
           # Display the matrix for debugging too
           cat matrix.json | jq
 
-          if jq -e '.include | length > 0' matrix.json > /dev/null; then
+          if jq -e '."python-build".include | length > 0' matrix.json > /dev/null; then
             # Build matrix has entries
             echo "any_builds=true" >> $GITHUB_OUTPUT
           else

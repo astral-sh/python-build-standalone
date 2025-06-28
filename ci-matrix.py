@@ -19,6 +19,14 @@ CI_RUNNERS_YAML = "ci-runners.yaml"
 CI_EXTRA_SKIP_LABELS = ["documentation"]
 CI_MATRIX_SIZE_LIMIT = 256  # The maximum size of a matrix in GitHub Actions
 
+# Docker images for building toolchains and dependencies
+DOCKER_BUILD_IMAGES = [
+    {"name": "build", "arch": "x86_64"},
+    {"name": "build.cross", "arch": "x86_64"},
+    {"name": "build.cross-riscv64", "arch": "x86_64"},
+    {"name": "gcc", "arch": "x86_64"},
+]
+
 
 def meets_conditional_version(version: str, min_version: str) -> bool:
     return Version(version) >= Version(min_version)
@@ -89,12 +97,36 @@ def should_include_entry(entry: dict[str, str], filters: dict[str, set[str]]) ->
     return True
 
 
-def generate_matrix_entries(
+def generate_docker_matrix_entries(
+    runners: dict[str, Any],
+    platform_filter: Optional[str] = None,
+) -> list[dict[str, str]]:
+    """Generate matrix entries for docker image builds."""
+    if platform_filter and platform_filter != "linux":
+        return []
+
+    matrix_entries = []
+    for image in DOCKER_BUILD_IMAGES:
+        # Find appropriate runner for Linux platform with the specified architecture
+        runner = find_runner(runners, "linux", image["arch"])
+
+        entry = {
+            "name": image["name"],
+            "arch": image["arch"],
+            "runner": runner,
+        }
+        matrix_entries.append(entry)
+
+    return matrix_entries
+
+
+def generate_python_build_matrix_entries(
     config: dict[str, Any],
     runners: dict[str, Any],
     platform_filter: Optional[str] = None,
     label_filters: Optional[dict[str, set[str]]] = None,
 ) -> list[dict[str, str]]:
+    """Generate matrix entries for python builds."""
     matrix_entries = []
 
     for platform, platform_config in config.items():
@@ -102,13 +134,13 @@ def generate_matrix_entries(
             continue
 
         for target_triple, target_config in platform_config.items():
-            add_matrix_entries_for_config(
+            add_python_build_entries_for_config(
                 matrix_entries,
                 target_triple,
                 target_config,
                 platform,
                 runners,
-                label_filters.get("directives", set()),
+                label_filters.get("directives", set()) if label_filters else set(),
             )
 
     # Apply label filters if present
@@ -144,7 +176,7 @@ def find_runner(runners: dict[str, Any], platform: str, arch: str) -> str:
     raise RuntimeError(f"No runner found for platform {platform!r} and arch {arch!r}")
 
 
-def add_matrix_entries_for_config(
+def add_python_build_entries_for_config(
     matrix_entries: list[dict[str, str]],
     target_triple: str,
     config: dict[str, Any],
@@ -152,6 +184,7 @@ def add_matrix_entries_for_config(
     runners: dict[str, Any],
     directives: set[str],
 ) -> None:
+    """Add python build matrix entries for a specific target configuration."""
     python_versions = config["python_versions"]
     build_options = config["build_options"]
     arch = config["arch"]
@@ -233,6 +266,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="If only free runners should be used.",
     )
+    parser.add_argument(
+        "--matrix-type",
+        choices=["python-build", "docker-build", "all"],
+        default="all",
+        help="Which matrix types to generate (default: all)",
+    )
     return parser.parse_args()
 
 
@@ -254,36 +293,59 @@ def main() -> None:
             if runner_config.get("free")
         }
 
-    entries = generate_matrix_entries(
-        config,
-        runners,
-        args.platform,
-        labels,
-    )
+    result = {}
 
-    if args.max_shards:
-        matrix = {}
-        shards = (len(entries) // CI_MATRIX_SIZE_LIMIT) + 1
-        if shards > args.max_shards:
-            print(
-                f"error: matrix of size {len(entries)} requires {shards} shards, but the maximum is {args.max_shards}; consider increasing `--max-shards`",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-        for shard in range(args.max_shards):
-            shard_entries = entries[
-                shard * CI_MATRIX_SIZE_LIMIT : (shard + 1) * CI_MATRIX_SIZE_LIMIT
-            ]
-            matrix[str(shard)] = {"include": shard_entries}
-    else:
-        if len(entries) > CI_MATRIX_SIZE_LIMIT:
-            print(
-                f"warning: matrix of size {len(entries)} exceeds limit of {CI_MATRIX_SIZE_LIMIT} but sharding is not enabled; consider setting `--max-shards`",
-                file=sys.stderr,
-            )
-        matrix = {"include": entries}
+    # Generate python-build matrix if requested
+    python_entries = []
+    if args.matrix_type in ["python-build", "all"]:
+        python_entries = generate_python_build_matrix_entries(
+            config,
+            runners,
+            args.platform,
+            labels,
+        )
 
-    print(json.dumps(matrix))
+        if args.max_shards:
+            python_build_matrix = {}
+            shards = (len(python_entries) // CI_MATRIX_SIZE_LIMIT) + 1
+            if shards > args.max_shards:
+                print(
+                    f"error: python-build matrix of size {len(python_entries)} requires {shards} shards, but the maximum is {args.max_shards}; consider increasing `--max-shards`",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+            for shard in range(args.max_shards):
+                shard_entries = python_entries[
+                    shard * CI_MATRIX_SIZE_LIMIT : (shard + 1) * CI_MATRIX_SIZE_LIMIT
+                ]
+                python_build_matrix[str(shard)] = {"include": shard_entries}
+            result["python-build"] = python_build_matrix
+        else:
+            if len(python_entries) > CI_MATRIX_SIZE_LIMIT:
+                print(
+                    f"warning: python-build matrix of size {len(python_entries)} exceeds limit of {CI_MATRIX_SIZE_LIMIT} but sharding is not enabled; consider setting `--max-shards`",
+                    file=sys.stderr,
+                )
+            result["python-build"] = {"include": python_entries}
+
+    # Generate docker-build matrix if requested
+    # Only include docker builds if there are Linux python builds
+    if args.matrix_type in ["docker-build", "all"]:
+        # Check if we have any Linux python builds
+        has_linux_builds = any(
+            entry.get("platform") == "linux" for entry in python_entries
+        )
+
+        # If no platform filter or explicitly requesting docker-build only, include docker builds
+        # Otherwise, only include if there are Linux python builds
+        if args.matrix_type == "docker-build" or has_linux_builds:
+            docker_entries = generate_docker_matrix_entries(
+                runners,
+                args.platform,
+            )
+            result["docker-build"] = {"include": docker_entries}
+
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

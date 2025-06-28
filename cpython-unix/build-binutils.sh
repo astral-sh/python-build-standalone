@@ -11,9 +11,15 @@ tar -xf binutils-${BINUTILS_VERSION}.tar.xz
 mkdir binutils-objdir
 pushd binutils-objdir
 
+if [ "$(uname -m)" = "x86_64" ]; then
+  triple="x86_64-unknown-linux-gnu"
+else
+  triple="aarch64-unknown-linux-gnu"
+fi
+
 # gprofng requires a bison newer than what we have. So just disable it.
 ../binutils-${BINUTILS_VERSION}/configure \
-    --build=x86_64-unknown-linux-gnu \
+    --build=${triple} \
     --prefix=/tools/host \
     --enable-plugins \
     --enable-gprofng=no \

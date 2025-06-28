@@ -156,6 +156,7 @@ aarch64-apple-ios:
 aarch64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
+    - linux_aarch64
   pythons_supported:
     - '3.9'
     - '3.10'
@@ -163,11 +164,16 @@ aarch64-unknown-linux-gnu:
     - '3.12'
     - '3.13'
     - '3.14'
-  docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/aarch64-linux-gnu-gcc
-  target_cxx: /usr/bin/aarch64-linux-gnu-g++
+  docker_image_suffix: .debian9
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
+  target_cflags:
+    - '-fvisibility=hidden'
+    # Needed to prevent BOLT from crashing.
+    - '-fdebug-default-version=4'
   needs:
     - autoconf
     - bdb
@@ -193,6 +199,11 @@ aarch64-unknown-linux-gnu:
     - xz
     - zlib
   openssl_target: linux-aarch64
+  # Blocked on:
+  #   BOLT-ERROR: Cannot relax adr in non-simple function
+  #   trampoline_code_table/1. Use --strict option to override
+  # See https://github.com/llvm/llvm-project/issues/146541
+  # bolt_capable: true
 
 arm64-apple-tvos:
   host_platforms:

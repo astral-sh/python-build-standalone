@@ -50,13 +50,11 @@ linux:
       - "3.14"
     build_options:
       - debug
-      - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
-          - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
 
   armv7-unknown-linux-gnueabi:

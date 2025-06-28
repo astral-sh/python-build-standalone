@@ -172,6 +172,13 @@ DOWNLOADS = {
         "version": "14.0.3+20220508",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
+    "llvm-20-aarch64-linux": {
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
+        "size": 255946687,
+        "sha256": "e70753f294b8f83fffbaf07af36857c27ceaef0291cb10f724ada6af11b0a5bc",
+        "version": "20.1.4+20250511",
+    },
+    # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-20-x86_64-linux": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
         "size": 299883811,

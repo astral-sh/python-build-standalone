@@ -5,11 +5,10 @@ depot-ubuntu-22.04:
   platform: linux
   free: false
 
-# TODO: Enable this runner to perform native builds for aarch64
-# depot-ubuntu-22.04-arm:
-#   arch: aarch64
-#   platform: linux
-#   free: false
+depot-ubuntu-22.04-arm:
+  arch: aarch64
+  platform: linux
+  free: false
 
 depot-macos-latest:
   arch: x86_64

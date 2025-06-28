@@ -29,8 +29,10 @@ def write_dockerfiles(source_dir: pathlib.Path, dest_dir: pathlib.Path):
         write_if_different(dest_dir / f, data.encode("utf-8"))
 
 
-def build_docker_image(client, image_data: bytes, image_dir: pathlib.Path, name):
-    image_path = image_dir / ("image-%s" % name)
+def build_docker_image(
+    client, image_data: bytes, image_dir: pathlib.Path, name, host_platform
+):
+    image_path = image_dir / f"image-{name}.{host_platform}"
 
     return ensure_docker_image(client, io.BytesIO(image_data), image_path=image_path)
 
@@ -66,11 +68,14 @@ def ensure_docker_image(client, fh, image_path=None):
     return image
 
 
-def get_image(client, source_dir: pathlib.Path, image_dir: pathlib.Path, name):
+def get_image(
+    client, source_dir: pathlib.Path, image_dir: pathlib.Path, name, host_platform
+):
     if client is None:
         return None
 
-    image_path = image_dir / ("image-%s" % name)
+    image_name = f"image-{name}.{host_platform}"
+    image_path = image_dir / image_name
     tar_path = image_path.with_suffix(".tar")
 
     with image_path.open("r") as fh:
@@ -88,7 +93,9 @@ def get_image(client, source_dir: pathlib.Path, image_dir: pathlib.Path, name):
             return image_id
 
         else:
-            return build_docker_image(client, str(source_dir).encode(), image_dir, name)
+            return build_docker_image(
+                client, str(source_dir).encode(), image_dir, name, host_platform
+            )
 
 
 def copy_file_to_container(path, container, container_path, archive_path=None):

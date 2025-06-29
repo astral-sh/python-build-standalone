@@ -20,9 +20,8 @@ if [ -n "${STATIC}" ]; then
 		# `checking whether musl-clang accepts -g...` fails with a duplicate definition error
 		TARGET_TRIPLE="$(echo "${TARGET_TRIPLE}" | sed -e 's/-unknown-linux-musl/-unknown-linux-gnu/g')"
 	fi
-fi
 
-patch -p1 << 'EOF'
+	patch -p1 << 'EOF'
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in
 +++ b/unix/Makefile.in
@@ -36,6 +35,7 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
  		fi; \
  	    fi; \
 EOF
+fi
 
 # Remove packages we don't care about and can pull in unwanted symbols.
 rm -rf pkgs/sqlite* pkgs/tdbc*
@@ -48,12 +48,14 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./conf
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \
-    --enable-shared=no \
+    --enable-shared"${STATIC:+=no}" \
     --enable-threads
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath
+make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out DYLIB_INSTALL_DIR=@rpath
 make -j ${NUM_CPUS} install-private-headers DESTDIR=${ROOT}/out
 
-# For some reason libtcl*.a have weird permissions. Fix that.
-chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a
+if [ -n "${STATIC}" ]; then
+    # For some reason libtcl*.a have weird permissions. Fix that.
+    chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a
+fi

@@ -44,7 +44,7 @@ sed "${sed_args[@]}" "s|/tools/host|${TOOLS_PATH}/host|g" ${TOOLS_PATH}/host/sha
 # We force linking of external static libraries by removing the shared
 # libraries. This is hacky. But we're building in a temporary container
 # and it gets the job done.
-find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+find ${TOOLS_PATH}/deps -name '*.so*' -a \! \( -name 'libtcl*.so*' -or -name 'libtk*.so*' \) -exec rm {} \;
 
 tar -xf Python-${PYTHON_VERSION}.tar.xz
 
@@ -705,6 +705,8 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
             ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 
         # Python's build system doesn't make this file writable.
+        # TODO(geofft): @executable_path/ is a weird choice here, who is
+        # relying on it? Should probably be @loader_path.
         chmod 755 ${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
         install_name_tool \
             -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
@@ -723,6 +725,13 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                 -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
         fi
+
+        # At the moment, python3 and libpython don't have shared-library
+        # dependencies, but at some point we will want to run this for
+        # them too.
+        for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
+            install_name_tool -add_rpath @loader_path/../.. "$module"
+        done
     else # (not macos)
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
@@ -1250,6 +1259,14 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
     for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.4,tcl8,tcl8.6,thread2.8.9,tk8.6}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
+
+    (
+        shopt -s nullglob
+        dylibs=(${TOOLS_PATH}/deps/lib/lib*.dylib ${TOOLS_PATH}/deps/lib/lib*.so)
+        if [ "${#dylibs[@]}" -gt 0 ]; then
+            cp -av "${dylibs[@]}" ${ROOT}/out/python/install/lib/
+        fi
+    )
 fi
 
 # Copy the terminfo database if present.

@@ -69,6 +69,7 @@ EXTENSION_MODULE_SCHEMA = {
                 "properties": {
                     "name": {"type": "string"},
                     "targets": {"type": "array", "items": {"type": "string"}},
+                    "build-mode": {"type": "string"},
                 },
                 "additionalProperties": False,
             },
@@ -535,7 +536,17 @@ def derive_setup_local(
                 python_version, entry.get("maximum-python-version", "100.0")
             )
 
-            if target_match and (python_min_match and python_max_match):
+            if build_mode := entry.get("build-mode"):
+                build_mode_match = section == build_mode
+            else:
+                build_mode_match = True
+
+            if (
+                target_match
+                and python_min_match
+                and python_max_match
+                and build_mode_match
+            ):
                 if source := entry.get("source"):
                     line += f" {source}"
                 for source in entry.get("sources", []):

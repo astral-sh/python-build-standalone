@@ -39,6 +39,8 @@ def current_host_platform() -> str:
     if sys.platform == "linux":
         if machine == "x86_64":
             return "linux_x86_64"
+        elif machine == "aarch64":
+            return "linux_aarch64"
         else:
             raise Exception(f"unsupported Linux host platform: {machine}")
     elif sys.platform == "darwin":
@@ -57,6 +59,8 @@ def default_target_triple() -> str:
     host = current_host_platform()
     if host == "linux_x86_64":
         return "x86_64-unknown-linux-gnu"
+    elif host == "linux_aarch64":
+        return "aarch64-unknown-linux-gnu"
     elif host == "macos_arm64":
         return "aarch64-apple-darwin"
     elif host == "macos_x86_64":
@@ -83,6 +87,8 @@ def supported_targets(yaml_path: pathlib.Path):
     for target, settings in get_targets(yaml_path).items():
         for host_platform in settings["host_platforms"]:
             if sys.platform == "linux" and host_platform == "linux_x86_64":
+                targets.add(target)
+            elif sys.platform == "linux" and host_platform == "linux_aarch64":
                 targets.add(target)
             elif sys.platform == "darwin" and host_platform.startswith("macos_"):
                 targets.add(target)
@@ -194,7 +200,13 @@ def write_triples_makefiles(
 
             image_suffix = settings.get("docker_image_suffix", "")
 
+            # On cross builds, we can just use the bare `gcc` image
+            gcc_image_suffix = (
+                image_suffix if not image_suffix.startswith(".cross") else ""
+            )
+
             lines.append("DOCKER_IMAGE_BUILD := build%s\n" % image_suffix)
+            lines.append("DOCKER_IMAGE_GCC := gcc%s\n" % gcc_image_suffix)
 
             entry = clang_toolchain(host_platform, triple)
             lines.append(
@@ -470,6 +482,8 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
             return "llvm-14-x86_64-linux"
         else:
             return "llvm-20-x86_64-linux"
+    elif host_platform == "linux_aarch64":
+        return "llvm-20-aarch64-linux"
     elif host_platform == "macos_arm64":
         return "llvm-aarch64-macos"
     elif host_platform == "macos_x86_64":

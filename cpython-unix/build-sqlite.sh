@@ -14,7 +14,7 @@ pushd sqlite-autoconf-${SQLITE_VERSION}
 
 
 CONFIGURE_FLAGS="--build=${BUILD_TRIPLE} --host=${TARGET_TRIPLE}"
-CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --prefix /tools/deps --disable-shared"
+CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --prefix=/tools/deps --disable-shared"
 
 if [ "${TARGET_TRIPLE}" = "aarch64-apple-ios" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_search_system=no"

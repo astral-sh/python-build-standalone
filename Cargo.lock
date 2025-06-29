@@ -1570,6 +1570,7 @@ dependencies = [
  "tempfile",
  "text-stub-library",
  "tokio",
+ "tokio-util",
  "url",
  "version-compare",
  "zip",

@@ -146,12 +146,6 @@ jobs:
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\${{ matrix.vcvars }}"
           py.exe -3.12 build-windows.py --python cpython-${{ matrix.python }} --sh c:\cygwin\bin\sh.exe --options ${{ matrix.build_options }}
 
-      - name: Validate Distribution
-        if: ${{ ! matrix.dry-run }}
-        run: |
-          $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
-          .\pythonbuild.exe validate-distribution --run $Dists
-
       - name: Generate attestations
         uses: actions/attest-build-provenance@v2
         if: ${{ github.ref == 'refs/heads/main' }}
@@ -163,3 +157,9 @@ jobs:
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
           path: dist/*
+
+      - name: Validate Distribution
+        if: ${{ ! matrix.dry-run }}
+        run: |
+          $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
+          .\pythonbuild.exe validate-distribution --run $Dists

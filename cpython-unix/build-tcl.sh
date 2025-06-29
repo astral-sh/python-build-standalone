@@ -22,21 +22,6 @@ if [ -n "${STATIC}" ]; then
 	fi
 fi
 
-patch -p1 << 'EOF'
-diff --git a/unix/Makefile.in b/unix/Makefile.in
---- a/unix/Makefile.in
-+++ b/unix/Makefile.in
-@@ -1813,7 +1813,7 @@ configure-packages:
- 			  $$i/configure --with-tcl=../.. \
- 			      --with-tclinclude=$(GENERIC_DIR) \
- 			      $(PKG_CFG_ARGS) --libdir=$(PACKAGE_DIR) \
--			      --enable-shared --enable-threads; ) || exit $$?; \
-+			      --enable-shared=no --enable-threads; ) || exit $$?; \
- 		    fi; \
- 		fi; \
- 	    fi; \
-EOF
-
 # Remove packages we don't care about and can pull in unwanted symbols.
 rm -rf pkgs/sqlite* pkgs/tdbc*
 
@@ -48,12 +33,9 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./conf
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \
-    --enable-shared=no \
+    --enable-shared \
     --enable-threads
 
 make -j ${NUM_CPUS}
 make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
 make -j ${NUM_CPUS} install-private-headers DESTDIR=${ROOT}/out
-
-# For some reason libtcl*.a have weird permissions. Fix that.
-chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a

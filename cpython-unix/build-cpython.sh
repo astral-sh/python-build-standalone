@@ -44,7 +44,7 @@ sed "${sed_args[@]}" "s|/tools/host|${TOOLS_PATH}/host|g" ${TOOLS_PATH}/host/sha
 # We force linking of external static libraries by removing the shared
 # libraries. This is hacky. But we're building in a temporary container
 # and it gets the job done.
-find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+find ${TOOLS_PATH}/deps -name '*.so*' -a \! \( -name 'libtcl*.so*' -or -name 'libtk*.so*' \) -exec rm {} \;
 
 tar -xf Python-${PYTHON_VERSION}.tar.xz
 
@@ -1253,6 +1253,7 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
 
     if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
         cp -av ${TOOLS_PATH}/deps/lib/Tix8.4.3 ${ROOT}/out/python/install/lib/
+        cp -av ${TOOLS_PATH}/deps/lib/lib*.so ${ROOT}/out/python/install/lib/
     fi
 fi
 

@@ -822,7 +822,7 @@ const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 const GLOBAL_EXTENSIONS_WINDOWS_NO_STATIC: &[&str] = &["_testinternalcapi", "_tkinter"];
 
 /// Extension modules that should be built as shared libraries.
-const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt"];
+const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt", "_tkinter"];
 
 const PYTHON_VERIFICATIONS: &str = include_str!("verify_distribution.py");
 

@@ -17,10 +17,9 @@ use {
     },
     rayon::prelude::*,
     reqwest::{Client, StatusCode},
-    reqwest_middleware::{self, ClientWithMiddleware},
     reqwest_retry::{
-        default_on_request_failure, policies::ExponentialBackoff, RetryTransientMiddleware,
-        Retryable, RetryableStrategy,
+        default_on_request_failure, policies::ExponentialBackoff, RetryPolicy, Retryable,
+        RetryableStrategy,
     },
     sha2::{Digest, Sha256},
     std::{
@@ -28,7 +27,9 @@ use {
         io::Read,
         path::PathBuf,
         str::FromStr,
+        time::{Duration, SystemTime},
     },
+    tokio::io::AsyncReadExt,
     url::Url,
     zip::ZipArchive,
 };
@@ -65,12 +66,19 @@ async fn fetch_artifact(
     Ok(res)
 }
 
+enum UploadSource {
+    Filename(PathBuf),
+    Data(Bytes),
+}
+
 async fn upload_release_artifact(
-    client: &ClientWithMiddleware,
+    client: &Client,
+    retry_policy: &impl RetryPolicy,
+    retryable_strategy: &impl RetryableStrategy,
     auth_token: String,
     release: &Release,
     filename: String,
-    data: Bytes,
+    body: UploadSource,
     dry_run: bool,
 ) -> Result<()> {
     if release.assets.iter().any(|asset| asset.name == filename) {
@@ -93,17 +101,51 @@ async fn upload_release_artifact(
         return Ok(());
     }
 
-    // Octocrab doesn't yet support release artifact upload. And the low-level HTTP API
-    // forces the use of strings on us. So we have to make our own HTTP client.
+    // Octocrab's high-level API for uploading release artifacts doesn't yet support streaming
+    // bodies, and their low-level API isn't more helpful than using our own HTTP client.
+    //
+    // Because we are streaming the body, we can't use the standard retry middleware for reqwest
+    // (see e.g. https://github.com/seanmonstar/reqwest/issues/2416), so we have to recreate the
+    // request on each retry and handle the retry logic ourself. This logic is inspired by
+    // uv/crates/uv-publish/src/lib.rs (which has the same problem), which in turn is inspired by
+    // reqwest-middleware/reqwest-retry/src/middleware.rs.
+    //
+    // (While Octocrab's API would work fine for the non-streaming case, we just use this function
+    // for both cases so that we can make a homogeneous Vec<impl Future> later in the file.)
 
-    let response = client
-        .put(url)
-        .header("Authorization", format!("Bearer {auth_token}"))
-        .header("Content-Length", data.len())
-        .header("Content-Type", "application/x-tar")
-        .body(data)
-        .send()
-        .await?;
+    let mut n_past_retries = 0;
+    let start_time = SystemTime::now();
+    let response = loop {
+        let request = client
+            .put(url.clone())
+            .header("Authorization", format!("Bearer {auth_token}"))
+            .header("Content-Type", "application/octet-stream");
+        let request = match body {
+            UploadSource::Filename(ref path) => {
+                let file = tokio::fs::File::open(&path).await?;
+                let len = file.metadata().await?.len();
+                request.header("Content-Length", len).body(file)
+            }
+            UploadSource::Data(ref bytes) => request
+                .header("Content-Length", bytes.len())
+                .body(bytes.clone()),
+        };
+        let result = request.send().await.map_err(|e| e.into());
+
+        if retryable_strategy.handle(&result) == Some(Retryable::Transient) {
+            let retry_decision = retry_policy.should_retry(start_time, n_past_retries);
+            if let reqwest_retry::RetryDecision::Retry { execute_after } = retry_decision {
+                println!("retrying {url}: {result:?}");
+                let duration = execute_after
+                    .duration_since(SystemTime::now())
+                    .unwrap_or_else(|_| Duration::default());
+                tokio::time::sleep(duration).await;
+                n_past_retries += 1;
+                continue;
+            }
+        }
+        break result?;
+    };
 
     if !response.status().is_success() {
         return Err(anyhow!("HTTP {}", response.status()));
@@ -207,10 +249,8 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             .await?;
 
         for artifact in artifacts {
-            if matches!(
-                artifact.name.as_str(),
-                "pythonbuild" | "toolchain"
-            ) || artifact.name.contains("install-only")
+            if matches!(artifact.name.as_str(), "pythonbuild" | "toolchain")
+                || artifact.name.contains("install-only")
             {
                 continue;
             }
@@ -473,12 +513,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
     let mut digests = BTreeMap::new();
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-    let raw_client = reqwest_middleware::ClientBuilder::new(Client::new())
-        .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-            retry_policy,
-            GitHubUploadRetryStrategy,
-        ))
-        .build();
+    let raw_client = Client::new();
 
     {
         let mut fs = vec![];
@@ -488,29 +523,43 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
                 continue;
             }
 
-            let file_data = Bytes::copy_from_slice(&std::fs::read(dist_dir.join(&source))?);
-
-            let mut digest = Sha256::new();
-            digest.update(&file_data);
-
-            let digest = hex::encode(digest.finalize());
-
-            digests.insert(dest.clone(), digest.clone());
-
+            let local_filename = dist_dir.join(&source);
             fs.push(upload_release_artifact(
                 &raw_client,
+                &retry_policy,
+                &GitHubUploadRetryStrategy,
                 token.clone(),
                 &release,
                 dest.clone(),
-                file_data,
+                UploadSource::Filename(local_filename.clone()),
                 dry_run,
             ));
+
+            // reqwest wants to take ownership of the body, so it's hard for us to do anything
+            // clever with reading the file once and calculating the sha256sum while we read.
+            // So we open and read the file again.
+            let mut file = tokio::fs::File::open(local_filename).await?;
+            let mut hasher = Sha256::new();
+            let mut buf = vec![0; 1048576];
+            loop {
+                let len = file.read(&mut buf).await?;
+                if len == 0 {
+                    break;
+                };
+                hasher.update(&buf);
+            }
+            drop(file);
+
+            let digest = hex::encode(hasher.finalize());
+            digests.insert(dest.clone(), digest.clone());
             fs.push(upload_release_artifact(
                 &raw_client,
+                &retry_policy,
+                &GitHubUploadRetryStrategy,
                 token.clone(),
                 &release,
-                format!("{}.sha256", dest),
-                Bytes::copy_from_slice(format!("{}\n", digest).as_bytes()),
+                format!("{dest}.sha256"),
+                UploadSource::Data(Bytes::copy_from_slice(format!("{digest}\n").as_bytes())),
                 dry_run,
             ));
         }
@@ -532,10 +581,12 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     upload_release_artifact(
         &raw_client,
+        &retry_policy,
+        &GitHubUploadRetryStrategy,
         token.clone(),
         &release,
         "SHA256SUMS".to_string(),
-        Bytes::copy_from_slice(shasums.as_bytes()),
+        UploadSource::Data(Bytes::copy_from_slice(shasums.as_bytes())),
         dry_run,
     )
     .await?;

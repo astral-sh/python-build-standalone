@@ -249,6 +249,19 @@ jobs:
 
           ./build-linux.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
 
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
+
+      - name: Upload Distribution
+        if: ${{ ! matrix.dry-run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist/*
+
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}
         run: |
@@ -266,19 +279,6 @@ jobs:
           fi
 
           build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
-
-      - name: Generate attestations
-        uses: actions/attest-build-provenance@v2
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          subject-path: dist/*
-
-      - name: Upload Distribution
-        if: ${{ ! matrix.dry-run }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
-          path: dist/*
 
   build-1:
     needs:
@@ -349,6 +349,19 @@ jobs:
 
           ./build-linux.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
 
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
+
+      - name: Upload Distribution
+        if: ${{ ! matrix.dry-run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist/*
+
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}
         run: |
@@ -366,16 +379,3 @@ jobs:
           fi
 
           build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
-
-      - name: Generate attestations
-        uses: actions/attest-build-provenance@v2
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          subject-path: dist/*
-
-      - name: Upload Distribution
-        if: ${{ ! matrix.dry-run }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
-          path: dist/*

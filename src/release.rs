@@ -129,6 +129,18 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             }],
         },
     );
+    h.insert(
+        "aarch64-pc-windows-msvc",
+        TripleRelease {
+            suffixes: vec!["pgo"],
+            install_only_suffix: "pgo",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.11").unwrap()),
+            conditional_suffixes: vec![ConditionalSuffixes {
+                python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
+                suffixes: vec!["freethreaded+pgo"],
+            }],
+        },
+    );
 
     // Linux.
     let linux_suffixes_pgo = vec!["debug", "pgo+lto"];

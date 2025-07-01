@@ -112,6 +112,20 @@ async fn upload_release_artifact(
     Ok(())
 }
 
+fn new_github_client(args: &ArgMatches) -> Result<(Octocrab, String)> {
+    let token = args
+        .get_one::<String>("token")
+        .expect("token should be specified")
+        .to_string();
+    let github_uri = args.get_one::<String>("github-uri");
+
+    let mut builder = OctocrabBuilder::new().personal_token(token.clone());
+    if let Some(github_uri) = github_uri {
+        builder = builder.base_uri(github_uri.clone())?;
+    }
+    Ok((builder.build()?, token))
+}
+
 pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()> {
     let dest_dir = args
         .get_one::<PathBuf>("dest")
@@ -121,13 +135,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
         .expect("organization should be set");
     let repo = args.get_one::<String>("repo").expect("repo should be set");
 
-    let client = OctocrabBuilder::new()
-        .personal_token(
-            args.get_one::<String>("token")
-                .expect("token should be required argument")
-                .to_string(),
-        )
-        .build()?;
+    let (client, _) = new_github_client(args)?;
 
     let release_version_range = pep440_rs::VersionSpecifier::from_str(">=3.9")?;
 
@@ -358,10 +366,6 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .get_one::<String>("tag")
         .expect("tag should be specified");
     let ignore_missing = args.get_flag("ignore_missing");
-    let token = args
-        .get_one::<String>("token")
-        .expect("token should be specified")
-        .to_string();
     let organization = args
         .get_one::<String>("organization")
         .expect("organization should be specified");
@@ -451,9 +455,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         return Err(anyhow!("missing {} release artifacts", missing.len()));
     }
 
-    let client = OctocrabBuilder::new()
-        .personal_token(token.clone())
-        .build()?;
+    let (client, token) = new_github_client(args)?;
     let repo_handler = client.repos(organization, repo);
     let releases = repo_handler.releases();
 

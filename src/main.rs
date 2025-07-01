@@ -70,6 +70,12 @@ fn main_impl() -> Result<()> {
                     .action(ArgAction::Set)
                     .default_value("python-build-standalone")
                     .help("GitHub repository name"),
+            )
+            .arg(
+                Arg::new("github-uri")
+                    .long("github-uri")
+                    .action(ArgAction::Set)
+                    .help("Alternative GitHub URI"),
             ),
     );
 
@@ -154,6 +160,12 @@ fn main_impl() -> Result<()> {
                     .action(ArgAction::Set)
                     .default_value("python-build-standalone")
                     .help("GitHub repository name"),
+            )
+            .arg(
+                Arg::new("github-uri")
+                    .long("github-uri")
+                    .action(ArgAction::Set)
+                    .help("Alternative GitHub URI"),
             ),
     );
 

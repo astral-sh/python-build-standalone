@@ -29,7 +29,6 @@ use {
         str::FromStr,
         time::{Duration, SystemTime},
     },
-    tokio::io::AsyncReadExt,
     url::Url,
     zip::ZipArchive,
 };
@@ -540,19 +539,15 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
             // reqwest wants to take ownership of the body, so it's hard for us to do anything
             // clever with reading the file once and calculating the sha256sum while we read.
             // So we open and read the file again.
-            let mut file = tokio::fs::File::open(local_filename).await?;
-            let mut hasher = Sha256::new();
-            let mut buf = vec![0; 1048576];
-            loop {
-                let len = file.read(&mut buf).await?;
-                if len == 0 {
-                    break;
-                };
-                hasher.update(&buf);
-            }
-            drop(file);
-
-            let digest = hex::encode(hasher.finalize());
+            let digest = {
+                let file = tokio::fs::File::open(local_filename).await?;
+                let mut stream = tokio_util::io::ReaderStream::with_capacity(file, 1048576);
+                let mut hasher = Sha256::new();
+                while let Some(chunk) = stream.next().await {
+                    hasher.update(&chunk?);
+                }
+                hex::encode(hasher.finalize())
+            };
             digests.insert(dest.clone(), digest.clone());
             fs.push(upload_release_artifact(
                 &raw_client,

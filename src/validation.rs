@@ -778,6 +778,7 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_zoneinfo",
     "_hmac",
     "_types",
+    "_zstd",
 ];
 
 const GLOBAL_EXTENSIONS_MACOS: &[&str] = &["_scproxy"];
@@ -813,8 +814,7 @@ const GLOBAL_EXTENSIONS_WINDOWS: &[&str] = &[
     "winsound",
 ];
 
-// TODO(zanieb): Move `_zstd` to non-Windows specific once we add support on Unix.
-const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi", "_zstd"];
+const GLOBAL_EXTENSIONS_WINDOWS_3_14: &[&str] = &["_wmi"];
 
 const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 

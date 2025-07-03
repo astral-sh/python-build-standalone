@@ -772,15 +772,14 @@ _xxtestfuzz:
     - _xxtestfuzz/fuzzer.c
 
 _zstd:
-  # Disable on all targets until we add a zstd library
-  disabled-targets:
-    - .*
   minimum-python-version: '3.14'
   sources:
     - _zstd/_zstdmodule.c
-    - _zstd/zdict.c
+    - _zstd/zstddict.c
     - _zstd/compressor.c
     - _zstd/decompressor.c
+  links:
+    - zstd
 
 _zoneinfo:
   minimum-python-version: "3.9"

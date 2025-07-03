@@ -1213,7 +1213,7 @@ ${BUILD_PYTHON} ${ROOT}/fix_shebangs.py ${ROOT}/out/python/install
 # downstream consumers.
 OBJECT_DIRS="Objects Parser Parser/lexer Parser/pegen Parser/tokenizer Programs Python Python/deepfreeze"
 OBJECT_DIRS="${OBJECT_DIRS} Modules"
-for ext in _blake2 cjkcodecs _ctypes _ctypes/darwin _decimal _expat _hacl _io _multiprocessing _sha3 _sqlite _sre _testinternalcapi _xxtestfuzz ; do
+for ext in _blake2 cjkcodecs _ctypes _ctypes/darwin _decimal _expat _hacl _io _multiprocessing _sha3 _sqlite _sre _testinternalcapi _xxtestfuzz _zstd; do
     OBJECT_DIRS="${OBJECT_DIRS} Modules/${ext}"
 done
 

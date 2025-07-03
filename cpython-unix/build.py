@@ -1163,6 +1163,7 @@ def main():
             "xtrans",
             "xz",
             "zlib",
+            "zstd",
         ):
             tools_path = "host" if action in ("m4", "patchelf") else "deps"
 

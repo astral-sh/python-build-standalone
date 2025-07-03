@@ -236,6 +236,9 @@ $(OUTDIR)/xz-$(XZ_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/
 $(OUTDIR)/zlib-$(ZLIB_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-zlib.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) zlib
 
+$(OUTDIR)/zstd-$(ZSTD_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-zstd.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) zstd
+
 PYTHON_HOST_DEPENDS := \
   $(PYTHON_DEP_DEPENDS) \
   $(HERE)/build-cpython-host.sh \
@@ -272,6 +275,7 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_UUID),$$(OUTDIR)/uuid-$$(UUID_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_XZ),$$(OUTDIR)/xz-$$(XZ_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_ZLIB),$$(OUTDIR)/zlib-$$(ZLIB_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_ZSTD),$$(OUTDIR)/zstd-$$(ZSTD_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(NULL)
 
 ALL_PYTHON_DEPENDS_$(1) = \

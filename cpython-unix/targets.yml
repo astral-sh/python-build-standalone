@@ -108,6 +108,7 @@ aarch64-apple-darwin:
     - tk
     - uuid
     - xz
+    - zstd
   openssl_target: darwin64-arm64-cc
 
 aarch64-apple-ios:
@@ -151,6 +152,7 @@ aarch64-apple-ios:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: ios64-cross
 
 aarch64-unknown-linux-gnu:
@@ -198,6 +200,7 @@ aarch64-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-aarch64
   # Blocked on:
   #   BOLT-ERROR: Cannot relax adr in non-simple function
@@ -245,6 +248,7 @@ arm64-apple-tvos:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: todo
 
 armv7-unknown-linux-gnueabi:
@@ -286,6 +290,7 @@ armv7-unknown-linux-gnueabi:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-armv4
 
 armv7-unknown-linux-gnueabihf:
@@ -327,6 +332,7 @@ armv7-unknown-linux-gnueabihf:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-armv4
 
 mips-unknown-linux-gnu:
@@ -368,6 +374,7 @@ mips-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-mips32
 
 mipsel-unknown-linux-gnu:
@@ -409,6 +416,7 @@ mipsel-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-mips32
 
 ppc64le-unknown-linux-gnu:
@@ -450,6 +458,7 @@ ppc64le-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-ppc64le
 
 riscv64-unknown-linux-gnu:
@@ -491,6 +500,7 @@ riscv64-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux64-riscv64
 
 s390x-unknown-linux-gnu:
@@ -532,6 +542,7 @@ s390x-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux64-s390x
 
 thumb7k-apple-watchos:
@@ -574,6 +585,7 @@ thumb7k-apple-watchos:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: todo
 
 # Intel macOS.
@@ -629,6 +641,7 @@ x86_64-apple-darwin:
     - tk
     - uuid
     - xz
+    - zstd
   openssl_target: darwin64-x86_64-cc
 
 x86_64-apple-ios:
@@ -672,6 +685,7 @@ x86_64-apple-ios:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: darwin64-x86_64-cc
 
 x86_64-apple-tvos:
@@ -714,6 +728,7 @@ x86_64-apple-tvos:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: todo
 
 x86_64-apple-watchos:
@@ -756,6 +771,7 @@ x86_64-apple-watchos:
     - openssl-3.0
     - sqlite
     - xz
+    - zstd
   openssl_target: todo
 
 x86_64-unknown-linux-gnu:
@@ -801,6 +817,7 @@ x86_64-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
   bolt_capable: true
 
@@ -848,6 +865,7 @@ x86_64_v2-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
   bolt_capable: true
 
@@ -895,6 +913,7 @@ x86_64_v3-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
   bolt_capable: true
 
@@ -942,6 +961,7 @@ x86_64_v4-unknown-linux-gnu:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
   bolt_capable: true
 
@@ -987,6 +1007,7 @@ x86_64-unknown-linux-musl:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
 
 x86_64_v2-unknown-linux-musl:
@@ -1032,6 +1053,7 @@ x86_64_v2-unknown-linux-musl:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
 
 x86_64_v3-unknown-linux-musl:
@@ -1077,6 +1099,7 @@ x86_64_v3-unknown-linux-musl:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64
 
 x86_64_v4-unknown-linux-musl:
@@ -1122,4 +1145,5 @@ x86_64_v4-unknown-linux-musl:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-x86_64

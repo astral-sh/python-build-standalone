@@ -59,6 +59,14 @@ RUN apt-get install \
     gcc-mipsel-linux-gnu \
     gcc-powerpc64le-linux-gnu \
     gcc-s390x-linux-gnu \
+    g++-aarch64-linux-gnu \
+    g++-arm-linux-gnueabi \
+    g++-arm-linux-gnueabihf \
+    g++-mips-linux-gnu \
+    g++-mips64el-linux-gnuabi64 \
+    g++-mipsel-linux-gnu \
+    g++-powerpc64le-linux-gnu \
+    g++-s390x-linux-gnu \
     libc6-dev-arm64-cross \
     libc6-dev-armel-cross \
     libc6-dev-armhf-cross \

@@ -57,7 +57,6 @@ RUN apt-get install \
     gcc-powerpc64le-linux-gnu \
     gcc-riscv64-linux-gnu \
     gcc-s390x-linux-gnu \
-    g++-riscv64-linux-gnu \
     libc6-dev-arm64-cross \
     libc6-dev-armel-cross \
     libc6-dev-armhf-cross \

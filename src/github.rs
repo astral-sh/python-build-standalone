@@ -207,10 +207,8 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             .await?;
 
         for artifact in artifacts {
-            if matches!(
-                artifact.name.as_str(),
-                "pythonbuild" | "toolchain"
-            ) || artifact.name.contains("install-only")
+            if matches!(artifact.name.as_str(), "pythonbuild" | "toolchain")
+                || artifact.name.contains("install-only")
             {
                 continue;
             }
@@ -515,7 +513,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
             ));
         }
 
-        let mut buffered = futures::stream::iter(fs).buffer_unordered(16);
+        let mut buffered = futures::stream::iter(fs).buffer_unordered(1);
 
         while let Some(res) = buffered.next().await {
             res?;

@@ -480,11 +480,8 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 
         # Respect CFLAGS during JIT compilation.
         #
-        # Backports https://github.com/python/cpython/pull/134276 which we're trying to get released
-        # in 3.14, but is currently only in 3.15+.
-        if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-            patch -p1 -i ${ROOT}/patch-jit-cflags-314.patch
-        elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+        # Backports https://github.com/python/cpython/pull/134276
+        if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
             patch -p1 -i ${ROOT}/patch-jit-cflags-313.patch
         fi
 

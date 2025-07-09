@@ -97,6 +97,7 @@ def main():
             "toolchain-image-build.cross-riscv64",
             "toolchain-image-build.debian9",
             "toolchain-image-gcc",
+            "toolchain-image-gcc.debian9",
             "toolchain-image-xcb",
             "toolchain-image-xcb.cross",
             "toolchain-image-xcb.cross-riscv64",

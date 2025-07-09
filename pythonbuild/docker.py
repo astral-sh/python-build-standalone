@@ -78,24 +78,26 @@ def get_image(
     image_path = image_dir / image_name
     tar_path = image_path.with_suffix(".tar")
 
-    with image_path.open("r") as fh:
-        image_id = fh.read().strip()
-
     try:
-        client.images.get(image_id)
-        return image_id
-    except docker.errors.ImageNotFound:
-        if tar_path.exists():
-            with tar_path.open("rb") as fh:
-                data = fh.read()
-            client.images.load(data)
-
+        with image_path.open("r") as fh:
+            image_id = fh.read().strip()
+    except FileNotFoundError:
+        pass
+    else:
+        try:
+            client.images.get(image_id)
             return image_id
+        except docker.errors.ImageNotFound:
+            if tar_path.exists():
+                with tar_path.open("rb") as fh:
+                    data = fh.read()
+                client.images.load(data)
 
-        else:
-            return build_docker_image(
-                client, str(source_dir).encode(), image_dir, name, host_platform
-            )
+                return image_id
+
+    return build_docker_image(
+        client, str(source_dir).encode(), image_dir, name, host_platform
+    )
 
 
 def copy_file_to_container(path, container, container_path, archive_path=None):

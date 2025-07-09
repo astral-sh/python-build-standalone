@@ -505,14 +505,6 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
                 file_data,
                 dry_run,
             ));
-            fs.push(upload_release_artifact(
-                &raw_client,
-                token.clone(),
-                &release,
-                format!("{}.sha256", dest),
-                Bytes::copy_from_slice(format!("{}\n", digest).as_bytes()),
-                dry_run,
-            ));
         }
 
         let mut buffered = futures::stream::iter(fs).buffer_unordered(16);

@@ -79,7 +79,7 @@ $(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
 
-$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(HERE)/build-binutils.sh
+$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar $(HERE)/build-binutils.sh
 	$(RUN_BUILD) --toolchain --docker-image $(DOCKER_IMAGE_GCC) binutils
 
 $(OUTDIR)/$(CLANG_FILENAME):

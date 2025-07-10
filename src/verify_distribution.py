@@ -122,6 +122,15 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(hasattr(conn, "enable_load_extension"))
         # Backup feature requires modern SQLite, which we always have.
         self.assertTrue(hasattr(conn, "backup"))
+        # Ensure that various extensions are present. These will raise
+        # if they are not.
+        cursor = conn.cursor()
+        cursor.execute("CREATE VIRTUAL TABLE fts3 USING fts3(sender, title, body);")
+        cursor.execute("CREATE VIRTUAL TABLE fts4 USING fts4(sender, title, body);")
+        cursor.execute("CREATE VIRTUAL TABLE fts5 USING fts5(sender, title, body);")
+        cursor.execute("CREATE VIRTUAL TABLE geopoly USING geopoly();")
+        cursor.execute("CREATE VIRTUAL TABLE rtree USING rtree(id, minX, maxX);")
+        conn.close()
 
     def test_ssl(self):
         import ssl

@@ -129,7 +129,7 @@ class TestPythonInterpreter(unittest.TestCase):
         extensions = ["fts3", "fts4", "fts5"]
         if os.name != "nt":
             extensions.append("geopoly")
-        if os.name != "nt" or sys.version_info[0:2] >= (3, 9):
+        if os.name != "nt" or sys.version_info[0:2] > (3, 9):
             extensions.append("rtree")
         cursor = conn.cursor()
         for extension in extensions:

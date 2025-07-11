@@ -176,7 +176,6 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             workflows
                 .list_runs(format!("{workflow_id}"))
                 .event("push")
-                .status("success")
                 .send()
                 .await?
                 .into_iter()

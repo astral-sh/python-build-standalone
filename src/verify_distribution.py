@@ -128,8 +128,12 @@ class TestPythonInterpreter(unittest.TestCase):
         cursor.execute("CREATE VIRTUAL TABLE fts3 USING fts3(sender, title, body);")
         cursor.execute("CREATE VIRTUAL TABLE fts4 USING fts4(sender, title, body);")
         cursor.execute("CREATE VIRTUAL TABLE fts5 USING fts5(sender, title, body);")
-        cursor.execute("CREATE VIRTUAL TABLE geopoly USING geopoly();")
         cursor.execute("CREATE VIRTUAL TABLE rtree USING rtree(id, minX, maxX);")
+        if os.name != "nt":
+            # TODO(geofft): not sure why this isn't present in the prebuilt
+            # sqlite3 Windows library from CPython upstream, it seems weird to
+            # be inconsistent across platforms, but that's the status quo
+            cursor.execute("CREATE VIRTUAL TABLE geopoly USING geopoly();")
         conn.close()
 
     def test_ssl(self):

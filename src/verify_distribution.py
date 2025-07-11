@@ -122,18 +122,21 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(hasattr(conn, "enable_load_extension"))
         # Backup feature requires modern SQLite, which we always have.
         self.assertTrue(hasattr(conn, "backup"))
-        # Ensure that various extensions are present. These will raise
-        # if they are not.
-        cursor = conn.cursor()
-        cursor.execute("CREATE VIRTUAL TABLE fts3 USING fts3(sender, title, body);")
-        cursor.execute("CREATE VIRTUAL TABLE fts4 USING fts4(sender, title, body);")
-        cursor.execute("CREATE VIRTUAL TABLE fts5 USING fts5(sender, title, body);")
-        cursor.execute("CREATE VIRTUAL TABLE rtree USING rtree(id, minX, maxX);")
+        # Ensure that various extensions are present. These will raise if they are not. Note that
+        # CPython upstream carries configuration flags for the Windows build, so geopoly is missing
+        # on all versions and rtree is missing in 3.9. On non-Windows platforms, we configure
+        # SQLite ourselves. We might want to patch the build to enable these on Windows, see #666.
+        extensions = ["fts3", "fts4", "fts5"]
         if os.name != "nt":
-            # TODO(geofft): not sure why this isn't present in the prebuilt
-            # sqlite3 Windows library from CPython upstream, it seems weird to
-            # be inconsistent across platforms, but that's the status quo
-            cursor.execute("CREATE VIRTUAL TABLE geopoly USING geopoly();")
+            extensions.append("geopoly")
+        if os.name == "nt" and sys.version_info[0:2] >= (3, 9):
+            extensions.append("rtree")
+        cursor = conn.cursor()
+        for extension in extensions:
+            with self.subTest(extension=extension):
+                cursor.execute(
+                    f"CREATE VIRTUAL TABLE test{extension} USING {extension}(a, b, c);"
+                )
         conn.close()
 
     def test_ssl(self):

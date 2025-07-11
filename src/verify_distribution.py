@@ -6,36 +6,6 @@ import os
 import sys
 import unittest
 
-TERMINFO_DIRS = [
-    "/etc/terminfo",
-    "/lib/terminfo",
-    "/usr/share/terminfo",
-]
-
-TCL_PATHS = [
-    # POSIX
-    ("lib", "tcl", "tcl"),
-    # Windows.
-    ("tcl",),
-]
-
-HERE = os.path.dirname(sys.executable)
-INSTALL_ROOT = os.path.dirname(HERE)
-
-# Need to set TCL_LIBRARY so local tcl/tk files get picked up.
-for parts in TCL_PATHS:
-    candidate = os.path.join(INSTALL_ROOT, *parts)
-
-    if os.path.exists(candidate):
-        os.environ["TCL_LIBRARY"] = candidate
-        break
-
-# Need to set TERMINFO_DIRS so terminfo database can be located.
-if "TERMINFO_DIRS" not in os.environ:
-    terminfo_dirs = [p for p in TERMINFO_DIRS if os.path.exists(p)]
-    if terminfo_dirs:
-        os.environ["TERMINFO_DIRS"] = ":".join(terminfo_dirs)
-
 
 class TestPythonInterpreter(unittest.TestCase):
     def test_compression(self):
@@ -68,7 +38,7 @@ class TestPythonInterpreter(unittest.TestCase):
     def test_curses_import(self):
         import curses
 
-        assert curses is not None
+        self.assertIsNotNone(curses)
 
     @unittest.skipIf(os.name == "nt", "curses not available on Windows")
     @unittest.skipIf("TERM" not in os.environ, "TERM not set")
@@ -165,7 +135,6 @@ class TestPythonInterpreter(unittest.TestCase):
 
         self.assertEqual(sysconfig.get_config_var("Py_GIL_DISABLED"), wanted)
 
-    @unittest.skipIf("TCL_LIBRARY" not in os.environ, "TCL_LIBRARY not set")
     @unittest.skipIf("DISPLAY" not in os.environ, "DISPLAY not set")
     def test_tkinter(self):
         import tkinter as tk

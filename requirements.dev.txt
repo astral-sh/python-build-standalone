@@ -4,14 +4,14 @@ attrs==24.3.0 \
     --hash=sha256:8f5c07333d543103541ba7be0e2ce16eeee8130cb0b3f9238ab904ce1e85baff \
     --hash=sha256:ac96cd038792094f438ad1f6ff80837353805ac950cd2aa0e0625ef19850c308
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   jsonschema
     #   referencing
 certifi==2024.12.14 \
     --hash=sha256:1275f7a45be9464efc1173084eaa30f866fe2e47d389406136d332ed4967ec56 \
     --hash=sha256:b650d30f370c2b724812bee08008be0c4163b163ddaec3f2546c1caf65f191db
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   requests
 charset-normalizer==3.4.1 \
     --hash=sha256:0167ddc8ab6508fe81860a57dd472b2ef4060e8d378f0cc555707126830f2537 \
@@ -107,31 +107,31 @@ charset-normalizer==3.4.1 \
     --hash=sha256:fd4ec41f914fa74ad1b8304bbc634b3de73d2a0889bd32076342a573e0779e00 \
     --hash=sha256:ffc9202a29ab3920fa812879e95a9e78b2465fd10be7fcbd042899695d75e616
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   requests
 docker==7.1.0 \
     --hash=sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c \
     --hash=sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
 idna==3.10 \
     --hash=sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9 \
     --hash=sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   requests
 jinja2==3.1.5 \
     --hash=sha256:8fefff8dc3034e27bb80d67c671eb8a9bc424c0ef4c0826edbff304cceff43bb \
     --hash=sha256:aba0f4dc9ed8013c424088f68a5c226f7d6097ed89b246d7749c2ec4175c6adb
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
 jsonschema==4.23.0 \
     --hash=sha256:d71497fef26351a33265337fa77ffeb82423f3ea21283cd9467bb03999266bc4 \
     --hash=sha256:fbadb6f8b144a8f8cf9f0b89ba94501d143e50411a1278633f56a7acf7fd5566
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
 jsonschema-specifications==2024.10.1 \
     --hash=sha256:0f38b83639958ce1152d02a7f062902c41c8fd20d558b0c34344292d417ae272 \
     --hash=sha256:a09a0680616357d9a0ecf05c12ad234479f549239d0f5b55f3deea67475da9bf
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   jsonschema
 markupsafe==3.0.2 \
     --hash=sha256:0bff5e0ae4ef2e1ae4fdf2dfd5b76c75e5c2fa4132d05fc1b0dabcd20c7e28c4 \
@@ -196,7 +196,7 @@ markupsafe==3.0.2 \
     --hash=sha256:f8b3d067f2e40fe93e1ccdd6b2e1d16c43140e76f02fb1319a05cf2b79d99430 \
     --hash=sha256:fcabf5ff6eea076f859677f5f0b6b5c1a51e70a376b0579e0eadef8db48c6b50
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   jinja2
 mypy==1.16.1 \
     --hash=sha256:051e1677689c9d9578b9c7f4d206d763f9bbd95723cd1416fad50db49d52f359 \
@@ -294,12 +294,12 @@ pyyaml==6.0.2 \
     --hash=sha256:efdca5630322a10774e8e98e1af481aad470dd62c3170801852d752aa7a783ba \
     --hash=sha256:f753120cb8181e736c57ef7636e83f31b9c0d1722c516f7e86cf15b7aa57ff12 \
     --hash=sha256:ff3824dc5261f50c9b0dfb3be22b4567a6f938ccce4587b38952d85fd9e9afe4
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
 referencing==0.35.1 \
     --hash=sha256:25b42124a6c8b632a425174f24087783efb348a6f1e0008e63cd4466fedf703c \
     --hash=sha256:eda6d3234d62814d1c64e305c1331c9a3a6132da475ab6382eaa997b21ee75de
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   jsonschema
     #   jsonschema-specifications
     #   types-jsonschema
@@ -307,7 +307,7 @@ requests==2.32.3 \
     --hash=sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760 \
     --hash=sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   docker
 rpds-py==0.22.3 \
     --hash=sha256:009de23c9c9ee54bf11303a966edf4d9087cd43a6003672e6aa7def643d06518 \
@@ -414,33 +414,33 @@ rpds-py==0.22.3 \
     --hash=sha256:fda7cb070f442bf80b642cd56483b5548e43d366fe3f39b98e67cce780cded00 \
     --hash=sha256:feea821ee2a9273771bae61194004ee2fc33f8ec7db08117ef9147d4bbcbca8e
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   jsonschema
     #   referencing
-ruff==0.12.2 \
-    --hash=sha256:093ea2b221df1d2b8e7ad92fc6ffdca40a2cb10d8564477a987b44fd4008a7be \
-    --hash=sha256:09e4cf27cc10f96b1708100fa851e0daf21767e9709e1649175355280e0d950e \
-    --hash=sha256:2a4a20aeed74671b2def096bdf2eac610c7d8ffcbf4fb0e627c06947a1d7078d \
-    --hash=sha256:369ffb69b70cd55b6c3fc453b9492d98aed98062db9fec828cdfd069555f5f1a \
-    --hash=sha256:3b8b94317cbc2ae4a2771af641739f933934b03555e51515e6e021c64441532d \
-    --hash=sha256:3eb3a6b2db4d6e2c77e682f0b988d4d61aff06860158fdb413118ca133d57922 \
-    --hash=sha256:45fc42c3bf1d30d2008023a0a9a0cfb06bf9835b147f11fe0679f21ae86d34b1 \
-    --hash=sha256:48d6c6bfb4761df68bc05ae630e24f506755e702d4fb08f08460be778c7ccb12 \
-    --hash=sha256:4987b8f4ceadf597c927beee65a5eaf994c6e2b631df963f86d8ad1bdea99342 \
-    --hash=sha256:6932323db80484dda89153da3d8e58164d01d6da86857c79f1961934354992da \
-    --hash=sha256:6aa7e623a3a11538108f61e859ebf016c4f14a7e6e4eba1980190cacb57714ce \
-    --hash=sha256:71a4c550195612f486c9d1f2b045a600aeba851b298c667807ae933478fcef04 \
-    --hash=sha256:73448de992d05517170fc37169cbca857dfeaeaa8c2b9be494d7bcb0d36c8f4b \
-    --hash=sha256:793d8859445ea47591272021a81391350205a4af65a9392401f418a95dfb75c9 \
-    --hash=sha256:8ae64755b22f4ff85e9c52d1f82644abd0b6b6b6deedceb74bd71f35c24044cc \
-    --hash=sha256:ce48f675c394c37e958bf229fb5c1e843e20945a6d962cf3ea20b7a107dcd9f4 \
-    --hash=sha256:d7b4f55cd6f325cb7621244f19c873c565a08aff5a4ba9c69aa7355f3f7afd3e \
-    --hash=sha256:dca8a3b6d6dc9810ed8f328d406516bf4d660c00caeaef36eb831cf4871b0639
+ruff==0.12.3 \
+    --hash=sha256:023040a3499f6f974ae9091bcdd0385dd9e9eb4942f231c23c57708147b06311 \
+    --hash=sha256:0262d50ba2767ed0fe212aa7e62112a1dcbfd46b858c5bf7bbd11f326998bafc \
+    --hash=sha256:0a9153b000c6fe169bb307f5bd1b691221c4286c133407b8827c406a55282041 \
+    --hash=sha256:12371aec33e1a3758597c5c631bae9a5286f3c963bdfb4d17acdd2d395406687 \
+    --hash=sha256:2120d3aa855ff385e0e562fdee14d564c9675edbe41625c87eeab744a7830d12 \
+    --hash=sha256:40dced4a79d7c264389de1c59467d5d5cefd79e7e06d1dfa2c75497b5269a5a6 \
+    --hash=sha256:47552138f7206454eaf0c4fe827e546e9ddac62c2a3d2585ca54d29a890137a2 \
+    --hash=sha256:560f13b6baa49785665276c963edc363f8ad4b4fc910a883e2625bdb14a83a9e \
+    --hash=sha256:5f9c7c9c8f84c2d7f27e93674d27136fbf489720251544c4da7fb3d742e011b1 \
+    --hash=sha256:6b16647cbb470eaf4750d27dddc6ebf7758b918887b56d39e9c22cce2049082b \
+    --hash=sha256:883d844967bffff5ab28bba1a4d246c1a1b2933f48cb9840f3fdc5111c603b07 \
+    --hash=sha256:a946cf1e7ba3209bdef039eb97647f1c77f6f540e5845ec9c114d3af8df873e7 \
+    --hash=sha256:c4faaff1f90cea9d3033cbbcdf1acf5d7fb11d8180758feb31337391691f3df0 \
+    --hash=sha256:dfd45e6e926deb6409d0616078a666ebce93e55e07f0fb0228d4b2608b2c248d \
+    --hash=sha256:e1417051edb436230023575b149e8ff843a324557fe0a265863b7602df86722f \
+    --hash=sha256:e2506961bf6ead54887ba3562604d69cb430f59b42133d36976421bc8bd45901 \
+    --hash=sha256:f1b5a4b6668fd7b7ea3697d8d98857390b40c1320a63a178eee6be0899ea2d77 \
+    --hash=sha256:fa6b24600cf3b750e48ddb6057e901dd5b9aa426e316addb2a1af185a7509882
     # via -r requirements.dev.in
 six==1.17.0 \
     --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274 \
     --hash=sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
 tomli==2.2.1 \
     --hash=sha256:023aa114dd824ade0100497eb2318602af309e5a55595f76b626d6d9f3b7b0a6 \
     --hash=sha256:02abe224de6ae62c19f090f68da4e27b10af2b93213d36cf44e6e1c5abd19fdd \
@@ -475,15 +475,15 @@ tomli==2.2.1 \
     --hash=sha256:ece47d672db52ac607a3d9599a9d48dcb2f2f735c6c2d1f34130085bb12b112a \
     --hash=sha256:f4039b9cbc3048b2416cc57ab3bda989a6fcf9b36cf8937f01a6e731b64f80d7
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   mypy
 types-jinja2==2.11.9 \
     --hash=sha256:60a1e21e8296979db32f9374d8a239af4cb541ff66447bb915d8ad398f9c63b2 \
     --hash=sha256:dbdc74a40aba7aed520b7e4d89e8f0fe4286518494208b35123bcf084d4b8c81
     # via -r requirements.dev.in
-types-jsonschema==4.24.0.20250528 \
-    --hash=sha256:6a906b5ff73ac11c8d1e0b6c30a9693e1e4e1ab56c56c932b3a7e081b86d187b \
-    --hash=sha256:7e28c64e0ae7980eeb158105b20663fc6a6b8f81d5f86ea6614aa0014417bd1e
+types-jsonschema==4.24.0.20250708 \
+    --hash=sha256:a910e4944681cbb1b18a93ffb502e09910db788314312fc763df08d8ac2aadb7 \
+    --hash=sha256:d574aa3421d178a8435cc898cf4cf5e5e8c8f37b949c8e3ceeff06da433a18bf
     # via -r requirements.dev.in
 types-markupsafe==1.1.10 \
     --hash=sha256:85b3a872683d02aea3a5ac2a8ef590193c344092032f58457287fbf8e06711b1 \
@@ -501,7 +501,7 @@ urllib3==2.3.0 \
     --hash=sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df \
     --hash=sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d
     # via
-    #   -r requirements.txt
+    #   -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt
     #   docker
     #   requests
 zstandard==0.23.0 \
@@ -602,4 +602,4 @@ zstandard==0.23.0 \
     --hash=sha256:fd30d9c67d13d891f2360b2a120186729c111238ac63b43dbd37a5a40670b8ca \
     --hash=sha256:fd7699e8fd9969f455ef2926221e0233f81a2542921471382e77a9e2f2b57f4b \
     --hash=sha256:fe3b385d996ee0822fd46528d9f0443b880d4d05528fd26a9119a54ec3f91c69
-    # via -r requirements.txt
+    # via -r /home/dependabot/dependabot-updater/tmp/20250714-1304-yqr1j7/dependabot_20250714-1304-4ekfak/requirements.txt

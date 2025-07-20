@@ -1051,7 +1051,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         {
             let strings = symbols.strings();
 
-            for (symbol_index, symbol) in symbols.iter().enumerate() {
+            for (symbol_index, symbol) in symbols.enumerate() {
                 let name = String::from_utf8_lossy(symbol.name(endian, strings)?);
 
                 // If symbol versions are defined and we're in the .dynsym section, there should

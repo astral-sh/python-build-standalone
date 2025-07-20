@@ -551,8 +551,8 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     let mut stream = client
         .repos(organization, repo)
-        .releases()
-        .stream_asset(shasums_asset.id)
+        .release_assets()
+        .stream(shasums_asset.id.into_inner())
         .await?;
 
     let mut asset_bytes = Vec::<u8>::new();

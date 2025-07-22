@@ -206,6 +206,9 @@ _curses_panel:
 _datetime:
   sources:
     - _datetimemodule.c
+  setup-enabled-conditional:
+    - enabled: true
+      minimum-python-version: "3.14"
 
 _dbm:
   sources:

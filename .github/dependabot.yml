@@ -3,7 +3,7 @@ updates:
 - package-ecosystem: "pip"
   directory: "/"
   schedule:
-    interval: "weekly"
+    interval: "monthly"
   groups:
     python:
       patterns:
@@ -11,7 +11,7 @@ updates:
 - package-ecosystem: "cargo"
   directory: "/"
   schedule:
-    interval: "weekly"
+    interval: "monthly"
   groups:
     rust:
       patterns:

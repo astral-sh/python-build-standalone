@@ -23,6 +23,7 @@ import urllib.error
 import urllib.request
 import zipfile
 
+import github
 import yaml
 import zstandard
 
@@ -653,21 +654,20 @@ def validate_python_json(info, extension_modules):
 
 
 def release_download_statistics(mode="by_asset"):
-    with urllib.request.urlopen(
-        "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
-    ) as fh:
-        data = json.load(fh)
-
     by_tag = collections.Counter()
     by_build = collections.Counter()
     by_build_install_only = collections.Counter()
 
-    for release in data:
-        tag = release["tag_name"]
+    # Default paging settings time out. Reduce page size as a workaround.
+    gh = github.Github(per_page=5)
 
-        for asset in release["assets"]:
-            name = asset["name"]
-            count = asset["download_count"]
+    repo = gh.get_repo("astral-sh/python-build-standalone")
+    for release in repo.get_releases():
+        tag = release.tag_name
+
+        for asset in release.assets:
+            name = asset.name
+            count = asset.download_count
 
             by_tag[tag] += count
 

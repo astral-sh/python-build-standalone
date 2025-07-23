@@ -29,7 +29,7 @@ jobs:
   release:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    runs-on: github-ubuntu-24.04-x86_64-16
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:

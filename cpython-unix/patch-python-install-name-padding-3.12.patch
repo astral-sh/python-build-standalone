@@ -1,0 +1,33 @@
+From 2861855c08df773eaa640f1fe354c6f792b649a6 Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Fri, 25 Jul 2025 09:53:37 -0400
+Subject: [PATCH 1/1] Makefile.pre.in: Add padding to libpython.dylib
+ install_name
+
+This gives some room for later users to change the name by binary
+editing, without requiring install_name_tool or some other Mach-O
+writer.
+---
+ Makefile.pre.in | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 8fbcd7ac170..ff88a390cab 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -760,8 +760,11 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+ libpython3.so:	libpython$(LDVERSION).so
+ 	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
+ 
++PADDING_128 := /./././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././././.
++PADDING_512 := $(PADDING_128)$(PADDING_128)$(PADDING_128)$(PADDING_128)
++
+ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+-	 $(CC) -dynamiclib -Wl,-single_module $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
++	 $(CC) -dynamiclib -Wl,-single_module $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)$(PADDING_512)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 
+ 
+ libpython$(VERSION).sl: $(LIBRARY_OBJS)
+-- 
+2.39.5 (Apple Git-154)
+

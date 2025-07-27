@@ -54,6 +54,9 @@ if [ -n "${CROSS_COMPILING}" ]; then
     armv7-unknown-linux-gnueabihf)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
+    loongarch64-unknown-linux-gnu)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
     mips-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
@@ -76,6 +79,9 @@ if [ -n "${CROSS_COMPILING}" ]; then
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     aarch64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    loongarch64-unknown-linux-musl)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     mips-unknown-linux-musl)

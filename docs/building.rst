@@ -39,6 +39,7 @@ As are various other targets::
     $ ./build-linux.py --target aarch64-unknown-linux-gnu
     $ ./build-linux.py --target armv7-unknown-linux-gnueabi
     $ ./build-linux.py --target armv7-unknown-linux-gnueabihf
+    $ ./build-linux.py --target loongarch64-unknown-linux-gnu
     $ ./build-linux.py --target mips-unknown-linux-gnu
     $ ./build-linux.py --target mipsel-unknown-linux-gnu
     $ ./build-linux.py --target ppc64le-unknown-linux-gnu

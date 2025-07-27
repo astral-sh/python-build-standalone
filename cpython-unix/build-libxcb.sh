@@ -13,6 +13,12 @@ export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig:/tools/deps/lib/pkgconfig
 tar -xf libxcb-${LIBXCB_VERSION}.tar.gz
 pushd libxcb-${LIBXCB_VERSION}
 
+if [[ "${TARGET_TRIPLE}" = loongarch64* ]]; then
+    rm -f build-aux/config.guess build-aux/config.sub
+    curl -sSL -o build-aux/config.guess 'https://git.savannah.gnu.org/cgit/config.git/plain/config.guess'
+    curl -sSL -o build-aux/config.sub 'https://git.savannah.gnu.org/cgit/config.git/plain/config.sub'
+fi
+
 if [ "${CC}" = "musl-clang" ]; then
     EXTRA_FLAGS="--disable-shared"
 fi

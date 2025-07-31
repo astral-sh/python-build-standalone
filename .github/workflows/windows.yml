@@ -154,8 +154,8 @@ jobs:
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\${MATRIX_VCVARS}"
-          py.exe -3.12 build-windows.py --python cpython-${MATRIX_PYTHON} --sh c:\cygwin\bin\sh.exe --options ${MATRIX_BUILD_OPTIONS}
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          py.exe -3.12 build-windows.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS%
         env:
           MATRIX_VCVARS: ${{ matrix.vcvars }}
           MATRIX_PYTHON: ${{ matrix.python }}

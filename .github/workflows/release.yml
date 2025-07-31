@@ -18,30 +18,36 @@ on:
 env:
   FORCE_COLOR: 1
 
-permissions:
-  contents: write
-  packages: write
-  # Permissions used for actions/attest-build-provenance
-  id-token: write
-  attestations: write
+permissions: {}
 
 jobs:
   release:
+    name: Release
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+      # Permissions used for actions/attest-build-provenance
+      id-token: write
+      attestations: write
+
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          persist-credentials: false
 
       - uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
 
       # Perform a release in dry-run mode.
-      - run: just release-dry-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}
+      - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
         if: ${{ github.event.inputs.dry-run == 'true' }}
-
-      # Set our identity for git operations (on the latest-release branch).
+        env:
+          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Configure Git identity
         if: ${{ github.event.inputs.dry-run == 'false' }}
         run: |
@@ -51,28 +57,36 @@ jobs:
       # Fetch the commit so that it exists locally.
       - name: Fetch commit
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git fetch origin ${{ github.event.inputs.sha }}
+        run: git fetch origin ${GITHUB_EVENT_INPUTS_SHA}
+        env:
+          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
 
       # Associate the commit with the tag.
       - name: Create tag
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git tag ${{ github.event.inputs.tag }} ${{ github.event.inputs.sha }}
-
-      # Push the tag to GitHub.
+        run: git tag ${GITHUB_EVENT_INPUTS_TAG} ${GITHUB_EVENT_INPUTS_SHA}
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
       - name: Push tag
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git push origin ${{ github.event.inputs.tag }}
+        run: git push origin ${GITHUB_EVENT_INPUTS_TAG}
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       # Create a GitHub release.
       - name: Create GitHub Release
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: just release-create ${{ github.event.inputs.tag }}
+        run: just release-create ${GITHUB_EVENT_INPUTS_TAG}
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
 
       # Uploading the relevant artifact to the GitHub release.
-      - run: just release-run ${{ secrets.GITHUB_TOKEN }} ${{ github.event.inputs.sha }} ${{ github.event.inputs.tag }}
+      - run: just release-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
         if: ${{ github.event.inputs.dry-run == 'false' }}
-
-      # We filter by *.tar.@(zst|gz) since actions/attest-build-provenance only supports up to 1024 subjects
+        env:
+          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Generate attestations
         uses: actions/attest-build-provenance@v2
         if: ${{ github.event.inputs.dry-run == 'false' }}

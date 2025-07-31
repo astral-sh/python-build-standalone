@@ -12,6 +12,8 @@ concurrency:
 env:
   FORCE_COLOR: 1
 
+permissions: {}
+
 jobs:
   crate-build:
     needs:
@@ -23,6 +25,8 @@ jobs:
     name: crate / ${{ matrix.arch }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Emit rustc version
         run: |
@@ -47,6 +51,7 @@ jobs:
           path: target/release/pythonbuild
 
   generate-matrix:
+    name: Generate build matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
@@ -55,16 +60,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # fetch history for subsequent `git diff`
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: astral-sh/setup-uv@v4
 
       - name: Get pull request labels
         id: get-labels
+        env:
+          PULL_REQUEST_LABELS: ${{ toJson(github.event.pull_request.labels.*.name) }}
         run: |
           # Convert GitHub labels array to comma-separated string
-          LABELS=$(echo '${{ toJson(github.event.pull_request.labels.*.name) }}' | jq -r 'join(",")')
+          LABELS=$(echo "${PULL_REQUEST_LABELS}" | jq -r 'join(",")')
           echo "labels=$LABELS" >> $GITHUB_OUTPUT
 
       - name: Check if the `pythonbuild` crate changed
@@ -82,12 +90,12 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          uv run ci-matrix.py --platform darwin --labels '${{ steps.get-labels.outputs.labels }}' ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
-          
+          uv run ci-matrix.py --platform darwin --labels '${STEPS_GET_LABELS_OUTPUTS_LABELS}' ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
+
           # Extract python-build matrix
           echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
-          
+
           # Display the matrix for debugging too
           cat matrix.json | jq
 
@@ -98,6 +106,8 @@ jobs:
             # Build matrix is empty
             echo "any_builds=false" >> $GITHUB_OUTPUT
           fi
+        env:
+          STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
   build:
     needs:
@@ -116,11 +126,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Install Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Download pythonbuild
         uses: actions/download-artifact@v4
@@ -131,16 +142,20 @@ jobs:
       - name: Build
         if: ${{ ! matrix.dry-run }}
         run: |
-          if [ "${{ matrix.target_triple }}" = "aarch64-apple-darwin" ]; then
+          if [ "${MATRIX_TARGET_TRIPLE}" = "aarch64-apple-darwin" ]; then
             export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
-          elif [ "${{ matrix.target_triple }}" = "x86_64-apple-darwin" ]; then
+          elif [ "${MATRIX_TARGET_TRIPLE}" = "x86_64-apple-darwin" ]; then
             export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
           else
-            echo "unhandled target triple: ${{ matrix.target_triple }}"
+            echo "unhandled target triple: ${MATRIX_TARGET_TRIPLE}"
             exit 1
           fi
 
-          ./build-macos.py --target-triple ${{ matrix.target_triple }} --python cpython-${{ matrix.python }} --options ${{ matrix.build_options }}
+          ./build-macos.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS}
+        env:
+          MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
+          MATRIX_PYTHON: ${{ matrix.python }}
+          MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
 
       - name: Generate attestations
         uses: actions/attest-build-provenance@v2
@@ -159,9 +174,10 @@ jobs:
         if: ${{ ! matrix.dry-run }}
         uses: actions/checkout@v4
         with:
-          repository: 'phracker/MacOSX-SDKs'
+          repository: phracker/MacOSX-SDKs
           ref: master
           path: macosx-sdks
+          persist-credentials: false
 
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}

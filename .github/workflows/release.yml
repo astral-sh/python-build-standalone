@@ -40,7 +40,7 @@ jobs:
           submodules: recursive
           persist-credentials: false
 
-      - uses: extractions/setup-just@dd310ad5a97d8e7b41793f8ef055398d51ad4de6 # v2
+      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v2
 
       # Perform a release in dry-run mode.
       - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}

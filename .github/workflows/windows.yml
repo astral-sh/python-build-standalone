@@ -130,7 +130,7 @@ jobs:
           persist-credentials: false
 
       - name: Install Cygwin Environment
-        uses: cygwin/cygwin-install-action@49f298a7ebb00d4b3ddf58000c3e78eff5fbd6b9 # v2
+        uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
         with:
           packages: autoconf automake libtool
 

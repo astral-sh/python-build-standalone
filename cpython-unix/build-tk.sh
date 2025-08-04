@@ -7,6 +7,12 @@ set -ex
 
 ROOT=`pwd`
 
+# Force linking to static libraries from our dependencies.
+# TODO(geofft): This is copied from build-cpython.sh. Really this should
+# be done at the end of the build of each dependency, rather than before
+# the build of each consumer.
+find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+
 export PATH=${TOOLS_PATH}/deps/bin:${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib/pkgconfig
 

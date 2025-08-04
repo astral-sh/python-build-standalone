@@ -192,7 +192,13 @@ $(OUTDIR)/patchelf-$(PATCHELF_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPEN
 $(OUTDIR)/sqlite-$(SQLITE_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-sqlite.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) sqlite
 
-$(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-tcl.sh
+TCL_DEPENDS = \
+    $(PYTHON_DEP_DEPENDS) \
+    $(HERE)/build-tcl.sh \
+    $(OUTDIR)/zlib-$(ZLIB_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(NULL)
+
+$(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar: $(TCL_DEPENDS)
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tcl
 
 TK_DEPENDS = \

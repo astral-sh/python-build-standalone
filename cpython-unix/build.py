@@ -1121,6 +1121,9 @@ def main():
             "zstd",
         ):
             tools_path = "host" if action in ("m4", "patchelf") else "deps"
+            extra_archives = {
+                "tcl": {"zlib"},
+            }.get(action)
 
             simple_build(
                 settings,
@@ -1131,6 +1134,7 @@ def main():
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                extra_archives=extra_archives,
                 tools_path=tools_path,
             )
 
@@ -1195,7 +1199,7 @@ def main():
             )
 
         elif action == "tk":
-            extra_archives = {"tcl"}
+            extra_archives = {"tcl", "zlib"}
             if not host_platform.startswith("macos_"):
                 extra_archives |= {
                     "libX11",

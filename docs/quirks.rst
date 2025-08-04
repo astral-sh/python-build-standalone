@@ -71,18 +71,21 @@ ncurses/libedit/readline are loaded.
 
 .. _quirk_macos_no_tix:
 
-No tix on macOS
-===============
+No tix on UNIX
+==============
 
-macOS distributions do not contain tix tcl support files. This means that
-``tkinter.tix`` module functionality will likely break at run-time. The
-module will import fine. But attempting to instantiate a ``tkinter.tix.Tk``
-instance or otherwise attempt to run tix tcl files will result in a run-time
-error.
+Tix is an old widget library for Tcl/Tk. Python previously had a wrapper
+for it in ``tkinter.tix``, but it was deprecated in Python 3.6 (the
+recommendation is to use ``tkinter.ttk``) and removed in Python 3.13.
 
-``tkinter.tix`` has been deprecated since Python 3.6 and the official Python
-macOS installers do not ship the tix support files. So this project behaves
-similarly to the official CPython distributions.
+The macOS and Linux distributions from this project do not build and
+ship Tix, even for Python versions 3.12 and below.
+
+We had previously attempted to ship Tix support on Linux, but it was
+broken and nobody reported an issue about it. The macOS distributions
+from this project never shipped support for Tix. The official Python.org
+macOS installers and Apple's build of Python do not ship support for
+Tix, either, so this project behaves similarly to those distributions.
 
 .. _quirk_windows_no_pip:
 

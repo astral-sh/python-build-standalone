@@ -195,7 +195,6 @@ aarch64-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -285,7 +284,6 @@ armv7-unknown-linux-gnueabi:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -327,7 +325,6 @@ armv7-unknown-linux-gnueabihf:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -369,7 +366,6 @@ mips-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -411,7 +407,6 @@ mipsel-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -453,7 +448,6 @@ ppc64le-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -495,7 +489,6 @@ riscv64-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -537,7 +530,6 @@ s390x-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -812,7 +804,6 @@ x86_64-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -860,7 +851,6 @@ x86_64_v2-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -908,7 +898,6 @@ x86_64_v3-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -956,7 +945,6 @@ x86_64_v4-unknown-linux-gnu:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -1002,7 +990,6 @@ x86_64-unknown-linux-musl:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -1048,7 +1035,6 @@ x86_64_v2-unknown-linux-musl:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -1094,7 +1080,6 @@ x86_64_v3-unknown-linux-musl:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz
@@ -1140,7 +1125,6 @@ x86_64_v4-unknown-linux-musl:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz

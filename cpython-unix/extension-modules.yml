@@ -673,8 +673,6 @@ _tkinter:
   sources:
     - _tkinter.c
     - tkappinit.c
-  # TODO consider adding WITH_TIX, as Modules/Setup seems to recommend it. This also
-  # initializes tix at init time, which seems desirable.
   defines:
     - WITH_APPINIT
   includes-deps:

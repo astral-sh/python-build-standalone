@@ -195,16 +195,6 @@ $(OUTDIR)/sqlite-$(SQLITE_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) 
 $(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-tcl.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tcl
 
-TIX_DEPENDS = \
-    $(HERE)/build-tix.sh \
-    $(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/tk-$(TK_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(if $(NEED_LIBX11),$(OUTDIR)/libX11-$(LIBX11_VERSION)-$(PACKAGE_SUFFIX).tar) \
-    $(NULL)
-
-$(OUTDIR)/tix-$(TIX_VERSION)-$(PACKAGE_SUFFIX).tar: $(TIX_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tix
-
 TK_DEPENDS = \
     $(HOST_PYTHON_DEPENDS) \
     $(HERE)/build-tk.sh \
@@ -271,7 +261,6 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_SQLITE),$$(OUTDIR)/sqlite-$$(SQLITE_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TCL),$$(OUTDIR)/tcl-$$(TCL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TK),$$(OUTDIR)/tk-$$(TK_VERSION)-$$(PACKAGE_SUFFIX).tar) \
-    $$(if $$(NEED_TIX),$$(OUTDIR)/tix-$$(TIX_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_UUID),$$(OUTDIR)/uuid-$$(UUID_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_XZ),$$(OUTDIR)/xz-$$(XZ_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_ZLIB),$$(OUTDIR)/zlib-$$(ZLIB_VERSION)-$$(PACKAGE_SUFFIX).tar) \

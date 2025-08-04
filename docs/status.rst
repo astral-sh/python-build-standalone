@@ -285,7 +285,7 @@ test_spwd
 test_startfile
    object <module 'os' from '.../install/lib/python3.7/os.py'> has no attribute 'startfile'
 test_tix
-   cannot run without OS X gui process
+   tix is not built by this project
 test_tk
    cannot run without OS X gui process
 test_ttk_guionly

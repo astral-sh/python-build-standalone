@@ -173,7 +173,7 @@ jobs:
         run: |
           uv run ci-matrix.py \
             --platform linux \
-            --labels '${STEPS_GET_LABELS_OUTPUTS_LABELS}' \
+            --labels "${STEPS_GET_LABELS_OUTPUTS_LABELS}" \
             --max-shards 2 \
             ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} \
             > matrix.json

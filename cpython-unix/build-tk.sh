@@ -42,10 +42,13 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     ${EXTRA_CONFIGURE_FLAGS}
 
 # Remove wish, since we don't need it.
-if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
-    sed -i 's/all: binaries libraries doc/all: libraries/' Makefile
-    sed -i 's/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE) ${WISH_EXE}/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE)/' Makefile
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
+    sed_args=(-i '' -e)
+else
+    sed_args=(-i)
 fi
+sed "${sed_args[@]}" 's/all: binaries libraries doc/all: libraries/' Makefile
+sed "${sed_args[@]}" 's/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE) ${WISH_EXE}/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE)/' Makefile
 
 # We are statically linking libX11, and static libraries do not carry
 # information about dependencies. pkg-config --static does, but Tcl/Tk's

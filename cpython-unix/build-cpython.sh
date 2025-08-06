@@ -116,17 +116,12 @@ fi
 # Clang 13 actually prints something with --print-multiarch, confusing CPython's
 # configure. This is reported as https://bugs.python.org/issue45405. We nerf the
 # check since we know what we're doing.
-if [ "${CC}" = "clang" ]; then
+if [[ "${CC}" = "clang" || "${CC}" = "musl-clang" ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
         patch -p1 -i ${ROOT}/patch-disable-multiarch-13.patch
     else
         patch -p1 -i ${ROOT}/patch-disable-multiarch.patch
     fi
-elif [ "${CC}" = "musl-clang" ]; then
-  # Similarly, this is a problem for musl Clang on Python 3.13+
-  if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-    patch -p1 -i ${ROOT}/patch-disable-multiarch-13.patch
-  fi
 fi
 
 # Python 3.11 supports using a provided Python to use during bootstrapping

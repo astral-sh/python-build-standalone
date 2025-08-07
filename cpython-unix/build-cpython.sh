@@ -310,6 +310,13 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
 fi
 
+# Pad the install name with slashes. We'll replace this with NULs after the build.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+    patch -p1 -i ${ROOT}/patch-python-install-name-padding-3.11.patch
+else
+    patch -p1 -i ${ROOT}/patch-python-install-name-padding.patch
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
@@ -711,6 +718,11 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                 -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
         fi
+
+        # For cleanness, replace the slash-based padding for the install name with NUL-based
+        # padding. install_name_tool will not accept trailing NULs so we do it ourselves. Do this
+        # after any calls to install_name_tool.
+        ${BUILD_PYTHON} ${ROOT}/repad_install_name.py ${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
     else # (not macos)
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}

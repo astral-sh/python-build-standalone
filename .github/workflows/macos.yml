@@ -90,7 +90,7 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          uv run ci-matrix.py --platform darwin --labels '${STEPS_GET_LABELS_OUTPUTS_LABELS}' ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
+          uv run ci-matrix.py --platform darwin --labels "${STEPS_GET_LABELS_OUTPUTS_LABELS}" ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
 
           # Extract python-build matrix
           echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT

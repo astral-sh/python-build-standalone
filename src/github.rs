@@ -259,6 +259,9 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
         for artifact in artifacts {
             if matches!(artifact.name.as_str(), "pythonbuild" | "toolchain")
                 || artifact.name.contains("install-only")
+                || artifact.name.contains("dockerbuild")
+                || artifact.name.contains("crate-")
+                || artifact.name.contains("image-")
             {
                 continue;
             }

@@ -29,6 +29,7 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     LDFLAGS="-L${TOOLS_PATH}/deps/lib"
     EXTRA_CONFIGURE_FLAGS="--enable-aqua=yes --without-x"
 else
+    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
     EXTRA_CONFIGURE_FLAGS="--x-includes=${TOOLS_PATH}/deps/include --x-libraries=${TOOLS_PATH}/deps/lib"
 fi
 

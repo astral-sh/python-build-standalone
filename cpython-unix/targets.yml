@@ -1131,3 +1131,51 @@ x86_64_v4-unknown-linux-musl:
     - zlib
     - zstd
   openssl_target: linux-x86_64
+
+aarch64-unknown-linux-musl:
+  host_platforms:
+    - linux64
+  pythons_supported:
+    - '3.9'
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+  needs_toolchain: true
+  # TODO: Actually populate these compilers?
+  docker_image_suffix: .cross
+  host_cc: /usr/bin/x86_64-linux-musl-gcc
+  host_cxx: /usr/bin/x86_64-linux-musl-g++
+  target_cc: /usr/bin/aarch64-linux-musl-gcc
+  target_cxx: /usr/bin/aarch64-linux-musl-g++
+  target_cc: musl-clang
+  target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
+  target_cflags:
+    - '-fvisibility=hidden'
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi-3.3
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - musl
+    - ncurses
+    - openssl-3.0
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - tix
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+  openssl_target: linux-aarch64

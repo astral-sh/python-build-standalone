@@ -1,6 +1,6 @@
 # Debian Stretch.
 FROM debian@sha256:c5c5200ff1e9c73ffbf188b4a67eb1c91531b644856b4aefe86a58d2f0cb05be
-MAINTAINER Gregory Szorc <gregory.szorc@gmail.com>
+LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
 
 RUN groupadd -g 1000 build && \
     useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \

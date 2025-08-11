@@ -265,24 +265,32 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
         .collect()
     });
 
-static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<HashMap<&'static str, Vec<&'static str>>> =
-    Lazy::new(|| {
-        [
-            (
-                // libcrypt is provided by the system, but only on older distros.
-                "_crypt",
-                vec!["libcrypt.so.1"],
-            ),
-            (
-                // libtcl and libtk are shipped in our distribution.
-                "_tkinter",
-                vec!["libtcl8.6.so", "libtk8.6.so"],
-            ),
-        ]
-        .iter()
-        .cloned()
-        .collect()
-    });
+#[derive(Copy, Clone, PartialEq)]
+enum DepSource {
+    SystemRequired,
+    SystemOptional,
+    Vendored,
+}
+use DepSource::*;
+
+static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<
+    HashMap<&'static str, Vec<(&'static str, DepSource)>>,
+> = Lazy::new(|| {
+    [
+        (
+            // libcrypt is provided by the system, but only on older distros.
+            "_crypt",
+            vec![("libcrypt.so.1", SystemOptional)],
+        ),
+        (
+            "_tkinter",
+            vec![("libtcl8.6.so", Vendored), ("libtk8.6.so", Vendored)],
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect()
+});
 
 static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
     [
@@ -1022,7 +1030,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     if let Some(filename) = path.file_name() {
         if let Some((module, _)) = filename.to_string_lossy().split_once(".cpython-") {
             if let Some(extra) = ELF_ALLOWED_LIBRARIES_BY_MODULE.get(module) {
-                allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
+                allowed_libraries.extend(extra.iter().map(|x| x.0.to_string()));
             }
         }
     }
@@ -2184,6 +2192,85 @@ fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
 
     if !output.status.success() {
         errors.push("errors running interpreter tests".to_string());
+    }
+
+    // Explicitly test ldd directly on the extension modules, which PyInstaller
+    // relies on. This is not strictly needed for a working distribution (e.g.
+    // you can set an rpath on just python+libpython), so we test here for
+    // compatibility with tools that run ldd.
+    // that fails this check (e.g. by setting an rpath on just python+libpython).
+    // https://github.com/pyinstaller/pyinstaller/issues/9204#issuecomment-3171050891
+    // TODO(geofft): musl doesn't do lazy binding for the argument to
+    // ldd, so we will get complaints about missing Py_* symbols. Need
+    // to handle this somehow, skip testing for now.
+    if cfg!(target_os = "linux") && !python_json.target_triple.contains("-musl") {
+        // musl's ldd is packaged in the "musl-tools" Debian package.
+        let ldd = if python_json.target_triple.contains("-musl") && cfg!(not(target_env = "musl")) {
+            "musl-ldd"
+        } else {
+            "ldd"
+        };
+        for (name, variants) in python_json.build_info.extensions.iter() {
+            for ext in variants {
+                let Some(shared_lib) = &ext.shared_lib else {
+                    continue;
+                };
+                let shared_lib_path = temp_dir.path().join("python").join(shared_lib);
+                let output = duct::cmd(ldd, [shared_lib_path])
+                    .unchecked()
+                    .stdout_capture()
+                    .run()
+                    .context(format!("Failed to run `{ldd} {shared_lib}`"))?;
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                // Format of ldd output, for both glibc and musl:
+                // - Everything starts with a tab.
+                // - Most things are "libxyz.so.1 => /usr/lib/libxyz.so.1 (0xabcde000)".
+                // - The ELF interpreter is displayed as just "/lib/ld.so (0xabcde000)".
+                // - glibc, but not musl, shows the vDSO as "linux-vdso.so.1 (0xfffff000)".
+                // - If a library is listed in DT_NEEDED with an absolute path, or (currently only
+                //   supported on glibc) with an $ORIGIN-relative path, it displays as just
+                //   "/path/to/libxyz.so (0xabcde000)".
+                // - On glibc, if a library cannot be found ldd returns zero and shows "=> not
+                //   found" as the resolution (even if it wouldn't use the => form if found).
+                // - On musl, if a library cannot be found, ldd returns nonzero and shows "Error
+                //   loading shared library ...:" on stderr.
+                if !output.status.success() {
+                    // TODO: If we ever have any optional dependencies besides libcrypt (which is
+                    // glibc-only), we will need to capture musl ldd's stderr and parse it.
+                    errors.push(format!(
+                        "`{ldd} {shared_lib}` exited with {}:\n{stdout}",
+                        output.status
+                    ));
+                } else {
+                    let mut ldd_errors = vec![];
+                    let deps = ELF_ALLOWED_LIBRARIES_BY_MODULE.get(&name[..]);
+                    let temp_dir_lossy = temp_dir.path().to_string_lossy().into_owned();
+                    for line in stdout.lines() {
+                        let Some((needed, resolution)) = line.trim().split_once(" => ") else {
+                            continue;
+                        };
+                        let dep_source = deps
+                            .and_then(|deps| {
+                                deps.iter().find(|dep| dep.0 == needed).map(|dep| dep.1)
+                            })
+                            .unwrap_or(SystemRequired);
+                        if resolution.starts_with("not found") && dep_source != SystemOptional {
+                            ldd_errors.push(format!("{needed} was expected to be found"));
+                        } else if !resolution.contains(&temp_dir_lossy) && dep_source == Vendored {
+                            ldd_errors.push(format!(
+                                "{needed} should not come from the OS (missing rpath/$ORIGIN?)"
+                            ));
+                        }
+                    }
+                    if !ldd_errors.is_empty() {
+                        errors.push(format!(
+                            "In `{ldd} {shared_lib}`:\n - {}\n{stdout}",
+                            ldd_errors.join("\n - ")
+                        ));
+                    }
+                }
+            }
+        }
     }
 
     Ok(errors)

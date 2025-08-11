@@ -821,6 +821,25 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                     ${ROOT}/out/python/install/lib/libpython3.so
             fi
         fi
+
+        # PyInstaller would like to see `ldd` work on modules.
+        # https://github.com/pyinstaller/pyinstaller/issues/9204#issuecomment-3171583553
+        # Also this probably helps programs linking libpython avoid having to set an rpath.
+        patchelf_args=()
+        if [ "${CC}" == "musl-clang" ]; then
+            patchelf_args+=(--set-rpath '${ORIGIN}/../..')
+        else
+            for lib in ${ROOT}/out/python/install/lib/*; do
+                basename=${lib##*/}
+                patchelf_args+=(--replace-needed "$basename" '${ORIGIN}/../../'"$basename")
+            done
+        fi
+        # At the moment, python3 and libpython don't have shared-library
+        # dependencies, but at some point we will want to run this for
+        # them too.
+        for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
+            patchelf "${patchelf_args[@]}" "$module"
+        done
     fi
 fi
 

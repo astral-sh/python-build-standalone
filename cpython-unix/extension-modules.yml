@@ -145,6 +145,7 @@ _ctypes:
     - dl
 
 _ctypes_test:
+  build-mode: shared
   sources:
     - _ctypes/_ctypes_test.c
   links:

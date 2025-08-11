@@ -683,6 +683,14 @@ fi
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
 if [ "${PYBUILD_SHARED}" = "1" ]; then
+    (
+        shopt -s nullglob
+        dylibs=(${TOOLS_PATH}/deps/lib/lib*.dylib ${TOOLS_PATH}/deps/lib/lib*.so)
+        if [ "${#dylibs[@]}" -gt 0 ]; then
+            cp -av "${dylibs[@]}" ${ROOT}/out/python/install/lib/
+        fi
+    )
+
     if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
@@ -1266,14 +1274,6 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
     for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.4,tcl8,tcl8.6,thread2.8.9,tk8.6}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
-
-    (
-        shopt -s nullglob
-        dylibs=(${TOOLS_PATH}/deps/lib/lib*.dylib ${TOOLS_PATH}/deps/lib/lib*.so)
-        if [ "${#dylibs[@]}" -gt 0 ]; then
-            cp -av "${dylibs[@]}" ${ROOT}/out/python/install/lib/
-        fi
-    )
 fi
 
 # Copy the terminfo database if present.

@@ -696,7 +696,7 @@ def run_msbuild(
         # We pin the Windows 10 SDK version to make builds more deterministic.
         # This can also work around known incompatibilities with the Windows 11
         # SDK as of at least CPython 3.9.7.
-        f"/property:DefaultWindowsSDKVersion={windows_sdk_version}",
+        f"/property:WindowsTargetPlatformVersion={windows_sdk_version}",
     ]
 
     if freethreaded:

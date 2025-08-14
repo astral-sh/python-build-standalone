@@ -4,22 +4,22 @@
 
 use {
     crate::release::{
-        bootstrap_llvm, produce_install_only, produce_install_only_stripped, RELEASE_TRIPLES,
+        RELEASE_TRIPLES, bootstrap_llvm, produce_install_only, produce_install_only_stripped,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     bytes::Bytes,
     clap::ArgMatches,
     futures::StreamExt,
     octocrab::{
+        Octocrab, OctocrabBuilder,
         models::{repos::Release, workflows::WorkflowListArtifact},
         params::actions::ArchiveFormat,
-        Octocrab, OctocrabBuilder,
     },
     rayon::prelude::*,
     reqwest::{Client, StatusCode},
     reqwest_retry::{
-        default_on_request_failure, policies::ExponentialBackoff, RetryPolicy, Retryable,
-        RetryableStrategy,
+        RetryPolicy, Retryable, RetryableStrategy, default_on_request_failure,
+        policies::ExponentialBackoff,
     },
     sha2::{Digest, Sha256},
     std::{
@@ -268,6 +268,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
 
             fs.push(fetch_artifact(&client, org, repo, artifact));
         }
+        
     }
 
     let mut buffered = futures::stream::iter(fs).buffer_unordered(24);

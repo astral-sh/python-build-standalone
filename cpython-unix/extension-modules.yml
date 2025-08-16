@@ -533,8 +533,6 @@ _sqlite3:
     - include
   includes:
     - Modules/_sqlite
-  defines:
-    - "MODULE_NAME=\\\"sqlite3\\\""
   defines-conditional:
     # Require dynamic binaries to load extensions. Cannot load on iOS.
     # 3.11+ uses opt in. <3.11 uses opt out.
@@ -548,6 +546,8 @@ _sqlite3:
     - define: SQLITE_OMIT_LOAD_EXTENSION=1
       targets:
         - .*-ios
+    - define: "MODULE_NAME=\\\"sqlite3\\\""
+      maximum-python-version: "3.9"
   links:
     - sqlite3
 

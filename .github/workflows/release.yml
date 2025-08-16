@@ -35,7 +35,7 @@ jobs:
       attestations: write
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08eba0b27e820071cde6df949e0beb9ba4906955 # v4.3.0
         with:
           submodules: recursive
           persist-credentials: true # needed for git operations below
@@ -88,7 +88,7 @@ jobs:
           GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Generate attestations
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
         if: ${{ github.event.inputs.dry-run == 'false' }}
         with:
           subject-path: |

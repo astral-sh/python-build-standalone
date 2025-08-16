@@ -2,6 +2,4 @@ rules:
   unpinned-uses:
     config:
       policies:
-        actions/*: ref-pin
-        astral-sh/*: ref-pin
         "*": hash-pin

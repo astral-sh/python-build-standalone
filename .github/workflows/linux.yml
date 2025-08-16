@@ -97,6 +97,8 @@ jobs:
       - name: Build Image
         id: build-image
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+        env:
+          SOURCE_DATE_EPOCH: 0
         with:
           context: .
           file: build/${{ matrix.name }}.Dockerfile
@@ -118,6 +120,7 @@ jobs:
         run: |
           echo ${STEPS_BUILD_IMAGE_OUTPUTS_IMAGEID} > build/image-${MATRIX_NAME}.linux_${MATRIX_ARCH}
           zstd -v -T0 -6 --rm build/image-*.tar
+          touch -t 197001010000 build/image-*
         env:
           STEPS_BUILD_IMAGE_OUTPUTS_IMAGEID: ${{ steps.build-image.outputs.imageid }}
           MATRIX_NAME: ${{ matrix.name }}
@@ -128,6 +131,7 @@ jobs:
         with:
           name: image-${{ matrix.name }}-linux_${{ matrix.arch }}
           path: build/image-*
+          compression-level: '0'
 
   generate-matrix:
     name: Generate build matrix

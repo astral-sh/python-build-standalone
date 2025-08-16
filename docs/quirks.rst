@@ -142,64 +142,6 @@ Some functionality may behave subtly differently as a result of our choice
 to link ``libedit`` by default. (We choose ``libedit`` by default to
 avoid GPL licensing requirements of ``readline``.)
 
-.. _quirk_linux_libx11:
-
-Static Linking of ``libX11`` / Incompatibility with PyQt on Linux
-=================================================================
-
-The ``_tkinter`` Python extension module in the Python standard library
-statically links against ``libX11``, ``libxcb``, and ``libXau`` on Linux.
-In addition, the ``_tkinter`` extension module is statically linked into
-``libpython`` and isn't a standalone shared library file. This effectively
-means that all these X11 libraries are statically linked into the main
-Python interpreter.
-
-On typical builds of Python on Linux, ``_tkinter`` will link against
-external shared libraries. e.g.::
-
-   $ ldd /usr/lib/python3.9/lib-dynload/_tkinter.cpython-39-x86_64-linux-gnu.so
-        linux-vdso.so.1 (0x00007fff3be9d000)
-        libBLT.2.5.so.8.6 => /lib/libBLT.2.5.so.8.6 (0x00007fdb6a6f8000)
-        libtk8.6.so => /lib/x86_64-linux-gnu/libtk8.6.so (0x00007fdb6a584000)
-        libtcl8.6.so => /lib/x86_64-linux-gnu/libtcl8.6.so (0x00007fdb6a3c1000)
-        libc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007fdb6a1d5000)
-        libX11.so.6 => /lib/x86_64-linux-gnu/libX11.so.6 (0x00007fdb6a097000)
-        libm.so.6 => /lib/x86_64-linux-gnu/libm.so.6 (0x00007fdb69f49000)
-        libXft.so.2 => /lib/x86_64-linux-gnu/libXft.so.2 (0x00007fdb69f2e000)
-        libfontconfig.so.1 => /lib/x86_64-linux-gnu/libfontconfig.so.1 (0x00007fdb69ee6000)
-        libXss.so.1 => /lib/x86_64-linux-gnu/libXss.so.1 (0x00007fdb69ee1000)
-        libdl.so.2 => /lib/x86_64-linux-gnu/libdl.so.2 (0x00007fdb69eda000)
-        libz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007fdb69ebe000)
-        libpthread.so.0 => /lib/x86_64-linux-gnu/libpthread.so.0 (0x00007fdb69e9c000)
-        /lib64/ld-linux-x86-64.so.2 (0x00007fdb6a892000)
-        libxcb.so.1 => /lib/x86_64-linux-gnu/libxcb.so.1 (0x00007fdb69e70000)
-        libfreetype.so.6 => /lib/x86_64-linux-gnu/libfreetype.so.6 (0x00007fdb69dad000)
-        libXrender.so.1 => /lib/x86_64-linux-gnu/libXrender.so.1 (0x00007fdb69da0000)
-        libexpat.so.1 => /lib/x86_64-linux-gnu/libexpat.so.1 (0x00007fdb69d71000)
-        libuuid.so.1 => /lib/x86_64-linux-gnu/libuuid.so.1 (0x00007fdb69d68000)
-        libXext.so.6 => /lib/x86_64-linux-gnu/libXext.so.6 (0x00007fdb69d53000)
-        libXau.so.6 => /lib/x86_64-linux-gnu/libXau.so.6 (0x00007fdb69d4b000)
-        libXdmcp.so.6 => /lib/x86_64-linux-gnu/libXdmcp.so.6 (0x00007fdb69d43000)
-        libpng16.so.16 => /lib/x86_64-linux-gnu/libpng16.so.16 (0x00007fdb69d08000)
-        libbrotlidec.so.1 => /lib/x86_64-linux-gnu/libbrotlidec.so.1 (0x00007fdb69cfa000)
-        libbsd.so.0 => /lib/x86_64-linux-gnu/libbsd.so.0 (0x00007fdb69ce2000)
-        libbrotlicommon.so.1 => /lib/x86_64-linux-gnu/libbrotlicommon.so.1 (0x00007fdb69cbd000)
-        libmd.so.0 => /lib/x86_64-linux-gnu/libmd.so.0 (0x00007fdb69cb0000)
-
-The static linking of ``libX11`` and other libraries can cause problems when
-3rd party Python extension modules also loading similar libraries are also
-loaded into the process. For example, extension modules associated with ``PyQt``
-are known to link against a shared ``libX11.so.6``. If multiple versions of
-``libX11`` are loaded into the same process, run-time crashes / segfaults can
-occur. See e.g. https://github.com/astral-sh/python-build-standalone/issues/95.
-
-The conceptual workaround is to not statically link ``libX11`` and similar
-libraries into ``libpython``. However, this requires re-linking a custom
-``libpython`` without ``_tkinter``. It is possible to do this with the object
-files included in the distributions. But there isn't a turnkey way to do this.
-And you can't easily remove ``_tkinter`` and its symbols from the pre-built
-and ready-to-use Python install included in this project's distribution
-artifacts.
 
 .. _quirk_references_to_build_paths:
 
@@ -254,6 +196,7 @@ make distributions more portable, please file a GitHub issue.
 
 .. _quirk_former:
 .. _quirk_missing_libcrypt:
+.. _quirk_linux_libx11:
 
 Former quirks
 =============
@@ -282,5 +225,14 @@ been resolved.
   provide this library. Alternatively, there are suggestions in `What's
   New in Python 3.13`_ about third-party replacements for the ``crypt``
   module.
+
+* "Static Linking of ``libX11`` / Incompatibility with PyQt on Linux":
+  The 20220318 release and earlier exported dynamic symbols for the
+  internal, statically-linked build of ``libX11`` and other libraries.
+  These would cause conflicts and potential crashes when using
+  third-party extension modules such as PyQt that load an actual shared
+  ``libX11`` library (usually provided by your OS). Starting with the
+  20220502 release, symbols from internal dependencies are no longer
+  exported.
 
 .. _What's New in Python 3.13: https://docs.python.org/3/whatsnew/3.13.html#whatsnew313-pep594

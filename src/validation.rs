@@ -9,7 +9,7 @@ use {
     normalize_path::NormalizePath,
     object::{
         elf::{
-            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, STB_GLOBAL, STB_WEAK, STV_DEFAULT,
+            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT,
             STV_HIDDEN,
         },
         macho::{MachHeader32, MachHeader64, MH_OBJECT, MH_TWOLEVEL},
@@ -265,6 +265,25 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
         .collect()
     });
 
+static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<HashMap<&'static str, Vec<&'static str>>> =
+    Lazy::new(|| {
+        [
+            (
+                // libcrypt is provided by the system, but only on older distros.
+                "_crypt",
+                vec!["libcrypt.so.1"],
+            ),
+            (
+                // libtcl and libtk are shipped in our distribution.
+                "_tkinter",
+                vec!["libtcl8.6.so", "libtk8.6.so"],
+            ),
+        ]
+        .iter()
+        .cloned()
+        .collect()
+    });
+
 static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
     [
             MachOAllowedDylib {
@@ -501,6 +520,29 @@ static IOS_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
     .to_vec()
 });
 
+static ALLOWED_DYLIBS_BY_MODULE: Lazy<HashMap<&'static str, Vec<MachOAllowedDylib>>> =
+    Lazy::new(|| {
+        [(
+            // libtcl and libtk are shipped in our distribution.
+            "_tkinter",
+            vec![
+                MachOAllowedDylib {
+                    name: "@rpath/libtcl8.6.dylib".to_string(),
+                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    required: true,
+                },
+                MachOAllowedDylib {
+                    name: "@rpath/libtk8.6.dylib".to_string(),
+                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    required: true,
+                },
+            ],
+        )]
+        .iter()
+        .cloned()
+        .collect()
+    });
+
 static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     [
         ("aarch64-apple-darwin", "macosx-11.0-arm64"),
@@ -544,9 +586,12 @@ const ELF_BANNED_SYMBOLS: &[&str] = &[
 /// We use this list to spot test behavior of symbols belonging to dependency packages.
 /// The list is obviously not complete.
 const DEPENDENCY_PACKAGE_SYMBOLS: &[&str] = &[
-    // libX11
-    "XClearWindow",
-    "XFlush",
+    /* TODO(geofft): Tk provides these as no-op stubs on macOS, make it
+     * stop doing that so we can reenable the check
+     * // libX11
+     * "XClearWindow",
+     * "XFlush",
+     */
     // OpenSSL
     "BIO_ADDR_new",
     "BN_new",
@@ -591,6 +636,11 @@ const DEPENDENCY_PACKAGE_SYMBOLS: &[&str] = &[
     // liblzma
     "lzma_index_init",
     "lzma_stream_encoder",
+];
+
+// TODO(geofft): Conditionally prohibit these exported symbols
+// everywhere except libtcl and libtk. This should be a hashmap
+const _DEPENDENCY_PACKAGE_SYMBOLS_BUNDLED: &[&str] = &[
     // tcl
     "Tcl_Alloc",
     "Tcl_ChannelName",
@@ -599,6 +649,10 @@ const DEPENDENCY_PACKAGE_SYMBOLS: &[&str] = &[
     "TkBindInit",
     "TkCreateFrame",
     "Tk_FreeGC",
+    // _ctypes_test module
+    "my_free",
+    "mystrdup",
+    "top",
 ];
 
 const PYTHON_EXPORTED_SYMBOLS: &[&str] = &[
@@ -822,7 +876,7 @@ const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 const GLOBAL_EXTENSIONS_WINDOWS_NO_STATIC: &[&str] = &["_testinternalcapi", "_tkinter"];
 
 /// Extension modules that should be built as shared libraries.
-const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt"];
+const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt", "_ctypes_test", "_tkinter"];
 
 const PYTHON_VERIFICATIONS: &str = include_str!("verify_distribution.py");
 
@@ -967,11 +1021,13 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         allowed_libraries.push("libc.so".to_string());
     }
 
-    // Allow the _crypt extension module - and only it - to link against libcrypt,
-    // which is no longer universally present in Linux distros.
+    // Allow certain extension modules to link against shared libraries
+    // (either from the system or from our distribution).
     if let Some(filename) = path.file_name() {
-        if filename.to_string_lossy().starts_with("_crypt") {
-            allowed_libraries.push("libcrypt.so.1".to_string());
+        if let Some((module, _)) = filename.to_string_lossy().split_once(".cpython-") {
+            if let Some(extra) = ELF_ALLOWED_LIBRARIES_BY_MODULE.get(module) {
+                allowed_libraries.extend(extra.iter().map(|x| x.to_string()));
+            }
         }
     }
 
@@ -1109,6 +1165,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     // to prevent them from being exported.
                     if DEPENDENCY_PACKAGE_SYMBOLS.contains(&name.as_ref())
                         && matches!(symbol.st_bind(), STB_GLOBAL | STB_WEAK)
+                        && symbol.st_shndx(endian) != SHN_UNDEF
                         && symbol.st_visibility() != STV_HIDDEN
                     {
                         context.errors.push(format!(
@@ -1124,6 +1181,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                         if filename.starts_with("libpython")
                             && filename.ends_with(".so.1.0")
                             && matches!(symbol.st_bind(), STB_GLOBAL | STB_WEAK)
+                            && symbol.st_shndx(endian) != SHN_UNDEF
                             && symbol.st_visibility() == STV_DEFAULT
                         {
                             context.libpython_exported_symbols.insert(name.to_string());
@@ -1225,7 +1283,16 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
                 dylib_names.push(lib.clone());
 
-                let allowed = allowed_dylibs_for_triple(target_triple);
+                let mut allowed = allowed_dylibs_for_triple(target_triple);
+                // Allow certain extension modules to link against shared libraries
+                // (either from the system or from our distribution).
+                if let Some(filename) = path.file_name() {
+                    if let Some((module, _)) = filename.to_string_lossy().split_once(".cpython-") {
+                        if let Some(extra) = ALLOWED_DYLIBS_BY_MODULE.get(module) {
+                            allowed.extend(extra.clone());
+                        }
+                    }
+                }
 
                 if let Some(entry) = allowed.iter().find(|l| l.name == lib) {
                     let load_version =

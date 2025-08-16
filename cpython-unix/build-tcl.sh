@@ -7,6 +7,12 @@ set -ex
 
 ROOT=`pwd`
 
+# Force linking to static libraries from our dependencies.
+# TODO(geofft): This is copied from build-cpython.sh. Really this should
+# be done at the end of the build of each dependency, rather than before
+# the build of each consumer.
+find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib/pkgconfig
 
@@ -20,9 +26,8 @@ if [ -n "${STATIC}" ]; then
 		# `checking whether musl-clang accepts -g...` fails with a duplicate definition error
 		TARGET_TRIPLE="$(echo "${TARGET_TRIPLE}" | sed -e 's/-unknown-linux-musl/-unknown-linux-gnu/g')"
 	fi
-fi
 
-patch -p1 << 'EOF'
+	patch -p1 << 'EOF'
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in
 +++ b/unix/Makefile.in
@@ -36,6 +41,7 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
  		fi; \
  	    fi; \
 EOF
+fi
 
 # Remove packages we don't care about and can pull in unwanted symbols.
 rm -rf pkgs/sqlite* pkgs/tdbc*
@@ -43,17 +49,23 @@ rm -rf pkgs/sqlite* pkgs/tdbc*
 pushd unix
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include"
+LDFLAGS="${EXTRA_TARGET_CFLAGS} -L${TOOLS_PATH}/deps/lib"
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+    LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
+fi
 
-CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
+CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \
-    --enable-shared=no \
+    --enable-shared"${STATIC:+=no}" \
     --enable-threads
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath
+make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out DYLIB_INSTALL_DIR=@rpath
 make -j ${NUM_CPUS} install-private-headers DESTDIR=${ROOT}/out
 
-# For some reason libtcl*.a have weird permissions. Fix that.
-chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a
+if [ -n "${STATIC}" ]; then
+    # For some reason libtcl*.a have weird permissions. Fix that.
+    chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a
+fi

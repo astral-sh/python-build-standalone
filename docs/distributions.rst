@@ -388,8 +388,8 @@ license_path
 tcl_library_path
    Relative path to location of tcl library files. The path should be a
    directory tree containing tcl files to support the tkinter extension.
-   This will include a subset of the library files provided by the tcl, tk,
-   and tix packages.
+   This will include a subset of the library files provided by the tcl
+   and tk packages.
 
    This points to the root directory containing tcl resources. Actual
    tcl resources are in sub-directories underneath, as identified by

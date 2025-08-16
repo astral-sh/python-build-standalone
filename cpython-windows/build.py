@@ -1842,7 +1842,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--windows-sdk-version",
-        default="10.0.20348.0",
+        default="10.0.26100.0",
         help="Windows SDK version to build with",
     )
 

@@ -99,6 +99,11 @@ if [ -n "${CROSS_COMPILING}" ]; then
   esac
 fi
 
+# Avoid dlopen("libXcursor.so.1") from the OS, which can go horribly wrong. We
+# might not need to avoid this if we switch to shipping X11 as shared
+# libraries, and ideally if we ship libXcursor ourselves.
+EXTRA_FLAGS="${EXTRA_FLAGS} --disable-loadable-xcursor"
+
 # CC_FOR_BUILD is here because configure doesn't look for `clang` when
 # cross-compiling. So we force it.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \

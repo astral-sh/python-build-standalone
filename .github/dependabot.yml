@@ -1,18 +1,32 @@
 version: 2
 updates:
-- package-ecosystem: "pip"
-  directory: "/"
-  schedule:
-    interval: "monthly"
-  groups:
-    python:
-      patterns:
-        - "*"
-- package-ecosystem: "cargo"
-  directory: "/"
-  schedule:
-    interval: "monthly"
-  groups:
-    rust:
-      patterns:
-        - "*"
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    groups:
+      python:
+        patterns:
+          - "*"
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    groups:
+      rust:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: ".github/workflows"
+    schedule:
+      interval: "monthly"
+    cooldown:
+      default-days: 14
+    groups:
+      actions:
+        patterns:
+          - "*"

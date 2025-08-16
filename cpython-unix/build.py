@@ -379,48 +379,6 @@ def build_libedit(
         build_env.get_tools_archive(dest_archive, "deps")
 
 
-def build_tix(
-    settings, client, image, host_platform, target_triple, build_options, dest_archive
-):
-    tcl_archive = download_entry("tcl", DOWNLOADS_PATH)
-    tk_archive = download_entry("tk", DOWNLOADS_PATH)
-    tix_archive = download_entry("tix", DOWNLOADS_PATH)
-
-    with build_environment(client, image) as build_env:
-        if settings.get("needs_toolchain"):
-            build_env.install_toolchain(
-                BUILD,
-                host_platform,
-                target_triple,
-                binutils=install_binutils(host_platform),
-                clang=True,
-                musl="musl" in target_triple,
-                static="static" in build_options,
-            )
-
-        depends = {"tcl", "tk"}
-        if not host_platform.startswith("macos_"):
-            depends |= {"libX11", "xorgproto"}
-
-        for p in sorted(depends):
-            build_env.install_artifact_archive(BUILD, p, target_triple, build_options)
-
-        for p in (tcl_archive, tk_archive, tix_archive, SUPPORT / "build-tix.sh"):
-            build_env.copy_file(p)
-
-        env = {
-            "TOOLCHAIN": "clang-%s" % host_platform,
-            "TCL_VERSION": DOWNLOADS["tcl"]["version"],
-            "TIX_VERSION": DOWNLOADS["tix"]["version"],
-            "TK_VERSION": DOWNLOADS["tk"]["version"],
-        }
-
-        add_target_env(env, host_platform, target_triple, build_env)
-
-        build_env.run("build-tix.sh", environment=env)
-        build_env.get_tools_archive(dest_archive, "deps")
-
-
 def build_cpython_host(
     client,
     image,
@@ -946,9 +904,6 @@ def build_cpython(
             "tk8.6",
         ]
 
-        if "-apple" not in target_triple:
-            python_info["tcl_library_paths"].append("Tix8.4.3")
-
         if "-apple" in target_triple:
             python_info["apple_sdk_platform"] = env["APPLE_SDK_PLATFORM"]
             python_info["apple_sdk_version"] = env["APPLE_SDK_VERSION"]
@@ -1166,6 +1121,9 @@ def main():
             "zstd",
         ):
             tools_path = "host" if action in ("m4", "patchelf") else "deps"
+            extra_archives = {
+                "tcl": {"zlib"},
+            }.get(action)
 
             simple_build(
                 settings,
@@ -1176,6 +1134,7 @@ def main():
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                extra_archives=extra_archives,
                 tools_path=tools_path,
             )
 
@@ -1239,19 +1198,8 @@ def main():
                 python_host_version=python_host_version,
             )
 
-        elif action == "tix":
-            build_tix(
-                settings,
-                client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
-                host_platform=host_platform,
-                target_triple=target_triple,
-                build_options=build_options,
-                dest_archive=dest_archive,
-            )
-
         elif action == "tk":
-            extra_archives = {"tcl"}
+            extra_archives = {"tcl", "zlib"}
             if not host_platform.startswith("macos_"):
                 extra_archives |= {
                     "libX11",

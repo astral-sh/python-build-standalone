@@ -145,6 +145,7 @@ _ctypes:
     - dl
 
 _ctypes_test:
+  build-mode: shared
   sources:
     - _ctypes/_ctypes_test.c
   links:
@@ -206,6 +207,9 @@ _curses_panel:
 _datetime:
   sources:
     - _datetimemodule.c
+  setup-enabled-conditional:
+    - enabled: true
+      minimum-python-version: "3.14"
 
 _dbm:
   sources:
@@ -670,45 +674,27 @@ _tkinter:
   sources:
     - _tkinter.c
     - tkappinit.c
-  # TODO consider adding WITH_TIX, as Modules/Setup seems to recommend it. This also
-  # initializes tix at init time, which seems desirable.
   defines:
     - WITH_APPINIT
   includes-deps:
     - include/X11
+  build-mode: shared
   links:
     - tcl8.6
     - tk8.6
-
-  # Without -ObjC, we get a crash: -[TKApplication tkProcessEvent:]: unrecognized selector sent to instance.
-  # See also https://core.tcl-lang.org/tk/tktview/85f316beb15108ac43b03fa6c8608e31f3ae5f92.
-  # This is apparently an issue with static linking Objective-C binaries.
-  linker-args:
-    - args: ["-ObjC"]
-      targets:
-        - .*-apple-darwin
   links-conditional:
     - name: X11
       targets:
         - .*-unknown-linux-.*
+      build-mode: static
     - name: xcb
       targets:
         - .*-unknown-linux-.*
+      build-mode: static
     - name: Xau
       targets:
         - .*-unknown-linux-.*
-  # Many of these are dependencies of libtcl and libtk.
-  frameworks:
-    - AppKit
-    - ApplicationServices
-    - Carbon
-    - Cocoa
-    - CoreFoundation
-    - CoreServices
-    - CoreGraphics
-    - IOKit
-    - QuartzCore
-    - UniformTypeIdentifiers
+      build-mode: static
 
 _tokenize:
   minimum-python-version: "3.11"

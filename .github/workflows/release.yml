@@ -40,7 +40,10 @@ jobs:
           submodules: recursive
           persist-credentials: true # needed for git operations below
 
-      - uses: extractions/setup-just@e33e0265a09d6d736e2ee1e0eb685ef1de4669ff # v2
+      - uses: extractions/setup-crate@4993624604c307fbca528d28a3c8b60fa5ecc859 # v1.4.0
+        with:
+          repo: casey/just
+          version: 1.42.4
 
       # Perform a release in dry-run mode.
       - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}

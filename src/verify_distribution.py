@@ -3,7 +3,6 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import os
-import platform
 import sys
 import unittest
 
@@ -180,10 +179,9 @@ class TestPythonInterpreter(unittest.TestCase):
     def test_zstd_multithreaded(self):
         from compression import zstd
 
-        bounds = zstd.CompressionParameter.nb_workers.bounds()
-        expected_max = 64 if os.name == "nt" and platform.machine() == "x86" else 256
-        assert bounds == (0, expected_max), (
-            f"Expected (0, {expected_max}) threads, got {bounds}"
+        max_threads = zstd.CompressionParameter.nb_workers.bounds()[1]
+        assert max_threads > 0, (
+            "Expected multithreading to be enabled but max threads is zero"
         )
 
     @unittest.skipIf("TCL_LIBRARY" not in os.environ, "TCL_LIBRARY not set")

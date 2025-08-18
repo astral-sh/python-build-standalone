@@ -23,7 +23,6 @@ import urllib.error
 import urllib.request
 import zipfile
 
-import github
 import yaml
 import zstandard
 
@@ -654,6 +653,8 @@ def validate_python_json(info, extension_modules):
 
 
 def release_download_statistics(mode="by_asset"):
+    import github
+
     by_tag = collections.Counter()
     by_build = collections.Counter()
     by_build_install_only = collections.Counter()

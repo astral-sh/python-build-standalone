@@ -5,6 +5,7 @@
 
 import os
 import pathlib
+import platform
 import subprocess
 import sys
 import venv
@@ -15,7 +16,8 @@ DIST = ROOT / "dist"
 VENV = BUILD / "venv"
 PIP = VENV / "Scripts" / "pip.exe"
 PYTHON = VENV / "Scripts" / "python.exe"
-REQUIREMENTS = ROOT / "requirements.win.txt"
+ARCH = "-arm64" if platform.machine() == "ARM64" else ""
+REQUIREMENTS = ROOT / f"requirements.win{ARCH}.txt"
 WINDOWS_DIR = ROOT / "cpython-windows"
 
 

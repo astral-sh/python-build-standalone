@@ -57,7 +57,7 @@ index 5e6e8bc..6ca72a1 100644
 EOF
 fi
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -DZSTD_MULTITHREAD -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" make -j ${NUM_CPUS} libzstd.a
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -DZSTD_MULTITHREAD -O3" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" make -j ${NUM_CPUS} VERBOSE=1 libzstd.a
 make -j ${NUM_CPUS} install-static DESTDIR=${ROOT}/out
 make -j ${NUM_CPUS} install-includes DESTDIR=${ROOT}/out
 MT=1 make -j ${NUM_CPUS} install-pc DESTDIR=${ROOT}/out

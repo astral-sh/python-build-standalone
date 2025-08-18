@@ -172,6 +172,15 @@ class TestPythonInterpreter(unittest.TestCase):
 
         self.assertEqual(sysconfig.get_config_var("Py_GIL_DISABLED"), wanted)
 
+    @unittest.skipIf(
+        sys.version_info[:2] < (3, 14),
+        "zstd is only available in 3.14+",
+    )
+    def test_zstd_multithreaded(self):
+        from compression import zstd
+
+        assert zstd.CompressionParameter.nb_workers.bounds() == (0, 256)
+
     @unittest.skipIf("TCL_LIBRARY" not in os.environ, "TCL_LIBRARY not set")
     @unittest.skipIf("DISPLAY" not in os.environ, "DISPLAY not set")
     def test_tkinter(self):

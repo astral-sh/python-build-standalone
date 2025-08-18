@@ -179,7 +179,10 @@ class TestPythonInterpreter(unittest.TestCase):
     def test_zstd_multithreaded(self):
         from compression import zstd
 
-        assert zstd.CompressionParameter.nb_workers.bounds() == (0, 256)
+        bounds = zstd.CompressionParameter.nb_workers.bounds()
+        assert bounds == (0, 256), (
+            f"Expected multithreading to be enabled, got {bounds}"
+        )
 
     @unittest.skipIf("TCL_LIBRARY" not in os.environ, "TCL_LIBRARY not set")
     @unittest.skipIf("DISPLAY" not in os.environ, "DISPLAY not set")

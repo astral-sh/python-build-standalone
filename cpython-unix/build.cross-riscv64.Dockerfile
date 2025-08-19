@@ -1,6 +1,6 @@
 # Debian Buster.
 FROM debian@sha256:2a0c1b9175adf759420fe0fbd7f5b449038319171eb76554bb76cbe172b62b42
-MAINTAINER Gregory Szorc <gregory.szorc@gmail.com>
+LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
 
 RUN groupadd -g 1000 build && \
     useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \

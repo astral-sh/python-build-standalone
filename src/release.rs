@@ -179,6 +179,19 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     );
 
     h.insert(
+        "loongarch64-unknown-linux-gnu",
+        TripleRelease {
+            suffixes: linux_suffixes_nopgo.clone(),
+            install_only_suffix: "lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            conditional_suffixes: vec![ConditionalSuffixes {
+                python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
+                suffixes: linux_suffixes_nopgo_freethreaded.clone(),
+            }],
+        },
+    );
+
+    h.insert(
         "ppc64le-unknown-linux-gnu",
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),

@@ -357,6 +357,7 @@ linux:
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
     build_options:
       - debug+static
       - noopt+static

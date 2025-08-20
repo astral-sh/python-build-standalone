@@ -1172,7 +1172,6 @@ aarch64-unknown-linux-musl:
     - sqlite
     - tcl
     - tk
-    - tix
     - uuid
     - xorgproto
     - xz

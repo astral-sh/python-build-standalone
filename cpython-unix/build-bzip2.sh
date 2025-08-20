@@ -18,7 +18,7 @@ fi
 # Copy compiler-rt builtins library for static aarch64-musl builds
 if [ "${TARGET_TRIPLE}" = "aarch64-unknown-linux-musl" ] && [ "${CC}" = "musl-clang" ] && [ -n "${STATIC}" ]; then
     # musl-clang eliminates default library search paths, so copy compiler-rt builtins to accessible location
-    for lib in ${TOOLS_PATH}/${TOOLCHAIN}/lib/clang/*/lib/linux/libclang_rt.builtins-aarch64.a; do
+    for lib in ${TOOLS_PATH}/${TOOLCHAIN}/lib/clang/*/lib/aarch64-unknown-linux-gnu/libclang_rt.builtins.a; do
         if [ -e "$lib" ]; then
             filename=$(basename "$lib")
             if [ -e "${TOOLS_PATH}/host/lib/${filename}" ]; then
@@ -27,6 +27,9 @@ if [ "${TARGET_TRIPLE}" = "aarch64-unknown-linux-musl" ] && [ "${CC}" = "musl-cl
             cp "$lib" ${TOOLS_PATH}/host/lib/
         fi
     done
+
+    # Add explicit library path for compiler-rt builtins
+    export EXTRA_TARGET_LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/host/lib -lclang_rt.builtins"
 fi
 
 tar -xf bzip2-${BZIP2_VERSION}.tar.gz

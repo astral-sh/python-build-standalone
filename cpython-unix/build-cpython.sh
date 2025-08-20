@@ -1077,8 +1077,14 @@ touch "${LIB_DYNLOAD}/.empty"
 
 # Symlink libpython so we don't have 2 copies.
 case "${TARGET_TRIPLE}" in
-aarch64-unknown-linux-gnu)
-    PYTHON_ARCH="aarch64-linux-gnu"
+aarch64-unknown-linux-*)
+    # In Python 3.13+, the musl target is identified in cross compiles and the output directory
+    # is named accordingly.
+    if [[ "${CC}" = "musl-clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+        PYTHON_ARCH="aarch64-linux-musl"
+    else
+        PYTHON_ARCH="aarch64-linux-gnu"
+    fi
     ;;
 # This is too aggressive. But we don't have patches in place for
 # setting the platform name properly on non-Darwin.

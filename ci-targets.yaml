@@ -348,6 +348,26 @@ linux:
         minimum-python-version: "3.13"
     run: true
 
+  aarch64-unknown-linux-musl:
+    arch: aarch64
+    libc: musl
+    python_versions:
+      - "3.9"
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+    build_options:
+      # TODO: Static support is current blocked by some compiler-rt linking issues
+      # - debug+static
+      # - noopt+static
+      # - lto+static
+      - debug
+      - noopt
+      - lto
+    run: true
+
 windows:
   i686-pc-windows-msvc:
     arch: x86

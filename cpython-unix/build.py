@@ -90,6 +90,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
 
     # Add compiler-rt for aarch64-musl to resolve missing floating-point builtins
     if target_triple == "aarch64-unknown-linux-musl":
+        extra_target_cflags.append("--rtlib=compiler-rt")
         extra_target_ldflags.append("--rtlib=compiler-rt")
 
     if build_platform.startswith("linux_"):

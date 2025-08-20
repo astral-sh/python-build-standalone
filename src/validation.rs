@@ -159,10 +159,6 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
-            "aarch64-unknown-linux-musl",
-            version_compare::Version::from("1").unwrap(),
-        );
-        versions.insert(
             "armv7-unknown-linux-gnueabi",
             version_compare::Version::from("2.17").unwrap(),
         );
@@ -216,6 +212,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
         );
 
         // musl shouldn't link against glibc.
+        versions.insert(
+            "aarch64-unknown-linux-musl",
+            version_compare::Version::from("1").unwrap(),
+        );
         versions.insert(
             "x86_64-unknown-linux-musl",
             version_compare::Version::from("1").unwrap(),

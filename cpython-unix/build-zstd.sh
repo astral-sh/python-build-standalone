@@ -33,7 +33,7 @@ if [ "${CC}" = "musl-clang" ]; then
     # `qsort_r` is actually available so we patch it to include a check for glibc.
     patch -p1 <<EOF
 diff --git a/dictBuilder/cover.c b/dictBuilder/cover.c
-index 5e6e8bc..6ca72a1 100644
+index 2ef33c7..078e2ee 100644
 --- a/dictBuilder/cover.c
 +++ b/dictBuilder/cover.c
 @@ -241,7 +241,7 @@ typedef struct {
@@ -45,6 +45,24 @@ index 5e6e8bc..6ca72a1 100644
  /* C90 only offers qsort() that needs a global context. */
  static COVER_ctx_t *g_coverCtx = NULL;
  #endif
+@@ -290,7 +290,7 @@ static int COVER_cmp8(COVER_ctx_t *ctx, const void *lp, const void *rp) {
+  */
+ #if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
+ static int WIN_CDECL COVER_strict_cmp(void* g_coverCtx, const void* lp, const void* rp) {
+-#elif defined(_GNU_SOURCE)
++#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
+ static int COVER_strict_cmp(const void *lp, const void *rp, void *g_coverCtx) {
+ #else /* C90 fallback.*/
+ static int COVER_strict_cmp(const void *lp, const void *rp) {
+@@ -306,7 +306,7 @@ static int COVER_strict_cmp(const void *lp, const void *rp) {
+  */
+ #if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
+ static int WIN_CDECL COVER_strict_cmp8(void* g_coverCtx, const void* lp, const void* rp) {
+-#elif defined(_GNU_SOURCE)
++#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
+ static int COVER_strict_cmp8(const void *lp, const void *rp, void *g_coverCtx) {
+ #else /* C90 fallback.*/
+ static int COVER_strict_cmp8(const void *lp, const void *rp) {
 @@ -328,7 +328,7 @@ static void stableSort(COVER_ctx_t *ctx) {
      qsort_r(ctx->suffix, ctx->suffixSize, sizeof(U32),
              ctx,

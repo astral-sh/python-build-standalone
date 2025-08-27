@@ -1176,4 +1176,5 @@ aarch64-unknown-linux-musl:
     - xorgproto
     - xz
     - zlib
+    - zstd
   openssl_target: linux-aarch64

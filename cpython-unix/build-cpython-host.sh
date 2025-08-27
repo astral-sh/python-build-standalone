@@ -70,6 +70,11 @@ case "${BUILD_TRIPLE}" in
     EXTRA_HOST_CPPFLAGS="${EXTRA_HOST_CPPFLAGS} -I/usr/include/x86_64-linux-gnu"
     EXTRA_HOST_LDFLAGS="${EXTRA_HOST_LDFLAGS} -L/usr/lib/x86_64-linux-gnu"
     ;;
+  aarch64-unknown-linux-gnu)
+    EXTRA_HOST_CFLAGS="${EXTRA_HOST_CFLAGS} -I/usr/include/aarch64-linux-gnu"
+    EXTRA_HOST_CPPFLAGS="${EXTRA_HOST_CPPFLAGS} -I/usr/include/aarch64-linux-gnu"
+    EXTRA_HOST_LDFLAGS="${EXTRA_HOST_LDFLAGS} -L/usr/lib/aarch64-linux-gnu"
+    ;;
   *)
     ;;
 esac

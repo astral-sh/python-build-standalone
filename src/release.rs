@@ -339,6 +339,18 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
             }],
         },
     );
+    h.insert(
+        "aarch64-unknown-linux-musl",
+        TripleRelease {
+            suffixes: vec!["debug", "lto", "noopt"],
+            install_only_suffix: "lto",
+            python_version_requirement: None,
+            conditional_suffixes: vec![ConditionalSuffixes {
+                python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
+                suffixes: linux_suffixes_musl_freethreaded.clone(),
+            }],
+        },
+    );
 
     h
 });

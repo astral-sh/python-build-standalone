@@ -1576,7 +1576,7 @@ def build_cpython(
         # import their contents. According to
         # https://github.com/pypa/pip/issues/11146 running pip from a wheel is not
         # supported. But it has historically worked and is simple. So do this until
-        # it stops working and we need to switch to running pip from the filesytem.
+        # it stops working and we need to switch to running pip from the filesystem.
         pip_env = dict(os.environ)
         pip_env["PYTHONPATH"] = str(pip_wheel)
 

@@ -225,7 +225,7 @@ index 60cfa50..6a9a561 100644
  	BTI_C
 -	/* Sign the lr with x1 since that is where it will be stored */
 +	PAC_CFI_WINDOW_SAVE
-+	/* Sign the lr with x1 since that is the CFA which is the modifer used in auth instructions */
++	/* Sign the lr with x1 since that is the CFA which is the modifier used in auth instructions */
  	SIGN_LR_WITH_REG(x1)
 
 -	/* Use a stack frame allocated by our caller.  */
@@ -352,7 +352,7 @@ index 6a9a561..e83bc65 100644
 +	cfi_startproc
  	BTI_C
  	PAC_CFI_WINDOW_SAVE
- 	/* Sign the lr with x1 since that is the CFA which is the modifer used in auth instructions */
+ 	/* Sign the lr with x1 since that is the CFA which is the modifier used in auth instructions */
 @@ -348,8 +348,8 @@ CNAME(ffi_closure_SYSV_V):
  #endif
 

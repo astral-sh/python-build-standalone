@@ -460,7 +460,7 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
 
         # Do not enable on x86-64 macOS because the JIT requires macOS 11+ and we are currently
-        # using 10.15 as a miniumum version.
+        # using 10.15 as a minimum version.
         # Do not enable when free-threading, because they're not compatible yet.
         if [[ ! ( "${TARGET_TRIPLE}" == "x86_64-apple-darwin" || -n "${CPYTHON_FREETHREADED}" ) ]]; then
             CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-experimental-jit=yes-off"

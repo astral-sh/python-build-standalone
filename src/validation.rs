@@ -593,7 +593,7 @@ const ELF_BANNED_SYMBOLS: &[&str] = &[
 /// The list is obviously not complete.
 const DEPENDENCY_PACKAGE_SYMBOLS: &[&str] = &[
     /* TODO(geofft): Tk provides these as no-op stubs on macOS, make it
-     * stop doing that so we can reenable the check
+     * stop doing that so we can re-enable the check
      * // libX11
      * "XClearWindow",
      * "XFlush",

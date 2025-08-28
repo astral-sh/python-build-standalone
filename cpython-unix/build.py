@@ -517,7 +517,7 @@ def python_build_info(
 
     bi["object_file_format"] = object_file_format
 
-    # Determine allowed libaries on Linux
+    # Determine allowed libraries on Linux
     libs = extra_metadata["python_config_vars"].get("LIBS", "").split()
     mips = target_triple.split("-")[0] in {"mips", "mipsel"}
     linux_allowed_system_libraries = LINUX_ALLOW_SYSTEM_LIBRARIES.copy()

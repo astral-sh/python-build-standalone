@@ -112,7 +112,7 @@ python_implementation_cache_tag
    (Version 5 or above only.)
 
 python_implementation_hex_version
-   Hexidecimal expression of implementation version.
+   Hexadecimal expression of implementation version.
 
    This is the value exposed by ``sys.implementation.hexversion``.
 
@@ -237,7 +237,7 @@ python_suffixes
    (Version 5 or above only.)
 
 python_bytecode_magic_number
-   Magic number to use for bytecode files, expressed as a hexidecimal
+   Magic number to use for bytecode files, expressed as a hexadecimal
    string.
 
    (Version 5 or above only.)

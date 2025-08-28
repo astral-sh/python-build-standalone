@@ -15,16 +15,20 @@ tar -xf zstd-${ZSTD_VERSION}.tar.gz
 pushd cpython-source-deps-zstd-${ZSTD_VERSION}/lib
 
 if [ "${CC}" = "musl-clang" ]; then
-    # In order to build the library with SSE2, BMI, AVX2, and ARM NEON intrinstics, we need musl-clang to find
+    # In order to build the library with intrinsics, we need musl-clang to find
     # headers that provide access to the intrinsics, as they are not provided by musl. These are
     # part of the include files that are part of clang. But musl-clang eliminates them from the
     # default include path. So copy them into place.
     for h in ${TOOLS_PATH}/${TOOLCHAIN}/lib/clang/*/include/*intrin.h ${TOOLS_PATH}/${TOOLCHAIN}/lib/clang/*/include/{__wmmintrin_aes.h,__wmmintrin_pclmul.h,emmintrin.h,immintrin.h,mm_malloc.h,arm_neon.h,arm_neon_sve_bridge.h,arm_bf16.h,arm_fp16.h,arm_acle.h,arm_vector_types.h}; do
         filename=$(basename "$h")
-        if [ -e "${TOOLS_PATH}/host/include/${filename}" ]; then
-            echo "warning: ${filename} already exists"
+        if [ -f "$h" ]; then
+            if [ -e "${TOOLS_PATH}/host/include/${filename}" ]; then
+                echo "warning: ${filename} already exists"
+            fi
+            cp "$h" ${TOOLS_PATH}/host/include/
+        else
+            echo "warning: ${filename} not found (skipping)"
         fi
-        cp "$h" ${TOOLS_PATH}/host/include/
     done
     EXTRA_TARGET_CFLAGS="${EXTRA_TARGET_CFLAGS} -I${TOOLS_PATH}/host/include/"
 

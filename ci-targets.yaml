@@ -366,6 +366,12 @@ linux:
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
 windows:

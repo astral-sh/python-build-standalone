@@ -69,6 +69,15 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     fi
 fi
 
+# configure doesn't support cross-compiling on LoongArch. Teach it.
+if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
+    case "${PYTHON_MAJMIN_VERSION}" in
+        3.9|3.10|3.11)
+            patch -p1 -i ${ROOT}/patch-configure-add-loongarch-triplet.patch
+            ;;
+    esac
+fi
+
 # disable readelf check when cross-compiling on older Python versions
 if [ -n "${CROSS_COMPILING}" ]; then
     if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
@@ -1096,6 +1105,9 @@ armv7-unknown-linux-gnueabi)
     ;;
 armv7-unknown-linux-gnueabihf)
     PYTHON_ARCH="arm-linux-gnueabihf"
+    ;;
+loongarch64-unknown-linux-gnu)
+    PYTHON_ARCH="loongarch64-linux-gnu"
     ;;
 mips-unknown-linux-gnu)
     PYTHON_ARCH="mips-linux-gnu"

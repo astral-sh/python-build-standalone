@@ -12,10 +12,10 @@ use {
             FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT,
             STV_HIDDEN,
         },
-        macho::{MachHeader32, MachHeader64, MH_OBJECT, MH_TWOLEVEL},
+        macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
             elf::{Dyn, FileHeader, SectionHeader, Sym},
-            macho::{LoadCommandVariant, MachHeader, Nlist},
+            macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
         Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
@@ -1264,6 +1264,8 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     let mut undefined_symbols = vec![];
     let mut target_version = None;
     let mut sdk_version = None;
+    let mut has_code_signature = false;
+    let mut lowest_file_offset = u64::MAX;
 
     while let Some(load_command) = load_commands.next()? {
         match load_command.variant()? {
@@ -1386,8 +1388,36 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                     }
                 }
             }
+            LoadCommandVariant::Segment32(segment, segment_data) => {
+                for section in segment.sections(endian, segment_data)? {
+                    if let Some((offset, _)) = section.file_range(endian) {
+                        lowest_file_offset = lowest_file_offset.min(offset);
+                    }
+                }
+            }
+            LoadCommandVariant::Segment64(segment, segment_data) => {
+                for section in segment.sections(endian, segment_data)? {
+                    if let Some((offset, _)) = section.file_range(endian) {
+                        lowest_file_offset = lowest_file_offset.min(offset);
+                    }
+                }
+            }
+            LoadCommandVariant::LinkeditData(c) if c.cmd.get(endian) == LC_CODE_SIGNATURE => {
+                has_code_signature = true;
+            }
             _ => {}
         }
+    }
+
+    let end_of_load_commands =
+        std::mem::size_of_val(header) as u64 + header.sizeofcmds(endian) as u64;
+    if header.filetype(endian) != MH_OBJECT
+        && end_of_load_commands + if has_code_signature { 0 } else { 16 } > lowest_file_offset
+    {
+        context.errors.push(format!(
+            "{}: Insufficient headerpad between end of load commands {end_of_load_commands:#x} and beginning of code {lowest_file_offset:#x}",
+            path.display(),
+        ));
     }
 
     if let Some(actual_target_version) = target_version {

@@ -365,6 +365,16 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && "${TARGET_TRIPLE}" = "ppc64le
     LDFLAGS="${LDFLAGS} -Wl,--no-tls-get-addr-optimize"
 fi
 
+# We're calling install_name_tool -add_rpath on extension modules, which
+# eats up 0x20 bytes of space in the Mach-O header, and we need to make
+# sure there's still enough room to add a code signature (0x10 bytes) on
+# non-arm64 where there's no automatic ad-hoc signature. We are somehow
+# on a toolchain that doesn't make sure there's enough space by default
+# so give it plenty of space.
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
+    LDFLAGS="${LDFLAGS} -Wl,-headerpad,40"
+fi
+
 CPPFLAGS=$CFLAGS
 
 CONFIGURE_FLAGS="

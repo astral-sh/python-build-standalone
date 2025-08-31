@@ -4,7 +4,7 @@
 
 use {
     crate::validation::ValidationContext,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     apple_sdk::{AppleSdk, SdkSearch, SdkSearchLocation, SdkSorting, SdkVersion, SimpleSdk},
     semver::Version,
     std::{
@@ -53,7 +53,7 @@ impl std::fmt::Display for MachOPackedVersion {
         let minor = (self.value >> 8) & 0xff;
         let subminor = self.value & 0xff;
 
-        f.write_str(&format!("{}.{}.{}", major, minor, subminor))
+        f.write_str(&format!("{major}.{minor}.{subminor}"))
     }
 }
 
@@ -128,9 +128,9 @@ impl RequiredSymbols {
 fn tbd_relative_path(path: &str) -> Result<String> {
     if let Some(stripped) = path.strip_prefix('/') {
         if let Some(stem) = stripped.strip_suffix(".dylib") {
-            Ok(format!("{}.tbd", stem))
+            Ok(format!("{stem}.tbd"))
         } else {
-            Ok(format!("{}.tbd", stripped))
+            Ok(format!("{stripped}.tbd"))
         }
     } else {
         Err(anyhow!("could not determine tbd path from {}", path))
@@ -165,13 +165,13 @@ impl TbdMetadata {
                                     export
                                         .objc_classes
                                         .iter()
-                                        .map(|cls| format!("_OBJC_CLASS_${}", cls)),
+                                        .map(|cls| format!("_OBJC_CLASS_${cls}")),
                                 )
                                 .chain(
                                     export
                                         .objc_classes
                                         .iter()
-                                        .map(|cls| format!("_OBJC_METACLASS_${}", cls)),
+                                        .map(|cls| format!("_OBJC_METACLASS_${cls}")),
                                 ),
                         );
 
@@ -214,13 +214,13 @@ impl TbdMetadata {
                                             export
                                                 .objc_classes
                                                 .iter()
-                                                .map(|cls| format!("_OBJC_CLASS_$_{}", cls)),
+                                                .map(|cls| format!("_OBJC_CLASS_$_{cls}")),
                                         )
                                         .chain(
                                             export
                                                 .objc_classes
                                                 .iter()
-                                                .map(|cls| format!("_OBJC_METACLASS_$_{}", cls)),
+                                                .map(|cls| format!("_OBJC_METACLASS_$_{cls}")),
                                         ),
                                 );
 
@@ -249,13 +249,13 @@ impl TbdMetadata {
                                         export
                                             .objc_classes
                                             .iter()
-                                            .map(|cls| format!("_OBJC_CLASS_$_{}", cls)),
+                                            .map(|cls| format!("_OBJC_CLASS_$_{cls}")),
                                     )
                                     .chain(
                                         export
                                             .objc_classes
                                             .iter()
-                                            .map(|cls| format!("_OBJC_METACLASS_$_{}", cls)),
+                                            .map(|cls| format!("_OBJC_METACLASS_$_{cls}")),
                                     ),
                             );
                             res.weak_symbols
@@ -370,8 +370,7 @@ impl IndexedSdks {
             "x86_64-apple-darwin" => "x86_64-macos",
             _ => {
                 context.errors.push(format!(
-                    "unknown target triple for Mach-O symbol analysis: {}",
-                    triple
+                    "unknown target triple for Mach-O symbol analysis: {triple}"
                 ));
                 return Ok(());
             }

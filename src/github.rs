@@ -4,22 +4,22 @@
 
 use {
     crate::release::{
-        bootstrap_llvm, produce_install_only, produce_install_only_stripped, RELEASE_TRIPLES,
+        RELEASE_TRIPLES, bootstrap_llvm, produce_install_only, produce_install_only_stripped,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     bytes::Bytes,
     clap::ArgMatches,
     futures::StreamExt,
     octocrab::{
+        Octocrab, OctocrabBuilder,
         models::{repos::Release, workflows::WorkflowListArtifact},
         params::actions::ArchiveFormat,
-        Octocrab, OctocrabBuilder,
     },
     rayon::prelude::*,
     reqwest::{Client, StatusCode},
     reqwest_retry::{
-        default_on_request_failure, policies::ExponentialBackoff, RetryPolicy, Retryable,
-        RetryableStrategy,
+        RetryPolicy, Retryable, RetryableStrategy, default_on_request_failure,
+        policies::ExponentialBackoff,
     },
     sha2::{Digest, Sha256},
     std::{
@@ -70,6 +70,7 @@ enum UploadSource {
     Data(Bytes),
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn upload_release_artifact(
     client: &Client,
     retry_policy: &impl RetryPolicy,
@@ -286,16 +287,13 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             let parts = name.split('-').collect::<Vec<_>>();
 
             if parts[0] != "cpython" {
-                println!("ignoring {} not a cpython artifact", name);
+                println!("ignoring {name} not a cpython artifact");
                 continue;
             };
 
             let python_version = pep440_rs::Version::from_str(parts[1])?;
             if !release_version_range.contains(&python_version) {
-                println!(
-                    "{} not in release version range {}",
-                    name, release_version_range
-                );
+                println!("{name} not in release version range {release_version_range}");
                 continue;
             }
 
@@ -310,17 +308,14 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
                     }
                 })
             else {
-                println!(
-                    "ignoring {} does not match any registered release triples",
-                    name
-                );
+                println!("ignoring {name} does not match any registered release triples");
                 continue;
             };
 
             let stripped_name = if let Some(s) = name.strip_suffix(".tar.zst") {
                 s
             } else {
-                println!("ignoring {} not a .tar.zst artifact", name);
+                println!("ignoring {name} not a .tar.zst artifact");
                 continue;
             };
 
@@ -333,7 +328,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             let build_suffix = &stripped_name[triple_start + triple.len() + 1..];
 
             if !release.suffixes(None).any(|suffix| build_suffix == suffix) {
-                println!("ignoring {} not a release artifact for triple", name);
+                println!("ignoring {name} not a release artifact for triple");
                 continue;
             }
 
@@ -342,7 +337,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             zf.read_to_end(&mut buf)?;
             std::fs::write(&dest_path, &buf)?;
 
-            println!("prepared {} for release", name);
+            println!("prepared {name} for release");
 
             if build_suffix == release.install_only_suffix {
                 install_paths.push(dest_path);
@@ -452,34 +447,19 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
             for suffix in release.suffixes(Some(&python_version)) {
                 wanted_filenames.insert(
-                    format!(
-                        "cpython-{}-{}-{}-{}.tar.zst",
-                        version, triple, suffix, datetime
-                    ),
-                    format!(
-                        "cpython-{}+{}-{}-{}-full.tar.zst",
-                        version, tag, triple, suffix
-                    ),
+                    format!("cpython-{version}-{triple}-{suffix}-{datetime}.tar.zst"),
+                    format!("cpython-{version}+{tag}-{triple}-{suffix}-full.tar.zst"),
                 );
             }
 
             wanted_filenames.insert(
-                format!(
-                    "cpython-{}-{}-install_only-{}.tar.gz",
-                    version, triple, datetime
-                ),
-                format!("cpython-{}+{}-{}-install_only.tar.gz", version, tag, triple),
+                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
             );
 
             wanted_filenames.insert(
-                format!(
-                    "cpython-{}-{}-install_only_stripped-{}.tar.gz",
-                    version, triple, datetime
-                ),
-                format!(
-                    "cpython-{}+{}-{}-install_only_stripped.tar.gz",
-                    version, tag, triple
-                ),
+                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
             );
         }
     }
@@ -490,7 +470,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .collect::<Vec<_>>();
 
     for f in &missing {
-        println!("missing release artifact: {}", f);
+        println!("missing release artifact: {f}");
     }
     if missing.is_empty() {
         println!("found all {} release artifacts", wanted_filenames.len());
@@ -564,7 +544,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     let shasums = digests
         .iter()
-        .map(|(filename, digest)| format!("{}  {}\n", digest, filename))
+        .map(|(filename, digest)| format!("{digest}  {filename}\n"))
         .collect::<Vec<_>>()
         .join("");
 

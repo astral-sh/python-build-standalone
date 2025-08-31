@@ -9,8 +9,8 @@ mod release;
 mod validation;
 
 use {
-    anyhow::{anyhow, Context, Result},
-    clap::{value_parser, Arg, ArgAction, Command},
+    anyhow::{Context, Result, anyhow},
+    clap::{Arg, ArgAction, Command, value_parser},
     std::{
         io::Read,
         path::{Path, PathBuf},
@@ -240,7 +240,7 @@ fn main() {
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
-            eprintln!("Error: {:?}", err);
+            eprintln!("Error: {err:?}");
             1
         }
     };

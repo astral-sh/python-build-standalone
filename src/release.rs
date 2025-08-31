@@ -13,7 +13,7 @@ use std::{
 use url::Url;
 use {
     crate::json::parse_python_json,
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     once_cell::sync::Lazy,
     pep440_rs::VersionSpecifier,
     std::{
@@ -628,7 +628,7 @@ static LLVM_URL: Lazy<Url> = Lazy::new(|| {
 /// Returns the path to the top-level `llvm` directory.
 pub async fn bootstrap_llvm() -> Result<PathBuf> {
     let url = &*LLVM_URL;
-    let filename = url.path_segments().unwrap().last().unwrap();
+    let filename = url.path_segments().unwrap().next_back().unwrap();
 
     let llvm_dir = Path::new("build").join("llvm");
     std::fs::create_dir_all(&llvm_dir)?;
@@ -646,7 +646,7 @@ pub async fn bootstrap_llvm() -> Result<PathBuf> {
     // Download the tarball.
     let tarball_path = temp_dir
         .path()
-        .join(url.path_segments().unwrap().last().unwrap());
+        .join(url.path_segments().unwrap().next_back().unwrap());
     let mut tarball_file = tokio::fs::File::create(&tarball_path).await?;
     let mut bytes_stream = reqwest::Client::new()
         .get(url.clone())

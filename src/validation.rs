@@ -4,13 +4,14 @@
 
 use {
     crate::{json::*, macho::*},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     clap::ArgMatches,
     normalize_path::NormalizePath,
     object::{
+        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT,
-            STV_HIDDEN,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
+            STV_DEFAULT, STV_HIDDEN,
         },
         macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
@@ -18,7 +19,6 @@ use {
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
-        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
     },
     once_cell::sync::Lazy,
     std::{
@@ -973,7 +973,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "x86_64_v2-unknown-linux-musl" => object::elf::EM_X86_64,
         "x86_64_v3-unknown-linux-musl" => object::elf::EM_X86_64,
         "x86_64_v4-unknown-linux-musl" => object::elf::EM_X86_64,
-        _ => panic!("unhandled target triple: {}", target_triple),
+        _ => panic!("unhandled target triple: {target_triple}"),
     };
 
     let endian = elf.endian()?;
@@ -998,27 +998,23 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     if json.libpython_link_mode == "shared" {
         if target_triple.contains("-musl") {
             // On musl, we link to `libpython` and rely on `RUN PATH`
-            allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{python_major_minor}.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}d.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}t.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}td.so.1.0"));
         } else {
             // On glibc, we can use `$ORIGIN` for relative, reloctable linking
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}d.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}d.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}t.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}t.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}td.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}td.so.1.0"
             ));
         }
     }
@@ -1229,8 +1225,8 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     bytes: &[u8],
 ) -> Result<()> {
     let advertised_target_version =
-        semver::Version::parse(&format!("{}.0", advertised_target_version))?;
-    let advertised_sdk_version = semver::Version::parse(&format!("{}.0", advertised_sdk_version))?;
+        semver::Version::parse(&format!("{advertised_target_version}.0"))?;
+    let advertised_sdk_version = semver::Version::parse(&format!("{advertised_sdk_version}.0"))?;
 
     let endian = header.endian()?;
 
@@ -1661,7 +1657,7 @@ fn validate_extension_modules(
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_14);
         }
         _ => {
-            panic!("unhandled Python version: {}", python_major_minor);
+            panic!("unhandled Python version: {python_major_minor}");
         }
     }
 
@@ -1732,11 +1728,11 @@ fn validate_extension_modules(
     }
 
     for extra in have_extensions.difference(&wanted) {
-        errors.push(format!("extra/unknown extension module: {}", extra));
+        errors.push(format!("extra/unknown extension module: {extra}"));
     }
 
     for missing in wanted.difference(have_extensions) {
-        errors.push(format!("missing extension module: {}", missing));
+        errors.push(format!("missing extension module: {missing}"));
     }
 
     Ok(errors)
@@ -1791,7 +1787,7 @@ fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<
 
     for extension in json.build_info.extensions.keys() {
         if GLOBALLY_BANNED_EXTENSIONS.contains(&extension.as_str()) {
-            errors.push(format!("banned extension detected: {}", extension));
+            errors.push(format!("banned extension detected: {extension}"));
         }
     }
 
@@ -1828,11 +1824,7 @@ fn validate_distribution(
 
     let triple = RECOGNIZED_TRIPLES
         .iter()
-        .find(|triple| {
-            dist_path
-                .to_string_lossy()
-                .contains(&format!("-{}-", triple))
-        })
+        .find(|triple| dist_path.to_string_lossy().contains(&format!("-{triple}-")))
         .ok_or_else(|| {
             anyhow!(
                 "could not identify triple from distribution filename: {}",
@@ -1883,7 +1875,7 @@ fn validate_distribution(
                 .unwrap()
                 .python_paths
                 .values()
-                .map(|x| format!("python/{}", x)),
+                .map(|x| format!("python/{x}")),
         );
     } else {
         context.errors.push(format!(
@@ -2031,8 +2023,7 @@ fn validate_distribution(
 
     for path in wanted_python_paths {
         context.errors.push(format!(
-            "path prefix {} seen in python_paths does not appear in archive",
-            path
+            "path prefix {path} seen in python_paths does not appear in archive"
         ));
     }
 
@@ -2046,7 +2037,7 @@ fn validate_distribution(
     for lib in wanted_dylibs.difference(&context.seen_dylibs) {
         context
             .errors
-            .push(format!("required library dependency {} not seen", lib));
+            .push(format!("required library dependency {lib} not seen"));
     }
 
     if triple.contains("-windows-") && is_static {
@@ -2083,8 +2074,7 @@ fn validate_distribution(
             if let Some(shared) = &ext.shared_lib {
                 if !seen_paths.contains(&PathBuf::from("python").join(shared)) {
                     context.errors.push(format!(
-                        "extension module {} references missing shared library path {}",
-                        name, shared
+                        "extension module {name} references missing shared library path {shared}"
                     ));
                 }
             }
@@ -2106,13 +2096,11 @@ fn validate_distribution(
 
             if want_shared && ext.shared_lib.is_none() {
                 context.errors.push(format!(
-                    "extension module {} does not have a shared library",
-                    name
+                    "extension module {name} does not have a shared library"
                 ));
             } else if !want_shared && ext.shared_lib.is_some() {
                 context.errors.push(format!(
-                    "extension module {} contains a shared library unexpectedly",
-                    name
+                    "extension module {name} contains a shared library unexpectedly"
                 ));
             }
 
@@ -2165,7 +2153,7 @@ fn validate_distribution(
     if triple.contains("-apple-darwin") {
         if let Some(sdks) = macos_sdks {
             if let Some(value) = json.as_ref().unwrap().apple_sdk_deployment_target.as_ref() {
-                let target_minimum_sdk = semver::Version::parse(&format!("{}.0", value))?;
+                let target_minimum_sdk = semver::Version::parse(&format!("{value}.0"))?;
 
                 sdks.validate_context(&mut context, target_minimum_sdk, triple)?;
             } else {
@@ -2253,7 +2241,7 @@ pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
             println!("  {} OK", path.display());
         } else {
             for error in errors {
-                println!("  error: {}", error);
+                println!("  error: {error}");
             }
 
             success = false;

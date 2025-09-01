@@ -147,12 +147,12 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(ssl.HAS_TLSv1_2)
         self.assertTrue(ssl.HAS_TLSv1_3)
 
-        # OpenSSL 1.1 on older CPython versions on Windows. 3.0 everywhere
+        # OpenSSL 1.1 on older CPython versions on Windows. 3.5 everywhere
         # else.
         if os.name == "nt" and sys.version_info[0:2] < (3, 11):
             wanted_version = (1, 1, 1, 23, 15)
         else:
-            wanted_version = (3, 0, 0, 16, 0)
+            wanted_version = (3, 5, 0, 2, 0)
 
         self.assertEqual(ssl.OPENSSL_VERSION_INFO, wanted_version)
 

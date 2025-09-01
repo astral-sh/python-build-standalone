@@ -102,7 +102,7 @@ aarch64-apple-darwin:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - tcl
     - tk
@@ -149,7 +149,7 @@ aarch64-apple-ios:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -190,7 +190,7 @@ aarch64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -244,7 +244,7 @@ arm64-apple-tvos:
     - expat
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -279,7 +279,7 @@ armv7-unknown-linux-gnueabi:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -320,7 +320,7 @@ armv7-unknown-linux-gnueabihf:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -361,7 +361,7 @@ loongarch64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -402,7 +402,7 @@ mips-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -443,7 +443,7 @@ mipsel-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -484,7 +484,7 @@ ppc64le-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -525,7 +525,7 @@ riscv64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -566,7 +566,7 @@ s390x-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -615,7 +615,7 @@ thumb7k-apple-watchos:
     - expat
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -668,7 +668,7 @@ x86_64-apple-darwin:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - tcl
     - tk
@@ -715,7 +715,7 @@ x86_64-apple-ios:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -758,7 +758,7 @@ x86_64-apple-tvos:
     - expat
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -801,7 +801,7 @@ x86_64-apple-watchos:
     - expat
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - xz
     - zstd
@@ -840,7 +840,7 @@ x86_64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -887,7 +887,7 @@ x86_64_v2-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -934,7 +934,7 @@ x86_64_v3-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -981,7 +981,7 @@ x86_64_v4-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1026,7 +1026,7 @@ x86_64-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1071,7 +1071,7 @@ x86_64_v2-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1116,7 +1116,7 @@ x86_64_v3-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1161,7 +1161,7 @@ x86_64_v4-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1208,7 +1208,7 @@ aarch64-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl

@@ -274,7 +274,7 @@ def simple_build(
 
         add_target_env(env, host_platform, target_triple, build_env)
 
-        if entry in ("openssl-1.1", "openssl-3.0"):
+        if entry.startswith("openssl-"):
             settings = get_targets(TARGETS_CONFIG)[target_triple]
             env["OPENSSL_TARGET"] = settings["openssl_target"]
 
@@ -1114,6 +1114,7 @@ def main():
             "ncurses",
             "openssl-1.1",
             "openssl-3.0",
+            "openssl-3.5",
             "patchelf",
             "sqlite",
             "tcl",

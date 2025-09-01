@@ -470,7 +470,7 @@ def hack_props(
         raise Exception("unhandled architecture: %s" % arch)
 
     try:
-        # CPython 3.11+ builds with OpenSSL 3.0 by default.
+        # CPython 3.11+ builds with OpenSSL 3.x by default.
         static_replace_in_file(
             openssl_props,
             b"<_DLLSuffix>-3</_DLLSuffix>",
@@ -1874,7 +1874,7 @@ def main() -> None:
         if args.python in ("cpython-3.9", "cpython-3.10"):
             openssl_entry = "openssl-1.1"
         else:
-            openssl_entry = "openssl-3.0"
+            openssl_entry = "openssl-3.5"
 
         openssl_archive = BUILD / (
             "%s-%s-%s.tar" % (openssl_entry, target_triple, build_options)

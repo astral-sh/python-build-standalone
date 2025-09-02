@@ -110,7 +110,7 @@ jobs:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
   build:
-    timeout-minutes: 60
+    timeout-minutes: 90
     needs:
       - generate-matrix
       - crate-build

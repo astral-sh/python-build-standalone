@@ -114,7 +114,7 @@ class TestPythonInterpreter(unittest.TestCase):
     def test_sqlite(self):
         import sqlite3
 
-        self.assertEqual(sqlite3.sqlite_version_info, (3, 49, 1))
+        self.assertEqual(sqlite3.sqlite_version_info, (3, 50, 4))
 
         # Optional SQLite3 features are enabled.
         conn = sqlite3.connect(":memory:")

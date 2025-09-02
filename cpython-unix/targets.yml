@@ -552,6 +552,9 @@ s390x-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/s390x-linux-gnu-gcc
   target_cxx: /usr/bin/s390x-linux-gnu-g++
+  target_cflags:
+    # set the minimum compatibility level to z10 (released 2008)
+    - '-march=z10'
   needs:
     - autoconf
     - bdb

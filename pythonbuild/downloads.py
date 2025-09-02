@@ -268,10 +268,10 @@ DOWNLOADS = {
         "license_file": "LICENSE.openssl-3.txt",
     },
     "nasm-windows-bin": {
-        "url": "https://github.com/python/cpython-bin-deps/archive/nasm-2.11.06.tar.gz",
-        "size": 384826,
-        "sha256": "8af0ae5ceed63fa8a2ded611d44cc341027a91df22aaaa071efedc81437412a5",
-        "version": "2.11.06",
+        "url": "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip",
+        "size": 513543,
+        "sha256": "3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6",
+        "version": "2.16.03",
     },
     "patchelf": {
         "url": "https://github.com/NixOS/patchelf/releases/download/0.13.1/patchelf-0.13.1.tar.bz2",

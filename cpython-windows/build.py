@@ -720,11 +720,11 @@ def build_openssl_for_arch(
     log("extracting %s to %s" % (openssl_archive, build_root))
     extract_tar_to_directory(openssl_archive, build_root)
     log("extracting %s to %s" % (nasm_archive, build_root))
-    extract_tar_to_directory(nasm_archive, build_root)
+    extract_zip_to_directory(nasm_archive, build_root)
     log("extracting %s to %s" % (jom_archive, build_root))
     extract_zip_to_directory(jom_archive, build_root / "jom")
 
-    nasm_path = build_root / ("cpython-bin-deps-nasm-%s" % nasm_version)
+    nasm_path = build_root / ("nasm-%s" % nasm_version)
     jom_path = build_root / "jom"
 
     env = dict(os.environ)

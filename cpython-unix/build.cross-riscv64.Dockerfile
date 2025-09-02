@@ -48,6 +48,15 @@ RUN apt-get install \
 
 # Cross-building.
 RUN apt-get install \
+    g++-aarch64-linux-gnu \
+    g++-arm-linux-gnueabi \
+    g++-arm-linux-gnueabihf \
+    g++-mips-linux-gnu \
+    g++-mips64el-linux-gnuabi64 \
+    g++-mipsel-linux-gnu \
+    g++-powerpc64le-linux-gnu \
+    g++-riscv64-linux-gnu \
+    g++-s390x-linux-gnu \
     gcc-aarch64-linux-gnu \
     gcc-arm-linux-gnueabi \
     gcc-arm-linux-gnueabihf \

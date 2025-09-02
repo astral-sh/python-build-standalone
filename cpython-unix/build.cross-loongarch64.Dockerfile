@@ -53,6 +53,7 @@ RUN apt-get install \
     zlib1g-dev
 
 RUN apt-get install \
+    g++-loongarch64-linux-gnu \
     gcc-loongarch64-linux-gnu \
     libc6-dev-loong64-cross
 

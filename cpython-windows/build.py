@@ -122,7 +122,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_lzma": ["xz"],
     "_sqlite3": ["sqlite"],
     "_ssl": ["openssl"],
-    "_tkinter": ["tcl-8612", "tk-8612", "tix"],
+    "_tkinter": ["tcl", "tk", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
     "_zstd": ["zstd"],
@@ -370,10 +370,7 @@ def hack_props(
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
-        tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
-    else:
-        tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
+    tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
 
     sqlite_path = td / ("sqlite-autoconf-%s" % sqlite_version)
     bzip2_path = td / ("bzip2-%s" % bzip2_version)
@@ -1220,10 +1217,6 @@ def collect_python_build_artifacts(
                 if name == "zlib":
                     name = zlib_entry
 
-                # On 3.14+ and aarch64, we use the latest tcl/tk version
-                if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
-                    name = name.replace("-8612", "")
-
                 download_entry = DOWNLOADS[name]
 
                 # This will raise if no license metadata defined. This is
@@ -1307,17 +1300,8 @@ def build_cpython(
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)
 
-    # On CPython 3.14+, we use the latest tcl/tk version which has additional
-    # runtime dependencies, so we are conservative and use the old version
-    # elsewhere. The old version isn't built for arm64, so we use the new
-    # version there too
-    tk_bin_entry = (
-        "tk-windows-bin"
-        if meets_python_minimum_version(python_version, "3.14") or arch == "arm64"
-        else "tk-windows-bin-8612"
-    )
     tk_bin_archive = download_entry(
-        tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
+        "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
     )
 
     # On CPython 3.14+, zstd is included
@@ -1401,16 +1385,15 @@ def build_cpython(
             shutil.copyfile(source, dest)
 
         # Delete the tk nmake helper, it's not needed and links msvc
-        if tk_bin_entry == "tk-windows-bin":
-            tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
-            tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
-            (
-                tcltk_path
-                / build_directory
-                / "lib"
-                / "nmake"
-                / "x86_64-w64-mingw32-nmakehlp.exe"
-            ).unlink()
+        tcltk_commit: str = DOWNLOADS["tk-windows-bin"]["git_commit"]
+        tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+        (
+            tcltk_path
+            / build_directory
+            / "lib"
+            / "nmake"
+            / "x86_64-w64-mingw32-nmakehlp.exe"
+        ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"

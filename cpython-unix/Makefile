@@ -174,9 +174,6 @@ $(OUTDIR)/ncurses-$(NCURSES_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS
 $(OUTDIR)/openssl-1.1-$(OPENSSL_1.1_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-1.1.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-1.1
 
-$(OUTDIR)/openssl-3.0-$(OPENSSL_3.0_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-3.0.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-3.0
-
 $(OUTDIR)/openssl-3.5-$(OPENSSL_3.5_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-3.5.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-3.5
 
@@ -265,7 +262,6 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_MPDECIMAL),$$(OUTDIR)/mpdecimal-$$(MPDECIMAL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_NCURSES),$$(OUTDIR)/ncurses-$$(NCURSES_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_OPENSSL_1_1),$$(OUTDIR)/openssl-1.1-$$(OPENSSL_1.1_VERSION)-$$(PACKAGE_SUFFIX).tar) \
-    $$(if $$(NEED_OPENSSL_3_0),$$(OUTDIR)/openssl-3.0-$$(OPENSSL_3.0_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_OPENSSL_3_5),$$(OUTDIR)/openssl-3.5-$$(OPENSSL_3.5_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_PATCHELF),$$(OUTDIR)/patchelf-$$(PATCHELF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_SQLITE),$$(OUTDIR)/sqlite-$$(SQLITE_VERSION)-$$(PACKAGE_SUFFIX).tar) \

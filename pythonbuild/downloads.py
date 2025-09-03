@@ -248,16 +248,6 @@ DOWNLOADS = {
         "license_file": "LICENSE.openssl-1.1.txt",
     },
     # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
-    "openssl-3.0": {
-        "url": "https://www.openssl.org/source/openssl-3.0.16.tar.gz",
-        "size": 15334967,
-        "sha256": "57e03c50feab5d31b152af2b764f10379aecd8ee92f16c985983ce4a99f7ef86",
-        "version": "3.0.16",
-        "library_names": ["crypto", "ssl"],
-        "licenses": ["Apache-2.0"],
-        "license_file": "LICENSE.openssl-3.txt",
-    },
-    # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
     "openssl-3.5": {
         "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.2/openssl-3.5.2.tar.gz",
         "size": 53180161,

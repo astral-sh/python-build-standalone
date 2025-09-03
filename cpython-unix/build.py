@@ -1117,7 +1117,6 @@ def main():
             "mpdecimal",
             "ncurses",
             "openssl-1.1",
-            "openssl-3.0",
             "openssl-3.5",
             "patchelf",
             "sqlite",

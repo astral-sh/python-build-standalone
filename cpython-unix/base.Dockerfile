@@ -1,5 +1,5 @@
-# Debian Jessie.
-FROM debian@sha256:32ad5050caffb2c7e969dac873bce2c370015c2256ff984b70c1c08b3a2816a0
+# Debian 13 "Trixie"
+FROM debian:trixie
 MAINTAINER Gregory Szorc <gregory.szorc@gmail.com>
 
 RUN groupadd -g 1000 build && \
@@ -16,12 +16,7 @@ ENV HOME=/build \
 
 CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
-
-# Jessie's signing keys expired in late 2022. So need to add [trusted=yes] to force trust.
-# Jessie stopped publishing snapshots in March 2023.
-RUN for s in debian_jessie debian_jessie-updates debian-security_jessie/updates; do \
-      echo "deb [trusted=yes] http://snapshot.debian.org/archive/${s%_*}/20230322T152120Z/ ${s#*_} main"; \
-    done > /etc/apt/sources.list && \
+RUN \
     ( echo 'quiet "true";'; \
       echo 'APT::Get::Assume-Yes "true";'; \
       echo 'APT::Install-Recommends "false";'; \

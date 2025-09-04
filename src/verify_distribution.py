@@ -3,6 +3,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import os
+import struct
 import sys
 import unittest
 
@@ -137,6 +138,45 @@ class TestPythonInterpreter(unittest.TestCase):
                 cursor.execute(
                     f"CREATE VIRTUAL TABLE test{extension} USING {extension}(a, b, c);"
                 )
+
+        # Test various SQLite flags and features requested / expected by users.
+        # The DBSTAT virtual table shows some metadata about disk usage.
+        # https://www.sqlite.org/dbstat.html
+        self.assertNotEqual(
+            cursor.execute("SELECT COUNT(*) FROM dbstat;").fetchone()[0],
+            0,
+        )
+
+        # The serialize/deserialize API is configurable at compile time.
+        if sys.version_info[0:2] >= (3, 11):
+            self.assertEqual(conn.serialize()[:15], b"SQLite format 3")
+
+        # The "enhanced query syntax" (-DSQLITE_ENABLE_FTS3_PARENTHESIS) allows parenthesizable
+        # AND, OR, and NOT operations. The "standard query syntax" only has OR as a keyword, so we
+        # can test for the difference with a query using AND.
+        # https://www.sqlite.org/fts3.html#_set_operations_using_the_enhanced_query_syntax
+        cursor.execute("INSERT INTO testfts3 VALUES('hello world', '', '');")
+        self.assertEqual(
+            cursor.execute(
+                "SELECT COUNT(*) FROM testfts3 WHERE a MATCH 'hello AND world';"
+            ).fetchone()[0],
+            1,
+        )
+
+        # fts3_tokenizer() takes/returns native pointers. Newer SQLite versions require the use of
+        # bound parameters with this function to avoid the risk of a SQL injection esclating into a
+        # full RCE. This requirement can be disabled at either compile time or runtime for
+        # backwards compatibility. Ensure that the check is enabled (more secure) by default but
+        # applications can still use fts3_tokenize with a bound parameter. See discussion at
+        # https://github.com/astral-sh/python-build-standalone/pull/562#issuecomment-3254522958
+        wild_pointer = struct.pack("P", 0xDEADBEEF)
+        with self.assertRaises(sqlite3.OperationalError) as caught:
+            cursor.execute(
+                f"SELECT fts3_tokenizer('mytokenizer', x'{wild_pointer.hex()}')"
+            )
+        self.assertEqual(str(caught.exception), "fts3tokenize disabled")
+        cursor.execute("SELECT fts3_tokenizer('mytokenizer', ?)", (wild_pointer,))
+
         conn.close()
 
     def test_ssl(self):

@@ -137,6 +137,33 @@ class TestPythonInterpreter(unittest.TestCase):
                 cursor.execute(
                     f"CREATE VIRTUAL TABLE test{extension} USING {extension}(a, b, c);"
                 )
+
+        # Test various SQLite flags and features requested / expected by users.
+        # The DBSTAT virtual table shows some metadata about disk usage.
+        # https://www.sqlite.org/dbstat.html
+        self.assertNotEqual(
+            cursor.execute("SELECT COUNT(*) FROM dbstat;").fetchone()[0],
+            0,
+        )
+
+        # The serialize/deserialize API is configurable at compile time.
+        self.assertEqual(conn.serialize()[:15], b"SQLite format 3")
+
+        # The "enhanced query syntax" (-DSQLITE_ENABLE_FTS3_PARENTHESIS) allows parenthesizable
+        # AND, OR, and NOT operations. The "standard query syntax" only has OR as a keyword, so we
+        # can test for the difference with a query using AND.
+        # https://www.sqlite.org/fts3.html#_set_operations_using_the_enhanced_query_syntax
+        cursor.execute("INSERT INTO testfts3 VALUES('hello world');")
+        self.assertEqual(
+            cursor.execute("SELECT COUNT(*) FROM testfts3 WHERE a MATCH 'hello AND world';").fetchone()[0],
+            1,
+        )
+
+        # Allow user-defined tokenizers by default... though arguably this should be off by default
+        # since applications that need it can turn it on, see discussion at
+        # https://github.com/astral-sh/python-build-standalone/pull/562#issuecomment-3254522958
+        self.assertTrue(conn.getconfig(sqlite3.SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER))
+
         conn.close()
 
     def test_ssl(self):

@@ -147,13 +147,14 @@ class TestPythonInterpreter(unittest.TestCase):
         )
 
         # The serialize/deserialize API is configurable at compile time.
-        self.assertEqual(conn.serialize()[:15], b"SQLite format 3")
+        if sys.version_info[0:2] >= (3, 11):
+            self.assertEqual(conn.serialize()[:15], b"SQLite format 3")
 
         # The "enhanced query syntax" (-DSQLITE_ENABLE_FTS3_PARENTHESIS) allows parenthesizable
         # AND, OR, and NOT operations. The "standard query syntax" only has OR as a keyword, so we
         # can test for the difference with a query using AND.
         # https://www.sqlite.org/fts3.html#_set_operations_using_the_enhanced_query_syntax
-        cursor.execute("INSERT INTO testfts3 VALUES('hello world');")
+        cursor.execute("INSERT INTO testfts3 VALUES('hello world', '', '');")
         self.assertEqual(
             cursor.execute("SELECT COUNT(*) FROM testfts3 WHERE a MATCH 'hello AND world';").fetchone()[0],
             1,

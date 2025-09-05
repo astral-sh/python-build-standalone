@@ -160,10 +160,17 @@ class TestPythonInterpreter(unittest.TestCase):
             1,
         )
 
-        # Allow user-defined tokenizers by default... though arguably this should be off by default
-        # since applications that need it can turn it on, see discussion at
+        # fts3_tokenizer() takes/returns native pointers. Newer SQLite versions require the use of
+        # bound parameters with this function to avoid the risk of a SQL injection esclating into a
+        # full RCE. This requirement can be disabled at either compile time or runtime for
+        # backwards compatibility. Ensure that the check is enabled (more secure) by default but
+        # applications can still use fts3_tokenize with a bound parameter. See discussion at
         # https://github.com/astral-sh/python-build-standalone/pull/562#issuecomment-3254522958
-        self.assertTrue(conn.getconfig(sqlite3.SQLITE_DBCONFIG_ENABLE_FTS3_TOKENIZER))
+        wild_pointer = struct.pack('P', 0xdeadbeef)
+        with self.assertRaises(sqlite3.OperationalError) as caught:
+            cursor.execute(f"SELECT fts3_tokenizer('mytokenizer', x'{wild_pointer.hex()}')")
+        self.assertEqual(str(caught), "fts3tokenize disabled")
+        cursor.execute("SELECT fts3_tokenizer('mytokenizer', ?)", (wild_pointer,))
 
         conn.close()
 

@@ -142,15 +142,6 @@ jobs:
       - name: Build
         if: ${{ ! matrix.dry-run }}
         run: |
-          if [ "${MATRIX_TARGET_TRIPLE}" = "aarch64-apple-darwin" ]; then
-            export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
-          elif [ "${MATRIX_TARGET_TRIPLE}" = "x86_64-apple-darwin" ]; then
-            export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
-          else
-            echo "unhandled target triple: ${MATRIX_TARGET_TRIPLE}"
-            exit 1
-          fi
-
           ./build-macos.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS}
         env:
           MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}

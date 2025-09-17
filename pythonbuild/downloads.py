@@ -2,9 +2,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+# Several files here are mirrored from their upstream sources due to flaky
+# downloads from upstream hosts (either intentional rate limiting or general
+# low-availability / non-CDN infrastructure) and to reduce load on them. To
+# update a file, push the new artifact to github.com/astral-sh/mirror (without
+# removing the old artifact) and then update here once GitHub Pages has
+# deployed. Feel free to point directly to the upstream source while working on
+# a PR, especially if you don't have push access to astral-sh/mirror or are
+# unsure if the PR will land, but we should make sure to switch back to the
+# mirror shortly after landing the dependency.
+
 DOWNLOADS = {
     "autoconf": {
-        "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.72.tar.gz",
+        # Mirrored from https://ftp.gnu.org/gnu/autoconf/autoconf-2.72.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/autoconf-2.72.tar.gz",
         "size": 2143794,
         "sha256": "afb181a76e1ee72832f6581c0eddf8df032b83e2e0239ef79ebedc4467d92d6e",
         "version": "2.72",
@@ -20,14 +31,14 @@ DOWNLOADS = {
         "license_file": "LICENSE.bdb.txt",
     },
     "binutils": {
-        "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.43.tar.xz",
+        # Mirrored from https://ftp.gnu.org/gnu/binutils/binutils-2.43.tar.xz
+        "url": "https://astral-sh.github.io/mirror/files/binutils-2.43.tar.xz",
         "size": 28175768,
         "sha256": "b53606f443ac8f01d1d5fc9c39497f2af322d99e14cea5c0b4b124d630379365",
         "version": "2.43",
     },
     "bzip2": {
-        # Mirror of `https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz` due to
-        # rate limiting
+        # Mirrored from https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
         "url": "https://astral-sh.github.io/mirror/files/bzip2-1.0.8.tar.gz",
         "size": 810029,
         "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
@@ -200,7 +211,8 @@ DOWNLOADS = {
         "version": "20.1.4+20250511",
     },
     "m4": {
-        "url": "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz",
+        # Mirrored from https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz
+        "url": "https://astral-sh.github.io/mirror/files/m4-1.4.19.tar.xz",
         "size": 1654908,
         "sha256": "63aede5c6d33b6d9b13511cd0be2cac046f2e70fd0a07aa9573a04a82783af96",
         "version": "1.4.19",
@@ -229,7 +241,8 @@ DOWNLOADS = {
         "version": "1.2.5",
     },
     "ncurses": {
-        "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz",
+        # Mirrored from https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/ncurses-6.5.tar.gz",
         "size": 3688489,
         "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6",
         "version": "6.5",
@@ -258,7 +271,8 @@ DOWNLOADS = {
         "license_file": "LICENSE.openssl-3.txt",
     },
     "nasm-windows-bin": {
-        "url": "https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip",
+        # Mirrored from https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip
+        "url": "https://astral-sh.github.io/mirror/files/nasm-2.16.03-win64.zip",
         "size": 513543,
         "sha256": "3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6",
         "version": "2.16.03",
@@ -276,7 +290,8 @@ DOWNLOADS = {
         "version": "24.3.1",
     },
     "readline": {
-        "url": "https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz",
+        # Mirrored from https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/readline-8.2.tar.gz",
         "size": 3043952,
         "sha256": "3feb7171f16a84ee82ca18a36d7b9be109a52c04f492a053331d7d1095007c35",
         "version": "8.2",

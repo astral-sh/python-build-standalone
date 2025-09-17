@@ -13,12 +13,6 @@ tar -xf openssl-${OPENSSL_3_5_VERSION}.tar.gz
 
 pushd openssl-${OPENSSL_3_5_VERSION}
 
-# hardcode the vlenb CSR address (0xc22) as our GCC version doesn't know it
-# https://github.com/riscv/riscv-isa-manual/blob/c001fa237cdd8b6079384044462a89eb0e3fd9cf/src/v-st-ext.adoc?plain=1#L74
-if [[ "${TARGET_TRIPLE}" = "riscv64-unknown-linux-gnu" ]]; then
-    patch -p1 -i "${ROOT}/patch-openssl-3.5-riscv-vlenb-register.patch"
-fi
-
 # Otherwise it gets set to /tools/deps/ssl by default.
 case "${TARGET_TRIPLE}" in
     *apple*)

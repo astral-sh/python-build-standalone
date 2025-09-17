@@ -274,13 +274,10 @@ def simple_build(
 
         add_target_env(env, host_platform, target_triple, build_env)
 
-        # for OpenSSL, set the OPENSSL_TARGET environment variable and copy in patches
+        # for OpenSSL, set the OPENSSL_TARGET environment variable
         if entry.startswith("openssl-"):
             settings = get_targets(TARGETS_CONFIG)[target_triple]
             env["OPENSSL_TARGET"] = settings["openssl_target"]
-            build_env.copy_file(
-                SUPPORT / "patch-openssl-3.5-riscv-vlenb-register.patch"
-            )
 
         build_env.run("build-%s.sh" % entry, environment=env)
 

@@ -568,7 +568,7 @@ def hack_project_files(
         rb"<SqlitePatchVersion>%s</SqlitePatchVersion>" % sqlite3_version_parts[3],
     )
 
-    # Please try keep these in sync with cpython-unix/build-sqlite.sh
+    # Please try to keep these in sync with cpython-unix/build-sqlite.sh
     sqlite_build_flags = {
         b"SQLITE_ENABLE_DBSTAT_VTAB",
         b"SQLITE_ENABLE_FTS3",

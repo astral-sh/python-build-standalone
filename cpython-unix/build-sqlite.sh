@@ -27,8 +27,8 @@ fi
 # it's not looked for.
 unset CXX
 
+# Please try to keep the build flags in sync with cpython-windows/build.py
 CC_FOR_BUILD="${HOST_CC}" \
-# Please try to keep these in sync with cpython-windows/build.py
 CFLAGS="${EXTRA_TARGET_CFLAGS} \
     -DSQLITE_ENABLE_DBSTAT_VTAB \
     -DSQLITE_ENABLE_FTS3 \

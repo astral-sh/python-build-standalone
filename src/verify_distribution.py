@@ -123,15 +123,8 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(hasattr(conn, "enable_load_extension"))
         # Backup feature requires modern SQLite, which we always have.
         self.assertTrue(hasattr(conn, "backup"))
-        # Ensure that various extensions are present. These will raise if they are not. Note that
-        # CPython upstream carries configuration flags for the Windows build, so geopoly is missing
-        # on all versions and rtree is missing in 3.9. On non-Windows platforms, we configure
-        # SQLite ourselves. We might want to patch the build to enable these on Windows, see #666.
-        extensions = ["fts3", "fts4", "fts5"]
-        if os.name != "nt":
-            extensions.append("geopoly")
-        if os.name != "nt" or sys.version_info[0:2] > (3, 9):
-            extensions.append("rtree")
+        # Ensure that various extensions are present. These will raise if they are not.
+        extensions = ["fts3", "fts4", "fts5", "geopoly", "rtree"]
         cursor = conn.cursor()
         for extension in extensions:
             with self.subTest(extension=extension):

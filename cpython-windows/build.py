@@ -568,6 +568,36 @@ def hack_project_files(
         rb"<SqlitePatchVersion>%s</SqlitePatchVersion>" % sqlite3_version_parts[3],
     )
 
+    # Please try keep these in sync with cpython-unix/build-sqlite.sh
+    sqlite_build_flags = {
+        b"SQLITE_ENABLE_DBSTAT_VTAB",
+        b"SQLITE_ENABLE_FTS3",
+        b"SQLITE_ENABLE_FTS3_PARENTHESIS",
+        b"SQLITE_ENABLE_FTS4",
+        b"SQLITE_ENABLE_FTS5",
+        b"SQLITE_ENABLE_GEOPOLY",
+        b"SQLITE_ENABLE_RTREE",
+    }
+    with sqlite3_path.open("rb") as fh:
+        data = fh.read()
+    sqlite_preprocessor_regex = (
+        rb"<PreprocessorDefinitions>(SQLITE_ENABLE.*)</PreprocessorDefinitions>"
+    )
+    m = re.search(sqlite_preprocessor_regex, data)
+    if m is None:
+        raise NoSearchStringError(
+            "search string (%s) not in %s" % (sqlite_preprocessor_regex, sqlite3_path)
+        )
+    current_flags = set(m.group(1).split(b";"))
+    data = (
+        data[: m.start(1)]
+        + b";".join(sqlite_build_flags - current_flags)
+        + b";"
+        + data[m.start(1) :]
+    )
+    with sqlite3_path.open("wb") as fh:
+        fh.write(data)
+
     # Our version of the xz sources is newer than what's in cpython-source-deps
     # and the xz sources changed the path to config.h. Hack the project file
     # accordingly.

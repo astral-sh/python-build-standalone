@@ -319,6 +319,13 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
 fi
 
+# Cherry-pick an upstream change in Python 3.15 to build _asyncio as
+# static (which we do anyway in our own fashion) and more importantly to
+# take this into account when finding the AsyncioDebug section.
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
+    patch -p1 -i ${ROOT}/patch-python-3.14-asyncio-static.patch
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

@@ -11,7 +11,7 @@ export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 
 tar -xf patchelf-${PATCHELF_VERSION}.tar.bz2
 
-pushd patchelf-0.13.1.20211127.72b6d44
+pushd patchelf-${PATCHELF_VERSION}
 
 CC="${HOST_CC}" CXX="${HOST_CXX}" CFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" \
     ./configure \

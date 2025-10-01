@@ -262,10 +262,10 @@ DOWNLOADS = {
     },
     # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
     "openssl-3.5": {
-        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.3/openssl-3.5.3.tar.gz",
-        "size": 53183370,
-        "sha256": "c9489d2abcf943cdc8329a57092331c598a402938054dc3a22218aea8a8ec3bf",
-        "version": "3.5.3",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.4/openssl-3.5.4.tar.gz",
+        "size": 53190367,
+        "sha256": "967311f84955316969bdb1d8d4b983718ef42338639c621ec4c34fddef355e99",
+        "version": "3.5.4",
         "library_names": ["crypto", "ssl"],
         "licenses": ["Apache-2.0"],
         "license_file": "LICENSE.openssl-3.txt",

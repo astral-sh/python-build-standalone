@@ -326,6 +326,12 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i ${ROOT}/patch-python-3.14-asyncio-static.patch
 fi
 
+# Ensure the new build-details.json file reports relocatable paths.
+# There is not yet a flag in ./configure for this, sadly.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    patch -p1 -i ${ROOT}/patch-python-relative-build-details.patch
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

@@ -49,7 +49,7 @@ DOWNLOADS = {
     },
     "cpython-3.9": {
         "url": "https://www.python.org/ftp/python/3.9.24/Python-3.9.24.tar.xz",
-        "size": 19659284,
+        "size": 20176216,
         "sha256": "668391afabd5083faafa4543753d190f82f33ce6ba22d6e9ac728b43644b278a",
         "version": "3.9.24",
         "licenses": ["Python-2.0", "CNRI-Python"],
@@ -58,7 +58,7 @@ DOWNLOADS = {
     },
     "cpython-3.10": {
         "url": "https://www.python.org/ftp/python/3.10.19/Python-3.10.19.tar.xz",
-        "size": 19619316,
+        "size": 19873020,
         "sha256": "c8f4a596572201d81dd7df91f70e177e19a70f1d489968b54b5fbbf29a97c076",
         "version": "3.10.19",
         "licenses": ["Python-2.0", "CNRI-Python"],
@@ -67,7 +67,7 @@ DOWNLOADS = {
     },
     "cpython-3.11": {
         "url": "https://www.python.org/ftp/python/3.11.14/Python-3.11.14.tar.xz",
-        "size": 20117496,
+        "size": 20326860,
         "sha256": "8d3ed8ec5c88c1c95f5e558612a725450d2452813ddad5e58fdb1a53b1209b78",
         "version": "3.11.14",
         "licenses": ["Python-2.0", "CNRI-Python"],
@@ -76,7 +76,7 @@ DOWNLOADS = {
     },
     "cpython-3.12": {
         "url": "https://www.python.org/ftp/python/3.12.12/Python-3.12.12.tar.xz",
-        "size": 20525812,
+        "size": 20798712,
         "sha256": "fb85a13414b028c49ba18bbd523c2d055a30b56b18b92ce454ea2c51edc656c4",
         "version": "3.12.12",
         "licenses": ["Python-2.0", "CNRI-Python"],

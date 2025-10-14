@@ -151,6 +151,15 @@ const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
     "msvcrt.dll",                        // zlib loads this library
 ];
 const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
+    // See `PE_ALLOWED_LIBRARIES_314` for zlib-related libraries
+    "zlib1.dll",
+    "api-ms-win-crt-private-l1-1-0.dll",
+    "msvcrt.dll",
+    // `_remote_debugging` loads `ntdll`
+    // See https://github.com/python/cpython/pull/138710
+    "ntdll.dll",
+];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
     Lazy::new(|| {
@@ -1512,8 +1521,13 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
                         continue;
                     }
                 }
-                "3.14" | "3.15" => {
+                "3.14" => {
                     if PE_ALLOWED_LIBRARIES_314.contains(&lib.as_str()) {
+                        continue;
+                    }
+                }
+                "3.15" => {
+                    if PE_ALLOWED_LIBRARIES_315.contains(&lib.as_str()) {
                         continue;
                     }
                 }

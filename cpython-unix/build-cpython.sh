@@ -613,10 +613,20 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}"  ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_explicit_bzero=no"
 fi
 
+# Define the base PGO profiling task, which we'll extend below with ignores
+export PROFILE_TASK='-m test --pgo'
+
 # On 3.14+ `test_strftime_y2k` fails when cross-compiling for `x86_64_v2` and `x86_64_v3` targets on
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
-    export PROFILE_TASK='-m test --pgo --ignore test_strftime_y2k'
+    PROFILE_TASK="${PROFILE_TASK} --ignore test_strftime_y2k"
+fi
+
+# On 3.15+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
+# PGO due to RecursionError not being raised as expected.
+# TODO(zanieb): Report this upstream
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
 fi
 
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,

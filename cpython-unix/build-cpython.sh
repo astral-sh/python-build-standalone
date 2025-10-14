@@ -512,8 +512,12 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
             patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.13.patch"
         fi
 
-         if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+        if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
             patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.14.patch"
+        fi
+
+        if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+            patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.15.patch"
         fi
     fi
 fi

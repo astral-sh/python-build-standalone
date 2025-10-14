@@ -623,8 +623,7 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "$
 fi
 
 # On 3.15+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
-# PGO due to RecursionError not being raised as expected.
-# TODO(zanieb): Report this upstream
+# PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
     PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
 fi

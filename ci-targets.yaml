@@ -374,6 +374,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       # TODO: Static support is current blocked by some compiler-rt linking issues
       # - debug+static
@@ -438,6 +439,7 @@ windows:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - pgo
     build_options_conditional:

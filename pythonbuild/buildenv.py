@@ -164,10 +164,9 @@ class TempdirContext(object):
     def install_toolchain_archive(
         self, build_dir, package_name, host_platform, version=None
     ):
-        entry = DOWNLOADS[package_name]
         basename = "%s-%s-%s.tar" % (
             package_name,
-            version or entry["version"],
+            version or DOWNLOADS[package_name]["version"],
             host_platform,
         )
 

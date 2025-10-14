@@ -61,6 +61,7 @@ def main():
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         },
         default="cpython-3.11",
         help="Python distribution to build",

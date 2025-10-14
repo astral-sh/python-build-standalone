@@ -393,13 +393,23 @@ def build_cpython_host(
     target_triple: str,
     build_options: list[str],
     dest_archive,
+    python_source=None,
+    entry_name=None,
 ):
     """Build binutils in the Docker image."""
-    archive = download_entry(entry, DOWNLOADS_PATH)
+    if not python_source:
+        python_version = entry["version"]
+        archive = download_entry(entry_name, DOWNLOADS_PATH)
+    else:
+        python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
+        print("Compressing %s to %s" % (python_source, archive))
+        with archive.open("wb") as fh:
+            create_tar_from_directory(
+                fh, python_source, path_prefix="Python-%s" % python_version
+            )
 
     with build_environment(client, image) as build_env:
-        python_version = DOWNLOADS[entry]["version"]
-
         build_env.install_toolchain(
             BUILD,
             host_platform,
@@ -434,7 +444,7 @@ def build_cpython_host(
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -706,12 +716,15 @@ def build_cpython(
     """Build CPython in a Docker image'"""
     parsed_build_options = set(build_options.split("+"))
     entry_name = "cpython-%s" % version
-    entry = DOWNLOADS[entry_name]
     if not python_source:
+        entry = DOWNLOADS[entry_name]
         python_version = entry["version"]
         python_archive = download_entry(entry_name, DOWNLOADS_PATH)
     else:
+        entry = DOWNLOADS.get(entry_name, {})
         python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        entry.setdefault("licenses", ["Python-2.0", "CNRI-Python"])
+        entry.setdefault("python_tag", "cp" + "".join(version.split(".")))
         python_archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
         print("Compressing %s to %s" % (python_source, python_archive))
         with python_archive.open("wb") as fh:
@@ -804,7 +817,7 @@ def build_cpython(
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -1024,6 +1037,18 @@ def main():
         log_name = "%s-%s" % (action, host_platform)
     elif args.action.startswith("cpython-") and args.action.endswith("-host"):
         log_name = args.action
+    elif action.startswith("cpython-"):
+        version = (
+            os.environ["PYBUILD_PYTHON_VERSION"]
+            if python_source
+            else DOWNLOADS[action]["version"]
+        )
+        log_name = "%s-%s-%s-%s" % (
+            action,
+            version,
+            target_triple,
+            build_options,
+        )
     else:
         entry = DOWNLOADS[action]
         log_name = "%s-%s-%s-%s" % (
@@ -1229,14 +1254,21 @@ def main():
             )
 
         elif action.startswith("cpython-") and action.endswith("-host"):
+            entry_name = action[:-5]
+            if not python_source:
+                entry = DOWNLOADS[entry_name]
+            else:
+                entry = DOWNLOADS.get(entry_name, {})
             build_cpython_host(
                 client,
                 get_image(client, ROOT, BUILD, docker_image, host_platform),
-                action[:-5],
+                entry,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                python_source=python_source,
+                entry_name=entry_name,
             )
 
         elif action in (
@@ -1246,6 +1278,7 @@ def main():
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         ):
             build_cpython(
                 settings,

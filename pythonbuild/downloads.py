@@ -101,6 +101,15 @@ DOWNLOADS = {
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp314",
     },
+    "cpython-3.15": {
+        "url": "https://www.python.org/ftp/python/3.15.0/Python-3.15.0a1.tar.xz",
+        "size": 23646768,
+        "sha256": "3194939d488eeaeefdcf990d35542d9ad1ce788789c4e2305a2060eb7058e5a4",
+        "version": "3.15.0a1",
+        "licenses": ["Python-2.0", "CNRI-Python"],
+        "license_file": "LICENSE.cpython.txt",
+        "python_tag": "cp315",
+    },
     "expat": {
         "url": "https://github.com/libexpat/libexpat/releases/download/R_2_6_3/expat-2.6.3.tar.xz",
         "size": 485600,

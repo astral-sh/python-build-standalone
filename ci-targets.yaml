@@ -10,6 +10,7 @@ darwin:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -28,6 +29,7 @@ darwin:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -48,6 +50,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -67,6 +70,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -88,6 +92,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -109,6 +114,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -130,6 +136,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -151,6 +158,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -172,6 +180,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -193,6 +202,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -214,6 +224,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -235,6 +246,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -255,6 +267,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug+static
       - noopt+static
@@ -281,6 +294,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug+static
       - noopt+static
@@ -307,6 +321,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug+static
       - noopt+static
@@ -333,6 +348,7 @@ linux:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug+static
       - noopt+static
@@ -385,6 +401,7 @@ windows:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - pgo
     build_options_conditional:
@@ -402,6 +419,7 @@ windows:
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - pgo
     build_options_conditional:

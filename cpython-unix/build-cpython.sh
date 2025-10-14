@@ -878,10 +878,7 @@ fi
 # It is possible for the Python interpreter to run wheels directly. So we
 # simply use our pip to install self. Kinda crazy, but it works!
 
-# The pip wheel segfaults on 3.15+ at this time, only install it on stable versions.
-if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
-    ${BUILD_PYTHON} "${PIP_WHEEL}/pip" install --prefix="${ROOT}/out/python/install" --no-cache-dir --no-index "${PIP_WHEEL}"
-fi
+${BUILD_PYTHON} "${PIP_WHEEL}/pip" install --prefix="${ROOT}/out/python/install" --no-cache-dir --no-index "${PIP_WHEEL}"
 
 # Setuptools is only installed for Python 3.11 and older, for parity with
 # `ensurepip` and `venv`: https://github.com/python/cpython/pull/101039

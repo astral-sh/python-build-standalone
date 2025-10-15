@@ -522,6 +522,11 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     fi
 fi
 
+# Revert problematic C stack limits refactoring on 3.15 (macOS build issue)
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" && "${PYBUILD_PLATFORM}" = macos* ]]; then
+    patch -p1 -i "${ROOT}/patch-revert-stack-limits-3.15.patch"
+fi
+
 if [ -n "${CPYTHON_LTO}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto"
 fi

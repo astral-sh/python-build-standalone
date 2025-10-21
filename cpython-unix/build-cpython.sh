@@ -673,7 +673,19 @@ if [ -n "${CROSS_COMPILING}" ]; then
     # default on relatively modern compilers.
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_pthread=yes"
 
-    # TODO: There are probably more of these, see #399.
+    # Also, it cannot detect whether misaligned memory accesses should
+    # be avoided, and conservatively defaults to yes, which makes it
+    # pick the 'fnv' hash instead of 'siphash', which numba does not
+    # like (#683, see also comment in cpython/configure.ac). These
+    # answers are taken from the Linux kernel source's Kconfig files,
+    # search for HAVE_EFFICIENT_UNALIGNED_ACCESS.
+    case "${TARGET_TRIPLE}" in
+        arm64*|aarch64*|armv7*|thumb7*|ppc64*|s390*|x86*)
+            CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_aligned_required=no"
+            ;;
+    esac
+
+    # TODO: There are probably more of these, see #599.
 fi
 
 # We patched configure.ac above. Reflect those changes.

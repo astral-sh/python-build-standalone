@@ -249,6 +249,12 @@ class TestPythonInterpreter(unittest.TestCase):
         root = tk.Tk()
         Application(master=root)
 
+    def test_hash_algorithm(self):
+        self.assertTrue(
+            sys.hash_info.algorithm.startswith("siphash"),
+            msg=f"{sys.hash_info.algorithm=!r} is not siphash",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

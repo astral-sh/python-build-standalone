@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import importlib.machinery
 import os
 import struct
 import sys
@@ -254,6 +255,17 @@ class TestPythonInterpreter(unittest.TestCase):
             sys.hash_info.algorithm.startswith("siphash"),
             msg=f"{sys.hash_info.algorithm=!r} is not siphash",
         )
+
+    def test_libc_identity(self):
+        def assertLibc(value):
+            for libc in ("-gnu", "-musl"):
+                if os.environ["TARGET_TRIPLE"].endswith(libc):
+                    self.assertIn(libc, value)
+                else:
+                    self.assertNotIn(libc, value)
+
+        assertLibc(sys.implementation._multiarch)
+        assertLibc(importlib.machinery.EXTENSION_SUFFIXES[0])
 
 
 if __name__ == "__main__":

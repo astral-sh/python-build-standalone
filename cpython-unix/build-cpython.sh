@@ -115,15 +115,14 @@ if [ -n "${CROSS_COMPILING}" ]; then
     fi
 fi
 
-# Clang 13 actually prints something with --print-multiarch, confusing CPython's
-# configure. This is reported as https://bugs.python.org/issue45405. We nerf the
-# check since we know what we're doing.
-if [[ "${CC}" = "clang" || "${CC}" = "musl-clang" ]]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-        patch -p1 -i ${ROOT}/patch-disable-multiarch-13.patch
-    else
-        patch -p1 -i ${ROOT}/patch-disable-multiarch.patch
-    fi
+# CPython <=3.10 doesn't properly detect musl. CPython <=3.12 tries, but fails in our environment
+# because of an autoconf bug. CPython >=3.13 is fine.
+# Backport the musl detection code from CPython 3.13 so it loads
+# extension modules with the right suffix.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
+    patch -p1 -i ${ROOT}/patch-cpython-configure-target-triple-musl-3.10.patch
+elif [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i ${ROOT}/patch-cpython-configure-target-triple-musl-3.12.patch
 fi
 
 # Python 3.11 supports using a provided Python to use during bootstrapping

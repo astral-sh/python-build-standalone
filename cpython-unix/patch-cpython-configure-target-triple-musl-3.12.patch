@@ -1,0 +1,36 @@
+From 851c49bafb1fe11c02eafe4850e952cafec548b7 Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Sat, 25 Oct 2025 18:49:45 -0400
+Subject: [PATCH 1/1] LOCAL: configure.ac: Fix musl detection
+Forwarded: not-needed
+
+We set HOST_CC to regular (glibc) clang and CC to musl-clang.
+AC_CANONICAL_HOST sets build_os based on the output of config.guess,
+which looks at HOST_CC in preference to CC, and therefore misreports the
+target triple as gnu. Directly checking CC works for us.
+
+Newer versions of Python rework this code significantly to not rely on
+build_os and do musl detection internally, so this does not need to be
+upstreamed.
+---
+ configure.ac | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/configure.ac b/configure.ac
+index 1a02d19f1b2..ee743c11aa5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1108,8 +1108,8 @@ EOF
+ 
+ if $CPP $CPPFLAGS conftest.c >conftest.out 2>/dev/null; then
+   PLATFORM_TRIPLET=`grep -v '^#' conftest.out | grep -v '^ *$' | tr -d ' 	'`
+-  case "$build_os" in
+-  linux-musl*)
++  case "$CC" in
++  musl-*)
+     PLATFORM_TRIPLET=`echo "$PLATFORM_TRIPLET" | sed 's/linux-gnu/linux-musl/'`
+     ;;
+   esac
+-- 
+2.39.5 (Apple Git-154)
+

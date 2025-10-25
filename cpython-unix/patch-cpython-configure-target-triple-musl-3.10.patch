@@ -1,0 +1,31 @@
+From d7a70fe9ffa0e4e173bae545cdcba62dc7a2a1f1 Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Sat, 25 Oct 2025 18:49:45 -0400
+Subject: [PATCH 1/1] LOCAL: configure.ac: Fix musl detection
+Forwarded: not-needed
+
+Newer versions of Python rework this code significantly, so this does
+not need to be upstreamed.
+---
+ configure.ac | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index ac3be3850a9..9c7c02ea6de 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -866,6 +866,11 @@ EOF
+ 
+ if $CPP $CPPFLAGS conftest.c >conftest.out 2>/dev/null; then
+   PLATFORM_TRIPLET=`grep -v '^#' conftest.out | grep -v '^ *$' | tr -d ' 	'`
++  case "$CC" in
++  musl-*)
++    PLATFORM_TRIPLET=`echo "$PLATFORM_TRIPLET" | sed 's/linux-gnu/linux-musl/'`
++    ;;
++  esac
+   AC_MSG_RESULT([$PLATFORM_TRIPLET])
+ else
+   AC_MSG_RESULT([none])
+-- 
+2.39.5 (Apple Git-154)
+

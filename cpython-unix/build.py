@@ -747,7 +747,6 @@ def build_cpython(
 
     enabled_extensions = setup["extensions"]
     setup_local_content = setup["setup_local"]
-    extra_make_content = setup["make_data"]
 
     with build_environment(client, image) as build_env:
         if settings.get("needs_toolchain"):
@@ -799,13 +798,6 @@ def build_cpython(
             fh.flush()
 
             build_env.copy_file(fh.name, dest_name="Setup.local")
-
-        with tempfile.NamedTemporaryFile("wb") as fh:
-            os.chmod(fh.name, 0o644)
-            fh.write(extra_make_content)
-            fh.flush()
-
-            build_env.copy_file(fh.name, dest_name="Makefile.extra")
 
         env = {
             "PIP_VERSION": DOWNLOADS["pip"]["version"],

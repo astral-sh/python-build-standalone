@@ -1132,11 +1132,10 @@ mkdir -p "${LIB_DYNLOAD}"
 touch "${LIB_DYNLOAD}/.empty"
 
 # Symlink libpython so we don't have 2 copies.
+# TODO(geofft): Surely we can get PYTHON_ARCH out of the build?
 case "${TARGET_TRIPLE}" in
 aarch64-unknown-linux-*)
-    # In Python 3.13+, the musl target is identified in cross compiles and the output directory
-    # is named accordingly.
-    if [[ "${CC}" = "musl-clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+    if [[ "${CC}" = "musl-clang" ]]; then
         PYTHON_ARCH="aarch64-linux-musl"
     else
         PYTHON_ARCH="aarch64-linux-gnu"
@@ -1175,9 +1174,7 @@ s390x-unknown-linux-gnu)
     PYTHON_ARCH="s390x-linux-gnu"
     ;;
 x86_64-unknown-linux-*)
-    # In Python 3.13+, the musl target is identified in cross compiles and the output directory
-    # is named accordingly.
-    if [[ "${CC}" = "musl-clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+    if [[ "${CC}" = "musl-clang" ]]; then
         PYTHON_ARCH="x86_64-linux-musl"
     else
         PYTHON_ARCH="x86_64-linux-gnu"

@@ -21,12 +21,6 @@ pushd tcl${TCL_VERSION}
 
 
 if [ -n "${STATIC}" ]; then
-	if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
-		# tcl misbehaves when performing static musl builds
-		# `checking whether musl-clang accepts -g...` fails with a duplicate definition error
-		TARGET_TRIPLE="$(echo "${TARGET_TRIPLE}" | sed -e 's/-unknown-linux-musl/-unknown-linux-gnu/g')"
-	fi
-
 	patch -p1 << 'EOF'
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in

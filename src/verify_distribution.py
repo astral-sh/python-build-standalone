@@ -264,7 +264,9 @@ class TestPythonInterpreter(unittest.TestCase):
                 else:
                     self.assertNotIn(libc, value)
 
-        assertLibc(sys.implementation._multiarch)
+        if hasattr(sys.implementation, "_multiarch"):
+            assertLibc(sys.implementation._multiarch)
+
         assertLibc(importlib.machinery.EXTENSION_SUFFIXES[0])
 
 

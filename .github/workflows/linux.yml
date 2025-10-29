@@ -417,3 +417,4 @@ jobs:
         env:
           MATRIX_RUN: ${{ matrix.run }}
           MATRIX_LIBC: ${{ matrix.libc }}
+          TERM: xterm

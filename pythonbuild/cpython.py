@@ -446,8 +446,6 @@ def derive_setup_local(
     # agrees fully with the distribution's knowledge of extensions. So we can
     # treat our metadata as canonical.
 
-    RE_DEFINE = re.compile(rb"-D[^=]+=[^\s]+")
-
     # Translate our YAML metadata into Setup lines.
 
     section_lines = {
@@ -455,12 +453,6 @@ def derive_setup_local(
         "shared": [],
         "static": [],
     }
-
-    # makesetup parses lines with = as extra config options. There appears
-    # to be no easy way to define e.g. -Dfoo=bar in Setup.local. We hack
-    # around this by producing a Makefile supplement that overrides the build
-    # rules for certain targets to include these missing values.
-    extra_cflags = {}
 
     enabled_extensions = {}
 
@@ -520,6 +512,10 @@ def derive_setup_local(
 
         line = name
 
+        # Keep track of defines separately to work around makesetup's treatment of = signs
+        defines = set()
+        def_name = name.upper() + "DEFS"
+
         for source in info.get("sources", []):
             line += " %s" % source
 
@@ -553,7 +549,7 @@ def derive_setup_local(
                     line += f" {source}"
 
         for define in info.get("defines", []):
-            line += f" -D{define}"
+            defines.add(f"-D{define}")
 
         for entry in info.get("defines-conditional", []):
             if targets := entry.get("targets", []):
@@ -569,7 +565,10 @@ def derive_setup_local(
             )
 
             if target_match and (python_min_match and python_max_match):
-                line += f" -D{entry['define']}"
+                defines.add(f"-D{entry['define']}")
+
+        if defines:
+            line += f" $({def_name})"
 
         for path in info.get("includes", []):
             line += f" -I{path}"
@@ -638,23 +637,15 @@ def derive_setup_local(
         if not parsed:
             raise Exception("we should always parse a setup line we generated")
 
-        # makesetup parses lines with = as extra config options. There appears
-        # to be no easy way to define e.g. -Dfoo=bar in Setup.local. We hack
-        # around this by detecting the syntax we'd like to support and move the
-        # variable defines to a Makefile supplement that overrides variables for
-        # specific targets.
-        for m in RE_DEFINE.finditer(parsed["line"]):
-            for obj_path in sorted(parsed["posix_obj_paths"]):
-                extra_cflags.setdefault(bytes(obj_path), []).append(m.group(0))
-
-        line = RE_DEFINE.sub(b"", line)
-
         if b"=" in line:
             raise Exception(
                 "= appears in EXTRA_MODULES line; will confuse "
                 "makesetup: %s" % line.decode("utf-8")
             )
 
+        if defines:
+            defines_str = " ".join(sorted(defines))
+            section_lines[section].append(f"{def_name}={defines_str}".encode("ascii"))
         section_lines[section].append(line)
         enabled_extensions[name]["setup_line"] = line
 
@@ -669,18 +660,7 @@ def derive_setup_local(
 
     dest_lines.append(b"")
 
-    make_lines = []
-
-    for target in sorted(extra_cflags):
-        make_lines.append(
-            b"%s: PY_STDMODULE_CFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
-        )
-
-    return {
-        "extensions": enabled_extensions,
-        "setup_local": b"\n".join(dest_lines),
-        "make_data": b"\n".join(make_lines),
-    }
+    return {"extensions": enabled_extensions, "setup_local": b"\n".join(dest_lines)}
 
 
 RE_INITTAB_ENTRY = re.compile(r'\{"([^"]+)", ([^\}]+)\},')

@@ -246,6 +246,8 @@ _dbm:
     - name: db
       targets:
         - .*-unknown-linux-.*
+  # Allow people who want to avoid the Sleepycat license to remove _dbm entirely.
+  build-mode: shared
 
 _decimal:
   sources:

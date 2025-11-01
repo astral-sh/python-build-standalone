@@ -549,7 +549,7 @@ _sqlite3:
     - define: SQLITE_OMIT_LOAD_EXTENSION=1
       targets:
         - .*-ios
-    - define: "MODULE_NAME=\\\"sqlite3\\\""
+    - define: "MODULE_NAME='\"sqlite3\"'"
       maximum-python-version: "3.9"
   links:
     - sqlite3

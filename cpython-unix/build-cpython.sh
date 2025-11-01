@@ -54,8 +54,6 @@ SETUPTOOLS_WHEEL="${ROOT}/setuptools-${SETUPTOOLS_VERSION}-py3-none-any.whl"
 cat Setup.local
 mv Setup.local Python-${PYTHON_VERSION}/Modules/Setup.local
 
-cat Makefile.extra
-
 pushd Python-${PYTHON_VERSION}
 
 # configure doesn't support cross-compiling on Apple. Teach it.
@@ -713,9 +711,6 @@ fi
 
 CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
-
-# Supplement produced Makefile with our modifications.
-cat ../Makefile.extra >> Makefile
 
 make -j ${NUM_CPUS}
 make -j ${NUM_CPUS} sharedinstall DESTDIR=${ROOT}/out/python

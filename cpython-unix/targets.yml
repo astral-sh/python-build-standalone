@@ -91,7 +91,6 @@ aarch64-apple-darwin:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'arm64'
@@ -138,7 +137,6 @@ aarch64-apple-ios:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'arm64'
@@ -175,7 +173,6 @@ aarch64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    - '-fvisibility=hidden'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -235,7 +232,6 @@ arm64-apple-tvos:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'arm64'
@@ -616,7 +612,6 @@ thumb7k-apple-watchos:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'armv7k'
@@ -669,7 +664,6 @@ x86_64-apple-darwin:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'x86_64'
@@ -716,7 +710,6 @@ x86_64-apple-ios:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'x86_64'
@@ -760,7 +753,6 @@ x86_64-apple-tvos:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'x86_64'
@@ -803,7 +795,6 @@ x86_64-apple-watchos:
     # to work with the macOS SDKs out of the box. We work around
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
   target_ldflags:
     - '-arch'
     - 'x86_64'
@@ -837,7 +828,6 @@ x86_64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    - '-fvisibility=hidden'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -885,7 +875,6 @@ x86_64_v2-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-march=x86-64-v2'
-    - '-fvisibility=hidden'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -933,7 +922,6 @@ x86_64_v3-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-march=x86-64-v3'
-    - '-fvisibility=hidden'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -981,7 +969,6 @@ x86_64_v4-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-march=x86-64-v4'
-    - '-fvisibility=hidden'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -1027,8 +1014,6 @@ x86_64-unknown-linux-musl:
   host_cxx: clang++
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
-  target_cflags:
-    - '-fvisibility=hidden'
   needs:
     - autoconf
     - bdb
@@ -1074,7 +1059,6 @@ x86_64_v2-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v2'
-    - '-fvisibility=hidden'
   needs:
     - autoconf
     - bdb
@@ -1120,7 +1104,6 @@ x86_64_v3-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v3'
-    - '-fvisibility=hidden'
   needs:
     - autoconf
     - bdb
@@ -1166,7 +1149,6 @@ x86_64_v4-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-march=x86-64-v4'
-    - '-fvisibility=hidden'
   needs:
     - autoconf
     - bdb

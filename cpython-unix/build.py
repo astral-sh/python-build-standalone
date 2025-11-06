@@ -64,7 +64,7 @@ MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 
-def add_target_env(env, build_platform, target_triple, build_env):
+def add_target_env(env, build_platform, target_triple, build_env, build_options):
     add_env_common(env)
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
@@ -92,6 +92,9 @@ def add_target_env(env, build_platform, target_triple, build_env):
     if target_triple == "aarch64-unknown-linux-musl":
         extra_target_cflags.append("--rtlib=compiler-rt")
         extra_target_ldflags.append("--rtlib=compiler-rt")
+
+    if "asan" in build_options:
+        extra_target_cflags.append("-fsanitize=address")
 
     if build_platform.startswith("linux_"):
         machine = platform.machine()
@@ -272,7 +275,7 @@ def simple_build(
         if "static" in build_options:
             env["STATIC"] = 1
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # for OpenSSL, set the OPENSSL_TARGET environment variable
         if entry.startswith("openssl-"):
@@ -379,7 +382,7 @@ def build_libedit(
             "LIBEDIT_VERSION": DOWNLOADS["libedit"]["version"],
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-libedit.sh", environment=env)
         build_env.get_tools_archive(dest_archive, "deps")
@@ -440,7 +443,7 @@ def build_cpython_host(
             "PYTHON_VERSION": python_version,
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
@@ -837,7 +840,7 @@ def build_cpython(
         if "static" in parsed_build_options:
             env["CPYTHON_STATIC"] = "1"
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-cpython.sh", environment=env)
 
@@ -979,7 +982,7 @@ def main():
 
     # Construct possible options
     options = set()
-    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto", "pgo+lto+asan"})
     options.update({f"freethreaded+{option}" for option in options})
     options.update({f"{option}+static" for option in options})
     parser.add_argument(

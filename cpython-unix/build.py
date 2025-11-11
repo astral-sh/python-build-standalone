@@ -64,7 +64,7 @@ MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 
-def add_target_env(env, build_platform, target_triple, build_env):
+def add_target_env(env, build_platform, target_triple, build_env, build_options):
     add_env_common(env)
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
@@ -83,7 +83,10 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["PYBUILD_PLATFORM"] = build_platform
     env["TOOLS_PATH"] = build_env.tools_path
 
-    extra_target_cflags = list(settings.get("target_cflags", []))
+    if "debug" in build_options:
+        extra_target_cflags = list(settings.get("debug_cflags", [])) + list(settings.get("target_cflags", []))
+    else:
+        extra_target_cflags = list(settings.get("standard_cflags", [])) + list(settings.get("target_cflags", []))
     extra_target_ldflags = list(settings.get("target_ldflags", []))
     extra_host_cflags = []
     extra_host_ldflags = []
@@ -272,7 +275,7 @@ def simple_build(
         if "static" in build_options:
             env["STATIC"] = 1
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # for OpenSSL, set the OPENSSL_TARGET environment variable
         if entry.startswith("openssl-"):
@@ -379,7 +382,7 @@ def build_libedit(
             "LIBEDIT_VERSION": DOWNLOADS["libedit"]["version"],
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-libedit.sh", environment=env)
         build_env.get_tools_archive(dest_archive, "deps")
@@ -440,7 +443,7 @@ def build_cpython_host(
             "PYTHON_VERSION": python_version,
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
@@ -831,7 +834,7 @@ def build_cpython(
         if "static" in parsed_build_options:
             env["CPYTHON_STATIC"] = "1"
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-cpython.sh", environment=env)
 

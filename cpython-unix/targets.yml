@@ -91,6 +91,13 @@ aarch64-apple-darwin:
     # this by undoing the -Werror=undef-prefix in that commit.
     - '-Wno-undef-prefix'
     - '-fvisibility=hidden'
+    # Misc flags
+    - '-fstack-protector-strong'
+    - '-pipe'
+  standard_cflags:
+    - '-O3'
+  debug_cflags:
+    - '-O0'
   target_ldflags:
     - '-arch'
     - 'arm64'

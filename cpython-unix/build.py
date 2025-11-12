@@ -84,9 +84,10 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
     env["TOOLS_PATH"] = build_env.tools_path
 
     if "debug" in build_options:
-        extra_target_cflags = ["-O0"] + list(settings.get("target_cflags", []))
+        extra_target_cflags = ["-O0"]
     else:
-        extra_target_cflags = ["-O3"] + list(settings.get("target_cflags", []))
+        extra_target_cflags = ["-O3"]
+    extra_target_cflags += list(settings.get("target_cflags", []))
     extra_target_ldflags = list(settings.get("target_ldflags", []))
     extra_host_cflags = []
     extra_host_ldflags = []

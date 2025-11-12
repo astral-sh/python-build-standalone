@@ -414,19 +414,18 @@ DOWNLOADS = {
         "sha256": "936b74c60b19c317c3f3cb1b114575032528dbdaf428740483200ea874c2ca0a",
         "version": "1.6.0",
     },
-    # IMPORTANT: xz 5.6 has a backdoor. Be extremely cautious before taking any xz
-    # upgrade since it isn't clear which versions are safe.
+    # IMPORTANT: xz 5.6.0 was released with a backdoor (CVE-2024-3094). This has been resolved.
+    # Be cautious before taking any xz upgrades given this past behavior.
     "xz": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20240224/xz-5.2.12.tar.gz",
-        "size": 2190541,
-        "sha256": "61bda930767dcb170a5328a895ec74cab0f5aac4558cdda561c83559db582a13",
-        "version": "5.2.12",
+        "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz",
+        "size": 2587189,
+        "sha256": "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543",
+        "version": "5.8.1",
         "library_names": ["lzma"],
-        # liblzma is in the public domain. Other parts of code have licenses. But
-        # we only use liblzma.
-        "licenses": [],
+        # liblzma is licensed as 0BSD. Other parts of code have different licenses.
+        # But we only use liblzma.
+        "licenses": ["0BSD"],
         "license_file": "LICENSE.liblzma.txt",
-        "license_public_domain": True,
     },
     "zlib": {
         "url": "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz",

@@ -606,35 +606,32 @@ def hack_project_files(
     # these modification to the project file are not needed.
     # The most recent change was an update to version 5.8.1:
     # https://github.com/python/cpython/pull/141022
-    try:
-        liblzma_path = pcbuild_path / "liblzma.vcxproj"
-        static_replace_in_file(
-            liblzma_path,
-            rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
-            rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
-        )
-        static_replace_in_file(
-            liblzma_path,
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_table.c" />\r\n',
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n ',
-        )
-        static_replace_in_file(
-            liblzma_path,
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_table.c" />\r\n',
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n ',
-        )
-        static_replace_in_file(
-            liblzma_path,
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />',
-            rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm64.c" />'
-        )
-        static_replace_in_file(
-            liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
-        )
-    except NoSearchStringError:
-        pass
+    liblzma_path = pcbuild_path / "liblzma.vcxproj"
+    static_replace_in_file(
+        liblzma_path,
+        rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
+        rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
+    )
+    static_replace_in_file(
+        liblzma_path,
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_table.c" />\r\n',
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n ',
+    )
+    static_replace_in_file(
+        liblzma_path,
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_table.c" />\r\n',
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n ',
+    )
+    static_replace_in_file(
+        liblzma_path,
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />',
+        rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm64.c" />'
+    )
+    static_replace_in_file(
+        liblzma_path,
+        rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
+        rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
+    )
 
     # Our logic for rewriting extension projects gets confused by _sqlite.vcxproj not
     # having a `<PreprocessorDefinitions>` line in 3.10+. So adjust that.

@@ -614,18 +614,18 @@ def hack_project_files(
     )
     static_replace_in_file(
         liblzma_path,
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_table.c" />\r\n',
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n ',
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_table.c" />\r\n',
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n ',
     )
     static_replace_in_file(
         liblzma_path,
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_table.c" />\r\n',
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n ',
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_table.c" />\r\n',
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n ',
     )
     static_replace_in_file(
         liblzma_path,
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />',
-        rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm64.c" />'
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />'
     )
     static_replace_in_file(
         liblzma_path,

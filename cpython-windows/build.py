@@ -598,23 +598,40 @@ def hack_project_files(
     with sqlite3_path.open("wb") as fh:
         fh.write(data)
 
-    # Our version of the xz sources is newer than what's in cpython-source-deps
-    # and the xz sources changed the path to config.h. Hack the project file
+    # Our version of the xz sources may be newer than what's in cpython-source-deps.
+    # The source files and locations may have changed. Hack the project file
     # accordingly.
     #
-    # ... but CPython finally upgraded liblzma in 2022, so newer CPython releases
-    # already have this patch. So we're phasing it out.
+    # CPython updates xz occasionally. When these changes make it into a release
+    # these modification to the project file are not needed.
+    # The most recent change was an update to version 5.8.1:
+    # https://github.com/python/cpython/pull/141022
     try:
         liblzma_path = pcbuild_path / "liblzma.vcxproj"
         static_replace_in_file(
             liblzma_path,
-            rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
             rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
+            rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
         )
         static_replace_in_file(
             liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_table.c" />\r\n',
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_table.c" />\r\n',
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />',
+            rb'<ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm64.c" />'
+        )
+        static_replace_in_file(
+            liblzma_path,
             rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
+            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
         )
     except NoSearchStringError:
         pass

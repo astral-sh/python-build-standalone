@@ -609,7 +609,7 @@ def hack_project_files(
     liblzma_path = pcbuild_path / "liblzma.vcxproj"
     static_replace_in_file(
         liblzma_path,
-        rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
+        rb"$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;",
         rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
     )
     static_replace_in_file(

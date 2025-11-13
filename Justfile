@@ -1,4 +1,4 @@
-# Diff 2 releases using diffocope.
+# Diff 2 releases using diffoscope.
 diff a b:
   diffoscope \
     --html build/diff.html \

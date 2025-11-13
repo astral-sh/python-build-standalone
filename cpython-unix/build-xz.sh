@@ -13,7 +13,16 @@ tar -xf xz-${XZ_VERSION}.tar.gz
 
 pushd xz-${XZ_VERSION}
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CCASFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
+skip_werror_check=no
+
+# musl-clang injects flags that are not used during compilation,
+# e.g. -fuse-ld=musl-clang. These raise warnings that can be ignored but
+# cause the -Werror check to fail. Skip the check.
+if [ "${CC}" = "musl-clang" ]; then
+    skip_werror_check=yes
+fi
+
+SKIP_WERROR_CHECK="${skip_werror_check}" CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CCASFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \

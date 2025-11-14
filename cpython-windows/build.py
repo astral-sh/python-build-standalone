@@ -625,7 +625,7 @@ def hack_project_files(
     static_replace_in_file(
         liblzma_path,
         b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
-        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />'
+        b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />',
     )
     static_replace_in_file(
         liblzma_path,
@@ -1425,6 +1425,15 @@ def build_cpython(
 
             for f in fs:
                 f.result()
+
+        # Copy the config.h file used by upstream CPython for xz 5.8.1
+        # https://github.com/python/cpython-source-deps/blob/665d407bd6bc941944db2152e4b5dca388ea586e/windows/config.h
+        xz_version = DOWNLOADS["xz"]["version"]
+        xz_path = td / ("xz-%s" % xz_version)
+        config_src = SUPPORT / "xz-support" / "config.h"
+        config_dest = xz_path / "windows" / "config.h"
+        log(f"copying {config_src} to {config_dest}")
+        shutil.copyfile(config_src, config_dest)
 
         extract_tar_to_directory(libffi_archive, td)
 

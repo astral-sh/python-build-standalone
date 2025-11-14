@@ -598,23 +598,40 @@ def hack_project_files(
     with sqlite3_path.open("wb") as fh:
         fh.write(data)
 
-    # Our version of the xz sources is newer than what's in cpython-source-deps
-    # and the xz sources changed the path to config.h. Hack the project file
+    # Our version of the xz sources may be newer than what's in cpython-source-deps.
+    # The source files and locations may have changed. Hack the project file
     # accordingly.
     #
-    # ... but CPython finally upgraded liblzma in 2022, so newer CPython releases
-    # already have this patch. So we're phasing it out.
+    # CPython updates xz occasionally. When these changes make it into a release
+    # these modification to the project file are not needed.
+    # The most recent change was an update to version 5.8.1:
+    # https://github.com/python/cpython/pull/141022
     try:
         liblzma_path = pcbuild_path / "liblzma.vcxproj"
         static_replace_in_file(
             liblzma_path,
+            rb"$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;",
             rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
-            rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
         )
         static_replace_in_file(
             liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />',
+        )
+        static_replace_in_file(
+            liblzma_path,
             rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
+            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
         )
     except NoSearchStringError:
         pass
@@ -1411,6 +1428,15 @@ def build_cpython(
 
             for f in fs:
                 f.result()
+
+        # Copy the config.h file used by upstream CPython for xz 5.8.1
+        # https://github.com/python/cpython-source-deps/blob/665d407bd6bc941944db2152e4b5dca388ea586e/windows/config.h
+        xz_version = DOWNLOADS["xz"]["version"]
+        xz_path = td / ("xz-%s" % xz_version)
+        config_src = SUPPORT / "xz-support" / "config.h"
+        config_dest = xz_path / "windows" / "config.h"
+        log(f"copying {config_src} to {config_dest}")
+        shutil.copyfile(config_src, config_dest)
 
         extract_tar_to_directory(libffi_archive, td)
 

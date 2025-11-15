@@ -58,6 +58,12 @@ cat Makefile.extra
 
 pushd Python-${PYTHON_VERSION}
 
+
+# add `--enable-relocatable`
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i ${ROOT}/patch-reloctable-flag.patch
+fi
+
 # configure doesn't support cross-compiling on Apple. Teach it.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
@@ -367,6 +373,11 @@ fi
 # so give it plenty of space.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     LDFLAGS="${LDFLAGS} -Wl,-headerpad,40"
+fi
+
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --enable-relocatable"
 fi
 
 CPPFLAGS=$CFLAGS

@@ -731,12 +731,8 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
 // _xxinterpchannels added in 3.12.
 // audioop removed in 3.13.
 
-const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] = &[
-    "audioop",
-    "_sha256",
-    "_sha512",
-    "_xxsubinterpreters",
-];
+const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] =
+    &["audioop", "_sha256", "_sha512", "_xxsubinterpreters"];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_11: &[&str] = &[
     "audioop",
@@ -771,6 +767,22 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_interpchannels",
     "_interpqueues",
     "_interpreters",
+    "_remote_debugging",
+    "_sha2",
+    "_suggestions",
+    "_sysconfig",
+    "_tokenize",
+    "_typing",
+    "_hmac",
+    "_types",
+    "_zstd",
+];
+
+const GLOBAL_EXTENSIONS_PYTHON_3_15: &[&str] = &[
+    "_interpchannels",
+    "_interpqueues",
+    "_interpreters",
+    "_math_integer",
     "_remote_debugging",
     "_sha2",
     "_suggestions",
@@ -1586,8 +1598,11 @@ fn validate_extension_modules(
         "3.13" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_13);
         }
-        "3.14" | "3.15" => {
+        "3.14" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_14);
+        }
+        "3.15" => {
+            wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_15);
         }
         _ => {
             panic!("unhandled Python version: {python_major_minor}");

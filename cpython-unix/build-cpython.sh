@@ -260,7 +260,7 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-bolt-icf-safe.patch
 
     # Tweak --skip-funcs to work with our toolchain.
-    if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
         patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs-3.15.patch
     else
         patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs.patch

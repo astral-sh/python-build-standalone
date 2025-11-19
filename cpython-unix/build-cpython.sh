@@ -260,7 +260,11 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-bolt-icf-safe.patch
 
     # Tweak --skip-funcs to work with our toolchain.
-    patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs.patch
+    if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
+        patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs-3.15.patch
+    else
+        patch -p1 -i ${ROOT}/patch-configure-bolt-skip-funcs.patch
+    fi
 fi
 
 # The optimization make targets are both phony and non-phony. This leads

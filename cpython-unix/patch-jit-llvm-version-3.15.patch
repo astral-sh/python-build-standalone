@@ -5,8 +5,8 @@ diff --git a/Tools/jit/_llvm.py b/Tools/jit/_llvm.py
  import _targets
 
 
--_LLVM_VERSION = "19"
+-_LLVM_VERSION = "21"
 +_LLVM_VERSION = "21"
- _EXTERNALS_LLVM_TAG = "llvm-19.1.7.0"
+ _EXTERNALS_LLVM_TAG = "llvm-21.1.4.0"
 
 

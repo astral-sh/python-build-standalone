@@ -1,9 +1,23 @@
+commit 34915211b42a64082e0470ebb9a8c4f2ebb20512
+Author: Zanie Blue <contact@zanie.dev>
+Date:   Fri Nov 21 15:44:42 2025 -0600
+
+    Set linker arguments when `--enabled-relocatable` is used
+
 diff --git a/Makefile.pre.in b/Makefile.pre.in
-index 6c9cba59e27..39fc2e911d0 100644
+index 6c9cba59e27..6c89690c35e 100644
 --- a/Makefile.pre.in
 +++ b/Makefile.pre.in
-@@ -1028,7 +1028,12 @@ libpython3.so:	libpython$(LDVERSION).so
- 	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
+@@ -1025,10 +1025,19 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+ 	fi
+ 
+ libpython3.so:	libpython$(LDVERSION).so
+-	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
++	if [ "$(RELOCATABLE)" = "yes" ]; then \
++		$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ -Wl,-rpath,'$$ORIGIN' $^; \
++	else \
++		$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^; \
++	fi
  
  libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
 -	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
@@ -17,7 +31,7 @@ index 6c9cba59e27..39fc2e911d0 100644
  
  libpython$(VERSION).sl: $(LIBRARY_OBJS)
 diff --git a/configure b/configure
-index 38f2d4dfbf2..153add6ac12 100755
+index 38f2d4dfbf2..9991932680e 100755
 --- a/configure
 +++ b/configure
 @@ -13749,7 +13749,13 @@ then
@@ -35,19 +49,8 @@ index 38f2d4dfbf2..153add6ac12 100755
  	# -u libsys_s pulls in all symbols in libsys
  	Darwin/*|iOS/*)
  		LINKFORSHARED="$extra_undefs -framework CoreFoundation"
-@@ -13774,6 +13780,10 @@ printf "%s\n" "#define THREAD_STACK_SIZE 0x$stack_size" >>confdefs.h
- 			if test "$enable_framework"; then
- 				LINKFORSHARED="$LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
- 			fi
-+			# Add rpath for relocatable builds
-+			if test "x$enable_relocatable" = xyes; then
-+				LINKFORSHARED="$LINKFORSHARED -Wl,-rpath,@executable_path/../lib"
-+			fi
- 			LINKFORSHARED="$LINKFORSHARED"
- 		elif test $ac_sys_system = "iOS"; then
- 			LINKFORSHARED="-Wl,-stack_size,$stack_size $LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/$(PYTHONFRAMEWORK)'
 diff --git a/configure.ac b/configure.ac
-index b1c859071f4..a40d279ebab 100644
+index b1c859071f4..f75f41441e2 100644
 --- a/configure.ac
 +++ b/configure.ac
 @@ -3613,7 +3613,13 @@ then
@@ -65,14 +68,3 @@ index b1c859071f4..a40d279ebab 100644
  	# -u libsys_s pulls in all symbols in libsys
  	Darwin/*|iOS/*)
  		LINKFORSHARED="$extra_undefs -framework CoreFoundation"
-@@ -3638,6 +3644,10 @@ then
- 			if test "$enable_framework"; then
- 				LINKFORSHARED="$LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/Versions/$(VERSION)/$(PYTHONFRAMEWORK)'
- 			fi
-+			# Add rpath for relocatable builds
-+			if test "x$enable_relocatable" = xyes; then
-+				LINKFORSHARED="$LINKFORSHARED -Wl,-rpath,@executable_path/../lib"
-+			fi
- 			LINKFORSHARED="$LINKFORSHARED"
- 		elif test $ac_sys_system = "iOS"; then
- 			LINKFORSHARED="-Wl,-stack_size,$stack_size $LINKFORSHARED "'$(PYTHONFRAMEWORKDIR)/$(PYTHONFRAMEWORK)'

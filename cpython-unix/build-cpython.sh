@@ -832,6 +832,12 @@ if [[ "${PYBUILD_SHARED}" = "1"  && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]
             fi
         fi
     fi
+else
+    # For Python 3.15+ on Linux, we still need to define LIBPYTHON_SHARED_LIBRARY for glibc version detection
+    if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+        LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
+        LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
+    fi
 fi
 
 # Install setuptools and pip as they are common tools that should be in any

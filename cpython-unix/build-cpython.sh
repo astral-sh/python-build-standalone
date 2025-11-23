@@ -498,6 +498,11 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     fi
 fi
 
+# Revert problematic C stack limits refactoring on 3.15 (macOS build issue)
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" && "${PYBUILD_PLATFORM}" = macos* ]]; then
+    patch -p1 -i "${ROOT}/patch-revert-stack-limits-3.15.patch"
+fi
+
 if [ -n "${CPYTHON_LTO}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto"
 fi
@@ -561,12 +566,6 @@ export PROFILE_TASK='-m test --pgo'
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
     PROFILE_TASK="${PROFILE_TASK} --ignore test_strftime_y2k"
-fi
-
-# On 3.15+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
-# PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
 fi
 
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,

@@ -1,0 +1,87 @@
+diff --git a/configure.ac b/configure.ac
+index 58f54076ff2..a734260691a 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -330,6 +330,21 @@ then
+ 	*-apple-ios*)
+ 		ac_sys_system=iOS
+ 		;;
++	*-apple-ios*)
++		ac_sys_system=iOS
++		;;
++	*-apple-tvos*)
++		ac_sys_system=tvOS
++		;;
++	*-apple-watchos*)
++		ac_sys_system=watchOS
++		;;
++	*-*-darwin*)
++		ac_sys_system=Darwin
++		;;
++	*-apple-*)
++	  ac_sys_system=Darwin
++	  ;;
+ 	*-*-vxworks*)
+ 	    ac_sys_system=VxWorks
+ 	    ;;
+@@ -771,6 +786,15 @@ if test "$cross_compiling" = yes; then
+ 				;;
+ 		esac
+ 		;;
++  *-*-darwin*)
++		case "$host_cpu" in
++		arm*)
++			_host_ident=arm
++			;;
++		*)
++			_host_ident=$host_cpu
++		esac
++		;;
+ 	*-*-vxworks*)
+ 		_host_ident=$host_cpu
+ 		;;
+@@ -785,6 +809,23 @@ if test "$cross_compiling" = yes; then
+ 	_PYTHON_HOST_PLATFORM="$MACHDEP${_host_ident:+-$_host_ident}"
+ fi
+ 
++# The _PYTHON_HOST_PLATFORM environment variable is used to
++# override the platform name in distutils and sysconfig when
++# cross-compiling. On Apple, the platform name expansion logic
++# is non-trivial, including renaming MACHDEP=darwin to macosx
++# and including the deployment target (or current OS version if
++# not set). Here we always force an override based on the target
++# triple. We do this in all build configurations because historically
++# the automatic resolution has been brittle.
++case "$host" in
++aarch64-apple-darwin*)
++  _PYTHON_HOST_PLATFORM="macosx-${MACOSX_DEPLOYMENT_TARGET}-arm64"
++  ;;
++x86_64-apple-darwin*)
++  _PYTHON_HOST_PLATFORM="macosx-${MACOSX_DEPLOYMENT_TARGET}-x86_64"
++  ;;
++esac
++
+ # Some systems cannot stand _XOPEN_SOURCE being defined at all; they
+ # disable features if it is defined, without any means to access these
+ # features as extensions. For these systems, we skip the definition of
+@@ -1582,7 +1623,7 @@ if test $enable_shared = "yes"; then
+       BLDLIBRARY='-Wl,+b,$(LIBDIR) -L. -lpython$(LDVERSION)'
+       RUNSHARED=SHLIB_PATH=`pwd`${SHLIB_PATH:+:${SHLIB_PATH}}
+       ;;
+-    Darwin*)
++    Darwin*|iOS*|tvOS*|watchOS*)
+       LDLIBRARY='libpython$(LDVERSION).dylib'
+       BLDLIBRARY='-L. -lpython$(LDVERSION)'
+       RUNSHARED=DYLD_LIBRARY_PATH=`pwd`${DYLD_LIBRARY_PATH:+:${DYLD_LIBRARY_PATH}}
+@@ -3469,6 +3510,11 @@ then
+ 	Linux*|GNU*|QNX*|VxWorks*|Haiku*)
+ 		LDSHARED='$(CC) -shared'
+ 		LDCXXSHARED='$(CXX) -shared';;
++	iOS*|tvOS*|watchOS*)
++		LDSHARED='$(CC) -bundle -undefined dynamic_lookup'
++		LDCXXSHARED='$(CXX) -bundle -undefined dynamic_lookup'
++		BLDSHARED="$LDSHARED"
++		;;
+ 	FreeBSD*)
+ 		if [[ "`$CC -dM -E - </dev/null | grep __ELF__`" != "" ]]
+ 		then

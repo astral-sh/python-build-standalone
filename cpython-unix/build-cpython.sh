@@ -97,7 +97,10 @@ fi
 # may still be useful since CPython's definition of cross-compiling has historically
 # been very liberal and kicks in when it arguably shouldn't.
 if [ -n "${CROSS_COMPILING}" ]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+        # Do nothing on 3.15+
+        true
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
         patch -p1 -i ${ROOT}/patch-dont-clear-runshared-14.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
         patch -p1 -i ${ROOT}/patch-dont-clear-runshared-13.patch

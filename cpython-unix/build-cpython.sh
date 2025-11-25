@@ -59,11 +59,11 @@ cat Makefile.extra
 pushd Python-${PYTHON_VERSION}
 
 # configure doesn't support cross-compiling on Apple. Teach it.
-if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-        patch -p1 -i ${ROOT}/patch-apple-cross-3.13.patch
-    elif [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
+    if [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
         patch -p1 -i ${ROOT}/patch-apple-cross-3.12.patch
+    elif [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ]; then
+        patch -p1 -i ${ROOT}/patch-apple-cross-3.13.patch
     else
         patch -p1 -i ${ROOT}/patch-apple-cross.patch
     fi

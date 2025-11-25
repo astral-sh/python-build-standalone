@@ -115,6 +115,7 @@ aarch64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
     - linux_aarch64
+    - macos_arm64
   pythons_supported:
     - '3.10'
     - '3.11'
@@ -919,6 +920,7 @@ aarch64-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
     - linux_aarch64
+    - macos_arm64
   pythons_supported:
     - '3.10'
     - '3.11'

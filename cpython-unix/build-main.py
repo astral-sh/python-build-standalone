@@ -79,7 +79,7 @@ def main():
         "--no-docker",
         action="store_true",
         default=True if sys.platform == "darwin" else False,
-        help="Disable building in Docker",
+        help="Disable building in Docker on Linux hosts.",
     )
     parser.add_argument(
         "--serial",
@@ -129,9 +129,26 @@ def main():
 
     musl = "musl" in target_triple
 
+    # Linux targets can be built on a macOS host using Docker.
+    building_linux_from_macos = sys.platform == "darwin" and "linux" in target_triple
+    if building_linux_from_macos:
+        print("Note: Using Docker to build for Linux on macOS")
+        args.no_docker = False
+
     env = dict(os.environ)
 
-    env["PYBUILD_HOST_PLATFORM"] = host_platform
+    # When building Linux targets from macOS using Docker, map to the equivalent
+    # Linux host platform.
+    effective_host_platform = host_platform
+    if building_linux_from_macos:
+        if host_platform == "macos_arm64":
+            effective_host_platform = "linux_aarch64"
+        else:
+            raise Exception(f"Unhandled macOS platform: {host_platform}")
+        print(
+            f"Building Linux target from macOS using Docker ({effective_host_platform} toolchain)"
+        )
+    env["PYBUILD_HOST_PLATFORM"] = effective_host_platform
     env["PYBUILD_TARGET_TRIPLE"] = target_triple
     env["PYBUILD_BUILD_OPTIONS"] = args.options
     env["PYBUILD_PYTHON_SOURCE"] = python_source

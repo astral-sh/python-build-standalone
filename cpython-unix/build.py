@@ -100,7 +100,8 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
     if build_platform.startswith("linux_"):
         machine = platform.machine()
 
-        if machine == "aarch64":
+        # arm64 allows building for Linux on a macOS host using Docker
+        if machine == "aarch64" or machine == "arm64":
             env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
             env["TARGET_TRIPLE"] = target_triple
         elif machine == "x86_64":

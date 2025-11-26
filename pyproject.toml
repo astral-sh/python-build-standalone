@@ -1,0 +1,25 @@
+[project]
+name = "python-build-standalone"
+version = "0.1.0"
+description = "Produces standalone, highly-redistributable builds of Python."
+readme = "README.rst"
+requires-python = ">=3.10"
+dependencies = [
+    "docker>=7.1.0",
+    "jinja2>=3.1.5",
+    "jsonschema>=4.23.0",
+    "pygithub>=2.6.1 ; platform_machine != 'aarch64' or sys_platform != 'win32'",
+    "pyyaml>=6.0.2",
+    "six>=1.17.0",
+    "tomli>=2.2.1",
+    "typing-extensions>=4.14.1",
+    "zstandard>=0.23.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.12,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "pythonbuild"
+module-root = ""

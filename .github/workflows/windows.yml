@@ -63,7 +63,7 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Python
+      - name: Set up uv
         uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
 
       - name: Get pull request labels
@@ -134,10 +134,8 @@ jobs:
         with:
           packages: autoconf automake libtool
 
-      - name: Install Python
-        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
-        with:
-          python-version: "3.12"
+      - name: Set up uv
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
 
       - name: Download pythonbuild Executable
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
@@ -148,14 +146,14 @@ jobs:
       # don't get compiled properly.
       - name: Bootstrap Python environment
         run: |
-          py.exe -3.12 build-windows.py --help
+          uv run build-uv.py --help
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
           call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          py.exe -3.12 build-windows.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS%
+          uv run build-uv.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS%
         env:
           MATRIX_VCVARS: ${{ matrix.vcvars }}
           MATRIX_PYTHON: ${{ matrix.python }}

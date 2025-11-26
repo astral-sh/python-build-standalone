@@ -1975,6 +1975,7 @@ def main() -> None:
             release_tag = release_tag_from_git()
 
         # Create, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
+        DIST.mkdir(exist_ok=True)
         compress_python_archive(
             tar_path,
             DIST,

@@ -1512,7 +1512,8 @@ def build_cpython(
                 p for p in env["PATH"].split(";") if p != str(BUILD / "venv" / "bin")
             ]
             env["PATH"] = ";".join(paths)
-            del env["PYTHONPATH"]
+            if "PYTHONPATH" in env:
+                del env["PYTHONPATH"]
 
             env["PYTHONHOME"] = str(cpython_source_path)
 

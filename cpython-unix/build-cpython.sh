@@ -629,6 +629,13 @@ if [ -n "${CROSS_COMPILING}" ]; then
     # TODO: There are probably more of these, see #599.
 fi
 
+# Adjust the Python startup logic (getpath.py) to properly locate the installation, even when
+# invoked through a symlink or through an incorrect argv[0]. Because this Python is relocatable, we
+# don't get to rely on the fallback to the compiled-in installation prefix.
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+    patch -p1 -i "${ROOT}/patch-python-getpath-3.14.patch"
+fi
+
 # We patched configure.ac above. Reflect those changes.
 autoconf
 

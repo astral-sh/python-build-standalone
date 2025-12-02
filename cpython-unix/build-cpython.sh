@@ -563,12 +563,6 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "$
     PROFILE_TASK="${PROFILE_TASK} --ignore test_strftime_y2k"
 fi
 
-# On 3.15+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
-# PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
-fi
-
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,
 # but on x86-64 that requires v2 and v3 respectively, and on arm64 the performance is bad as noted
 # in the comments, so just don't even try. (We should check if we can make this conditional)

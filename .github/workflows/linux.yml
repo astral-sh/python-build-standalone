@@ -37,7 +37,7 @@ jobs:
         run: |
           rustc --version > .rustc-version
 
-      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.cargo/registry
@@ -50,7 +50,7 @@ jobs:
           cargo build --release
 
       - name: Upload pythonbuild Executable
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
           path: target/release/pythonbuild
@@ -80,7 +80,7 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3.11.1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # v3.5.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -129,7 +129,7 @@ jobs:
           MATRIX_ARCH: ${{ matrix.arch }}
 
       - name: Upload Docker Image
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: image-${{ matrix.name }}-linux_${{ matrix.arch }}
           path: build/image-*
@@ -230,20 +230,20 @@ jobs:
           enable-cache: false
 
       - name: Download pythonbuild
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
           path: build
 
       - name: Download images
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           pattern: image-*
           path: build
           merge-multiple: true
 
       - name: Cache downloads
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: build/downloads
           key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
@@ -286,7 +286,7 @@ jobs:
 
       - name: Upload Distribution
         if: ${{ ! matrix.dry-run }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
           path: dist/*
@@ -338,20 +338,20 @@ jobs:
           enable-cache: false
 
       - name: Download pythonbuild
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
           path: build
 
       - name: Download images
-        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
           pattern: image-*
           path: build
           merge-multiple: true
 
       - name: Cache downloads
-        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: build/downloads
           key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
@@ -394,7 +394,7 @@ jobs:
 
       - name: Upload Distribution
         if: ${{ ! matrix.dry-run }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
           path: dist/*

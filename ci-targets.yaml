@@ -36,6 +36,7 @@ darwin:
           - freethreaded+debug
           - freethreaded+pgo+lto
         minimum-python-version: "3.13"
+    run: true
 
 linux:
   aarch64-unknown-linux-gnu:

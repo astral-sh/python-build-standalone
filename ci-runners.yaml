@@ -11,7 +11,7 @@ depot-ubuntu-22.04-arm:
   free: false
 
 depot-macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: false
 
@@ -21,7 +21,7 @@ ubuntu-latest:
   free: true
 
 macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: true
 

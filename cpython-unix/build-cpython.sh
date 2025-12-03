@@ -566,7 +566,7 @@ fi
 # On 3.14+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
 # PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
+    patch -p1 -i "${ROOT}/patch-test-json.patch"
 fi
 
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,

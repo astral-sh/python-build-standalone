@@ -1,0 +1,28 @@
+commit c7281478147d2a3859dd04ed3729593e9e4f2b73
+Author: Zanie Blue <contact@zanie.dev>
+Date:   Wed Dec 3 08:17:23 2025 -0600
+
+    Increase recursion depth for `test_json` from 200k to 500k
+
+diff --git a/Lib/test/test_json/test_recursion.py b/Lib/test/test_json/test_recursion.py
+index 5d7b56ff9ad..3110ce746b8 100644
+--- a/Lib/test/test_json/test_recursion.py
++++ b/Lib/test/test_json/test_recursion.py
+@@ -71,7 +71,7 @@ def default(self, o):
+     @support.skip_emscripten_stack_overflow()
+     @support.skip_wasi_stack_overflow()
+     def test_highly_nested_objects_decoding(self):
+-        very_deep = 200000
++        very_deep = 500000
+         # test that loading highly-nested objects doesn't segfault when C
+         # accelerations are used. See #12017
+         with self.assertRaises(RecursionError):
+@@ -90,7 +90,7 @@ def test_highly_nested_objects_decoding(self):
+     def test_highly_nested_objects_encoding(self):
+         # See #12051
+         l, d = [], {}
+-        for x in range(200_000):
++        for x in range(500_000):
+             l, d = [l], {'k':d}
+         with self.assertRaises(RecursionError):
+             with support.infinite_recursion(5000):

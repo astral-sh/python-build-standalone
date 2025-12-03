@@ -177,4 +177,10 @@ jobs:
         run: |
           chmod +x build/pythonbuild
 
-          build/pythonbuild validate-distribution --macos-sdks-path macosx-sdks --run dist/*.tar.zst
+          if [ "${MATRIX_RUN}" == "true" ]; then
+            EXTRA_ARGS="--run"
+          fi
+
+          build/pythonbuild validate-distribution --macos-sdks-path macosx-sdks ${EXTRA_ARGS} dist/*.tar.zst
+        env:
+          MATRIX_RUN: ${{ matrix.run }}

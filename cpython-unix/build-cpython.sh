@@ -633,7 +633,12 @@ fi
 # executable_dir when valid. This allows venv to be created from symlinks
 # See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+# 3.10 does not use getpath.py only getpath.c, no patch is applied
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
+    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+fi
 
 # We patched configure.ac above. Reflect those changes.
 autoconf

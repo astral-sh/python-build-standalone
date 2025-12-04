@@ -636,6 +636,12 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     patch -p1 -i "${ROOT}/patch-python-getpath-3.14.patch"
 fi
 
+# Another, similar change to getpath: When reading inside a venv use the base_executable path to
+# determine executable_dir when valid. This allows venv to be created from symlinks and covers some
+# cases the above patch doesn't. See:
+# https://github.com/python/cpython/issues/106045#issuecomment-2594628161
+patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+
 # We patched configure.ac above. Reflect those changes.
 autoconf
 

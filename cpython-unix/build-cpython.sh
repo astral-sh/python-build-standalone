@@ -629,6 +629,12 @@ if [ -n "${CROSS_COMPILING}" ]; then
     # TODO: There are probably more of these, see #599.
 fi
 
+# When reading inside a venv use the base_executable path to determine
+# executable_dir when valid. This allows venv to be created from symlinks
+# See:
+# https://github.com/python/cpython/issues/106045#issuecomment-2594628161
+patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+
 # We patched configure.ac above. Reflect those changes.
 autoconf
 

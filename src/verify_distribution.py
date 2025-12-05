@@ -273,7 +273,7 @@ class TestPythonInterpreter(unittest.TestCase):
         assertLibc(importlib.machinery.EXTENSION_SUFFIXES[0])
 
     @unittest.skipIf(
-        sys.version_info[:2] < (3, 14),
+        sys.version_info[:2] < (3, 11),
         "not yet implemented",
     )
     @unittest.skipIf(os.name == "nt", "no symlinks or argv[0] on Windows")

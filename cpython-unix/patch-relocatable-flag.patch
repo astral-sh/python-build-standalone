@@ -1,0 +1,121 @@
+commit 6187c3916ac1e7e6eb2bff7ca5f976c99cbe273b
+Author: Zanie Blue <contact@zanie.dev>
+Date:   Sat Nov 15 08:47:20 2025 -0600
+
+    Add an `--enable-relocatable` configure flag
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 19423c11545..6c9cba59e27 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -60,6 +60,7 @@ DSYMUTIL=       @DSYMUTIL@
+ DSYMUTIL_PATH=  @DSYMUTIL_PATH@
+ 
+ GNULD=		@GNULD@
++RELOCATABLE=	@RELOCATABLE@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+ SHELL=		/bin/sh -e
+diff --git a/configure b/configure
+index 9757b3419d3..38f2d4dfbf2 100755
+--- a/configure
++++ b/configure
+@@ -949,6 +949,7 @@ LINK_PYTHON_DEPS
+ LIBRARY_DEPS
+ HOSTRUNNER
+ NODE
++RELOCATABLE
+ STATIC_LIBPYTHON
+ GNULD
+ EXPORTSFROM
+@@ -1091,6 +1092,7 @@ with_suffix
+ enable_shared
+ with_static_libpython
+ enable_profiling
++enable_relocatable
+ enable_gil
+ with_pydebug
+ with_trace_refs
+@@ -1826,6 +1828,8 @@ Optional Features:
+                           no)
+   --enable-profiling      enable C-level code profiling with gprof (default is
+                           no)
++  --enable-relocatable    enable build of a relocatable Python distribution
++                          (default is no)
+   --disable-gil           enable support for running without the GIL (default
+                           is no)
+   --enable-pystats        enable internal statistics gathering (default is no)
+@@ -7673,6 +7677,31 @@ if test "x$enable_profiling" = xyes; then
+   LDFLAGS="-pg $LDFLAGS"
+ fi
+ 
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for --enable-relocatable" >&5
++printf %s "checking for --enable-relocatable... " >&6; }
++# Check whether --enable-relocatable was given.
++if test ${enable_relocatable+y}
++then :
++  enableval=$enable_relocatable;
++fi
++
++if test -z "$enable_relocatable"
++then
++  enable_relocatable="no"
++fi
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $enable_relocatable" >&5
++printf "%s\n" "$enable_relocatable" >&6; }
++
++if test "x$enable_relocatable" = xyes; then
++
++printf "%s\n" "#define Py_ENABLE_RELOCATABLE 1" >>confdefs.h
++
++  RELOCATABLE=yes
++else
++  RELOCATABLE=no
++fi
++
++
+ { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking LDLIBRARY" >&5
+ printf %s "checking LDLIBRARY... " >&6; }
+ 
+diff --git a/configure.ac b/configure.ac
+index f244e0b71a6..b1c859071f4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1523,6 +1523,23 @@ if test "x$enable_profiling" = xyes; then
+   LDFLAGS="-pg $LDFLAGS"
+ fi
+ 
++AC_MSG_CHECKING([for --enable-relocatable])
++AC_ARG_ENABLE([relocatable],
++              AS_HELP_STRING([--enable-relocatable], [enable build of a relocatable Python distribution (default is no)]))
++if test -z "$enable_relocatable"
++then
++  enable_relocatable="no"
++fi
++AC_MSG_RESULT([$enable_relocatable])
++
++if test "x$enable_relocatable" = xyes; then
++  AC_DEFINE([Py_ENABLE_RELOCATABLE], [1], [Define if --enable-relocatable is used])
++  RELOCATABLE=yes
++else
++  RELOCATABLE=no
++fi
++AC_SUBST([RELOCATABLE])
++
+ AC_MSG_CHECKING([LDLIBRARY])
+ 
+ # Apple framework builds need more magic. LDLIBRARY is the dynamic
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 72870411bc0..76fe6a9b52c 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -1733,6 +1733,9 @@
+ /* Define if you want to build an interpreter with many run-time checks. */
+ #undef Py_DEBUG
+ 
++/* Define if --enable-relocatable is used */
++#undef Py_ENABLE_RELOCATABLE
++
+ /* Defined if Python is built as a shared library. */
+ #undef Py_ENABLE_SHARED
+ 

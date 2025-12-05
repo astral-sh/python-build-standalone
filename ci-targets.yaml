@@ -180,6 +180,7 @@ linux:
       - options:
           - freethreaded+debug
           - freethreaded+pgo+lto
+          - pgo+lto+asan
         minimum-python-version: "3.13"
     run: true
 

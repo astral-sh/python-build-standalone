@@ -300,9 +300,8 @@ class TestPythonInterpreter(unittest.TestCase):
                     )
                     assertPythonWorks(venv / "bin" / "python")
 
-        # TODO: does not yet work on ARM64
-        # with self.subTest(msg="weird argv[0]"):
-        #     assertPythonWorks(sys.executable, argv0="/dev/null")
+        with self.subTest(msg="weird argv[0]"):
+            assertPythonWorks(sys.executable, argv0="/dev/null")
 
 
 if __name__ == "__main__":

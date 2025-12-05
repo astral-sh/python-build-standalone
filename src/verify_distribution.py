@@ -4,8 +4,11 @@
 
 import importlib.machinery
 import os
+from pathlib import Path
 import struct
+import subprocess
 import sys
+import tempfile
 import unittest
 
 TERMINFO_DIRS = [
@@ -268,6 +271,37 @@ class TestPythonInterpreter(unittest.TestCase):
             assertLibc(sys.implementation._multiarch)
 
         assertLibc(importlib.machinery.EXTENSION_SUFFIXES[0])
+
+    @unittest.skipIf(
+        sys.version_info[:2] < (3, 14),
+        "not yet implemented",
+    )
+    @unittest.skipIf(os.name == "nt", "no symlinks or argv[0] on Windows")
+    def test_getpath(self):
+        def assertPythonWorks(path: Path, argv0: str = None):
+            output = subprocess.check_output(
+                [argv0 or path, "-c", "print(42)"], executable=path, text=True
+            )
+            self.assertEqual(output.strip(), "42")
+
+        with tempfile.TemporaryDirectory(prefix="verify-distribution-") as t:
+            tmpdir = Path(t)
+            symlink = tmpdir / "python"
+            symlink.symlink_to(sys.executable)
+            with self.subTest(msg="symlink without venv"):
+                assertPythonWorks(symlink)
+
+            # TODO: --copies does not work right
+            for flag in ("--symlinks",):
+                with self.subTest(flag=flag):
+                    venv = tmpdir / f"venv_{flag}"
+                    subprocess.check_call(
+                        [symlink, "-m", "venv", flag, "--without-pip", venv]
+                    )
+                    assertPythonWorks(venv / "bin" / "python")
+
+        with self.subTest(msg="weird argv[0]"):
+            assertPythonWorks(sys.executable, argv0="/dev/null")
 
 
 if __name__ == "__main__":

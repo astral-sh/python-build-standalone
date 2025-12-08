@@ -704,16 +704,19 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
+        # Fix the Python binary to reference libpython via @rpath and add
+        # an rpath entry so it can find the library.
         install_name_tool \
-            -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
+            -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
+            -add_rpath @executable_path/../lib \
             ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}
 
         # Python's build system doesn't make this file writable.
-        # TODO(geofft): @executable_path/ is a weird choice here, who is
-        # relying on it? Should probably be @loader_path.
         chmod 755 ${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
+        # Set libpython's install name to @rpath so binaries linking against it
+        # can locate it via their own rpath entries.
         install_name_tool \
-            -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
+            -id @rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
             ${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
         # We also normalize /tools/deps/lib/libz.1.dylib to the system location.
@@ -726,7 +729,8 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
 
         if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
             install_name_tool \
-                -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @executable_path/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
+                -change /install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME} @rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME} \
+                -add_rpath @executable_path/../lib \
                 ${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}
         fi
 

@@ -188,13 +188,15 @@ fi
 # On Windows, CPython looks for the Tcl/Tk libraries relative to the base prefix,
 # which we want. But on Unix, it doesn't. This patch applies similar behavior on Unix,
 # thereby ensuring that the Tcl/Tk libraries are found in the correct location.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ]; then
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    patch -p1 -i ${ROOT}/patch-tkinter-3.14.patch
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
     patch -p1 -i ${ROOT}/patch-tkinter-3.13.patch
-elif [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-tkinter-3.12.patch
-elif [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i ${ROOT}/patch-tkinter-3.11.patch
-elif [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-tkinter-3.10.patch
 fi
 

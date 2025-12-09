@@ -19,12 +19,14 @@ export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib
 tar -xf tcl${TCL_VERSION}-src.tar.gz
 pushd tcl${TCL_VERSION}
 
+EXTRA_CONFIGURE=
 
 if [ -n "${STATIC}" ]; then
 	if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
-		# tcl misbehaves when performing static musl builds
-		# `checking whether musl-clang accepts -g...` fails with a duplicate definition error
-		TARGET_TRIPLE="$(echo "${TARGET_TRIPLE}" | sed -e 's/-unknown-linux-musl/-unknown-linux-gnu/g')"
+		# tcl will use an internal implementation of certain POSIX function when
+		# cross-compiling. The implementation of strtoul create multiple definitions
+		# when linked against the static musl libc. Exclude the internal implementation.
+		EXTRA_CONFIGURE="${EXTRA_CONFIGURE} tcl_cv_strtoul_unbroken=ok"
 	fi
 
 	patch -p1 << 'EOF'
@@ -59,7 +61,8 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --host=${TARGET_TRIPLE} \
     --prefix=/tools/deps \
     --enable-shared"${STATIC:+=no}" \
-    --enable-threads
+    --enable-threads \
+    ${EXTRA_CONFIGURE}
 
 make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath
 make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out DYLIB_INSTALL_DIR=@rpath

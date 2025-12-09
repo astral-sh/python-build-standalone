@@ -176,12 +176,6 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.libxcb.txt",
     },
-    "llvm-14-x86_64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20220508/llvm-14.0.3+20220508-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
-        "size": 158614671,
-        "sha256": "04cb77c660f09df017a57738ae9635ef23a506024789f2f18da1304b45af2023",
-        "version": "14.0.3+20220508",
-    },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-21-aarch64-linux": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20251029/llvm-21.1.4+20251029-gnu_only-aarch64-unknown-linux-gnu.tar.zst",

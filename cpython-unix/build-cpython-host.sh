@@ -34,17 +34,6 @@ tar -xf Python-${PYTHON_VERSION}.tar.xz
 
 pushd "Python-${PYTHON_VERSION}"
 
-# Clang 13 actually prints something with --print-multiarch, confusing CPython's
-# configure. This is reported as https://bugs.python.org/issue45405. We nerf the
-# check since we know what we're doing.
-if [[ "${CC}" = "clang" || "${CC}" = "musl-clang" ]]; then
-  if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-    patch -p1 -i ${ROOT}/patch-disable-multiarch-13.patch
-  else
-    patch -p1 -i ${ROOT}/patch-disable-multiarch.patch
-  fi
-fi
-
 autoconf
 
 # When cross-compiling, we need to build a host Python that has working zlib

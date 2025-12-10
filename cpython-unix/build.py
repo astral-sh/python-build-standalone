@@ -428,8 +428,6 @@ def build_cpython_host(
 
         support = {
             "build-cpython-host.sh",
-            "patch-disable-multiarch.patch",
-            "patch-disable-multiarch-13.patch",
         }
         for s in sorted(support):
             build_env.copy_file(SUPPORT / s)

@@ -295,8 +295,8 @@ fi
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault
-# is a fatal error.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+# is a fatal error. Fixed in 3.14+, https://github.com/python/cpython/pull/128474
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.12 ] || [ "${PYTHON_MAJMIN_VERSION}" = 3.13 ]; then
     patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
 fi
 

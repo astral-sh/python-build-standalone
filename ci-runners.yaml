@@ -40,6 +40,11 @@ windows-latest:
   platform: windows
   free: true
 
+github-windows-11-aarch64-8:
+  arch: aarch64
+  platform: windows
+  free: false
+
 windows-11-arm:
   arch: aarch64
   platform: windows

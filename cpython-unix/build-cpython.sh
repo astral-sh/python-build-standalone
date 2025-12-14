@@ -175,6 +175,12 @@ else
     patch -p1 -i ${ROOT}/patch-ctypes-callproc-legacy.patch
 fi
 
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+    patch -p1 -i ${ROOT}/patch-cpython-relocatable-sysconfig-3.13.patch
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
+    patch -p1 -i ${ROOT}/patch-cpython-relocatable-sysconfig-3.10.patch
+fi
+
 # On Windows, CPython looks for the Tcl/Tk libraries relative to the base prefix,
 # which we want. But on Unix, it doesn't. This patch applies similar behavior on Unix,
 # thereby ensuring that the Tcl/Tk libraries are found in the correct location.
@@ -883,6 +889,7 @@ fi
 # that a) it works on as many machines as possible b) doesn't leak details
 # about the build environment, which is non-portable.
 cat > ${ROOT}/hack_sysconfig.py << EOF
+import ast
 import json
 import os
 import sys
@@ -894,7 +901,7 @@ FREETHREADED = sysconfig.get_config_var("Py_GIL_DISABLED")
 MAJMIN = ".".join([str(sys.version_info[0]), str(sys.version_info[1])])
 LIB_SUFFIX = "t" if FREETHREADED else ""
 PYTHON_CONFIG = os.path.join(ROOT, "install", "bin", "python%s-config" % MAJMIN)
-PLATFORM_CONFIG = os.path.join(ROOT, sysconfig.get_config_var("LIBPL").lstrip("/"))
+PLATFORM_CONFIG = sysconfig.get_config_var("LIBPL")
 MAKEFILE = os.path.join(PLATFORM_CONFIG, "Makefile")
 SYSCONFIGDATA = os.path.join(
     ROOT,
@@ -925,51 +932,56 @@ def replace_in_all(search, replace):
     replace_in_file(SYSCONFIGDATA, search, replace)
 
 
+def _find_build_time_vars_assign(module):
+    """Return the Assign node for 'build_time_vars = {...}' or None."""
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == "build_time_vars":
+                    return node
+    return None
+
+
+def _patch_build_time_vars(assign_node, keys, search, replace):
+    """Patch plain string values for the given keys inside the dict literal."""
+    if not isinstance(assign_node.value, ast.Dict):
+        return
+
+    d: ast.Dict = assign_node.value
+    for key_node, val_node in zip(d.keys, d.values):
+        k = key_node.value
+        if k in keys and isinstance(val_node, ast.Constant) and isinstance(val_node.value, str):
+            val_node.value = val_node.value.replace(search, replace)
+
+
 def replace_in_sysconfigdata(search, replace, keys):
     """Replace a string in the sysconfigdata file for select keys."""
-    with open(SYSCONFIGDATA, "rb") as fh:
-        data = fh.read()
+    with open(SYSCONFIGDATA, "r", encoding="utf-8") as fh:
+        source = fh.read()
 
-    globals_dict = {}
-    locals_dict = {}
-    exec(data, globals_dict, locals_dict)
-    build_time_vars = locals_dict['build_time_vars']
+    module = ast.parse(source)
+    assign = _find_build_time_vars_assign(module)
+    if assign is None:
+        # Nothing to do if build_time_vars isn't present.
+        return
 
-    for key in keys:
-        if key in build_time_vars:
-            build_time_vars[key] = build_time_vars[key].replace(search, replace)
+    # Patch the dict
+    _patch_build_time_vars(assign, keys, search, replace)
 
-    with open(SYSCONFIGDATA, "wb") as fh:
-        fh.write(b'# system configuration generated and used by the sysconfig module\n')
-        fh.write(('build_time_vars = %s' % json.dumps(build_time_vars, indent=4, sort_keys=True)).encode("utf-8"))
-        fh.close()
+    # Compute the textual prefix up to (but not including) the start of build_time_vars.
+    lines = source.splitlines()
+    start_line = assign.lineno  # 1-based
+    head_text = "\n".join(lines[: start_line - 1])
 
+    # Unparse the patched assignment
+    assign_src = ast.unparse(assign)
 
-def format_sysconfigdata():
-    """Reformat the sysconfigdata file to avoid implicit string concatenations.
+    # Rewrite: preserved head + patched assignment + trailing newline
+    new_source = head_text + ("\n" if head_text and not head_text.endswith("\n") else "")
+    new_source += assign_src + "\n"
 
-    In some Python versions, the sysconfigdata file contains implicit string
-    concatenations that extend over multiple lines, which make string replacement
-    much harder. This function reformats the file to avoid this issue.
-
-    See: https://github.com/python/cpython/blob/a03efb533a58fd13fb0cc7f4a5c02c8406a407bd/Mac/BuildScript/build-installer.py#L1360C1-L1385C15.
-    """
-    with open(SYSCONFIGDATA, "rb") as fh:
-        data = fh.read()
-
-    globals_dict = {}
-    locals_dict = {}
-    exec(data, globals_dict, locals_dict)
-    build_time_vars = locals_dict['build_time_vars']
-
-    with open(SYSCONFIGDATA, "wb") as fh:
-        fh.write(b'# system configuration generated and used by the sysconfig module\n')
-        fh.write(('build_time_vars = %s' % json.dumps(build_time_vars, indent=4, sort_keys=True)).encode("utf-8"))
-        fh.close()
-
-
-# Format sysconfig to ensure that string replacements take effect.
-format_sysconfigdata()
+    with open(SYSCONFIGDATA, "w", encoding="utf-8") as fh:
+        fh.write(new_source)
 
 # Remove `-Werror=unguarded-availability-new` from `CFLAGS` and `CPPFLAGS`.
 # These flags are passed along when building extension modules. In that context,
@@ -1063,7 +1075,7 @@ metadata = {
     "python_paths_abstract": sysconfig.get_paths(expand=False),
     "python_exe": "install/bin/python%s%s" % (sysconfig.get_python_version(), sys.abiflags),
     "python_major_minor_version": sysconfig.get_python_version(),
-    "python_stdlib_platform_config": sysconfig.get_config_var("LIBPL").lstrip("/"),
+    "python_stdlib_platform_config": sysconfig.get_config_var("LIBPL"),
     "python_config_vars": {k: str(v) for k, v in sysconfig.get_config_vars().items()},
 }
 

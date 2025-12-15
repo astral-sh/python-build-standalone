@@ -1,4 +1,4 @@
-From 4fb328cb883504dde04dfdd0b4d182a0130a0909 Mon Sep 17 00:00:00 2001
+From 60d6a76dcee2a5647d69874d9b5c24f701a6722d Mon Sep 17 00:00:00 2001
 From: Geoffrey Thomas <geofft@ldpreload.com>
 Date: Mon, 1 Dec 2025 14:11:43 -0500
 Subject: [PATCH 1/1] getpath: Fix library detection and canonicalize paths on
@@ -25,13 +25,19 @@ relative paths and they are not canonicalized, so instead, use
 no safe API on glibc to read it and no API at all on musl. Note that and
 glibc also uses procfs to do so; see discussion at
 https://sourceware.org/bugzilla/show_bug.cgi?id=25263)
+
+Finally, switch the target address for lookups to the current function's
+return address. This avoids issues on some build configurations and
+platforms where the addresses Python library functions are behind a
+layer of indirection like the PLT. (See also the BUGS section of Linux
+man-pages' dladdr(3).)
 ---
- Modules/getpath.c  | 52 ++++++++++++++++++++++++++++++++++++++++------
- Modules/getpath.py |  4 ++--
- 2 files changed, 48 insertions(+), 8 deletions(-)
+ Modules/getpath.c  | 62 +++++++++++++++++++++++++++++++++++++++++-----
+ Modules/getpath.py |  4 +--
+ 2 files changed, 58 insertions(+), 8 deletions(-)
 
 diff --git a/Modules/getpath.c b/Modules/getpath.c
-index 1e75993480a..72860807133 100644
+index 1e75993480a..347c21e7387 100644
 --- a/Modules/getpath.c
 +++ b/Modules/getpath.c
 @@ -802,14 +802,19 @@ progname_to_dict(PyObject *dict, const char *key)
@@ -58,11 +64,13 @@ index 1e75993480a..72860807133 100644
  #ifdef MS_WINDOWS
      extern HMODULE PyWin_DLLhModule;
      if (PyWin_DLLhModule) {
-@@ -817,12 +822,47 @@ library_to_dict(PyObject *dict, const char *key)
+@@ -817,12 +822,57 @@ library_to_dict(PyObject *dict, const char *key)
      }
  #endif
  
-+    const void *target = (void *)Py_Initialize;
++    const void *target = __builtin_extract_return_addr(
++        __builtin_return_address(0)
++    );
 +
 +#ifdef __linux__
 +    /* Linux libcs do not reliably report the realpath in dladdr dli_fname and
@@ -84,11 +92,19 @@ index 1e75993480a..72860807133 100644
 +         * TODO(geofft): Consider using PROCMAP_QUERY if supported.
 +         */
 +        uintptr_t low, high;
-+        char filename[PATH_MAX];
-+        while (fscanf(maps,
-+                      "%lx-%lx %*s %*s %*s %*s %[^\n]",
-+                      &low, &high, filename) == 3) {
++        char rest[PATH_MAX + 1];
++        while (fscanf(maps, "%lx-%lx %*s %*s %*s %*s", &low, &high) == 2) {
++            if (fgets(rest, PATH_MAX + 1, maps) == NULL) {
++                break;
++            }
++            if (strlen(rest) >= PATH_MAX) {
++                // If the line is too long our parsing will be out of sync.
++                break;
++            }
++
 +            if (low <= (uintptr_t)target && (uintptr_t)target < high) {
++                // Skip past padding spaces in the filename.
++                const char *filename = rest + strspn(rest, " ");
 +                if (filename[0] == '/') {
 +                    return decode_to_dict(dict, key, filename);
 +                }

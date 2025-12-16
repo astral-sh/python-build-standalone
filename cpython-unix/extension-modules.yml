@@ -431,8 +431,18 @@ _random:
 
 _remote_debugging:
   minimum-python-version: "3.14"
-  sources:
-    - _remote_debugging_module.c
+  sources-conditional:
+    - sources:
+      - _remote_debugging_module.c
+      maximum-python-version: "3.14"
+    - sources:
+      - _remote_debugging/module.c
+      - _remote_debugging/object_reading.c
+      - _remote_debugging/code_objects.c
+      - _remote_debugging/frames.c
+      - _remote_debugging/threads.c
+      - _remote_debugging/asyncio.c
+      minimum-python-version: "3.15"
 
 _scproxy:
   # _scproxy is Apple OS only.

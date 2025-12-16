@@ -1,0 +1,109 @@
+From 3342daa091b0a8e6cf15fdaaa2c6fc2f9dcc8a60 Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Tue, 16 Dec 2025 09:29:55 -0500
+Subject: [PATCH 1/1] Backport relevant parts of 3.14 getpath.c to 3.13
+Forwarded: not-needed
+
+---
+ Modules/getpath.c | 38 +++++++++++++++-----------------------
+ configure.ac      |  2 +-
+ pyconfig.h.in     |  3 +++
+ 3 files changed, 19 insertions(+), 24 deletions(-)
+
+diff --git a/Modules/getpath.c b/Modules/getpath.c
+index d0128b20fae..50612432027 100644
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -17,10 +17,13 @@
+ #endif
+ 
+ #ifdef __APPLE__
+-#  include <dlfcn.h>
+ #  include <mach-o/dyld.h>
+ #endif
+ 
++#ifdef HAVE_DLFCN_H
++#  include <dlfcn.h>
++#endif
++
+ /* Reference the precompiled getpath.py */
+ #include "Python/frozen_modules/getpath.h"
+ 
+@@ -803,36 +806,25 @@ progname_to_dict(PyObject *dict, const char *key)
+ static int
+ library_to_dict(PyObject *dict, const char *key)
+ {
++/* macOS framework builds do not link against a libpython dynamic library, but
++   instead link against a macOS Framework. */
++#if defined(Py_ENABLE_SHARED) || defined(WITH_NEXT_FRAMEWORK)
++
+ #ifdef MS_WINDOWS
+-#ifdef Py_ENABLE_SHARED
+     extern HMODULE PyWin_DLLhModule;
+     if (PyWin_DLLhModule) {
+         return winmodule_to_dict(dict, key, PyWin_DLLhModule);
+     }
+ #endif
+-#elif defined(WITH_NEXT_FRAMEWORK)
+-    static char modPath[MAXPATHLEN + 1];
+-    static int modPathInitialized = -1;
+-    if (modPathInitialized < 0) {
+-        modPathInitialized = 0;
+-
+-        /* On Mac OS X we have a special case if we're running from a framework.
+-           This is because the python home should be set relative to the library,
+-           which is in the framework, not relative to the executable, which may
+-           be outside of the framework. Except when we're in the build
+-           directory... */
+-        Dl_info pythonInfo;
+-        if (dladdr(&Py_Initialize, &pythonInfo)) {
+-            if (pythonInfo.dli_fname) {
+-                strncpy(modPath, pythonInfo.dli_fname, MAXPATHLEN);
+-                modPathInitialized = 1;
+-            }
+-        }
+-    }
+-    if (modPathInitialized > 0) {
+-        return decode_to_dict(dict, key, modPath);
++
++#if HAVE_DLADDR
++    Dl_info libpython_info;
++    if (dladdr(&Py_Initialize, &libpython_info) && libpython_info.dli_fname) {
++        return decode_to_dict(dict, key, libpython_info.dli_fname);
+     }
+ #endif
++#endif
++
+     return PyDict_SetItemString(dict, key, Py_None) == 0;
+ }
+ 
+diff --git a/configure.ac b/configure.ac
+index 94776540d1b..fbc6cfd0de4 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -5217,7 +5217,7 @@ fi
+ # checks for library functions
+ AC_CHECK_FUNCS([ \
+   accept4 alarm bind_textdomain_codeset chmod chown clock closefrom close_range confstr \
+-  copy_file_range ctermid dup dup3 execv explicit_bzero explicit_memset \
++  copy_file_range ctermid dladdr dup dup3 execv explicit_bzero explicit_memset \
+   faccessat fchmod fchmodat fchown fchownat fdopendir fdwalk fexecve \
+   fork fork1 fpathconf fstatat ftime ftruncate futimens futimes futimesat \
+   gai_strerror getegid geteuid getgid getgrent getgrgid getgrgid_r \
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index e18a6426b06..10b0cc1dafd 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -284,6 +284,9 @@
+ /* Define if you have the 'dirfd' function or macro. */
+ #undef HAVE_DIRFD
+ 
++/* Define to 1 if you have the 'dladdr' function. */
++#undef HAVE_DLADDR
++
+ /* Define to 1 if you have the <dlfcn.h> header file. */
+ #undef HAVE_DLFCN_H
+ 
+-- 
+2.50.1 (Apple Git-155)
+

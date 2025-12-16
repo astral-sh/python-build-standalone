@@ -623,8 +623,12 @@ fi
 # Adjust the Python startup logic (getpath.py) to properly locate the installation, even when
 # invoked through a symlink or through an incorrect argv[0]. Because this Python is relocatable, we
 # don't get to rely on the fallback to the compiled-in installation prefix.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-    patch -p1 -i "${ROOT}/patch-python-getpath-3.14.patch"
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]]; then
+    if [ -e "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch" ]; then
+        # Sync the getpath logic in older minor releases to the current version.
+        patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
+    fi
+    patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 fi
 
 # Another, similar change to getpath: When reading inside a venv use the base_executable path to

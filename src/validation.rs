@@ -286,7 +286,7 @@ static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<HashMap<&'static str, Vec<&'static 
             (
                 // libtcl and libtk are shipped in our distribution.
                 "_tkinter",
-                vec!["libtcl8.6.so", "libtk8.6.so"],
+                vec!["libtcl9.0.so", "libtcl9tk9.0.so"],
             ),
         ]
         .iter()
@@ -454,6 +454,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: true,
             },
             MachOAllowedDylib {
+                name: "/System/Library/Frameworks/Security.framework/Versions/A/Security".to_string(),
+                max_compatibility_version: "1.0.0".try_into().unwrap(),
+                required: true,
+            },
+            MachOAllowedDylib {
                 name: "/usr/lib/libedit.3.dylib".to_string(),
                 max_compatibility_version: "2.0.0".try_into().unwrap(),
                 required: true,
@@ -494,13 +499,13 @@ static ALLOWED_DYLIBS_BY_MODULE: Lazy<HashMap<&'static str, Vec<MachOAllowedDyli
             "_tkinter",
             vec![
                 MachOAllowedDylib {
-                    name: "@rpath/libtcl8.6.dylib".to_string(),
-                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    name: "@rpath/libtcl9.0.dylib".to_string(),
+                    max_compatibility_version: "9.0.0".try_into().unwrap(),
                     required: true,
                 },
                 MachOAllowedDylib {
-                    name: "@rpath/libtk8.6.dylib".to_string(),
-                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    name: "@rpath/libtcl9tk9.0.dylib".to_string(),
+                    max_compatibility_version: "9.0.0".try_into().unwrap(),
                     required: true,
                 },
             ],

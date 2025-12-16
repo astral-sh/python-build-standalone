@@ -913,11 +913,9 @@ def build_cpython(
 
         python_info["tcl_library_path"] = "install/lib"
         python_info["tcl_library_paths"] = [
-            "itcl4.2.4",
-            "tcl8",
-            "tcl8.6",
-            "thread2.8.7",
-            "tk8.6",
+            "itcl4.3.5",
+            "thread3.0.4",
+            "tk9.0",
         ]
 
         if "-apple" in target_triple:

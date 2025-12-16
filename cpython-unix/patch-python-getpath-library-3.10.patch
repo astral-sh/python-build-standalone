@@ -1,0 +1,124 @@
+From cfb5d870686a52f9c6d0ee72b1a1c035eb0a19dd Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Tue, 16 Dec 2025 13:43:43 -0500
+Subject: [PATCH 1/1] [3.10] getpath: Fix library detection and canonicalize
+ paths on Linux
+Forwarded: not-needed
+
+This is an implementation of the corresponding patch for 3.11+
+(patch-python-getpath-library.patch) to the pure-C getpath
+implementation in 3.10. See that patch's commit message for the details
+and motivation.
+
+3.10 getpath appears to loop over parent directories to the calculated
+argv[0] path, so the issue mentioned in the original commit message
+about the extra lib/ segment should not arise.
+---
+ Modules/getpath.c | 77 +++++++++++++++++++++++++++++++++++++++++++++++
+ 1 file changed, 77 insertions(+)
+
+diff --git a/Modules/getpath.c b/Modules/getpath.c
+index ef6dd59a084..41255647bcd 100644
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -8,6 +8,7 @@
+ 
+ #include <sys/types.h>
+ #include <string.h>
++#include <dlfcn.h>
+ 
+ #ifdef __APPLE__
+ #  include <mach-o/dyld.h>
+@@ -952,6 +953,15 @@ calculate_program_macos(wchar_t **abs_path_p)
+ #endif  /* __APPLE__ */
+ 
+ 
++static void
++fclose_cleanup(FILE **pf) {
++    if (*pf) {
++        fclose(*pf);
++        *pf = NULL;
++    }
++}
++
++
+ static PyStatus
+ calculate_program_impl(PyCalculatePath *calculate, _PyPathConfig *pathconfig)
+ {
+@@ -959,6 +969,73 @@ calculate_program_impl(PyCalculatePath *calculate, _PyPathConfig *pathconfig)
+ 
+     PyStatus status;
+ 
++    const void *target = __builtin_extract_return_addr(
++        __builtin_return_address(0)
++    );
++    size_t len;
++
++#ifdef __linux__
++    /* Linux libcs do not reliably report the realpath in dladdr dli_fname and
++     * sometimes return relative paths, especially if the returned object is
++     * the main program itself. However, /proc/self/maps will give absolute
++     * realpaths (from the kernel, for the same reason that /proc/self/exe is
++     * canonical), so try to parse and look it up there.  (dyld seems to
++     * reliably report the canonical path, so doing this matches the behavior
++     * on macOS.) */
++
++    __attribute__((cleanup(fclose_cleanup)))
++    FILE *maps = fopen("/proc/self/maps", "r");
++    if (maps != NULL) {
++        /* See implementation in fs/proc/task_mmu.c for spacing. The pathname
++         * is the last field and has any \n characters escaped, so we can read
++         * until \n. Note that the filename may have " (deleted)" appended;
++         * we don't bother to handle that specially as the only user of this
++         * value calls dirname() anyway.
++         * TODO(geofft): Consider using PROCMAP_QUERY if supported.
++         */
++        uintptr_t low, high;
++        char rest[PATH_MAX + 1];
++        while (fscanf(maps, "%lx-%lx %*s %*s %*s %*s", &low, &high) == 2) {
++            if (fgets(rest, PATH_MAX + 1, maps) == NULL) {
++                break;
++            }
++            size_t restlen = strlen(rest);
++            if (restlen >= PATH_MAX) {
++                // If the line is too long our parsing will be out of sync.
++                break;
++            }
++            if (restlen > 0 && rest[restlen - 1] == '\n') {
++                rest[restlen - 1] = '\0';
++            } else {
++                // EOF or error before we got to end of line.
++                break;
++            }
++
++            if (low <= (uintptr_t)target && (uintptr_t)target < high) {
++                // Skip past padding spaces in the filename.
++                const char *filename = rest + strspn(rest, " ");
++                if (filename[0] == '/') {
++                    pathconfig->program_full_path = Py_DecodeLocale(filename, &len);
++                    if (pathconfig->program_full_path == NULL) {
++                        return DECODE_LOCALE_ERR("mapped code path", len);
++                    }
++                    return _PyStatus_OK();
++                }
++                break;
++            }
++        }
++    }
++#endif
++
++    Dl_info libpython_info;
++    if (dladdr(target, &libpython_info) && libpython_info.dli_fname) {
++        pathconfig->program_full_path = Py_DecodeLocale(libpython_info.dli_fname, &len);
++        if (pathconfig->program_full_path == NULL) {
++            return DECODE_LOCALE_ERR("shared object path", len);
++        }
++        return _PyStatus_OK();
++    }
++
+     /* If there is no slash in the argv0 path, then we have to
+      * assume python is on the user's $PATH, since there's no
+      * other way to find a directory to start the search from.  If
+-- 
+2.50.1 (Apple Git-155)
+

@@ -229,14 +229,11 @@ fi
 # disable the functionality and require our auto-generated Setup.local to provide
 # everything.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         # This sets MODULE_<NAME>_STATE=disabled in the Makefile for all extension
         # modules that are not unavailable (n/a) based on the platform.
         # Valid STATE variables are needed to create the _missing_stdlib_info.py
-        # file during the build.
-        # TODO(jjh): This could likely be done for older Python versions as well.
-        patch -p1 -i ${ROOT}/patch-configure-disable-stdlib-mod-3.15.patch
-    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+        # file during the build in Python 3.15+
         patch -p1 -i ${ROOT}/patch-configure-disable-stdlib-mod-3.12.patch
     else
         patch -p1 -i ${ROOT}/patch-configure-disable-stdlib-mod.patch

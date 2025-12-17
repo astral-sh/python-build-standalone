@@ -281,6 +281,13 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-crypt-no-modify-libs.patch
 fi
 
+# CPython <3.12 expects an external libtommath. Backport
+# https://github.com/python/cpython/pull/103842 to avoid this behavior.
+# TODO(jjh): Other changes from https://github.com/python/cpython/issues/103194
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+    patch -p1 -i ${ROOT}/patch-tkinter-for-no-libtommath.patch
+fi
+
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault

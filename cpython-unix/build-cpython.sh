@@ -270,7 +270,9 @@ fi
 # the configure-based module building and replacing it with our
 # own Setup-derived version completely breaks assumptions in this
 # script. So leave it off for now... at our own peril.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i ${ROOT}/patch-checksharedmods-disable-3.15.patch
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i ${ROOT}/patch-checksharedmods-disable.patch
 fi
 

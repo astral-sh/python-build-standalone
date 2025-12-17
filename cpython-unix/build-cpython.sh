@@ -96,7 +96,8 @@ fi
 # TODO this may not be needed after removing support for i686 builds. But it
 # may still be useful since CPython's definition of cross-compiling has historically
 # been very liberal and kicks in when it arguably shouldn't.
-if [ -n "${CROSS_COMPILING}" ]; then
+# Merged upstream in Python 3.15, https://github.com/python/cpython/pull/141958
+if [[ -n "${CROSS_COMPILING}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
         patch -p1 -i ${ROOT}/patch-dont-clear-runshared-14.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then

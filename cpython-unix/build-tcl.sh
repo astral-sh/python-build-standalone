@@ -53,6 +53,14 @@ if [ -n "${CROSS_COMPILING}" ]; then
     EXTRA_CONFIGURE="${EXTRA_CONFIGURE} --disable-zipfs"
 fi
 
+# musl does not include queue.h
+# https://wiki.musl-libc.org/faq#Q:-Why-is-%3Ccode%3Esys/queue.h%3C/code%3E-not-included?
+# It is a self contained header file, use a copy from the container.
+# https://core.tcl-lang.org/tcl/tktview/3ff2d724d03ba7d6edb8
+if [ "${CC}" = "musl-clang" ]; then
+    cp /usr/include/x86_64-linux-gnu/sys/queue.h /tools/host/include/sys/
+fi
+
 # Remove packages we don't care about and can pull in unwanted symbols.
 rm -rf pkgs/sqlite* pkgs/tdbc*
 

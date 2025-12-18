@@ -58,7 +58,7 @@ fi
 # It is a self contained header file, use a copy from the container.
 # https://core.tcl-lang.org/tcl/tktview/3ff2d724d03ba7d6edb8
 if [ "${CC}" = "musl-clang" ]; then
-    cp /usr/include/x86_64-linux-gnu/sys/queue.h /tools/host/include/sys/
+    cp /usr/include/$(uname -m)-linux-gnu/sys/queue.h /tools/host/include/sys
 fi
 
 # Remove packages we don't care about and can pull in unwanted symbols.

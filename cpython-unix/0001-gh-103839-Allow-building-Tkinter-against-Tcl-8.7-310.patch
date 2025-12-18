@@ -1,0 +1,37 @@
+From 5ea21ecc7ea3a8798be250566fe44fe11e8a98f8 Mon Sep 17 00:00:00 2001
+From: Christopher Chavez <chrischavez@gmx.us>
+Date: Fri, 19 May 2023 14:09:59 -0500
+Subject: [3.10] gh-103839: Allow building Tkinter against Tcl 8.7 without
+ external libtommath (GH-103842)
+
+---
+ .../Library/2023-04-25-16-31-00.gh-issue-103839.tpyLhI.rst     | 2 ++
+ Modules/_tkinter.c                                             | 3 +++
+ 2 files changed, 5 insertions(+)
+ create mode 100644 Misc/NEWS.d/next/Library/2023-04-25-16-31-00.gh-issue-103839.tpyLhI.rst
+
+diff --git a/Misc/NEWS.d/next/Library/2023-04-25-16-31-00.gh-issue-103839.tpyLhI.rst b/Misc/NEWS.d/next/Library/2023-04-25-16-31-00.gh-issue-103839.tpyLhI.rst
+new file mode 100644
+index 00000000000..1d40a8fbcd3
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2023-04-25-16-31-00.gh-issue-103839.tpyLhI.rst
+@@ -0,0 +1,2 @@
++Avoid compilation error due to tommath.h not being found when building
++Tkinter against Tcl 8.7 built with bundled libtommath.
+diff --git a/Modules/_tkinter.c b/Modules/_tkinter.c
+index 2a3e65b6c97..6aa7e6d7da1 100644
+--- a/Modules/_tkinter.c
++++ b/Modules/_tkinter.c
+@@ -55,6 +55,9 @@ Copyright (C) 1994 Steen Lumholt.
+ #if TK_HEX_VERSION >= 0x08050208 && TK_HEX_VERSION < 0x08060000 || \
+     TK_HEX_VERSION >= 0x08060200
+ #define HAVE_LIBTOMMATH
++#ifndef TCL_WITH_EXTERNAL_TOMMATH
++#define TCL_NO_TOMMATH_H
++#endif
+ #include <tclTomMath.h>
+ #endif
+ 
+-- 
+2.50.1 (Apple Git-155)
+

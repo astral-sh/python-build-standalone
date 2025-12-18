@@ -1,0 +1,134 @@
+From c64d272d4ba410296a9b6df3a256b767c1d61c46 Mon Sep 17 00:00:00 2001
+From: Serhiy Storchaka <storchaka@gmail.com>
+Date: Fri, 31 May 2024 12:15:53 +0300
+Subject: [3.10] =?UTF-8?q?[3.12]=20gh-103194:=20Fix=20Tkinter=E2=80=99s=20?=
+ =?UTF-8?q?Tcl=20value=20type=20handling=20for=20Tcl=208.7/9.0=20(GH-10384?=
+ =?UTF-8?q?6)=20(GH-119831)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Some of standard Tcl types were renamed, removed, or no longer
+registered in Tcl 8.7/9.0. This change fixes automatic conversion of Tcl
+values to Python values to avoid returning a Tcl_Obj where the primary
+Python types (int, bool, str, bytes) were returned in older Tcl.
+(cherry picked from commit 94e9585e99abc2d060cedc77b3c03e06b4a0a9c4)
+
+Co-authored-by: Christopher Chavez <chrischavez@gmx.us>
+---
+ ...-04-24-05-34-23.gh-issue-103194.GwBwWL.rst |  4 ++
+ Modules/_tkinter.c                            | 56 +++++++++++--------
+ 2 files changed, 36 insertions(+), 24 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2023-04-24-05-34-23.gh-issue-103194.GwBwWL.rst
+
+diff --git a/Misc/NEWS.d/next/Library/2023-04-24-05-34-23.gh-issue-103194.GwBwWL.rst b/Misc/NEWS.d/next/Library/2023-04-24-05-34-23.gh-issue-103194.GwBwWL.rst
+new file mode 100644
+index 00000000000..3f70168b810
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2023-04-24-05-34-23.gh-issue-103194.GwBwWL.rst
+@@ -0,0 +1,4 @@
++Prepare Tkinter for C API changes in Tcl 8.7/9.0 to avoid
++:class:`_tkinter.Tcl_Obj` being unexpectedly returned
++instead of :class:`bool`, :class:`str`,
++:class:`bytearray`, or :class:`int`.
+diff --git a/Modules/_tkinter.c b/Modules/_tkinter.c
+index 61296c8668a..dee90d6bc27 100644
+--- a/Modules/_tkinter.c
++++ b/Modules/_tkinter.c
+@@ -317,6 +317,7 @@ typedef struct {
+     const Tcl_ObjType *ListType;
+     const Tcl_ObjType *ProcBodyType;
+     const Tcl_ObjType *StringType;
++    const Tcl_ObjType *UTF32StringType;
+ } TkappObject;
+ 
+ #define Tkapp_Interp(v) (((TkappObject *) (v))->interp)
+@@ -745,15 +746,41 @@ Tkapp_New(const char *screenName, const char *className,
+     }
+ 
+     v->OldBooleanType = Tcl_GetObjType("boolean");
+-    v->BooleanType = Tcl_GetObjType("booleanString");
+-    v->ByteArrayType = Tcl_GetObjType("bytearray");
++    {
++        Tcl_Obj *value;
++        int boolValue;
++
++        /* Tcl 8.5 "booleanString" type is not registered
++           and is renamed to "boolean" in Tcl 9.0.
++           Based on approach suggested at
++           https://core.tcl-lang.org/tcl/info/3bb3bcf2da5b */
++        value = Tcl_NewStringObj("true", -1);
++        Tcl_GetBooleanFromObj(NULL, value, &boolValue);
++        v->BooleanType = value->typePtr;
++        Tcl_DecrRefCount(value);
++
++        // "bytearray" type is not registered in Tcl 9.0
++        value = Tcl_NewByteArrayObj(NULL, 0);
++        v->ByteArrayType = value->typePtr;
++        Tcl_DecrRefCount(value);
++    }
+     v->DoubleType = Tcl_GetObjType("double");
++    /* TIP 484 suggests retrieving the "int" type without Tcl_GetObjType("int")
++       since it is no longer registered in Tcl 9.0. But even though Tcl 8.7
++       only uses the "wideInt" type on platforms with 32-bit long, it still has
++       a registered "int" type, which FromObj() should recognize just in case. */
+     v->IntType = Tcl_GetObjType("int");
++    if (v->IntType == NULL) {
++        Tcl_Obj *value = Tcl_NewIntObj(0);
++        v->IntType = value->typePtr;
++        Tcl_DecrRefCount(value);
++    }
+     v->WideIntType = Tcl_GetObjType("wideInt");
+     v->BignumType = Tcl_GetObjType("bignum");
+     v->ListType = Tcl_GetObjType("list");
+     v->ProcBodyType = Tcl_GetObjType("procbody");
+     v->StringType = Tcl_GetObjType("string");
++    v->UTF32StringType = Tcl_GetObjType("utf32string");
+ 
+     /* Delete the 'exit' command, which can screw things up */
+     Tcl_DeleteCommand(v->interp, "exit");
+@@ -1308,14 +1335,6 @@ FromObj(TkappObject *tkapp, Tcl_Obj *value)
+         return PyFloat_FromDouble(value->internalRep.doubleValue);
+     }
+ 
+-    if (value->typePtr == tkapp->IntType) {
+-        long longValue;
+-        if (Tcl_GetLongFromObj(interp, value, &longValue) == TCL_OK)
+-            return PyLong_FromLong(longValue);
+-        /* If there is an error in the long conversion,
+-           fall through to wideInt handling. */
+-    }
+-
+     if (value->typePtr == tkapp->IntType ||
+         value->typePtr == tkapp->WideIntType) {
+         result = fromWideIntObj(tkapp, value);
+@@ -1362,23 +1381,12 @@ FromObj(TkappObject *tkapp, Tcl_Obj *value)
+         return result;
+     }
+ 
+-    if (value->typePtr == tkapp->ProcBodyType) {
+-      /* fall through: return tcl object. */
+-    }
+-
+-    if (value->typePtr == tkapp->StringType) {
++    if (value->typePtr == tkapp->StringType ||
++        value->typePtr == tkapp->UTF32StringType)
++    {
+         return unicodeFromTclObj(value);
+     }
+ 
+-#if TK_HEX_VERSION >= 0x08050000
+-    if (tkapp->BooleanType == NULL &&
+-        strcmp(value->typePtr->name, "booleanString") == 0) {
+-        /* booleanString type is not registered in Tcl */
+-        tkapp->BooleanType = value->typePtr;
+-        return fromBoolean(tkapp, value);
+-    }
+-#endif
+-
+ #ifdef HAVE_LIBTOMMATH
+     if (tkapp->BignumType == NULL &&
+         strcmp(value->typePtr->name, "bignum") == 0) {
+-- 
+2.50.1 (Apple Git-155)
+

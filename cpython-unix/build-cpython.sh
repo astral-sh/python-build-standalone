@@ -281,11 +281,28 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-crypt-no-modify-libs.patch
 fi
 
-# CPython <3.12 expects an external libtommath. Backport
-# https://github.com/python/cpython/pull/103842 to avoid this behavior.
-# TODO(jjh): Other changes from https://github.com/python/cpython/issues/103194
+# Backport Tcl/Tk 9.0 support from 3.12 to Python 3.10 and 3.11
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
-    patch -p1 -i ${ROOT}/patch-tkinter-for-no-libtommath.patch
+    if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
+        # git checkout v3.10.19
+        # git cherry-pick 625887e6df5dbebe48be172b424ba519e2ba2ddc
+        # git cherry-pick 27cbeb08b80138d093b9b08eb41744d249c386e6
+        # git cherry-pick d4680b9e17815140b512a399069400794dae1f97
+        # git cherry-pick ec139c8fae2064e5f1413dad0aadc1b83daf90d8
+        # git format-patch -N --subject-prefix=3.10 --suffix=-310.patch v3.10.19
+        patch -p1 -i ${ROOT}/0001-gh-103839-Allow-building-Tkinter-against-Tcl-8.7-310.patch
+        patch -p1 -i ${ROOT}/0002-3.12-gh-104399-Use-newer-libtommath-APIs-when-ne-310.patch
+        patch -p1 -i ${ROOT}/0003-3.12-gh-103194-Fix-Tkinter-s-Tcl-value-type-hand-310.patch
+        patch -p1 -i ${ROOT}/0004-3.12-gh-112672-Fix-builtin-Tkinter-with-Tcl-9.0--310.patch
+    else
+        # git checkout v3.11.15
+        # <same git cherry-pick commands as 3.10>
+        # git format-patch -N --subject-prefix=3.11 --suffix=-311.patch v3.11.14
+        patch -p1 -i ${ROOT}/0001-gh-103839-Allow-building-Tkinter-against-Tcl-8.7-311.patch
+        patch -p1 -i ${ROOT}/0002-3.12-gh-104399-Use-newer-libtommath-APIs-when-ne-311.patch
+        patch -p1 -i ${ROOT}/0003-3.12-gh-103194-Fix-Tkinter-s-Tcl-value-type-hand-311.patch
+        patch -p1 -i ${ROOT}/0004-3.12-gh-112672-Fix-builtin-Tkinter-with-Tcl-9.0--311.patch
+    fi
 fi
 
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.

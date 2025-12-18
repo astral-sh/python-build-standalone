@@ -45,6 +45,14 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
 EOF
 fi
 
+# When Zipfs support runs tclsh during the build which fails when
+# cross-comiling. Disable the feature.
+# An alternative is to first build a native tclsh to use during the build.
+# https://core.tcl-lang.org/tcl/tktview/cb338c130b8fba479c28
+if [ -n "${CROSS_COMPILING}" ]; then
+    EXTRA_CONFIGURE="${EXTRA_CONFIGURE} --disable-zipfs"
+fi
+
 # Remove packages we don't care about and can pull in unwanted symbols.
 rm -rf pkgs/sqlite* pkgs/tdbc*
 

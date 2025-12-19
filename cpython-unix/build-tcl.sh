@@ -56,8 +56,8 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
 EOF
 fi
 
-# When Zipfs support runs tclsh during the build which fails when
-# cross-comiling. Disable the feature.
+# zipfs support runs tclsh during the build which fails when cross-compiling. 
+# Disable the feature.
 # An alternative is to first build a native tclsh to use during the build.
 # https://core.tcl-lang.org/tcl/tktview/cb338c130b8fba479c28
 if [ -n "${CROSS_COMPILING}" ]; then

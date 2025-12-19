@@ -288,6 +288,20 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
     patch -p1 -i ${ROOT}/patch-configure-crypt-no-modify-libs.patch
 fi
 
+# Backport Tcl/Tk 9.0 support from 3.12 to Python 3.10 and 3.11
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
+    # git checkout v3.10.19
+    # git cherry-pick 625887e6 27cbeb08 d4680b9e ec139c8f
+    # git diff v3.10.19 Modules/_tkinter.c > patch-tkinter-backport-tcl-9-310.patch
+    patch -p1 -i ${ROOT}/patch-tkinter-backport-tcl-9-310.patch
+fi
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
+    # git checkout v3.11.14
+    # git cherry-pick 625887e6 27cbeb08 d4680b9e ec139c8f
+    # git diff v3.11.14 Modules/_tkinter.c > patch-tkinter-backport-tcl-9-311.patch
+    patch -p1 -i ${ROOT}/patch-tkinter-backport-tcl-9-311.patch
+fi
+
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault
@@ -1268,11 +1282,11 @@ fi
 # And prune libraries we never reference.
 rm -f ${ROOT}/out/python/build/lib/{libdb-6.0,libxcb-*,libX11-xcb}.a
 
-if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
+if [ -d "${TOOLS_PATH}/deps/lib/tk9.0" ]; then
     # Copy tcl/tk resources needed by tkinter.
-    mkdir ${ROOT}/out/python/install/lib/tcl
+    mkdir ${ROOT}/out/python/install/lib/tk9.0
     # Keep this list in sync with tcl_library_paths.
-    for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.4,tcl8,tcl8.6,thread2.8.9,tk8.6}; do
+    for source in ${TOOLS_PATH}/deps/lib/{itcl4.3.5,thread3.0.4,tk9.0}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
 

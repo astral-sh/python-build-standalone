@@ -676,8 +676,8 @@ _tkinter:
     - include/X11
   build-mode: shared
   links:
-    - tcl8.6
-    - tk8.6
+    - tcl9.0
+    - tcl9tk9.0
   links-conditional:
     - name: X11
       targets:

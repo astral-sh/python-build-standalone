@@ -22,27 +22,43 @@ pushd tcl${TCL_VERSION}
 EXTRA_CONFIGURE=
 
 if [ -n "${STATIC}" ]; then
-	if echo "${TARGET_TRIPLE}" | grep -q -- "-unknown-linux-musl"; then
-		# tcl will use an internal implementation of certain POSIX function when
-		# cross-compiling. The implementation of strtoul create multiple definitions
-		# when linked against the static musl libc. Exclude the internal implementation.
-		EXTRA_CONFIGURE="${EXTRA_CONFIGURE} tcl_cv_strtoul_unbroken=ok"
-	fi
-
 	patch -p1 << 'EOF'
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in
 +++ b/unix/Makefile.in
-@@ -1813,7 +1813,7 @@ configure-packages:
+@@ -2062,7 +2062,7 @@ configure-packages:
+ 			  $$i/configure --with-tcl8 --with-tcl=../.. \
+ 			      --with-tclinclude=$(GENERIC_DIR) \
+ 			      $(PKG_CFG_ARGS) --libdir=$(PACKAGE_DIR) \
+-			      --enable-shared; ) || exit $$?; \
++			      --enable-shared=no; ) || exit $$?; \
+ 		    fi; \
+ 		    mkdir -p $(PKG_DIR)/$$pkg; \
+ 		    if [ ! -f $(PKG_DIR)/$$pkg/Makefile ] ; then \
+@@ -2070,7 +2070,7 @@ configure-packages:
  			  $$i/configure --with-tcl=../.. \
  			      --with-tclinclude=$(GENERIC_DIR) \
  			      $(PKG_CFG_ARGS) --libdir=$(PACKAGE_DIR) \
--			      --enable-shared --enable-threads; ) || exit $$?; \
-+			      --enable-shared=no --enable-threads; ) || exit $$?; \
+-			      --enable-shared; ) || exit $$?; \
++			      --enable-shared=no; ) || exit $$?; \
  		    fi; \
  		fi; \
  	    fi; \
 EOF
+fi
+
+# Disable the use of fts64_* functions on the 32-bit armv7 platform as these
+# functions are not available in glibc 2.17
+if [[ ${TARGET_TRIPLE} = armv7* ]]; then
+    EXTRA_CONFIGURE="${EXTRA_CONFIGURE} tcl_cv_flag__file_offset_bits=no"
+fi
+
+# musl does not include queue.h
+# https://wiki.musl-libc.org/faq#Q:-Why-is-%3Ccode%3Esys/queue.h%3C/code%3E-not-included?
+# It is a self contained header file, use a copy from the container.
+# https://core.tcl-lang.org/tcl/tktview/3ff2d724d03ba7d6edb8
+if [ "${CC}" = "musl-clang" ]; then
+    cp /usr/include/$(uname -m)-linux-gnu/sys/queue.h /tools/host/include/sys
 fi
 
 # Remove packages we don't care about and can pull in unwanted symbols.
@@ -62,6 +78,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --prefix=/tools/deps \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
+    --disable-zipfs \
     ${EXTRA_CONFIGURE}
 
 make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath

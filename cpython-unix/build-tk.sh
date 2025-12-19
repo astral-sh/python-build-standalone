@@ -40,6 +40,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --with-tcl=${TOOLS_PATH}/deps/lib \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
+    --disable-zipfs \
     ${EXTRA_CONFIGURE_FLAGS}
 
 # Remove wish, since we don't need it.
@@ -48,7 +49,7 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
 else
     sed_args=(-i)
 fi
-sed "${sed_args[@]}" 's/all: binaries libraries doc/all: libraries/' Makefile
+sed "${sed_args[@]}" 's/all: binaries libraries/all: libraries/' Makefile
 sed "${sed_args[@]}" 's/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE) ${WISH_EXE}/install-binaries: $(TK_STUB_LIB_FILE) $(TK_LIB_FILE)/' Makefile
 
 # We are statically linking libX11, and static libraries do not carry

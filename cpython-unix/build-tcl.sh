@@ -26,15 +26,6 @@ if [ -n "${STATIC}" ]; then
 diff --git a/unix/Makefile.in b/unix/Makefile.in
 --- a/unix/Makefile.in
 +++ b/unix/Makefile.in
-@@ -831,7 +831,7 @@ objs: ${OBJS}
- ${TCL_EXE}: ${TCLSH_OBJS} ${TCL_LIB_FILE} ${TCL_STUB_LIB_FILE} ${TCL_ZIP_FILE}
- 	${CC} ${CFLAGS} ${LDFLAGS} ${TCLSH_OBJS} \
- 		@TCL_BUILD_LIB_SPEC@ ${TCL_STUB_LIB_FILE} ${LIBS} @EXTRA_TCLSH_LIBS@ \
--		${CC_SEARCH_FLAGS} -o ${TCL_EXE}
-+		${CC_SEARCH_FLAGS} -static -o ${TCL_EXE}
- 	@if test "${ZIPFS_BUILD}" = "2" ; then \
- 	    if test "x$(MACHER)" = "x" ; then \
- 	    cat ${TCL_ZIP_FILE} >> ${TCL_EXE}; \
 @@ -2062,7 +2062,7 @@ configure-packages:
  			  $$i/configure --with-tcl8 --with-tcl=../.. \
  			      --with-tclinclude=$(GENERIC_DIR) \
@@ -54,14 +45,6 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
  		fi; \
  	    fi; \
 EOF
-fi
-
-# zipfs support runs tclsh during the build which fails when cross-compiling. 
-# Disable the feature.
-# An alternative is to first build a native tclsh to use during the build.
-# https://core.tcl-lang.org/tcl/tktview/cb338c130b8fba479c28
-if [ -n "${CROSS_COMPILING}" ]; then
-    EXTRA_CONFIGURE="${EXTRA_CONFIGURE} --disable-zipfs"
 fi
 
 # Disable the use of fts64_* functions on the 32-bit armv7 platform as these
@@ -95,6 +78,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --prefix=/tools/deps \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
+    --disable-zipfs \
     ${EXTRA_CONFIGURE}
 
 make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath

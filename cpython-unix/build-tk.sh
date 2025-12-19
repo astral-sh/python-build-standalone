@@ -33,12 +33,6 @@ else
     EXTRA_CONFIGURE_FLAGS="--x-includes=${TOOLS_PATH}/deps/include --x-libraries=${TOOLS_PATH}/deps/lib"
 fi
 
-# zipfs support when statically linked expects tclsh to be a zip file.
-# It is not. Disable the feature.
-if [ -n "${STATIC}" ]; then
-    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --disable-zipfs"
-fi
-
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --build=${BUILD_TRIPLE} \
     --host=${TARGET_TRIPLE} \
@@ -46,6 +40,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
     --with-tcl=${TOOLS_PATH}/deps/lib \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
+    --disable-zipfs \
     ${EXTRA_CONFIGURE_FLAGS}
 
 # Remove wish, since we don't need it.

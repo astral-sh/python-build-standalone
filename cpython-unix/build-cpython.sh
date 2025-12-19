@@ -701,6 +701,14 @@ fi
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
 if [ "${PYBUILD_SHARED}" = "1" ]; then
+    (
+        shopt -s nullglob
+        dylibs=(${TOOLS_PATH}/deps/lib/lib*.dylib ${TOOLS_PATH}/deps/lib/lib*.so)
+        if [ "${#dylibs[@]}" -gt 0 ]; then
+            cp -av "${dylibs[@]}" ${ROOT}/out/python/install/lib/
+        fi
+    )
+
     if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
@@ -843,6 +851,25 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                     ${ROOT}/out/python/install/lib/libpython3.so
             fi
         fi
+
+        # PyInstaller would like to see `ldd` work on modules.
+        # https://github.com/pyinstaller/pyinstaller/issues/9204#issuecomment-3171583553
+        # Also this probably helps programs linking libpython avoid having to set an rpath.
+        patchelf_args=()
+        if [ "${CC}" == "musl-clang" ]; then
+            patchelf_args+=(--set-rpath '${ORIGIN}/../..')
+        else
+            for lib in ${ROOT}/out/python/install/lib/*; do
+                basename=${lib##*/}
+                patchelf_args+=(--replace-needed "$basename" '${ORIGIN}/../../'"$basename")
+            done
+        fi
+        # At the moment, python3 and libpython don't have shared-library
+        # dependencies, but at some point we will want to run this for
+        # them too.
+        for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
+            patchelf "${patchelf_args[@]}" "$module"
+        done
     fi
 fi
 
@@ -1275,14 +1302,6 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl8" ]; then
     for source in ${TOOLS_PATH}/deps/lib/{itcl4.2.4,tcl8,tcl8.6,thread2.8.9,tk8.6}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
-
-    (
-        shopt -s nullglob
-        dylibs=(${TOOLS_PATH}/deps/lib/lib*.dylib ${TOOLS_PATH}/deps/lib/lib*.so)
-        if [ "${#dylibs[@]}" -gt 0 ]; then
-            cp -av "${dylibs[@]}" ${ROOT}/out/python/install/lib/
-        fi
-    )
 fi
 
 # Copy the terminfo database if present.

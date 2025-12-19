@@ -18,6 +18,7 @@ distributions built by applying specific labels to your pull request. Only
 distributions matching the specified labels will be built.
 
 The following label prefixes can be used to customize the build matrix:
+
 * `platform`
 * `python`
 * `build`

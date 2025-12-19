@@ -317,15 +317,6 @@ DOWNLOADS = {
         "sha256": "ea451686065d6338d7e4d4a04c9af49f17951d15aa4c2e19ab8cb56fa2373440",
         "version": "5.38.2.2",
     },
-    "tcl-86": {
-        "url": "https://prdownloads.sourceforge.net/tcl/tcl8.6.14-src.tar.gz",
-        "size": 11627322,
-        "sha256": "5880225babf7954c58d4fb0f5cf6279104ce1cd6aa9b71e9a6322540e1c4de66",
-        "version": "8.6.14",
-        "library_names": ["tcl8.6"],
-        "licenses": ["TCL"],
-        "license_file": "LICENSE.tcl.txt",
-    },
     "tcl": {
         "url": "https://prdownloads.sourceforge.net/tcl/tcl9.0.3-src.tar.gz",
         "size": 11922915,
@@ -342,15 +333,6 @@ DOWNLOADS = {
         "version": "8.4.3.6",
         "licenses": ["TCL"],
         "license_file": "LICENSE.tix.txt",
-    },
-    "tk-86": {
-        "url": "https://prdownloads.sourceforge.net/tcl/tk8.6.14-src.tar.gz",
-        "size": 4510695,
-        "sha256": "8ffdb720f47a6ca6107eac2dd877e30b0ef7fac14f3a84ebbd0b3612cee41a94",
-        "version": "8.6.14",
-        "library_names": ["tk8.6"],
-        "licenses": ["TCL"],
-        "license_file": "LICENSE.tcl.txt",
     },
     "tk": {
         "url": "https://prdownloads.sourceforge.net/tcl/tk9.0.3-src.tar.gz",

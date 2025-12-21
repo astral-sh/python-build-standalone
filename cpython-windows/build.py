@@ -243,6 +243,8 @@ def find_vs_path(path, msvc_version):
         version = "[16,17)"
     elif msvc_version == "2022":
         version = "[17,18)"
+    elif msvc_version == "2026":
+        version = "[18,19)"
     else:
         raise ValueError(f"unsupported Visual Studio version: {msvc_version}")
 
@@ -1870,7 +1872,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--vs",
-        choices={"2019", "2022"},
+        choices={"2019", "2022", "2026"},
         default="2022",
         help="Visual Studio version to use",
     )

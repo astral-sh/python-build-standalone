@@ -577,6 +577,7 @@ def hack_project_files(
         b"SQLITE_ENABLE_FTS5",
         b"SQLITE_ENABLE_GEOPOLY",
         b"SQLITE_ENABLE_RTREE",
+        b"SQLITE_ENABLE_UPDATE_DELETE_LIMIT",
     }
     with sqlite3_path.open("rb") as fh:
         data = fh.read()

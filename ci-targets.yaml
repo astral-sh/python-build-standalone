@@ -71,7 +71,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -92,7 +92,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -113,7 +113,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -134,7 +134,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -155,7 +155,7 @@ linux:
     build_options:
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
@@ -262,12 +262,12 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
           - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
     run: true
 
@@ -288,12 +288,12 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
           - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
     run: true
 
@@ -314,12 +314,12 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
           - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
     run: true
 
@@ -340,12 +340,12 @@ linux:
       - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
           - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
     run: true
 
@@ -366,12 +366,12 @@ linux:
       # - lto+static
       - debug
       - noopt
-      - lto
+      - pgo+lto
     build_options_conditional:
       - options:
           - freethreaded+debug
           - freethreaded+noopt
-          - freethreaded+lto
+          - freethreaded+pgo+lto
         minimum-python-version: "3.13"
     run: true
 

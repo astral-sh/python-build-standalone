@@ -1282,11 +1282,11 @@ fi
 # And prune libraries we never reference.
 rm -f ${ROOT}/out/python/build/lib/{libdb-6.0,libxcb-*,libX11-xcb}.a
 
-if [ -d "${TOOLS_PATH}/deps/lib/tk9.0" ]; then
+if [ -d "${TOOLS_PATH}/deps/lib/tcl9" ]; then
     # Copy tcl/tk resources needed by tkinter.
-    mkdir ${ROOT}/out/python/install/lib/tk9.0
+    mkdir ${ROOT}/out/python/install/lib/tcl
     # Keep this list in sync with tcl_library_paths.
-    for source in ${TOOLS_PATH}/deps/lib/{itcl4.3.5,thread3.0.4,tk9.0}; do
+    for source in ${TOOLS_PATH}/deps/lib/{itcl4.3.5,tcl9,tcl9.0,thread3.0.4,tk9.0}; do
         cp -av $source ${ROOT}/out/python/install/lib/
     done
 

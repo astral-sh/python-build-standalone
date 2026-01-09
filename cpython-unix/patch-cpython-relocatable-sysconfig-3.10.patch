@@ -1,0 +1,55 @@
+diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
+index daf9f000060..ed70b771e56 100644
+--- a/Lib/sysconfig.py
++++ b/Lib/sysconfig.py
+@@ -1,6 +1,7 @@
+ """Access to Python's configuration information."""
+ 
+ import os
++import re
+ import sys
+ from os.path import pardir, realpath
+ 
+@@ -407,9 +408,29 @@ def _get_sysconfigdata_name():
+     )
+ 
+ 
++def _print_config_dict(d, stream):
++    # Build a regex that matches the prefix at the start of the
++    # string or following a whitespace character.
++    prefix = d.get("prefix", "/install")
++    install_prefix_pattern = re.compile(r"(^|\s)" + re.escape(prefix))
++    # The replacement string. Use a backreference \1 to keep the
++    # whitespace if it was present.
++    relocatable_path = r"\1{installed_base}"
++
++    print ("{", file=stream)
++    for k, v in sorted(d.items()):
++        if isinstance(v, str):
++            replaced, count = install_prefix_pattern.subn(relocatable_path, v)
++            if count:
++                value_literal = "f" + repr(replaced)
++                print(f"    {k!r}: {value_literal},", file=stream)
++                continue
++        print(f"    {k!r}: {v!r},", file=stream)
++    print ("}", file=stream)
++
++
+ def _generate_posix_vars():
+     """Generate the Python module containing build-time variables."""
+-    import pprint
+     vars = {}
+     # load the installed Makefile:
+     makefile = get_makefile_filename()
+@@ -463,8 +484,10 @@ def _generate_posix_vars():
+     with open(destfile, 'w', encoding='utf8') as f:
+         f.write('# system configuration generated and used by'
+                 ' the sysconfig module\n')
++        f.write('from pathlib import Path\n')
++        f.write('installed_base = str(Path(__file__).resolve().parent.parent.parent)\n')
+         f.write('build_time_vars = ')
+-        pprint.pprint(vars, stream=f)
++        _print_config_dict(vars, stream=f)
+ 
+     # Create file used for sys.path fixup -- see Modules/getpath.c
+     with open('pybuilddir.txt', 'w', encoding='utf8') as f:

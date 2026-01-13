@@ -901,7 +901,7 @@ FREETHREADED = sysconfig.get_config_var("Py_GIL_DISABLED")
 MAJMIN = ".".join([str(sys.version_info[0]), str(sys.version_info[1])])
 LIB_SUFFIX = "t" if FREETHREADED else ""
 PYTHON_CONFIG = os.path.join(ROOT, "install", "bin", "python%s-config" % MAJMIN)
-PLATFORM_CONFIG = sysconfig.get_config_var("LIBPL").split("lib/python%s%s" % (MAJMIN, LIB_SUFFIX), 1)[1].lstrip('/')
+PLATFORM_CONFIG = sysconfig.get_config_var("LIBPL").split("/")[-1]
 MAKEFILE = os.path.join(
     ROOT,
     "install",
@@ -1085,7 +1085,8 @@ metadata = {
     "python_stdlib_platform_config": "install/lib/python%s%s/%s" % (
         sysconfig.get_python_version(),
         sys.abiflags,
-        sysconfig.get_config_var("LIBPL").split("lib/python%s%s" % (sysconfig.get_python_version(), sys.abiflags), 1)[1].lstrip('/')),
+        sysconfig.get_config_var("LIBPL").split("/")[-1]
+    ),
     "python_config_vars": {k: str(v) for k, v in sysconfig.get_config_vars().items()},
 }
 

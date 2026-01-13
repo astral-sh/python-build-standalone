@@ -436,14 +436,16 @@ _remote_debugging:
       - _remote_debugging_module.c
       maximum-python-version: "3.14"
     - sources:
+      - _remote_debugging/asyncio.c
+      - _remote_debugging/binary_io_reader.c
+      - _remote_debugging/binary_io_writer.c
+      - _remote_debugging/code_objects.c
+      - _remote_debugging/frame_cache.c
+      - _remote_debugging/frames.c
       - _remote_debugging/module.c
       - _remote_debugging/object_reading.c
-      - _remote_debugging/code_objects.c
-      - _remote_debugging/frames.c
-      - _remote_debugging/frame_cache.c
-      - _remote_debugging/threads.c
-      - _remote_debugging/asyncio.c
       - _remote_debugging/subprocess.c
+      - _remote_debugging/threads.c
       minimum-python-version: "3.15"
 
 _scproxy:

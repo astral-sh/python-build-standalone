@@ -325,6 +325,8 @@ fi
 
 # Mark the COLORS global variable static to prevent it from
 # conflicting with the symbol in the ncurses library.
+# Fix has been merged upstream, drop in next 3.15 release
+# https://github.com/python/cpython/pull/143846
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i ${ROOT}/patch-optimizer-static-colors.patch
 fi

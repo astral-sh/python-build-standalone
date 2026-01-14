@@ -292,6 +292,7 @@ fi
 if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
     # git checkout v3.10.19
     # git cherry-pick 625887e6 27cbeb08 d4680b9e ec139c8f
+    # manually change int argc/objc -> Tcl_Size argc/objc in file
     # git diff v3.10.19 Modules/_tkinter.c > patch-tkinter-backport-tcl-9-310.patch
     patch -p1 -i ${ROOT}/patch-tkinter-backport-tcl-9-310.patch
 fi

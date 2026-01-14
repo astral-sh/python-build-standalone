@@ -1,5 +1,5 @@
 diff --git a/Modules/_tkinter.c b/Modules/_tkinter.c
-index 2a3e65b6c97..8bed45f933d 100644
+index 2a3e65b6c97..d601a2b7c2a 100644
 --- a/Modules/_tkinter.c
 +++ b/Modules/_tkinter.c
 @@ -55,9 +55,24 @@ Copyright (C) 1994 Steen Lumholt.
@@ -44,6 +44,33 @@ index 2a3e65b6c97..8bed45f933d 100644
  #if USE_TCL_UNICODE
      int byteorder = NATIVE_BYTEORDER;
      const Tcl_UniChar *u = Tcl_GetUnicodeFromObj(value, &len);
+@@ -510,7 +526,7 @@ unicodeFromTclObj(Tcl_Obj *value)
+ static PyObject *
+ Split(const char *list)
+ {
+-    int argc;
++    Tcl_Size argc;
+     const char **argv;
+     PyObject *v;
+ 
+@@ -612,7 +628,7 @@ SplitObj(PyObject *arg)
+         return result;
+     }
+     else if (PyUnicode_Check(arg)) {
+-        int argc;
++        Tcl_Size argc;
+         const char **argv;
+         const char *list = PyUnicode_AsUTF8(arg);
+ 
+@@ -627,7 +643,7 @@ SplitObj(PyObject *arg)
+         /* Fall through, returning arg. */
+     }
+     else if (PyBytes_Check(arg)) {
+-        int argc;
++        Tcl_Size argc;
+         const char **argv;
+         const char *list = PyBytes_AS_STRING(arg);
+ 
 @@ -655,6 +671,10 @@ class _tkinter.tktimertoken "TkttObject *" "&Tktt_Type_spec"
  
  /**** Tkapp Object ****/
@@ -275,3 +302,12 @@ index 2a3e65b6c97..8bed45f933d 100644
          Tcl_Obj **objv;
          if (Tcl_ListObjGetElements(Tkapp_Interp(self),
                                     ((PyTclObject*)arg)->value,
+@@ -2365,7 +2405,7 @@ _tkinter_tkapp_split(TkappObject *self, PyObject *arg)
+ 
+     if (PyTclObject_Check(arg)) {
+         Tcl_Obj *value = ((PyTclObject*)arg)->value;
+-        int objc;
++        Tcl_Size objc;
+         Tcl_Obj **objv;
+         int i;
+         if (Tcl_ListObjGetElements(Tkapp_Interp(self), value,

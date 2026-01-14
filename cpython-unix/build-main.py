@@ -43,7 +43,7 @@ def main():
 
     # Construct possible options, we use a set here for canonical ordering
     options = set()
-    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto", "pgo+lto+asan"})
     options.update({f"freethreaded+{option}" for option in options})
     options.update({f"{option}+static" for option in options})
     parser.add_argument(

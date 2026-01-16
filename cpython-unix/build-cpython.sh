@@ -851,8 +851,8 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # cases, we have no concerns/need no workarounds for code
         # referencing libpython3.x.so.1.0, because we are actually
         # dynamically linking it and so all code will get the real
-	# libpython3.x.so.1.0 that they want (and it's fine to use
-	# DT_RUNPATH instead of DT_RPATH).
+        # libpython3.x.so.1.0 that they want (and it's fine to use
+        # DT_RUNPATH instead of DT_RPATH).
         if [ "${CC}" == "musl-clang" ]; then
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then

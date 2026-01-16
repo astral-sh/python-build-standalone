@@ -97,3 +97,11 @@ jobs:
           subject-path: |
             dist/*.tar.gz
             dist/*.tar.zst
+
+  publish-versions:
+    needs: release
+    if: ${{ github.event.inputs.dry-run == 'false' }}
+    uses: ./.github/workflows/publish-versions.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}
+    secrets: inherit

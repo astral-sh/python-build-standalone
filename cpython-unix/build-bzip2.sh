@@ -25,3 +25,11 @@ make -j ${NUM_CPUS} install \
     CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" \
     LDFLAGS="${EXTRA_TARGET_LDFLAGS}" \
     PREFIX=${ROOT}/out/tools/deps
+
+# bzip2's Makefile creates these symlinks with absolute paths to the build
+# directory, which break after archive extraction. Only libbz2.a and headers
+# are needed for building CPython - remove the shell utility symlinks.
+rm ${ROOT}/out/tools/deps/bin/bzcmp \
+   ${ROOT}/out/tools/deps/bin/bzless \
+   ${ROOT}/out/tools/deps/bin/bzegrep \
+   ${ROOT}/out/tools/deps/bin/bzfgrep

@@ -514,7 +514,9 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         fi
 
         if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-            patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.15.patch"
+            # Python 3.15+ supports LLVM_VERSION environment variable
+            # https://github.com/astral-sh/python-build-standalone/issues/881
+            export LLVM_VERSION=21
         fi
     fi
 fi

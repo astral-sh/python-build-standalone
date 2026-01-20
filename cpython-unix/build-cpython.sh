@@ -514,7 +514,7 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         fi
 
         if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-            # Python 3.15+ supports LLVM_VERSION environment variable
+            # Python 3.15+ supports configuration via `LLVM_VERSION`
             # https://github.com/astral-sh/python-build-standalone/issues/881
             export LLVM_VERSION=21
         fi

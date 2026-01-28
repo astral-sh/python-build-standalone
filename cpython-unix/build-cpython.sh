@@ -58,6 +58,14 @@ cat Makefile.extra
 
 pushd Python-${PYTHON_VERSION}
 
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    # add `--enable-relocatable`
+    patch -p1 -i ${ROOT}/patch-relocatable-flag.patch
+    # add native support for rpath
+    patch -p1 -i ${ROOT}/patch-relocatable-link.patch
+fi
+
 # configure doesn't support cross-compiling on Apple. Teach it.
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
     if [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
@@ -147,10 +155,12 @@ fi
 
 # The default build rule for the macOS dylib doesn't pick up libraries
 # from modules / makesetup. So patch it accordingly.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
-    patch -p1 -i ${ROOT}/patch-macos-link-extension-modules-13.patch
-else
-    patch -p1 -i ${ROOT}/patch-macos-link-extension-modules.patch
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+        patch -p1 -i ${ROOT}/patch-macos-link-extension-modules-13.patch
+    else
+        patch -p1 -i ${ROOT}/patch-macos-link-extension-modules.patch
+    fi
 fi
 
 # Also on macOS, the `python` executable is linked against libraries defined by statically
@@ -392,6 +402,11 @@ fi
 # so give it plenty of space.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     LDFLAGS="${LDFLAGS} -Wl,-headerpad,40"
+fi
+
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --enable-relocatable"
 fi
 
 CPPFLAGS=$CFLAGS
@@ -723,7 +738,8 @@ fi
 # If we're building a shared library hack some binaries so rpath is set.
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
-if [ "${PYBUILD_SHARED}" = "1" ]; then
+# In 3.15+, we've upstreamed this behavior
+if [[ "${PYBUILD_SHARED}" = "1"  && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
     if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
@@ -866,6 +882,12 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                     ${ROOT}/out/python/install/lib/libpython3.so
             fi
         fi
+    fi
+else
+    # For Python 3.15+ on Linux, we still need to define LIBPYTHON_SHARED_LIBRARY for glibc version detection
+    if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+        LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
+        LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
     fi
 fi
 

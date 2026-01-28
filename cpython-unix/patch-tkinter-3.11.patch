@@ -1,5 +1,5 @@
 diff --git a/Modules/_tkinter.c b/Modules/_tkinter.c
-index 005036d3ff2..0e64706584a 100644
+index 005036d..1dd202d 100644
 --- a/Modules/_tkinter.c
 +++ b/Modules/_tkinter.c
 @@ -28,9 +28,7 @@ Copyright (C) 1994 Steen Lumholt.
@@ -29,17 +29,20 @@ index 005036d3ff2..0e64706584a 100644
          /* Check expected location for an installed Python first */
          tcl_library_path = PyUnicode_FromString("\\tcl\\tcl" TCL_VERSION);
          if (tcl_library_path == NULL) {
-@@ -177,11 +177,31 @@ _get_tcl_lib_path()
+@@ -177,11 +177,34 @@ _get_tcl_lib_path()
              tcl_library_path = NULL;
  #endif
          }
 +#else
 +        /* Check expected location for an installed Python first */
-+        tcl_library_path = PyUnicode_FromString("/lib/tcl" TCL_VERSION);
-+        if (tcl_library_path == NULL) {
++        PyObject *suffix = PyUnicode_FromString("/lib/tcl" TCL_VERSION);
++        if (suffix == NULL) {
++            Py_DECREF(prefix);
 +            return NULL;
 +        }
-+        tcl_library_path = PyUnicode_Concat(prefix, tcl_library_path);
++        tcl_library_path = PyUnicode_Concat(prefix, suffix);
++        Py_DECREF(suffix);
++        Py_DECREF(prefix);
 +        if (tcl_library_path == NULL) {
 +            return NULL;
 +        }
@@ -62,10 +65,27 @@ index 005036d3ff2..0e64706584a 100644
  
  /* The threading situation is complicated.  Tcl is not thread-safe, except
     when configured with --enable-threads.
-@@ -687,6 +707,30 @@ Tkapp_New(const char *screenName, const char *className,
+@@ -574,6 +594,9 @@ Tkapp_New(const char *screenName, const char *className,
+ {
+     TkappObject *v;
+     char *argv0;
++#ifndef MS_WINDOWS
++    int tcl_library_env_set = 0;
++#endif
  
-         ret = GetEnvironmentVariableW(L"TCL_LIBRARY", NULL, 0);
-         if (!ret && GetLastError() == ERROR_ENVVAR_NOT_FOUND) {
+     v = PyObject_New(TkappObject, (PyTypeObject *) Tkapp_Type);
+     if (v == NULL)
+@@ -704,9 +727,41 @@ Tkapp_New(const char *screenName, const char *className,
+             }
+         }
+     }
++#else
++    {
++        const char *env_val = getenv("TCL_LIBRARY");
++        if (!env_val || !env_val[0]) {
++            PyObject *str_path;
++            PyObject *utf8_path;
++
 +            str_path = _get_tcl_lib_path();
 +            if (str_path == NULL && PyErr_Occurred()) {
 +                return NULL;
@@ -79,29 +99,35 @@ index 005036d3ff2..0e64706584a 100644
 +                           "tcl_library",
 +                           PyBytes_AS_STRING(utf8_path),
 +                           TCL_GLOBAL_ONLY);
++                setenv("TCL_LIBRARY", PyBytes_AS_STRING(utf8_path), 1);
++                tcl_library_env_set = 1;
 +                Py_DECREF(utf8_path);
 +            }
 +        }
 +    }
-+#else
-+    {
-+        const char *env_val = getenv("TCL_LIBRARY");
-+        if (!env_val) {
-+            PyObject *str_path;
-+            PyObject *utf8_path;
-+
-             str_path = _get_tcl_lib_path();
-             if (str_path == NULL && PyErr_Occurred()) {
-                 return NULL;
-@@ -3428,7 +3472,32 @@ PyInit__tkinter(void)
+ #endif
+ 
+-    if (Tcl_AppInit(v->interp) != TCL_OK) {
++    int app_rc = Tcl_AppInit(v->interp);
++#ifndef MS_WINDOWS
++    if (tcl_library_env_set) {
++        unsetenv("TCL_LIBRARY");
++    }
++#endif
++    if (app_rc != TCL_OK) {
+         PyObject *result = Tkinter_Error(v);
+ #ifdef TKINTER_PROTECT_LOADTK
+         if (wantTk) {
+@@ -3428,7 +3483,33 @@ PyInit__tkinter(void)
                  PyMem_Free(wcs_path);
              }
  #else
 +            int set_var = 0;
 +            PyObject *str_path;
 +            char *path;
++            const char *env_val = getenv("TCL_LIBRARY");
 +
-+            if (!getenv("TCL_LIBRARY")) {
++            if (!env_val || !env_val[0]) {
 +                str_path = _get_tcl_lib_path();
 +                if (str_path == NULL && PyErr_Occurred()) {
 +                    Py_DECREF(m);

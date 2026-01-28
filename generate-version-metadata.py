@@ -37,17 +37,20 @@ def main() -> None:
     if not checksums.exists():
         raise SystemExit("SHA256SUMS not found in dist/")
 
-    checksum_map: dict[str, str] = {}
+    # Parse filenames and checksums directly from SHA256SUMS to avoid downloading
+    # all release artifacts (tens of GB).
+    entries: list[tuple[str, str]] = []
     for line in checksums.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
         checksum, filename = line.split(maxsplit=1)
-        checksum_map[filename.lstrip("*")] = checksum
+        filename = filename.lstrip("*")
+        entries.append((filename, checksum))
 
     versions: dict[str, list[dict[str, str]]] = defaultdict(list)
-    for path in sorted(dist.glob("cpython-*.tar.*")):
-        match = FILENAME_RE.match(path.name)
+    for filename, checksum in sorted(entries):
+        match = FILENAME_RE.match(filename)
         if match is None:
             continue
         python_version = match.group("py")
@@ -63,18 +66,16 @@ def main() -> None:
         variant = "+".join(variant_parts) if variant_parts else ""
 
         url_prefix = f"https://github.com/{repo}/releases/download/{tag}/"
-        url = url_prefix + quote(path.name, safe="")
-        archive_format = "tar.zst" if path.name.endswith(".tar.zst") else "tar.gz"
+        url = url_prefix + quote(filename, safe="")
+        archive_format = "tar.zst" if filename.endswith(".tar.zst") else "tar.gz"
 
         artifact = {
             "platform": match.group("triple"),
             "variant": variant,
             "url": url,
             "archive_format": archive_format,
-            "sha256": checksum_map.get(path.name, ""),
+            "sha256": checksum,
         }
-        if not artifact["sha256"]:
-            artifact.pop("sha256")
         versions[version].append(artifact)
 
     payload_versions: list[dict[str, object]] = []

@@ -23,12 +23,12 @@ jobs:
       - name: "Install uv"
         uses: astral-sh/setup-uv@61cb8a9741eeb8a550a1b8544337180c0fc8476b # v7.2.0
 
-      - name: "Download release artifacts"
+      - name: "Download SHA256SUMS"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mkdir -p dist
-          gh release download "$TAG" --dir dist
+          gh release download "$TAG" --dir dist --pattern "SHA256SUMS"
 
       - name: "Generate versions payload"
         env:

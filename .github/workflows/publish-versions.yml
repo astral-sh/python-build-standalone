@@ -30,12 +30,6 @@ jobs:
           mkdir -p dist
           gh release download "$TAG" --dir dist --pattern "SHA256SUMS"
 
-      - name: "Generate versions payload"
-        env:
-          GITHUB_EVENT_INPUTS_TAG: ${{ inputs.tag }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-        run: uv run generate-version-metadata.py
-
       - name: "Set branch name"
         run: echo "BRANCH_NAME=update-versions-$TAG-$(date +%s)" >> $GITHUB_ENV
 
@@ -43,7 +37,10 @@ jobs:
         run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
 
       - name: "Update versions"
-        run: cat dist/python-build-standalone.json | uv run astral-versions/scripts/publish-version.py --format json --name python-build-standalone --output astral-versions/v1
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ inputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: uv run generate-version-metadata.py | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
 
       - name: "Commit versions"
         working-directory: astral-versions

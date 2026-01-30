@@ -92,14 +92,8 @@ def main() -> None:
             }
         )
 
-    payload = {
-        "name": "python-build-standalone",
-        "versions": payload_versions,
-    }
-
-    output = dist / "python-build-standalone.json"
-    output.write_text(json.dumps(payload, separators=(",", ":")))
-    print(f"Wrote {output}")
+    for version in payload_versions:
+        print(json.dumps(version, separators=(",", ":")))
 
 
 if __name__ == "__main__":

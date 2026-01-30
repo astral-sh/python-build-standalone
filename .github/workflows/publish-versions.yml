@@ -7,6 +7,17 @@ on:
       tag:
         required: true
         type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g. 20260127)"
+        required: true
+        type: string
+      dry-run:
+        description: "Only generate metadata, skip PR creation"
+        required: false
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -30,19 +41,31 @@ jobs:
           mkdir -p dist
           gh release download "$TAG" --dir dist --pattern "SHA256SUMS"
 
-      - name: "Set branch name"
-        run: echo "BRANCH_NAME=update-versions-$TAG-$(date +%s)" >> $GITHUB_ENV
-
-      - name: "Clone versions repo"
-        run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
-
-      - name: "Update versions"
+      - name: "Generate versions metadata"
         env:
           GITHUB_EVENT_INPUTS_TAG: ${{ inputs.tag }}
           GITHUB_REPOSITORY: ${{ github.repository }}
-        run: uv run generate-version-metadata.py | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
+        run: uv run generate-version-metadata.py > dist/versions.ndjson
+
+      - name: "Validate metadata"
+        run: |
+          echo "Generated $(wc -l < dist/versions.ndjson) version entries"
+          head -c 1000 dist/versions.ndjson
+
+      - name: "Set branch name"
+        if: inputs.dry-run != true
+        run: echo "BRANCH_NAME=update-versions-$TAG-$(date +%s)" >> $GITHUB_ENV
+
+      - name: "Clone versions repo"
+        if: inputs.dry-run != true
+        run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
+
+      - name: "Update versions"
+        if: inputs.dry-run != true
+        run: cat dist/versions.ndjson | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
 
       - name: "Commit versions"
+        if: inputs.dry-run != true
         working-directory: astral-versions
         run: |
           git config user.name "astral-versions-bot"
@@ -53,6 +76,7 @@ jobs:
           git commit -m "Update python-build-standalone to $TAG"
 
       - name: "Create Pull Request"
+        if: inputs.dry-run != true
         working-directory: astral-versions
         env:
           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
@@ -70,6 +94,7 @@ jobs:
             --label "automation"
 
       - name: "Merge Pull Request"
+        if: inputs.dry-run != true
         working-directory: astral-versions
         env:
           GITHUB_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}

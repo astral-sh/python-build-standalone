@@ -894,6 +894,7 @@ fi
 cat > ${ROOT}/hack_sysconfig.py << EOF
 import json
 import os
+import re
 import sys
 import sysconfig
 
@@ -977,6 +978,44 @@ def format_sysconfigdata():
         fh.close()
 
 
+def make_relocatable():
+    """Make the sysconfigdata file relocatable."""
+    with open(SYSCONFIGDATA, "rb") as fh:
+        data = fh.read()
+
+    globals_dict = {}
+    locals_dict = {}
+    exec(data, globals_dict, locals_dict)
+    build_time_vars = locals_dict['build_time_vars']
+
+    # The pattern looks for '/install' at the start of the string (^) or
+    # following a whitespace character (\s).
+    install_prefix_pattern = re.compile(r"(^|\s)/install")
+
+    # The replacement string. We use a backreference \1 to keep the
+    # whitespace if it was present.
+    relocatable_path = r"\1{python_install}"
+
+    # Replace the install prefix with a relocatable path.
+    for key, value in build_time_vars.items():
+        if isinstance(value, str) and install_prefix_pattern.search(value):
+            new_value = install_prefix_pattern.sub(relocatable_path, value)
+            build_time_vars[key] = f'f"{new_value}"'
+
+    # Write the new sysconfigdata file.
+    with open(SYSCONFIGDATA, "wb") as fh:
+        fh.write(b'# system configuration generated and used by the sysconfig module\n')
+        fh.write(b'from pathlib import Path\n')
+        fh.write(b'python_install = str(Path(__file__).resolve().parent.parent.parent)\n')
+        fh.write(b'build_time_vars = {\n')
+        for key, value in sorted(build_time_vars.items()):
+            if isinstance(value, str) and value.startswith('f"'):
+                 fh.write(('    "%s": %s,\n' % (key, value)).encode("utf-8"))
+            else:
+                fh.write(('    "%s": %s,\n' % (key, json.dumps(value))).encode("utf-8"))
+        fh.write(b'}\n')
+
+
 # Format sysconfig to ensure that string replacements take effect.
 format_sysconfigdata()
 
@@ -1012,6 +1051,9 @@ replace_in_all("-I%s/deps/include/ncursesw" % tools_path, "")
 replace_in_all("-I%s/deps/include/uuid" % tools_path, "")
 replace_in_all("-I%s/deps/include" % tools_path, "")
 replace_in_all("-L%s/deps/lib" % tools_path, "")
+
+# Make the sysconfigdata relocatable
+make_relocatable()
 
 EOF
 

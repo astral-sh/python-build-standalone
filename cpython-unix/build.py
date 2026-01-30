@@ -834,6 +834,15 @@ def build_cpython(
         if "static" in parsed_build_options:
             env["CPYTHON_STATIC"] = "1"
 
+        # Extract LLVM major version for JIT configuration
+        llvm_full_version = DOWNLOADS[clang_toolchain(host_platform, target_triple)][
+            "version"
+        ]
+        if "+" in llvm_full_version:
+            llvm_full_version = llvm_full_version.split("+")[0]
+        # Get major version (e.g., "21" from "21.1.4")
+        env["LLVM_VERSION"] = llvm_full_version.split(".")[0]
+
         add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-cpython.sh", environment=env)

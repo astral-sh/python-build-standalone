@@ -513,10 +513,8 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
             patch -p1 -i "${ROOT}/patch-jit-llvm-version-3.14.patch"
         fi
 
-        if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-            # Python 3.15+ supports configuration via `LLVM_VERSION`
-            # https://github.com/astral-sh/python-build-standalone/issues/881
-        fi
+        # Python 3.15+ supports configuration via `LLVM_VERSION`
+        # https://github.com/astral-sh/python-build-standalone/issues/881
     fi
 fi
 

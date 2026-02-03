@@ -97,6 +97,10 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
         extra_target_cflags.append("--rtlib=compiler-rt")
         extra_target_ldflags.append("--rtlib=compiler-rt")
 
+    if "asan" in build_options:
+        extra_target_cflags.append("-fsanitize=address")
+        env["ASAN_OPTIONS"] = "detect_leaks=0"
+
     if build_platform.startswith("linux_"):
         machine = platform.machine()
 
@@ -974,7 +978,7 @@ def main():
 
     # Construct possible options
     options = set()
-    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto", "pgo+lto+asan"})
     options.update({f"freethreaded+{option}" for option in options})
     options.update({f"{option}+static" for option in options})
     parser.add_argument(

@@ -1,0 +1,70 @@
+commit 34915211b42a64082e0470ebb9a8c4f2ebb20512
+Author: Zanie Blue <contact@zanie.dev>
+Date:   Fri Nov 21 15:44:42 2025 -0600
+
+    Set linker arguments when `--enabled-relocatable` is used
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 6c9cba59e27..6c89690c35e 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -1025,10 +1025,19 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+ 	fi
+ 
+ libpython3.so:	libpython$(LDVERSION).so
+-	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
++	if [ "$(RELOCATABLE)" = "yes" ]; then \
++		$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ -Wl,-rpath,'$$ORIGIN' $^; \
++	else \
++		$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^; \
++	fi
+ 
+ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+-	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
++	if [ "$(RELOCATABLE)" = "yes" ]; then \
++		install_name="@executable_path/../lib/libpython$(LDVERSION).dylib"; \
++	else \
++		install_name="$(prefix)/lib/libpython$(LDVERSION).dylib"; \
++	fi; \
++	$(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$$install_name -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM);
+ 
+ 
+ libpython$(VERSION).sl: $(LIBRARY_OBJS)
+diff --git a/configure b/configure
+index 38f2d4dfbf2..9991932680e 100755
+--- a/configure
++++ b/configure
+@@ -13749,7 +13749,13 @@ then
+ 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
+ #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
+ 	Linux-android*) LINKFORSHARED="-pie -Xlinker -export-dynamic";;
+-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
++	Linux*|GNU*)
++		LINKFORSHARED="-Xlinker -export-dynamic"
++		# Add rpath for relocatable builds
++		if test "x$enable_relocatable" = xyes; then
++			LINKFORSHARED="$LINKFORSHARED -Wl,-rpath=\$ORIGIN/../lib"
++		fi
++		;;
+ 	# -u libsys_s pulls in all symbols in libsys
+ 	Darwin/*|iOS/*)
+ 		LINKFORSHARED="$extra_undefs -framework CoreFoundation"
+diff --git a/configure.ac b/configure.ac
+index b1c859071f4..f75f41441e2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3613,7 +3613,13 @@ then
+ 	    LINKFORSHARED="-Wl,-E -Wl,+s";;
+ #	    LINKFORSHARED="-Wl,-E -Wl,+s -Wl,+b\$(BINLIBDEST)/lib-dynload";;
+ 	Linux-android*) LINKFORSHARED="-pie -Xlinker -export-dynamic";;
+-	Linux*|GNU*) LINKFORSHARED="-Xlinker -export-dynamic";;
++	Linux*|GNU*)
++		LINKFORSHARED="-Xlinker -export-dynamic"
++		# Add rpath for relocatable builds
++		if test "x$enable_relocatable" = xyes; then
++			LINKFORSHARED="$LINKFORSHARED -Wl,-rpath=\$ORIGIN/../lib"
++		fi
++		;;
+ 	# -u libsys_s pulls in all symbols in libsys
+ 	Darwin/*|iOS/*)
+ 		LINKFORSHARED="$extra_undefs -framework CoreFoundation"

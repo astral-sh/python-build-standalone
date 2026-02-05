@@ -1,0 +1,199 @@
+From 770c9997a58a50144ae433119f32e3ffa9d2c26c Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Tue, 16 Dec 2025 13:43:43 -0500
+Subject: [PATCH 1/1] [3.10] getpath: Fix library detection and canonicalize
+ paths on Linux
+Forwarded: not-needed
+
+This is an implementation of the corresponding patch for 3.11+
+(patch-python-getpath-library.patch) to the pure-C getpath
+implementation in 3.10. See that patch's commit message for the details
+and motivation.
+
+3.10 getpath appears to loop over parent directories to the calculated
+argv[0] path, so the issue mentioned in the original commit message
+about the extra lib/ segment should not arise.
+---
+ Modules/getpath.c | 134 ++++++++++++++++++++++------------------------
+ 1 file changed, 65 insertions(+), 69 deletions(-)
+
+diff --git a/Modules/getpath.c b/Modules/getpath.c
+index ef6dd59a084..6fd02a25277 100644
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -8,6 +8,7 @@
+ 
+ #include <sys/types.h>
+ #include <string.h>
++#include <dlfcn.h>
+ 
+ #ifdef __APPLE__
+ #  include <mach-o/dyld.h>
+@@ -1090,87 +1091,84 @@ resolve_symlinks(wchar_t **path_p)
+ #endif /* HAVE_READLINK */
+ 
+ 
+-#ifdef WITH_NEXT_FRAMEWORK
+-static PyStatus
+-calculate_argv0_path_framework(PyCalculatePath *calculate, _PyPathConfig *pathconfig)
+-{
+-    NSModule pythonModule;
+-
+-    /* On Mac OS X we have a special case if we're running from a framework.
+-       This is because the python home should be set relative to the library,
+-       which is in the framework, not relative to the executable, which may
+-       be outside of the framework. Except when we're in the build
+-       directory... */
+-    pythonModule = NSModuleForSymbol(NSLookupAndBindSymbol("_Py_Initialize"));
+-
+-    /* Use dylib functions to find out where the framework was loaded from */
+-    const char* modPath = NSLibraryNameForModule(pythonModule);
+-    if (modPath == NULL) {
+-        return _PyStatus_OK();
+-    }
+-
+-    /* We're in a framework.
+-       See if we might be in the build directory. The framework in the
+-       build directory is incomplete, it only has the .dylib and a few
+-       needed symlinks, it doesn't have the Lib directories and such.
+-       If we're running with the framework from the build directory we must
+-       be running the interpreter in the build directory, so we use the
+-       build-directory-specific logic to find Lib and such. */
+-    size_t len;
+-    wchar_t* wbuf = Py_DecodeLocale(modPath, &len);
+-    if (wbuf == NULL) {
+-        return DECODE_LOCALE_ERR("framework location", len);
++static void
++fclose_cleanup(FILE **pf) {
++    if (*pf) {
++        fclose(*pf);
++        *pf = NULL;
+     }
++}
+ 
+-    /* Path: reduce(modPath) / lib_python / LANDMARK */
+-    PyStatus status;
+ 
+-    wchar_t *parent = _PyMem_RawWcsdup(wbuf);
+-    if (parent == NULL) {
+-        status = _PyStatus_NO_MEMORY();
+-        goto done;
+-    }
++static PyStatus
++calculate_argv0_path_library(PyCalculatePath *calculate, _PyPathConfig *pathconfig)
++{
++    const void *target = __builtin_extract_return_addr(
++        __builtin_return_address(0)
++    );
++    wchar_t *wbuf = NULL;
++    size_t len;
+ 
+-    reduce(parent);
+-    wchar_t *lib_python = joinpath2(parent, calculate->lib_python);
+-    PyMem_RawFree(parent);
++#ifdef __linux__
++    /* Linux libcs do not reliably report the realpath in dladdr dli_fname and
++     * sometimes return relative paths, especially if the returned object is
++     * the main program itself. However, /proc/self/maps will give absolute
++     * realpaths (from the kernel, for the same reason that /proc/self/exe is
++     * canonical), so try to parse and look it up there.  (dyld seems to
++     * reliably report the canonical path, so doing this matches the behavior
++     * on macOS.) */
++
++    __attribute__((cleanup(fclose_cleanup)))
++    FILE *maps = fopen("/proc/self/maps", "r");
++    if (maps != NULL) {
++        /* See implementation in fs/proc/task_mmu.c for spacing. The pathname
++         * is the last field and has any \n characters escaped, so we can read
++         * until \n. Note that the filename may have " (deleted)" appended;
++         * we don't bother to handle that specially as the only user of this
++         * value calls dirname() anyway.
++         * TODO(geofft): Consider using PROCMAP_QUERY if supported.
++         */
++        uintptr_t low, high;
++        char rest[PATH_MAX + 1];
++        while (fscanf(maps, "%lx-%lx %*s %*s %*s %*s", &low, &high) == 2) {
++            if (fgets(rest, PATH_MAX + 1, maps) == NULL) {
++                break;
++            }
++            if (strlen(rest) >= PATH_MAX) {
++                // If the line is too long our parsing will be out of sync.
++                break;
++            }
+ 
+-    if (lib_python == NULL) {
+-        status = _PyStatus_NO_MEMORY();
+-        goto done;
++            if (low <= (uintptr_t)target && (uintptr_t)target < high) {
++                // Skip past padding spaces in the filename.
++                const char *filename = rest + strspn(rest, " ");
++                if (filename[0] == '/') {
++                    pathconfig->program_full_path = Py_DecodeLocale(filename, &len);
++                    if (pathconfig->program_full_path == NULL) {
++                        return DECODE_LOCALE_ERR("mapped code path", len);
++                    }
++                }
++                break;
++            }
++        }
+     }
++#endif
+ 
+-    int module;
+-    status = ismodule(lib_python, &module);
+-    PyMem_RawFree(lib_python);
+-
+-    if (_PyStatus_EXCEPTION(status)) {
+-        goto done;
+-    }
+-    if (!module) {
+-        /* We are in the build directory so use the name of the
+-           executable - we know that the absolute path is passed */
+-        PyMem_RawFree(calculate->argv0_path);
+-        calculate->argv0_path = _PyMem_RawWcsdup(pathconfig->program_full_path);
+-        if (calculate->argv0_path == NULL) {
+-            status = _PyStatus_NO_MEMORY();
+-            goto done;
++    if (wbuf == NULL) {
++        Dl_info libpython_info;
++        if (dladdr(target, &libpython_info) && libpython_info.dli_fname) {
++            wbuf = Py_DecodeLocale(libpython_info.dli_fname, &len);
++            if (wbuf == NULL) {
++                return DECODE_LOCALE_ERR("shared object path", len);
++            }
+         }
+-
+-        status = _PyStatus_OK();
+-        goto done;
+     }
+ 
+     /* Use the location of the library as argv0_path */
+     PyMem_RawFree(calculate->argv0_path);
+     calculate->argv0_path = wbuf;
+     return _PyStatus_OK();
+-
+-done:
+-    PyMem_RawFree(wbuf);
+-    return status;
+ }
+-#endif
+ 
+ 
+ static PyStatus
+@@ -1184,12 +1182,10 @@ calculate_argv0_path(PyCalculatePath *calculate,
+         return _PyStatus_NO_MEMORY();
+     }
+ 
+-#ifdef WITH_NEXT_FRAMEWORK
+-    status = calculate_argv0_path_framework(calculate, pathconfig);
++    status = calculate_argv0_path_library(calculate, pathconfig);
+     if (_PyStatus_EXCEPTION(status)) {
+         return status;
+     }
+-#endif
+ 
+     status = resolve_symlinks(&calculate->argv0_path);
+     if (_PyStatus_EXCEPTION(status)) {
+-- 
+2.50.1 (Apple Git-155)
+

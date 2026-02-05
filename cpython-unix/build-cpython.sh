@@ -658,6 +658,8 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]]; then
         patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
     fi
     patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
+else
+    patch -p1 -i "${ROOT}/patch-python-getpath-library-3.10.patch"
 fi
 
 # Another, similar change to getpath: When reading inside a venv use the base_executable path to

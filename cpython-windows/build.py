@@ -751,6 +751,7 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
+    # Build tail-call Python for 3.15+
     if python_version.startswith("3.15") and platform == "x64":
         args.append("/property:PlatformToolset=v145")
         args.append("/p:UseTailCallInterp=true")
@@ -1877,7 +1878,7 @@ def main() -> None:
     parser.add_argument(
         "--vs",
         choices={"2019", "2022", "2026"},
-        default="2026",
+        default="2022",
         help="Visual Studio version to use",
     )
     parser.add_argument(

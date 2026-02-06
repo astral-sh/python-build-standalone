@@ -238,6 +238,30 @@ def find_runner(runners: dict[str, Any], platform: str, arch: str, free: bool) -
     )
 
 
+def create_python_build_entry(
+    base_entry: dict[str, Any],
+    python_version: str,
+    build_option: str,
+    config: dict[str, Any],
+) -> dict[str, Any]:
+    entry = base_entry.copy()
+    entry.update(
+        {
+            "python": python_version,
+            "build_options": build_option,
+        }
+    )
+    if "vs_version_override_conditional" in config:
+        conditional = config["vs_version_override_conditional"]
+        min_version = conditional["minimum-python-version"]
+        if meets_conditional_version(python_version, min_version):
+            entry["vs_version"] = conditional["vs_version"]
+    # TODO remove once VS 2026 is available in 'standard' runnners
+    if entry.get("vs_version") == "2026":
+        entry["runner"] = "windows-2025-vs2026"
+    return entry
+
+
 def add_python_build_entries_for_config(
     matrix_entries: list[dict[str, str]],
     target_triple: str,
@@ -272,6 +296,8 @@ def add_python_build_entries_for_config(
         base_entry["libc"] = config["libc"]
     if "vcvars" in config:
         base_entry["vcvars"] = config["vcvars"]
+    if "vs_version" in config:
+        base_entry["vs_version"] = config["vs_version"]
 
     if "dry-run" in directives:
         base_entry["dry-run"] = "true"
@@ -279,19 +305,9 @@ def add_python_build_entries_for_config(
     # Process regular build options
     for python_version in python_versions:
         for build_option in build_options:
-            entry = base_entry.copy()
-            entry.update(
-                {
-                    "python": python_version,
-                    "build_options": build_option,
-                }
+            entry = create_python_build_entry(
+                base_entry, python_version, build_option, config
             )
-            if platform == "windows" and arch == "x86_64" and python_version == "3.15":
-                entry.update(
-                    {
-                        "runner": "windows-2025-vs2026",
-                    }
-                )
             matrix_entries.append(entry)
 
     # Process conditional build options (e.g., freethreaded)
@@ -302,23 +318,9 @@ def add_python_build_entries_for_config(
                 continue
 
             for build_option in conditional["options"]:
-                entry = base_entry.copy()
-                entry.update(
-                    {
-                        "python": python_version,
-                        "build_options": build_option,
-                    }
+                entry = create_python_build_entry(
+                    base_entry, python_version, build_option, config
                 )
-                if (
-                    platform == "windows"
-                    and arch == "x86_64"
-                    and python_version == "3.15"
-                ):
-                    entry.update(
-                        {
-                            "runner": "windows-2025-vs2026",
-                        }
-                    )
                 matrix_entries.append(entry)
 
 

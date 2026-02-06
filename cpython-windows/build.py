@@ -755,7 +755,6 @@ def run_msbuild(
         args.append("/property:PlatformToolset=v145")
         args.append("/p:UseTailCallInterp=true")
 
-
     exec_and_log(args, str(pcbuild_path), os.environ)
 
 

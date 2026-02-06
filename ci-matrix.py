@@ -286,6 +286,12 @@ def add_python_build_entries_for_config(
                     "build_options": build_option,
                 }
             )
+            if platform == "windows" and arch == "x86_64" and python_version == "3.15":
+                entry.update(
+                    {
+                        "runner": "windows-2025-vs2026",
+                    }
+                )
             matrix_entries.append(entry)
 
     # Process conditional build options (e.g., freethreaded)
@@ -303,6 +309,12 @@ def add_python_build_entries_for_config(
                         "build_options": build_option,
                     }
                 )
+                if platform == "windows" and arch == "x86_64" and python_version == "3.15":
+                    entry.update(
+                        {
+                            "runner": "windows-2025-vs2026",
+                        }
+                    )
                 matrix_entries.append(entry)
 
 

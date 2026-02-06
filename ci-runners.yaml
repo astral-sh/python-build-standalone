@@ -40,6 +40,11 @@ windows-latest:
   platform: windows
   free: true
 
+windows-2025-vs2026:
+  arch: x86_64
+  platform: windows
+  free: true
+
 windows-11-arm:
   arch: aarch64
   platform: windows

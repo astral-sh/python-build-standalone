@@ -752,7 +752,8 @@ def run_msbuild(
         args.append("/property:DisableGil=true")
 
     # Build tail-calling Python for 3.15+
-    if python_version.startswith("3.15"):
+    # TODO(jjh) Remove 'not freethreaded' when 3.15.0a6 released
+    if python_version.startswith("3.15") and not freethreaded:
         args.append("/property:PlatformToolset=v145")
         args.append("/property:UseTailCallInterp=true")
 

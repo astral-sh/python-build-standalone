@@ -4,79 +4,81 @@
 Building
 ========
 
+A Python distribution can be built on a Linux, macOS or Windows host.
+Regardless of the operating system, `uv <https://docs.astral.sh/uv/>`_ must be installed. 
+Additional operating system requirements are needed and outlined in the following sections.
+
+Regardless of the host, to build a Python distribution::
+
+    $ uv run build.py
+
+On Linux and macOS, ``./build.py`` can also be used.
+
+To build a different version of Python::
+
+    $ uv run build.py --python cpython-3.14
+
+Various build options can be specified::
+
+    # With profile-guided optimizations (generated code should be faster)
+    $ uv run build.py --options pgo
+    # Produce a debug build.
+    $ uv run build.py --options debug
+    # Produce a free-threaded build without extra optimizations
+    $ uv run build.py --options freethreaded+noopt
+
+Different platforms  support different build options. 
+``uv run build.py --help`` will show the available build options and other usage information.
+
+
 Linux
 =====
 
-The host system must be 64-bit. A Python 3.10+ interpreter must be
-available. The execution environment must have access to a Docker
+The host system must be x86-64 or aarch64. 
+The execution environment must have access to a Docker
 daemon (all build operations are performed in Docker containers for
 isolation from the host system).
 
-To build a Python distribution for Linux x64::
+``build.py`` accepts a ``--target-triple`` argument to support building
+for non-native targets (i.e. cross-compiling). 
 
-    $ ./build-linux.py
-    # With profile-guided optimizations (generated code should be faster):
-    $ ./build-linux.py --options pgo
-    # Produce a debug build.
-    $ ./build-linux.py --options debug
-    # Produce a free-threaded build without extra optimizations
-    $ ./build-linux.py --options freethreaded+noopt
+This option can be used to build for musl libc::
 
-You can also build another version of Python. e.g.::
+    $ ./build.py --target-triple x86_64-unknown-linux-musl
 
-    $ ./build-linux.py --python cpython-3.13
+Or on a x86-64 host for different architectures::
 
-To build a Python distribution for Linux x64 using musl libc::
+    $ ./build.py --target-triple i686-unknown-linux-gnu
+    $ ./build.py --target-triple armv7-unknown-linux-gnueabi
+    $ ./build.py --target-triple armv7-unknown-linux-gnueabihf
+    $ ./build.py --target-triple loongarch64-unknown-linux-gnu
+    $ ./build.py --target-triple mips-unknown-linux-gnu
+    $ ./build.py --target-triple mipsel-unknown-linux-gnu
+    $ ./build.py --target-triple ppc64le-unknown-linux-gnu
+    $ ./build.py --target-triple riscv64-unknown-linux-gnu
+    $ ./build.py --target-triple s390x-unknown-linux-gnu
 
-    $ ./build-linux.py --target x86_64-unknown-linux-musl
-
-Building a 32-bit x86 Python distribution is also possible::
-
-    $ ./build-linux.py --target i686-unknown-linux-gnu
-
-As are various other targets::
-
-    $ ./build-linux.py --target aarch64-unknown-linux-gnu
-    $ ./build-linux.py --target armv7-unknown-linux-gnueabi
-    $ ./build-linux.py --target armv7-unknown-linux-gnueabihf
-    $ ./build-linux.py --target loongarch64-unknown-linux-gnu
-    $ ./build-linux.py --target mips-unknown-linux-gnu
-    $ ./build-linux.py --target mipsel-unknown-linux-gnu
-    $ ./build-linux.py --target ppc64le-unknown-linux-gnu
-    $ ./build-linux.py --target riscv64-unknown-linux-gnu
-    $ ./build-linux.py --target s390x-unknown-linux-gnu
-
-Additionally, an arm64 macOS host can be used to build Linux aarch64 targets
-using Docker::
-
-    $ ./build-linux.py --target aarch64-unknown-linux-gnu
 
 macOS
 =====
 
-The XCode command line tools must be installed. A Python 3 interpreter
-is required to execute the build. ``/usr/bin/clang`` must exist.
+The XCode command line tools must be installed.
+``/usr/bin/clang`` must exist.
 
-macOS SDK headers must be installed. Try running ``xcode-select --install``
-to install them if you see errors about e.g. ``stdio.h`` not being found.
-Verify they are installed by running ``xcrun --show-sdk-path``. It
-should print something like
+macOS SDK headers must be installed. 
+If you see errors such as ``stdio.h`` not being found, try running ``xcode-select --install`` to install them.
+Verify they are installed by running ``xcrun --show-sdk-path``.
+It should print something like
 ``/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk``
 on modern versions of macOS.
 
-To build a Python distribution for macOS::
+The ``--target-triple`` argument can be used to build for an Intel Mac on an arm64 (Apple Silicon) host::
 
-    $ ./build-macos.py
+    $ ./build.py --target-triple x86_64-apple-darwin
 
-macOS uses the same build code as Linux, just without Docker.
-So similar build configuration options are available.
+Additionally, an arm64 macOS host can be used to build Linux aarch64 targets using Docker::
 
-``build-macos.py`` accepts a ``--target-triple`` argument to support building
-for non-native targets (i.e. cross-compiling). By default, macOS builds target
-the currently running architecture. e.g. an Intel Mac will target
-``x86_64-apple-darwin`` and an M1 (ARM) Mac will target ``aarch64-apple-darwin``.
-It should be possible to build an ARM distribution on an Intel Mac and an Intel
-distribution on an ARM Mac.
+    $ ./build.py --target-triple aarch64-unknown-linux-gnu
 
 The ``APPLE_SDK_PATH`` environment variable is recognized as the path
 to the Apple SDK to use. If not defined, the build will attempt to find
@@ -89,24 +91,17 @@ an Intel 10.15 machine (as long as the 11.0+ SDK is used).
 Windows
 =======
 
-Visual Studio 2017 (or later) is required. A compatible Windows SDK is required
-(10.0.17763.0 as per CPython 3.7.2).
+Visual Studio 2022 (or later) is required. 
+A compatible Windows SDK is required (10.0.26100.0 as of CPython 3.10).
+A ``git.exe`` must be on ``PATH`` (to clone ``libffi`` from source).
+Cygwin must be installed with the ``autoconf``, ``automake``, ``libtool``,
+and ``make`` packages. (``libffi`` build dependency.)
 
-* A ``git.exe`` on ``PATH`` (to clone ``libffi`` from source).
-* An installation of Cygwin with the ``autoconf``, ``automake``, ``libtool``,
-  and ``make`` packages installed. (``libffi`` build dependency.)
+Building can be done from the ``x64 Native Tools Command Prompt``, by calling 
+the vcvars batch file, or by adjusting the ``PATH`` and environment variables.
 
-To build a dynamically linked Python distribution for Windows x64::
+You will need to specify the path to ``sh.exe`` from cygwin::
 
-    $ py.exe build-windows.py --options noopt
+   $ uv run build.py --sh c:\cygwin\bin\sh.exe
 
-It's also possible to build with optional PGO optimizations::
-
-   $ py.exe build-windows.py --options pgo
-
-You will need to specify the path to a ``sh.exe`` installed from cygwin. e.g.
-
-   $ py.exe build-windows.py --python cpython-3.13 --sh c:\cygwin\bin\sh.exe --options noopt
-
-To build a 32-bit x86 binary, simply use an ``x86 Native Tools
-Command Prompt`` instead of ``x64``.
+To build a 32-bit x86 binary, simply use an ``x86 Native Tools Command Prompt`` instead of ``x64``.

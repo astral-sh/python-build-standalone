@@ -646,6 +646,16 @@ if [ -n "${CROSS_COMPILING}" ]; then
             ;;
     esac
 
+    # When cross-compiling, configure defaults to assuming `sem_getvalue` is broken,
+    # which causes `multiprocessing.Queue.qsize()` to raise `NotImplementedError`.
+    # Linux has a working `sem_getvalue`, so we explicitly tell configure it's not broken.
+    # macOS is excluded because it genuinely has a non-functional `sem_getvalue`.
+    # See: https://github.com/astral-sh/python-build-standalone/issues/977
+    # See also: https://github.com/python/cpython/issues/101094 (macOS `sem_getvalue` issue)
+    if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+        CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_broken_sem_getvalue=no"
+    fi
+
     # TODO: There are probably more of these, see #599.
 fi
 

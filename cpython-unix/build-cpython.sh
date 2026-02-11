@@ -325,6 +325,8 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
 fi
 
 # Mark _Py_jit_entry as extern in _testiternalcapi/interpreter.c to avoid a duplicate symbols.
+# The symbol is not actually used in the module, a better solution should be found, see:
+# https://github.com/python/cpython/issues/144712
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i ${ROOT}/patch-testinternalcapi-interpreter-extern.patch
 fi

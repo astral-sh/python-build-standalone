@@ -1,0 +1,13 @@
+diff --git a/Modules/_testinternalcapi/interpreter.c b/Modules/_testinternalcapi/interpreter.c
+index 2cd23fa3c58..653332f7073 100644
+--- a/Modules/_testinternalcapi/interpreter.c
++++ b/Modules/_testinternalcapi/interpreter.c
+@@ -21,7 +21,7 @@ stop_tracing_and_jit(PyThreadState *tstate, _PyInterpreterFrame *frame)
+ }
+ #endif
+ 
+-_PyJitEntryFuncPtr _Py_jit_entry;
++extern _PyJitEntryFuncPtr _Py_jit_entry;
+ 
+ #if _Py_TAIL_CALL_INTERP
+ #include "test_targets.h"

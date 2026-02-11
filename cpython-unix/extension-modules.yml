@@ -652,6 +652,8 @@ _testinternalcapi:
       minimum-python-version: "3.13"
     - source: _testinternalcapi/complex.c
       minimum-python-version: "3.14"
+    - source: _testinternalcapi/interpreter.c
+      minimum-python-version: "3.15"
 
 _testmultiphase:
   minimum-python-version: '3.10'

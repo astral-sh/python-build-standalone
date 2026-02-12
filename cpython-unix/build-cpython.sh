@@ -311,6 +311,11 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.12 ] || [ "${PYTHON_MAJMIN_VERSION}" = 3.13 
     patch -p1 -i ${ROOT}/patch-test-embed-prevent-segfault.patch
 fi
 
+# RHEL 8 (supported until 2029) and below, including Fedora 33 and below, do not
+# ship an /etc/ssl/cert.pem or a hashed /etc/ssl/cert/ directory. Patch to look at
+# /etc/pki/tls/cert.pem instead, if that file exists and /etc/ssl/cert.pem does not.
+patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
+
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as
 # static (which we do anyway in our own fashion) and more importantly to
 # take this into account when finding the AsyncioDebug section.

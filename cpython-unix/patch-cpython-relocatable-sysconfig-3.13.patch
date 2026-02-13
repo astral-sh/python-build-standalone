@@ -1,0 +1,42 @@
+diff --git a/Lib/sysconfig/__main__.py b/Lib/sysconfig/__main__.py
+index d7257b9d2d0..1209757b45b 100644
+--- a/Lib/sysconfig/__main__.py
++++ b/Lib/sysconfig/__main__.py
+@@ -1,4 +1,5 @@
+ import os
++import re
+ import sys
+ from sysconfig import (
+     _ALWAYS_STR,
+@@ -151,8 +152,22 @@ def _parse_makefile(filename, vars=None, keep_unresolved=True):
+ 
+ 
+ def _print_config_dict(d, stream):
++    # Build a regex that matches the prefix at the start of the
++    # string or following a whitespace character.
++    prefix = d.get("prefix", "/install")
++    install_prefix_pattern = re.compile(r"(^|\s)" + re.escape(prefix))
++    # The replacement string. Use a backreference \1 to keep the
++    # whitespace if it was present.
++    relocatable_path = r"\1{installed_base}"
++
+     print ("{", file=stream)
+     for k, v in sorted(d.items()):
++        if isinstance(v, str):
++            replaced, count = install_prefix_pattern.subn(relocatable_path, v)
++            if count:
++                value_literal = "f" + repr(replaced)
++                print(f"    {k!r}: {value_literal},", file=stream)
++                continue
+         print(f"    {k!r}: {v!r},", file=stream)
+     print ("}", file=stream)
+ 
+@@ -212,6 +227,8 @@ def _generate_posix_vars():
+     with open(destfile, 'w', encoding='utf8') as f:
+         f.write('# system configuration generated and used by'
+                 ' the sysconfig module\n')
++        f.write('from pathlib import Path\n')
++        f.write('installed_base = str(Path(__file__).resolve().parent.parent.parent)\n')
+         f.write('build_time_vars = ')
+         _print_config_dict(vars, stream=f)
+ 

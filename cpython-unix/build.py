@@ -682,7 +682,8 @@ def python_build_info(
         }
 
         if info.get("build-mode") == "shared":
-            shared_dir = extra_metadata["python_config_vars"]["DESTSHARED"].strip("/")
+            shared_dir = extra_metadata["python_config_vars"]["DESTSHARED"]
+            shared_dir = 'install/lib' + shared_dir.split('install/lib', 1)[1]
             extension_suffix = extra_metadata["python_config_vars"]["EXT_SUFFIX"]
             entry["shared_lib"] = "%s/%s%s" % (shared_dir, extension, extension_suffix)
 

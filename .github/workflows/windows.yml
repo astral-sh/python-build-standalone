@@ -159,11 +159,13 @@ jobs:
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
         with:
           name: build-deps-${{ matrix.target_triple }}-${{ matrix.build_options}}
+          path: build
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
+          DIR
           IF "%MATRIX_VS_VERSION%"=="2026" (
             call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
           ) ELSE (
@@ -203,7 +205,7 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.dep-build-matrix) }}
       fail-fast: false
-    name: ${{ matrix.target_triple }} / ${{ matrix.build_options }}
+    name: build-deps / ${{ matrix.target_triple }} / ${{ matrix.build_options }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:

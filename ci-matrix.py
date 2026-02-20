@@ -127,6 +127,30 @@ def generate_docker_matrix_entries(
     return matrix_entries
 
 
+def generate_deps_build_matrix_entries(
+    python_entries: list[dict[str, str]],
+    platform_filter: str | None = None,
+) -> list[dict[str, str]]:
+    """Generate matrix entries for deps builds based on python build matrix."""
+    include_keys = {
+        "arch",
+        "target_triple",
+        "platform",
+        "runner",
+        "build_options",
+        "vcvars",
+        "vs_version",
+    }
+    dep_build_pairs = set()
+    for entry in python_entries:
+        platform = entry["platform"]
+        if platform_filter and platform != platform_filter:
+            continue
+        pairs = tuple((k, v) for k, v in entry.items() if k in include_keys)
+        dep_build_pairs.add(pairs)
+    return [dict(pairs) for pairs in dep_build_pairs]
+
+
 def generate_crate_build_matrix_entries(
     python_entries: list[dict[str, str]],
     runners: dict[str, Any],
@@ -355,7 +379,7 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "crate-build", "all"],
+        choices=["python-build", "docker-build", "crate-build", "deps-build", "all"],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -442,6 +466,14 @@ def main() -> None:
             args.platform,
         )
         result["crate-build"] = {"include": crate_entries}
+
+    # Generate deps-build matrix if requested
+    if args.matrix_type in ["deps-build", "all"]:
+        deps_entries = generate_deps_build_matrix_entries(
+            python_entries,
+            args.platform,
+        )
+        result["deps-build"] = {"include": deps_entries}
 
     print(json.dumps(result))
 

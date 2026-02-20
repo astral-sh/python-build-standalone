@@ -56,6 +56,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
+      dep-build-matrix: ${{ steps.set-matrix.outputs.dep-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -97,6 +98,7 @@ jobs:
           # Extract python-build matrix
           echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "dep-build-matrix=$(jq -c '."dep-build"' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
           cat matrix.json | jq
@@ -116,6 +118,7 @@ jobs:
     needs:
       - generate-matrix
       - crate-build
+      - build-deps
     # Permissions used for actions/attest-build-provenance
     permissions:
       id-token: write
@@ -152,6 +155,11 @@ jobs:
         run: |
           uv run build.py --help
 
+      - name: Download build dependencies
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: build-deps-${{ matrix.target_triple }}-${{ matrix.build_options}}
+
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
@@ -185,3 +193,56 @@ jobs:
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution --run $Dists
+
+  build-deps:
+    timeout-minutes: 90
+    needs:
+      - generate-matrix
+    # Permissions used for actions/attest-build-provenance
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.dep-build-matrix) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.build_options }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Cygwin Environment
+        uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
+        with:
+          packages: autoconf automake libtool
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+        with:
+          enable-cache: false
+
+      # We need to do this before we activate the VC++ environment or else binary packages
+      # don't get compiled properly.
+      - name: Bootstrap Python environment
+        run: |
+          uv run build.py --help
+
+      - name: Build
+        if: ${{ ! matrix.dry-run }}
+        shell: cmd
+        run: |
+          IF "%MATRIX_VS_VERSION%"=="2026" (
+            call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          ) ELSE (
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          )
+          uv run build.py --only-deps --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
+        env:
+          MATRIX_VCVARS: ${{ matrix.vcvars }}
+          MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+          MATRIX_VS_VERSION: ${{ matrix.vs_version }}
+
+      - name: Upload Build Dependencies
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-deps-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: build/*.tar

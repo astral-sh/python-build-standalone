@@ -98,7 +98,7 @@ jobs:
           # Extract python-build matrix
           echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
-          echo "dep-build-matrix=$(jq -c '."dep-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "dep-build-matrix=$(jq -c '."deps-build"' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
           cat matrix.json | jq

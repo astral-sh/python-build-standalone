@@ -1,52 +1,24 @@
 diff --git a/Lib/ssl.py b/Lib/ssl.py
-index 42ebb8ed384..e35b056668b 100644
+index 42ebb8ed384..2cf7e64e18e 100644
 --- a/Lib/ssl.py
 +++ b/Lib/ssl.py
-@@ -709,7 +709,24 @@ def create_default_context(purpose=Purpose.SERVER_AUTH, *, cafile=None,
-         # no explicit cafile, capath or cadata but the verify mode is
-         # CERT_OPTIONAL or CERT_REQUIRED. Let's try to load default system
-         # root CA certificates for the given purpose. This may fail silently.
--        context.load_default_certs(purpose)
-+        #
-+        # First, try the paths reported by get_default_verify_paths(),
-+        # which may include patched paths (e.g., /etc/pki/tls/cert.pem
-+        # for RHEL/Fedora). OpenSSL's SSL_CTX_set_default_verify_paths()
-+        # only uses its own compile-time defaults, so we must explicitly
-+        # load these if they differ.
-+        _def_paths = get_default_verify_paths()
-+        _cafile = _def_paths.cafile  # actual resolved file path
-+        _capath = _def_paths.capath  # actual resolved directory path
-+        _loaded = False
-+        if _cafile and os.path.isfile(_cafile):
-+            context.load_verify_locations(cafile=_cafile)
-+            _loaded = True
-+        if _capath and os.path.isdir(_capath):
-+            context.load_verify_locations(capath=_capath)
-+            _loaded = True
-+        if not _loaded:
-+            context.load_default_certs(purpose)
-     # OpenSSL 1.1.1 keylog file
-     if hasattr(context, 'keylog_filename'):
-         keylogfile = os.environ.get('SSLKEYLOGFILE')
-diff --git a/Modules/_ssl.c b/Modules/_ssl.c
-index 0b8cf0b6df3..d2df96fff15 100644
---- a/Modules/_ssl.c
-+++ b/Modules/_ssl.c
-@@ -5253,7 +5253,16 @@ _ssl_get_default_verify_paths_impl(PyObject *module)
-     }
+@@ -423,6 +423,7 @@ class SSLContext(_SSLContext):
+     """An SSLContext holds various SSL-related configuration options and
+     data, such as certificates and possibly a private key."""
+     _windows_cert_stores = ("CA", "ROOT")
++    _FALLBACK_CERT_FILE = "/etc/pki/tls/cert.pem"  # RHEL 8 and below, Fedora 33 and below
  
-     CONVERT(X509_get_default_cert_file_env(), ofile_env);
--    CONVERT(X509_get_default_cert_file(), ofile);
-+
-+    /* Check for certificate file path, with fallback for RHEL/Fedora */
-+    const char *cert_file = X509_get_default_cert_file();
-+    struct stat st;
-+
-+    /* If the default cert file doesn't exist, try RHEL/Fedora location */
-+    if (!(cert_file != NULL && stat(cert_file, &st) == 0) && (stat("/etc/pki/tls/cert.pem", &st) == 0))
-+        cert_file = "/etc/pki/tls/cert.pem";
-+
-+    CONVERT(cert_file, ofile);
-     CONVERT(X509_get_default_cert_dir_env(), odir_env);
-     CONVERT(X509_get_default_cert_dir(), odir);
- #undef CONVERT
+     sslsocket_class = None  # SSLSocket is assigned later.
+     sslobject_class = None  # SSLObject is assigned later.
+@@ -531,6 +532,11 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
+         if sys.platform == "win32":
+             for storename in self._windows_cert_stores:
+                 self._load_windows_store_certs(storename, purpose)
++        elif sys.platform == "linux":
++            _def_paths = _ssl.get_default_verify_paths()
++            openssl_cafile = os.environ.get(_def_paths[0], _def_paths[1])
++            if not os.path.isfile(openssl_cafile) and os.path.isfile(self._FALLBACK_CERT_FILE):
++                self.load_verify_locations(cafile=self._FALLBACK_CERT_FILE)
+         self.set_default_verify_paths()
+ 
+     if hasattr(_SSLContext, 'minimum_version'):

@@ -1,5 +1,5 @@
 diff --git a/Lib/ssl.py b/Lib/ssl.py
-index 42ebb8ed384..2cf7e64e18e 100644
+index 42ebb8ed384..5cf2575ecd8 100644
 --- a/Lib/ssl.py
 +++ b/Lib/ssl.py
 @@ -423,6 +423,7 @@ class SSLContext(_SSLContext):
@@ -10,14 +10,15 @@ index 42ebb8ed384..2cf7e64e18e 100644
  
      sslsocket_class = None  # SSLSocket is assigned later.
      sslobject_class = None  # SSLObject is assigned later.
-@@ -531,6 +532,11 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
+@@ -531,6 +532,12 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
          if sys.platform == "win32":
              for storename in self._windows_cert_stores:
                  self._load_windows_store_certs(storename, purpose)
 +        elif sys.platform == "linux":
 +            _def_paths = _ssl.get_default_verify_paths()
-+            openssl_cafile = os.environ.get(_def_paths[0], _def_paths[1])
-+            if not os.path.isfile(openssl_cafile) and os.path.isfile(self._FALLBACK_CERT_FILE):
++            if (_def_paths[0] not in os.environ and
++                not os.path.isfile(_def_paths[1]) and
++                os.path.isfile(self._FALLBACK_CERT_FILE)):
 +                self.load_verify_locations(cafile=self._FALLBACK_CERT_FILE)
          self.set_default_verify_paths()
  

@@ -5,12 +5,12 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf sqlite-autoconf-${SQLITE_VERSION}.tar.gz
-pushd sqlite-autoconf-${SQLITE_VERSION}
+tar -xf "sqlite-autoconf-${SQLITE_VERSION}.tar.gz"
+pushd "sqlite-autoconf-${SQLITE_VERSION}"
 
 
 CONFIGURE_FLAGS="--build=${BUILD_TRIPLE} --host=${TARGET_TRIPLE}"
@@ -35,7 +35,7 @@ CFLAGS="${EXTRA_TARGET_CFLAGS} \
 CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" \
 LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure ${CONFIGURE_FLAGS}
 
-make -j ${NUM_CPUS} libsqlite3.a
-make install-lib DESTDIR=${ROOT}/out
-make install-headers DESTDIR=${ROOT}/out
-make install-pc DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}" libsqlite3.a
+make install-lib DESTDIR="${ROOT}/out"
+make install-headers DESTDIR="${ROOT}/out"
+make install-pc DESTDIR="${ROOT}/out"

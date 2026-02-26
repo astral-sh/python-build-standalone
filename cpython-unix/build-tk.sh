@@ -5,18 +5,18 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 # Force linking to static libraries from our dependencies.
 # TODO(geofft): This is copied from build-cpython.sh. Really this should
 # be done at the end of the build of each dependency, rather than before
 # the build of each consumer.
-find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+find "${TOOLS_PATH}/deps" -name '*.so*' -exec rm {} \;
 
 export PATH=${TOOLS_PATH}/deps/bin:${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib/pkgconfig
 
-tar -xf tk${TK_VERSION}-src.tar.gz
+tar -xf "tk${TK_VERSION}-src.tar.gz"
 
 pushd tk*/unix
 
@@ -34,10 +34,10 @@ else
 fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
-    --with-tcl=${TOOLS_PATH}/deps/lib \
+    --with-tcl="${TOOLS_PATH}/deps/lib" \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
     --disable-zipfs \
@@ -63,14 +63,14 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     MAKE_VARS+=(X11_LIB_SWITCHES="-lX11 -lxcb -lXau")
 fi
 
-make -j ${NUM_CPUS} "${MAKE_VARS[@]}"
+make -j "${NUM_CPUS}" "${MAKE_VARS[@]}"
 touch wish
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out "${MAKE_VARS[@]}"
-make -j ${NUM_CPUS} install-private-headers DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out" "${MAKE_VARS[@]}"
+make -j "${NUM_CPUS}" install-private-headers DESTDIR="${ROOT}/out"
 
 # For some reason libtk*.a have weird permissions. Fix that.
 if [ -n "${STATIC}" ]; then
-    chmod 644 /${ROOT}/out/tools/deps/lib/libtk*.a
+    chmod 644 "/${ROOT}/out/tools/deps/lib"/libtk*.a
 fi
 
-rm ${ROOT}/out/tools/deps/bin/wish*
+rm "${ROOT}/out/tools/deps/bin"/wish*

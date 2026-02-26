@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig:/tools/deps/lib/pkgconfig
 
-tar -xf libxcb-${LIBXCB_VERSION}.tar.gz
-pushd libxcb-${LIBXCB_VERSION}
+tar -xf "libxcb-${LIBXCB_VERSION}.tar.gz"
+pushd "libxcb-${LIBXCB_VERSION}"
 
 if [[ "${TARGET_TRIPLE}" = loongarch64* ]]; then
     rm -f build-aux/config.guess build-aux/config.sub
@@ -24,10 +24,10 @@ if [ "${CC}" = "musl-clang" ]; then
 fi
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC"  CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     ${EXTRA_FLAGS}
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=${ROOT}/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR="${ROOT}/out"

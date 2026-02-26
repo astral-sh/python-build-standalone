@@ -5,7 +5,7 @@
 
 set -ex
 
-export ROOT=`pwd`
+export ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:${TOOLS_PATH}/deps/bin:$PATH
 
@@ -28,9 +28,9 @@ else
   sed_args="-i"
 fi
 
-sed ${sed_args} "s|/tools/host|${TOOLS_PATH}/host|g" ${TOOLS_PATH}/host/share/autoconf/autom4te.cfg
+sed ${sed_args} "s|/tools/host|${TOOLS_PATH}/host|g" "${TOOLS_PATH}/host/share/autoconf/autom4te.cfg"
 
-tar -xf Python-${PYTHON_VERSION}.tar.xz
+tar -xf "Python-${PYTHON_VERSION}.tar.xz"
 
 pushd "Python-${PYTHON_VERSION}"
 
@@ -82,7 +82,7 @@ CC="${HOST_CC}" CXX="${HOST_CXX}" CFLAGS="${EXTRA_HOST_CFLAGS}" CPPFLAGS="${EXTR
 # condition in CPython's build system related to directory creation that gets
 # tickled when we do this. https://github.com/python/cpython/issues/109796.
 make -j "${NUM_CPUS}"
-make -j sharedinstall DESTDIR=${ROOT}/out
-make -j install DESTDIR=${ROOT}/out
+make -j sharedinstall DESTDIR="${ROOT}/out"
+make -j install DESTDIR="${ROOT}/out"
 
 popd

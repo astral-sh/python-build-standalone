@@ -5,19 +5,19 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 # Force linking to static libraries from our dependencies.
 # TODO(geofft): This is copied from build-cpython.sh. Really this should
 # be done at the end of the build of each dependency, rather than before
 # the build of each consumer.
-find ${TOOLS_PATH}/deps -name '*.so*' -exec rm {} \;
+find "${TOOLS_PATH}/deps" -name '*.so*' -exec rm {} \;
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib/pkgconfig
 
-tar -xf tcl${TCL_VERSION}-src.tar.gz
-pushd tcl${TCL_VERSION}
+tar -xf "tcl${TCL_VERSION}-src.tar.gz"
+pushd "tcl${TCL_VERSION}"
 
 EXTRA_CONFIGURE=
 
@@ -58,7 +58,7 @@ fi
 # It is a self contained header file, use a copy from the container.
 # https://core.tcl-lang.org/tcl/tktview/3ff2d724d03ba7d6edb8
 if [ "${CC}" = "musl-clang" ]; then
-    cp /usr/include/$(uname -m)-linux-gnu/sys/queue.h /tools/host/include/sys
+    cp "/usr/include/$(uname -m)-linux-gnu/sys/queue.h" /tools/host/include/sys
 fi
 
 # Remove packages we don't care about and can pull in unwanted symbols.
@@ -73,19 +73,19 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
 fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     --enable-shared"${STATIC:+=no}" \
     --enable-threads \
     --disable-zipfs \
     ${EXTRA_CONFIGURE}
 
-make -j ${NUM_CPUS} DYLIB_INSTALL_DIR=@rpath
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out DYLIB_INSTALL_DIR=@rpath
-make -j ${NUM_CPUS} install-private-headers DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}" DYLIB_INSTALL_DIR=@rpath
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out" DYLIB_INSTALL_DIR=@rpath
+make -j "${NUM_CPUS}" install-private-headers DESTDIR="${ROOT}/out"
 
 if [ -n "${STATIC}" ]; then
     # For some reason libtcl*.a have weird permissions. Fix that.
-    chmod 644 ${ROOT}/out/tools/deps/lib/libtcl*.a
+    chmod 644 "${ROOT}/out/tools/deps/lib"/libtcl*.a
 fi

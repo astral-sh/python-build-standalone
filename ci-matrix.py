@@ -9,6 +9,7 @@
 import argparse
 import json
 import sys
+from collections import defaultdict
 from typing import Any
 
 import yaml
@@ -127,11 +128,11 @@ def generate_docker_matrix_entries(
     return matrix_entries
 
 
-def generate_deps_build_matrix_entries(
+def generate_dependencies_build_matrix_entries(
     python_entries: list[dict[str, str]],
     platform_filter: str | None = None,
 ) -> list[dict[str, str]]:
-    """Generate matrix entries for deps builds based on python build matrix."""
+    """Generate matrix entries for dependencies builds based on python build matrix."""
     include_keys = {
         "arch",
         "target_triple",
@@ -234,6 +235,17 @@ def generate_python_build_matrix_entries(
         ]
 
     return matrix_entries
+
+
+def facet_by_triple(entries: list[dict[str, str]]) -> dict[str, dict[str, list]]:
+    """Split entries into sections based upon the target_triple key."""
+    by_triple = defaultdict(list)
+    for entry in entries:
+        by_triple[entry["target_triple"]].append(entry)
+    entries_by_triple = {
+        triple: {"include": entries} for triple, entries in by_triple.items()
+    }
+    return entries_by_triple
 
 
 def find_runner(runners: dict[str, Any], platform: str, arch: str, free: bool) -> str:
@@ -357,11 +369,17 @@ def parse_args() -> argparse.Namespace:
         choices=["darwin", "linux", "windows"],
         help="Filter matrix entries by platform",
     )
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
         "--max-shards",
         type=int,
         default=0,
         help="The maximum number of shards allowed; set to zero to disable ",
+    )
+    group.add_argument(
+        "--facet-by-triple",
+        action="store_true",
+        help="Facet the python-build and dependencies-build entries by target_triple",
     )
     parser.add_argument(
         "--labels",
@@ -379,7 +397,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "crate-build", "deps-build", "all"],
+        choices=[
+            "python-build",
+            "docker-build",
+            "crate-build",
+            "dependencies-build",
+            "all",
+        ],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -467,13 +491,21 @@ def main() -> None:
         )
         result["crate-build"] = {"include": crate_entries}
 
-    # Generate deps-build matrix if requested
-    if args.matrix_type in ["deps-build", "all"]:
-        deps_entries = generate_deps_build_matrix_entries(
+    # Generate dependencies-build matrix if requested
+    if args.matrix_type in ["dependencies-build", "all"]:
+        deps_entries = generate_dependencies_build_matrix_entries(
             python_entries,
             args.platform,
         )
-        result["deps-build"] = {"include": deps_entries}
+        result["dependencies-build"] = {"include": deps_entries}
+
+    # facet
+    if args.facet_by_triple:
+        result["python-build"] = facet_by_triple(result["python-build"]["include"])
+        if "dependencies-build" in result:
+            result["dependencies-build"] = facet_by_triple(
+                result["dependencies-build"]["include"]
+            )
 
     print(json.dumps(result))
 

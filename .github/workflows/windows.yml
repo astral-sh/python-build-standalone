@@ -118,7 +118,7 @@ jobs:
     needs:
       - generate-matrix
       - crate-build
-      - build-deps
+      - build-dependencies
     # Permissions used for actions/attest-build-provenance
     permissions:
       id-token: write
@@ -196,11 +196,10 @@ jobs:
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution --run $Dists
 
-  build-deps:
-    timeout-minutes: 90
+  build-dependencies:
+    timeout-minutes: 20
     needs:
       - generate-matrix
-    # Permissions used for actions/attest-build-provenance
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.dep-build-matrix) }}

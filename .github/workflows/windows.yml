@@ -59,7 +59,7 @@ jobs:
       matrix-aarch64: ${{ steps.set-matrix.outputs.matrix-aarch64 }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       dependencies-build-matrix-x86_64: ${{ steps.set-matrix.outputs.dependencies-build-matrix-x86_64 }}
-      dependencies-build-matrix-i686: ${{ steps.set-matrix.outputs.dependencies-build-matrix-x86_64 }}
+      dependencies-build-matrix-i686: ${{ steps.set-matrix.outputs.dependencies-build-matrix-i686 }}
       dependencies-build-matrix-aarch64: ${{ steps.set-matrix.outputs.dependencies-build-matrix-aarch64 }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:

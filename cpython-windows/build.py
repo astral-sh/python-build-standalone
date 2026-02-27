@@ -1912,7 +1912,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--only-deps",
-        action='store_true',
+        action="store_true",
         help="Build only dependencies, not CPython",
     )
 

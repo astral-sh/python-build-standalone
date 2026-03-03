@@ -4,7 +4,8 @@
 
 use {
     crate::release::{
-        RELEASE_TRIPLES, bootstrap_llvm, produce_install_only, produce_install_only_stripped,
+        RELEASE_TRIPLES, bootstrap_llvm, build_wanted_filenames, produce_install_only,
+        produce_install_only_stripped,
     },
     anyhow::{Result, anyhow},
     bytes::Bytes,
@@ -429,40 +430,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .filter(|x| x.contains(datetime) && x.starts_with("cpython-"))
         .collect::<BTreeSet<_>>();
 
-    let mut python_versions = BTreeSet::new();
-    for filename in &filenames {
-        let parts = filename.split('-').collect::<Vec<_>>();
-        python_versions.insert(parts[1]);
-    }
-
-    let mut wanted_filenames = BTreeMap::new();
-    for version in python_versions {
-        for (triple, release) in RELEASE_TRIPLES.iter() {
-            let python_version = pep440_rs::Version::from_str(version)?;
-            if let Some(req) = &release.python_version_requirement {
-                if !req.contains(&python_version) {
-                    continue;
-                }
-            }
-
-            for suffix in release.suffixes(Some(&python_version)) {
-                wanted_filenames.insert(
-                    format!("cpython-{version}-{triple}-{suffix}-{datetime}.tar.zst"),
-                    format!("cpython-{version}+{tag}-{triple}-{suffix}-full.tar.zst"),
-                );
-            }
-
-            wanted_filenames.insert(
-                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
-                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
-            );
-
-            wanted_filenames.insert(
-                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
-                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
-            );
-        }
-    }
+    let wanted_filenames = build_wanted_filenames(&filenames, datetime, tag)?;
 
     let missing = wanted_filenames
         .keys()

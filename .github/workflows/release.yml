@@ -109,13 +109,10 @@ jobs:
           PROJECT: python-build-standalone
           VERSION: ${{ github.event.inputs.tag }}
         run: |
-          aws s3 cp --recursive --output table --color on \
-            --exclude '*' \
-            --include '*.tar.gz' --include '*.tar.zst' \
-            --include 'SHA256SUMS' \
-            --cache-control "public, max-age=31536000, immutable" \
-            dist/ \
-            s3://${R2_BUCKET}/github/$PROJECT/releases/download/$VERSION/
+          just release-upload-mirror \
+            ${R2_BUCKET} \
+            github/${PROJECT}/releases/download/${VERSION}/ \
+            ${VERSION}
 
   publish-versions:
     needs: release

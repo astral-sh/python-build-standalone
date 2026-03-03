@@ -17,7 +17,7 @@ use {
     once_cell::sync::Lazy,
     pep440_rs::VersionSpecifier,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, BTreeSet},
         io::{BufRead, Read, Write},
         path::{Path, PathBuf},
     },
@@ -354,6 +354,61 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
 
     h
 });
+
+/// Build a mapping from local artifact filenames (as found in the dist directory after
+/// `fetch-release-distributions`) to their corresponding GitHub Release asset names.
+///
+/// Both the source and destination names are derived from the same set of build artifacts;
+/// the difference is that GitHub Release names embed the release tag and use a normalised
+/// suffix (`-full`, no datetime component), while the local artifact names embed the build
+/// datetime and no tag.
+///
+/// Example:
+/// * source: `cpython-3.12.4-x86_64-unknown-linux-gnu-pgo+lto-20240722T0909.tar.zst`
+/// * dest:   `cpython-3.12.4+20240722-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst`
+pub fn build_wanted_filenames(
+    // `filenames` must already be filtered to entries that contain `datetime` and start with `cpython-`.
+    filenames: &BTreeSet<String>,
+    datetime: &str,
+    tag: &str,
+) -> Result<BTreeMap<String, String>> {
+    let mut python_versions = BTreeSet::new();
+    for filename in filenames {
+        let parts = filename.split('-').collect::<Vec<_>>();
+        python_versions.insert(parts[1].to_string());
+    }
+
+    let mut wanted_filenames = BTreeMap::new();
+    for version in &python_versions {
+        for (triple, release) in RELEASE_TRIPLES.iter() {
+            let python_version = pep440_rs::Version::from_str(version)?;
+            if let Some(req) = &release.python_version_requirement {
+                if !req.contains(&python_version) {
+                    continue;
+                }
+            }
+
+            for suffix in release.suffixes(Some(&python_version)) {
+                wanted_filenames.insert(
+                    format!("cpython-{version}-{triple}-{suffix}-{datetime}.tar.zst"),
+                    format!("cpython-{version}+{tag}-{triple}-{suffix}-full.tar.zst"),
+                );
+            }
+
+            wanted_filenames.insert(
+                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
+            );
+
+            wanted_filenames.insert(
+                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
+            );
+        }
+    }
+
+    Ok(wanted_filenames)
+}
 
 /// Convert a .tar.zst archive to an install-only .tar.gz archive.
 pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Result<W> {

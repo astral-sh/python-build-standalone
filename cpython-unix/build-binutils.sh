@@ -5,33 +5,28 @@
 
 set -ex
 
-ROOT=$(pwd)
-SCCACHE="${ROOT}/sccache"
-
 cd /build
 
-tar -xf binutils-${BINUTILS_VERSION}.tar.xz
+tar -xf "binutils-${BINUTILS_VERSION}.tar.xz"
 mkdir binutils-objdir
 pushd binutils-objdir
 
-EXTRA_VARS=
-
-if [ -x "${SCCACHE}" ]; then
-  "${SCCACHE}" --start-server
-  export CC="${SCCACHE} /usr/bin/gcc"
-  export STAGE_CC_WRAPPER="${SCCACHE}"
+if [ "$(uname -m)" = "x86_64" ]; then
+  triple="x86_64-unknown-linux-gnu"
+else
+  triple="aarch64-unknown-linux-gnu"
 fi
 
 # gprofng requires a bison newer than what we have. So just disable it.
-../binutils-${BINUTILS_VERSION}/configure \
-    --build=x86_64-unknown-linux-gnu \
+"../binutils-${BINUTILS_VERSION}/configure" \
+    --build=${triple} \
     --prefix=/tools/host \
     --enable-plugins \
     --enable-gprofng=no \
     --disable-nls \
     --with-sysroot=/
 
-make -j `nproc`
-make install -j `nproc` DESTDIR=/build/out
+make -j "$(nproc)"
+make install -j "$(nproc)" DESTDIR=/build/out
 
 popd

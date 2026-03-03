@@ -38,15 +38,12 @@ _blake2:
       - Modules/_hacl/include
       - Modules/_hacl/internal
       minimum-python-version: "3.14"
-  links-conditional:
-    - name: :libHacl_Hash_Blake2.a
-      minimum-python-version: "3.14"
   defines-conditional:
     - define: _BSD_SOURCE
       minimum-python-version: "3.14"
     - define: _DEFAULT_SOURCE
       minimum-python-version: "3.14"
-    # Disable `explicit_bzero`, it requires glib 2.25+
+    # Disable `explicit_bzero`, it requires glibc 2.25+
     - define: LINUX_NO_EXPLICIT_BZERO
       minimum-python-version: "3.14"
 
@@ -91,6 +88,9 @@ _collections:
 _contextvars:
   sources:
     - _contextvarsmodule.c
+  config-c-only-conditional:
+    - config-c-only: true
+      minimum-python-version: "3.14"
 
 _crypt:
   maximum-python-version: "3.12"
@@ -145,17 +145,13 @@ _ctypes:
     - dl
 
 _ctypes_test:
+  build-mode: shared
   sources:
     - _ctypes/_ctypes_test.c
   links:
     - m
 
 _curses:
-  # ncurses not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - _cursesmodule.c
   defines:
@@ -177,11 +173,6 @@ _curses:
         - .*-apple-darwin
 
 _curses_panel:
-  # ncurses not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - _curses_panel.c
   defines:
@@ -206,6 +197,9 @@ _curses_panel:
 _datetime:
   sources:
     - _datetimemodule.c
+  setup-enabled-conditional:
+    - enabled: true
+      minimum-python-version: "3.14"
 
 _dbm:
   sources:
@@ -242,6 +236,8 @@ _dbm:
     - name: db
       targets:
         - .*-unknown-linux-.*
+  # Allow people who want to avoid the Sleepycat license to remove _dbm entirely.
+  build-mode: shared
 
 _decimal:
   sources:
@@ -252,12 +248,12 @@ _decimal:
     - define: CONFIG_32=1
       targets:
         - armv7-.*
-        - i686-.*
         - mips-.*
         - mipsel-.*
     - define: CONFIG_64=1
       targets:
         - aarch64-.*
+        - loongarch64-unknown-linux.*
         - ppc64le-unknown-linux.*
         - riscv64-unknown-linux.*
         - s390x-unknown-linux-.*
@@ -302,7 +298,6 @@ _hashlib:
     # a static library so there isn't a runtime dependency.
     - name: ':libatomic.a'
       targets:
-        - i686-unknown-linux-gnu
         - mips-unknown-linux-gnu
         - mipsel-unknown-linux-gnu
         - x86_64.*-unknown-linux-gnu
@@ -310,6 +305,19 @@ _hashlib:
 _heapq:
   sources:
     - _heapqmodule.c
+
+_hmac:
+  minimum-python-version: '3.14'
+  sources:
+    - hmacmodule.c
+    - _hacl/Hacl_HMAC.c
+    - _hacl/Hacl_Streaming_HMAC.c
+  includes:
+    - Modules/_hacl/
+    - Modules/_hacl/include/
+  defines:
+    - _BSD_SOURCE
+    - _DEFAULT_SOURCE
 
 _imp:
   config-c-only: true
@@ -354,6 +362,11 @@ _lzma:
   links:
     - lzma
 
+_math_integer:
+  minimum-python-version: "3.15"
+  sources:
+   - mathintegermodule.c
+
 _md5:
   sources:
     - md5module.c
@@ -389,11 +402,6 @@ _opcode:
 _operator:
   setup-enabled: true
 
-_peg_parser:
-  minimum-python-version: "3.9"
-  maximum-python-version: "3.9"
-  setup-enabled: true
-
 _pickle:
   sources:
     - _pickle.c
@@ -420,11 +428,30 @@ _random:
   sources:
     - _randommodule.c
 
+
+_remote_debugging:
+  minimum-python-version: "3.14"
+  sources-conditional:
+    - sources:
+      - _remote_debugging_module.c
+      maximum-python-version: "3.14"
+    - sources:
+      - _remote_debugging/asyncio.c
+      - _remote_debugging/binary_io_reader.c
+      - _remote_debugging/binary_io_writer.c
+      - _remote_debugging/code_objects.c
+      - _remote_debugging/frame_cache.c
+      - _remote_debugging/frames.c
+      - _remote_debugging/module.c
+      - _remote_debugging/object_reading.c
+      - _remote_debugging/subprocess.c
+      - _remote_debugging/threads.c
+      minimum-python-version: "3.15"
+
 _scproxy:
   # _scproxy is Apple OS only.
   # APIs required by _scproxy not available on iOS.
   disabled-targets:
-    - .*-apple-ios
     - .*-unknown-linux-.*
   sources:
     - _scproxy.c
@@ -457,7 +484,8 @@ _sha2:
   minimum-python-version: "3.12"
   sources:
     - sha2module.c
-    - _hacl/Hacl_Hash_SHA2.c
+  sources-conditional:
+    - source: _hacl/Hacl_Hash_SHA2.c
   includes:
     - Modules/_hacl/include
   defines:
@@ -471,7 +499,6 @@ _sha3:
       maximum-python-version: "3.11"
     - source: sha3module.c
       minimum-python-version: "3.12"
-
     - source: _hacl/Hacl_Hash_SHA3.c
       minimum-python-version: "3.12"
   includes:
@@ -512,10 +539,8 @@ _sqlite3:
     - include
   includes:
     - Modules/_sqlite
-  defines:
-    - "MODULE_NAME=\\\"sqlite3\\\""
   defines-conditional:
-    # Require dynamic binaries to load extensions. Cannot load on iOS.
+    # Require dynamic binaries to load extensions.
     # 3.11+ uses opt in. <3.11 uses opt out.
     - define: PY_SQLITE_ENABLE_LOAD_EXTENSION=1
       targets:
@@ -524,9 +549,6 @@ _sqlite3:
         # linked. But this would break verification code. So enabled for
         # backwards compatibility.
         - .*-unknown-linux-.*
-    - define: SQLITE_OMIT_LOAD_EXTENSION=1
-      targets:
-        - .*-ios
   links:
     - sqlite3
 
@@ -550,7 +572,6 @@ _ssl:
     # a static library so there isn't a runtime dependency.
     - name: ':libatomic.a'
       targets:
-        - i686-unknown-linux-gnu
         - mips-unknown-linux-gnu
         - mipsel-unknown-linux-gnu
         - x86_64.*-unknown-linux-gnu
@@ -585,7 +606,7 @@ _sysconfig:
     - _sysconfig.c
 
 _testbuffer:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testbuffer.c
 
@@ -600,11 +621,12 @@ _testcapi:
 
 _testexternalinspection:
   minimum-python-version: '3.13'
+  maximum-python-version: '3.13'
   sources:
     - _testexternalinspection.c
 
 _testimportmultiple:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testimportmultiple.c
 
@@ -628,9 +650,13 @@ _testinternalcapi:
       minimum-python-version: "3.13"
     - source: _testinternalcapi/test_lock.c
       minimum-python-version: "3.13"
+    - source: _testinternalcapi/complex.c
+      minimum-python-version: "3.14"
+    - source: _testinternalcapi/interpreter.c
+      minimum-python-version: "3.15"
 
 _testmultiphase:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testmultiphase.c
 
@@ -645,51 +671,30 @@ _thread:
     - .*
 
 _tkinter:
-  # tk not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
   sources:
     - _tkinter.c
     - tkappinit.c
-  # TODO consider adding WITH_TIX, as Modules/Setup seems to recommend it. This also
-  # initializes tix at init time, which seems desirable.
   defines:
     - WITH_APPINIT
   includes-deps:
     - include/X11
+  build-mode: shared
   links:
-    - tcl8.6
-    - tk8.6
-
-  # Without -ObjC, we get a crash: -[TKApplication tkProcessEvent:]: unrecognized selector sent to instance.
-  # See also https://core.tcl-lang.org/tk/tktview/85f316beb15108ac43b03fa6c8608e31f3ae5f92.
-  # This is apparently an issue with static linking Objective-C binaries.
-  linker-args:
-    - args: ["-ObjC"]
-      targets:
-        - .*-apple-darwin
+    - tcl9.0
+    - tcl9tk9.0
   links-conditional:
     - name: X11
       targets:
         - .*-unknown-linux-.*
+      build-mode: static
     - name: xcb
       targets:
         - .*-unknown-linux-.*
+      build-mode: static
     - name: Xau
       targets:
         - .*-unknown-linux-.*
-  # Many of these are dependencies of libtcl and libtk.
-  frameworks:
-    - AppKit
-    - ApplicationServices
-    - Carbon
-    - Cocoa
-    - CoreFoundation
-    - CoreServices
-    - CoreGraphics
-    - IOKit
-    - QuartzCore
-    - UniformTypeIdentifiers
+      build-mode: static
 
 _tokenize:
   minimum-python-version: "3.11"
@@ -699,6 +704,12 @@ _tracemalloc:
   setup-enabled: true
   required-targets:
     - .*
+
+_types:
+  minimum-python-version: "3.14"
+  setup-enabled: true
+  sources:
+    - _typesmodule.c
 
 _typing:
   minimum-python-version: "3.11"
@@ -735,19 +746,29 @@ _xxinterpchannels:
     - _xxinterpchannelsmodule.c
 
 _xxsubinterpreters:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   maximum-python-version: '3.12'
   sources:
     - _xxsubinterpretersmodule.c
 
 _xxtestfuzz:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _xxtestfuzz/_xxtestfuzz.c
     - _xxtestfuzz/fuzzer.c
 
+_zstd:
+  minimum-python-version: '3.14'
+  sources:
+    - _zstd/_zstdmodule.c
+    - _zstd/zstddict.c
+    - _zstd/compressor.c
+    - _zstd/decompressor.c
+  links:
+    - zstd
+
 _zoneinfo:
-  minimum-python-version: "3.9"
+  minimum-python-version: "3.10"
   sources:
     - _zoneinfo.c
 
@@ -853,11 +874,6 @@ ossaudiodev:
   sources:
     - ossaudiodev.c
 
-parser:
-  maximum-python-version: "3.9"
-  sources:
-    - parsermodule.c
-
 posix:
   setup-enabled: true
   required-targets:
@@ -874,10 +890,6 @@ pyexpat:
     - expat
 
 readline:
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - readline.c
   defines:

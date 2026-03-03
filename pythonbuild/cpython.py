@@ -16,6 +16,19 @@ EXTENSION_MODULE_SCHEMA = {
     "properties": {
         "build-mode": {"type": "string"},
         "config-c-only": {"type": "boolean"},
+        "config-c-only-conditional": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "config-c-only": {"type": "boolean"},
+                    "minimum-python-version": {"type": "string"},
+                    "maximum-python-version": {"type": "string"},
+                },
+                "additionalProperties": False,
+                "required": ["config-c-only"],
+            },
+        },
         "defines": {"type": "array", "items": {"type": "string"}},
         "defines-conditional": {
             "type": "array",
@@ -40,6 +53,7 @@ EXTENSION_MODULE_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "path": {"type": "string"},
+                    "includes": {"type": "array", "items": {"type": "string"}},
                     "targets": {"type": "array", "items": {"type": "string"}},
                     "minimum-python-version": {"type": "string"},
                     "maximum-python-version": {"type": "string"},
@@ -56,6 +70,7 @@ EXTENSION_MODULE_SCHEMA = {
                 "properties": {
                     "name": {"type": "string"},
                     "targets": {"type": "array", "items": {"type": "string"}},
+                    "build-mode": {"type": "string"},
                 },
                 "additionalProperties": False,
             },
@@ -95,12 +110,20 @@ EXTENSION_MODULE_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "source": {"type": "string"},
+                    "sources": {"type": "array", "items": {"type": "string"}},
                     "targets": {"type": "array", "items": {"type": "string"}},
                     "minimum-python-version": {"type": "string"},
                     "maximum-python-version": {"type": "string"},
                 },
                 "additionalProperties": False,
-                "required": ["source"],
+                "oneOf": [
+                    {
+                        "required": ["source"],
+                    },
+                    {
+                        "required": ["sources"],
+                    },
+                ],
             },
         },
     },
@@ -110,7 +133,7 @@ EXTENSION_MODULE_SCHEMA = {
 EXTENSION_MODULES_SCHEMA = {
     "type": "object",
     "patternProperties": {
-        "^[a-z_]+$": EXTENSION_MODULE_SCHEMA,
+        "^[a-z0-9_]+$": EXTENSION_MODULE_SCHEMA,
     },
 }
 
@@ -227,6 +250,7 @@ def derive_setup_local(
     cpython_source_archive,
     python_version,
     target_triple,
+    build_options,
     extension_modules,
 ):
     """Derive the content of the Modules/Setup.local file."""
@@ -284,6 +308,18 @@ def derive_setup_local(
 
         if info.get("config-c-only"):
             config_c_only_wanted.add(name)
+
+        for entry in info.get("config-c-only-conditional", []):
+            python_min_match_setup = meets_python_minimum_version(
+                python_version, entry.get("minimum-python-version", "1.0")
+            )
+            python_max_match_setup = meets_python_maximum_version(
+                python_version, entry.get("maximum-python-version", "100.0")
+            )
+            if entry.get("config-c-only", False) and (
+                python_min_match_setup and python_max_match_setup
+            ):
+                config_c_only_wanted.add(name)
 
     # Parse more files in the distribution for their metadata.
 
@@ -466,12 +502,11 @@ def derive_setup_local(
             enabled_extensions[name]["setup_line"] = name.encode("ascii")
             continue
 
-        # musl is static only. Ignore build-mode override.
-        if "musl" in target_triple:
-            section = "static"
-        else:
-            section = info.get("build-mode", "static")
-
+        # Force static linking if we're doing a fully static build, otherwise,
+        # respect the `build-mode` falling back to `static` if not defined.
+        section = (
+            "static" if "static" in build_options else info.get("build-mode", "static")
+        )
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's
@@ -510,7 +545,17 @@ def derive_setup_local(
                 python_version, entry.get("maximum-python-version", "100.0")
             )
 
-            if target_match and (python_min_match and python_max_match):
+            if build_mode := entry.get("build-mode"):
+                build_mode_match = section == build_mode
+            else:
+                build_mode_match = True
+
+            if (
+                target_match
+                and python_min_match
+                and python_max_match
+                and build_mode_match
+            ):
                 if source := entry.get("source"):
                     line += f" {source}"
                 for source in entry.get("sources", []):
@@ -647,7 +692,7 @@ def derive_setup_local(
     }
 
 
-RE_INITTAB_ENTRY = re.compile('\{"([^"]+)", ([^\}]+)\},')
+RE_INITTAB_ENTRY = re.compile(r'\{"([^"]+)", ([^\}]+)\},')
 
 
 def parse_config_c(s: str):

@@ -72,6 +72,10 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     },
     "_overlapped": {},
     "_multiprocessing": {},
+    "_remote_debugging": {
+        # Added in 3.14
+        "ignore_missing": True
+    },
     "_socket": {},
     "_sqlite3": {"shared_depends": ["sqlite3"]},
     # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
@@ -90,6 +94,10 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
         "ignore_missing": True,
     },
     "_zoneinfo": {"ignore_missing": True},
+    "_zstd": {
+        # Added in 3.14
+        "ignore_missing": True
+    },
     "pyexpat": {},
     "select": {},
     "unicodedata": {},
@@ -117,6 +125,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_tkinter": ["tcl-8612", "tk-8612", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
+    "_zstd": ["zstd"],
 }
 
 
@@ -234,6 +243,8 @@ def find_vs_path(path, msvc_version):
         version = "[16,17)"
     elif msvc_version == "2022":
         version = "[17,18)"
+    elif msvc_version == "2026":
+        version = "[18,19)"
     else:
         raise ValueError(f"unsupported Visual Studio version: {msvc_version}")
 
@@ -346,6 +357,7 @@ def hack_props(
     pcbuild_path: pathlib.Path,
     arch: str,
     python_version: str,
+    zlib_entry: str,
 ):
     # TODO can we pass props into msbuild.exe?
 
@@ -355,11 +367,12 @@ def hack_props(
     bzip2_version = DOWNLOADS["bzip2"]["version"]
     sqlite_version = DOWNLOADS["sqlite"]["version"]
     xz_version = DOWNLOADS["xz"]["version"]
-    zlib_version = DOWNLOADS["zlib"]["version"]
+    zlib_version = DOWNLOADS[zlib_entry]["version"]
+    zstd_version = DOWNLOADS["zstd"]["version"]
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.14"):
+    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
     else:
         tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
@@ -369,7 +382,9 @@ def hack_props(
     libffi_path = td / "libffi"
     tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
     xz_path = td / ("xz-%s" % xz_version)
-    zlib_path = td / ("zlib-%s" % zlib_version)
+    zlib_prefix = "cpython-source-deps-" if zlib_entry == "zlib-ng" else ""
+    zlib_path = td / ("%s%s-%s" % (zlib_prefix, zlib_entry, zlib_version))
+    zstd_path = td / ("cpython-source-deps-zstd-%s" % zstd_version)
     mpdecimal_path = td / ("mpdecimal-%s" % mpdecimal_version)
 
     openssl_root = td / "openssl" / arch
@@ -410,6 +425,13 @@ def hack_props(
             elif b"<zlibDir" in line:
                 line = b"<zlibDir>%s\\</zlibDir>" % zlib_path
 
+            # On 3.14+, it's zlib-ng and the name changed
+            elif b"<zlibNgDir" in line:
+                line = b"<zlibNgDir>%s\\</zlibNgDir>" % zlib_path
+
+            elif b"<zstdDir" in line:
+                line = b"<zstdDir>%s\\</zstdDir>" % zstd_path
+
             elif b"<mpdecimalDir" in line:
                 line = b"<mpdecimalDir>%s\\</mpdecimalDir>" % mpdecimal_path
 
@@ -444,11 +466,13 @@ def hack_props(
         suffix = b"-x64"
     elif arch == "win32":
         suffix = b""
+    elif arch == "arm64":
+        suffix = b""
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
     try:
-        # CPython 3.11+ builds with OpenSSL 3.0 by default.
+        # CPython 3.11+ builds with OpenSSL 3.x by default.
         static_replace_in_file(
             openssl_props,
             b"<_DLLSuffix>-3</_DLLSuffix>",
@@ -484,6 +508,8 @@ def hack_project_files(
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
+    zlib_entry: str,
+    arch: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
 
@@ -494,7 +520,19 @@ def hack_project_files(
         pcbuild_path,
         build_directory,
         python_version,
+        zlib_entry,
     )
+
+    # `--include-tcltk` is forced off on arm64, undo that
+    # See https://github.com/python/cpython/pull/132650
+    try:
+        static_replace_in_file(
+            cpython_source_path / "PC" / "layout" / "main.py",
+            rb'if ns.arch in ("arm32", "arm64"):',
+            rb'if ns.arch == "arm32":',
+        )
+    except NoSearchStringError:
+        pass
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -532,23 +570,70 @@ def hack_project_files(
         rb"<SqlitePatchVersion>%s</SqlitePatchVersion>" % sqlite3_version_parts[3],
     )
 
-    # Our version of the xz sources is newer than what's in cpython-source-deps
-    # and the xz sources changed the path to config.h. Hack the project file
+    # Please try to keep these in sync with cpython-unix/build-sqlite.sh
+    sqlite_build_flags = {
+        b"SQLITE_ENABLE_DBSTAT_VTAB",
+        b"SQLITE_ENABLE_FTS3",
+        b"SQLITE_ENABLE_FTS3_PARENTHESIS",
+        b"SQLITE_ENABLE_FTS4",
+        b"SQLITE_ENABLE_FTS5",
+        b"SQLITE_ENABLE_GEOPOLY",
+        b"SQLITE_ENABLE_RTREE",
+    }
+    with sqlite3_path.open("rb") as fh:
+        data = fh.read()
+    sqlite_preprocessor_regex = (
+        rb"<PreprocessorDefinitions>(SQLITE_ENABLE.*)</PreprocessorDefinitions>"
+    )
+    m = re.search(sqlite_preprocessor_regex, data)
+    if m is None:
+        raise NoSearchStringError(
+            "search string (%s) not in %s" % (sqlite_preprocessor_regex, sqlite3_path)
+        )
+    current_flags = set(m.group(1).split(b";"))
+    data = (
+        data[: m.start(1)]
+        + b";".join(sqlite_build_flags - current_flags)
+        + b";"
+        + data[m.start(1) :]
+    )
+    with sqlite3_path.open("wb") as fh:
+        fh.write(data)
+
+    # Our version of the xz sources may be newer than what's in cpython-source-deps.
+    # The source files and locations may have changed. Hack the project file
     # accordingly.
     #
-    # ... but CPython finally upgraded liblzma in 2022, so newer CPython releases
-    # already have this patch. So we're phasing it out.
+    # CPython updates xz occasionally. When these changes make it into a release
+    # these modification to the project file are not needed.
+    # The most recent change was an update to version 5.8.1:
+    # https://github.com/python/cpython/pull/141022
     try:
         liblzma_path = pcbuild_path / "liblzma.vcxproj"
         static_replace_in_file(
             liblzma_path,
+            rb"$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;",
             rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
-            rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
         )
         static_replace_in_file(
             liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />',
+        )
+        static_replace_in_file(
+            liblzma_path,
             rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
+            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
         )
     except NoSearchStringError:
         pass
@@ -564,27 +649,35 @@ def hack_project_files(
     except NoSearchStringError:
         pass
 
-    # Our custom OpenSSL build has applink.c in a different location
-    # from the binary OpenSSL distribution. Update it.
-    ssl_proj = pcbuild_path / "_ssl.vcxproj"
-    static_replace_in_file(
-        ssl_proj,
-        rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
-        rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
-    )
+    # Our custom OpenSSL build has applink.c in a different location from the
+    # binary OpenSSL distribution. This is no longer relevant for 3.12+ per
+    # https://github.com/python/cpython/pull/131839, so we allow it to fail.swe
+    try:
+        ssl_proj = pcbuild_path / "_ssl.vcxproj"
+        static_replace_in_file(
+            ssl_proj,
+            rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
+            rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
+        )
+    except NoSearchStringError:
+        pass
 
     # Python 3.12+ uses the the pre-built tk-windows-bin 8.6.12 which doesn't
     # have a standalone zlib DLL, so we remove references to it. For Python
     # 3.14+, we're using tk-windows-bin 8.6.14 which includes a prebuilt zlib
     # DLL, so we skip this patch there.
-    if meets_python_minimum_version(
-        python_version, "3.12"
-    ) and meets_python_maximum_version(python_version, "3.13"):
-        static_replace_in_file(
-            pcbuild_path / "_tkinter.vcxproj",
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
-            rb"",
-        )
+    # On arm64, we use the new version of tk-windows-bin for all versions.
+    if meets_python_minimum_version(python_version, "3.12") and (
+        meets_python_maximum_version(python_version, "3.13") or arch == "arm64"
+    ):
+        try:
+            static_replace_in_file(
+                pcbuild_path / "_tkinter.vcxproj",
+                rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tclZlibDllName)" />',
+                rb"",
+            )
+        except NoSearchStringError:
+            pass
 
     # We don't need to produce python_uwp.exe and its *w variant. Or the
     # python3.dll, pyshellext, or pylauncher.
@@ -658,6 +751,11 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
+    # Build tail-calling Python for 3.15+
+    if python_version.startswith("3.15") and platform == "x64":
+        args.append("/property:PlatformToolset=v145")
+        args.append("/property:UseTailCallInterp=true")
+
     exec_and_log(args, str(pcbuild_path), os.environ)
 
 
@@ -676,11 +774,11 @@ def build_openssl_for_arch(
     log("extracting %s to %s" % (openssl_archive, build_root))
     extract_tar_to_directory(openssl_archive, build_root)
     log("extracting %s to %s" % (nasm_archive, build_root))
-    extract_tar_to_directory(nasm_archive, build_root)
+    extract_zip_to_directory(nasm_archive, build_root)
     log("extracting %s to %s" % (jom_archive, build_root))
     extract_zip_to_directory(jom_archive, build_root / "jom")
 
-    nasm_path = build_root / ("cpython-bin-deps-nasm-%s" % nasm_version)
+    nasm_path = build_root / ("nasm-%s" % nasm_version)
     jom_path = build_root / "jom"
 
     env = dict(os.environ)
@@ -704,9 +802,11 @@ def build_openssl_for_arch(
     elif arch == "amd64":
         configure = "VC-WIN64A"
         prefix = "64"
+    elif arch == "arm64":
+        configure = "VC-WIN64-ARM"
+        prefix = "arm64"
     else:
-        print("invalid architecture: %s" % arch)
-        sys.exit(1)
+        raise Exception("unhandled architecture: %s" % arch)
 
     # The official CPython OpenSSL builds hack ms/uplink.c to change the
     # ``GetModuleHandle(NULL)`` invocation to load things from _ssl.pyd
@@ -754,6 +854,12 @@ def build_openssl_for_arch(
         log("copying %s to %s" % (source, dest))
         shutil.copyfile(source, dest)
 
+    # Copy `applink.c` to the include directory.
+    source_applink = source_root / "ms" / "applink.c"
+    dest_applink = install_root / "include" / "openssl" / "applink.c"
+    log("copying %s to %s" % (source_applink, dest_applink))
+    shutil.copyfile(source_applink, dest_applink)
+
 
 def build_openssl(
     entry: str,
@@ -775,6 +881,7 @@ def build_openssl(
 
         root_32 = td / "x86"
         root_64 = td / "x64"
+        root_arm64 = td / "arm64"
 
         if arch == "x86":
             root_32.mkdir()
@@ -798,13 +905,28 @@ def build_openssl(
                 root_64,
                 jom_archive=jom_archive,
             )
+        elif arch == "arm64":
+            root_arm64.mkdir()
+            build_openssl_for_arch(
+                perl_path,
+                "arm64",
+                openssl_archive,
+                openssl_version,
+                nasm_archive,
+                root_arm64,
+                jom_archive=jom_archive,
+            )
         else:
-            raise ValueError("unhandled arch: %s" % arch)
+            raise Exception("unhandled architecture: %s" % arch)
 
         install = td / "out"
 
         if arch == "x86":
             shutil.copytree(root_32 / "install" / "32", install / "openssl" / "win32")
+        elif arch == "arm64":
+            shutil.copytree(
+                root_arm64 / "install" / "arm64", install / "openssl" / "arm64"
+            )
         else:
             shutil.copytree(root_64 / "install" / "64", install / "openssl" / "amd64")
 
@@ -875,9 +997,14 @@ def build_libffi(
         if arch == "x86":
             args.append("-x86")
             artifacts_path = ffi_source_path / "i686-pc-cygwin"
-        else:
+        elif arch == "arm64":
+            args.append("-arm64")
+            artifacts_path = ffi_source_path / "aarch64-w64-cygwin"
+        elif arch == "amd64":
             args.append("-x64")
             artifacts_path = ffi_source_path / "x86_64-w64-cygwin"
+        else:
+            raise Exception("unhandled architecture: %s" % arch)
 
         subprocess.run(args, env=env, check=True)
 
@@ -909,6 +1036,7 @@ def collect_python_build_artifacts(
     arch: str,
     config: str,
     openssl_entry: str,
+    zlib_entry: str,
     freethreaded: bool,
 ):
     """Collect build artifacts from Python.
@@ -991,6 +1119,9 @@ def collect_python_build_artifacts(
         "sqlite3",
     }
 
+    if zlib_entry == "zlib-ng":
+        depends_projects |= {"zlib-ng"}
+
     known_projects = (
         ignore_projects | other_projects | depends_projects | extension_projects
     )
@@ -1039,8 +1170,10 @@ def collect_python_build_artifacts(
         abi_platform = "win_amd64"
     elif arch == "win32":
         abi_platform = "win32"
+    elif arch == "arm64":
+        abi_platform = "win_arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     if freethreaded:
         abi_tag = ".cp%st-%s" % (python_majmin, abi_platform)
@@ -1138,8 +1271,11 @@ def collect_python_build_artifacts(
                 if name == "openssl":
                     name = openssl_entry
 
-                # On 3.14+, we use the latest tcl/tk version
-                if ext == "_tkinter" and python_majmin == "314":
+                if name == "zlib":
+                    name = zlib_entry
+
+                # On 3.14+ and aarch64, we use the latest tcl/tk version
+                if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
                     name = name.replace("-8612", "")
 
                 download_entry = DOWNLOADS[name]
@@ -1209,29 +1345,40 @@ def build_cpython(
     # The python.props file keys off MSBUILD, so it needs to be set.
     os.environ["MSBUILD"] = str(msbuild)
 
+    python_archive = download_entry(python_entry_name, BUILD)
+    entry = DOWNLOADS[python_entry_name]
+    python_version = entry["version"]
+
+    zlib_entry = (
+        "zlib-ng" if meets_python_minimum_version(python_version, "3.14") else "zlib"
+    )
+
     bzip2_archive = download_entry("bzip2", BUILD)
     sqlite_archive = download_entry("sqlite", BUILD)
     xz_archive = download_entry("xz", BUILD)
-    zlib_archive = download_entry("zlib", BUILD)
-
-    python_archive = download_entry(python_entry_name, BUILD)
-    entry = DOWNLOADS[python_entry_name]
-
-    python_version = entry["version"]
+    zlib_archive = download_entry(zlib_entry, BUILD)
 
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)
 
-    # On CPython 3.14+, we use the latest tcl/tk version which has additional runtime
-    # dependencies, so we are conservative and use the old version elsewhere.
+    # On CPython 3.14+, we use the latest tcl/tk version which has additional
+    # runtime dependencies, so we are conservative and use the old version
+    # elsewhere. The old version isn't built for arm64, so we use the new
+    # version there too
+    tk_bin_entry = (
+        "tk-windows-bin"
+        if meets_python_minimum_version(python_version, "3.14") or arch == "arm64"
+        else "tk-windows-bin-8612"
+    )
+    tk_bin_archive = download_entry(
+        tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
+    )
+
+    # On CPython 3.14+, zstd is included
     if meets_python_minimum_version(python_version, "3.14"):
-        tk_bin_archive = download_entry(
-            "tk-windows-bin", BUILD, local_name="tk-windows-bin.tar.gz"
-        )
+        zstd_archive = download_entry("zstd", BUILD)
     else:
-        tk_bin_archive = download_entry(
-            "tk-windows-bin-8612", BUILD, local_name="tk-windows-bin.tar.gz"
-        )
+        zstd_archive = None
 
     # CPython 3.13+ no longer uses a bundled `mpdecimal` version so we build it
     if meets_python_minimum_version(python_version, "3.13"):
@@ -1255,8 +1402,11 @@ def build_cpython(
     elif arch == "x86":
         build_platform = "win32"
         build_directory = "win32"
+    elif arch == "arm64":
+        build_platform = "arm64"
+        build_directory = "arm64"
     else:
-        raise ValueError("unhandled arch: %s" % arch)
+        raise Exception("unhandled architecture: %s" % arch)
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
@@ -1275,6 +1425,7 @@ def build_cpython(
                 tk_bin_archive,
                 xz_archive,
                 zlib_archive,
+                zstd_archive,
             ):
                 if a is None:
                     continue
@@ -1285,11 +1436,20 @@ def build_cpython(
             for f in fs:
                 f.result()
 
+        # Copy the config.h file used by upstream CPython for xz 5.8.1
+        # https://github.com/python/cpython-source-deps/blob/665d407bd6bc941944db2152e4b5dca388ea586e/windows/config.h
+        xz_version = DOWNLOADS["xz"]["version"]
+        xz_path = td / ("xz-%s" % xz_version)
+        config_src = SUPPORT / "xz-support" / "config.h"
+        config_dest = xz_path / "windows" / "config.h"
+        log(f"copying {config_src} to {config_dest}")
+        shutil.copyfile(config_src, config_dest)
+
         extract_tar_to_directory(libffi_archive, td)
 
         # We need all the OpenSSL library files in the same directory to appease
         # install rules.
-        openssl_arch = {"amd64": "amd64", "x86": "win32"}[arch]
+        openssl_arch = {"amd64": "amd64", "x86": "win32", "arm64": "arm64"}[arch]
         openssl_root = td / "openssl" / openssl_arch
         openssl_bin_path = openssl_root / "bin"
         openssl_lib_path = openssl_root / "lib"
@@ -1302,6 +1462,18 @@ def build_cpython(
             dest = openssl_lib_path / f
             log("copying %s to %s" % (source, dest))
             shutil.copyfile(source, dest)
+
+        # Delete the tk nmake helper, it's not needed and links msvc
+        if tk_bin_entry == "tk-windows-bin":
+            tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
+            tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
+            (
+                tcltk_path
+                / build_directory
+                / "lib"
+                / "nmake"
+                / "x86_64-w64-mingw32-nmakehlp.exe"
+            ).unlink()
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
@@ -1324,6 +1496,8 @@ def build_cpython(
             cpython_source_path,
             build_directory,
             python_version=python_version,
+            zlib_entry=zlib_entry,
+            arch=arch,
         )
 
         if pgo:
@@ -1345,7 +1519,8 @@ def build_cpython(
                 p for p in env["PATH"].split(";") if p != str(BUILD / "venv" / "bin")
             ]
             env["PATH"] = ";".join(paths)
-            del env["PYTHONPATH"]
+            if "PYTHONPATH" in env:
+                del env["PYTHONPATH"]
 
             env["PYTHONHOME"] = str(cpython_source_path)
 
@@ -1465,7 +1640,7 @@ def build_cpython(
         # import their contents. According to
         # https://github.com/pypa/pip/issues/11146 running pip from a wheel is not
         # supported. But it has historically worked and is simple. So do this until
-        # it stops working and we need to switch to running pip from the filesytem.
+        # it stops working and we need to switch to running pip from the filesystem.
         pip_env = dict(os.environ)
         pip_env["PYTHONPATH"] = str(pip_wheel)
 
@@ -1524,6 +1699,7 @@ def build_cpython(
             build_directory,
             artifact_config,
             openssl_entry=openssl_entry,
+            zlib_entry=zlib_entry,
             freethreaded=freethreaded,
         )
 
@@ -1701,19 +1877,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--vs",
-        choices={"2019", "2022"},
+        choices={"2019", "2022", "2026"},
         default="2022",
         help="Visual Studio version to use",
     )
     parser.add_argument(
         "--python",
         choices={
-            "cpython-3.9",
             "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         },
         default="cpython-3.11",
         help="Python distribution to build",
@@ -1730,7 +1906,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--windows-sdk-version",
-        default="10.0.20348.0",
+        default="10.0.26100.0",
         help="Windows SDK version to build with",
     )
 
@@ -1745,19 +1921,24 @@ def main() -> None:
         if os.environ.get("Platform") == "x86":
             target_triple = "i686-pc-windows-msvc"
             arch = "x86"
-        else:
+        elif os.environ.get("Platform") == "arm64":
+            target_triple = "aarch64-pc-windows-msvc"
+            arch = "arm64"
+        elif os.environ.get("Platform") == "x64":
             target_triple = "x86_64-pc-windows-msvc"
             arch = "amd64"
+        else:
+            raise Exception("unhandled architecture: %s" % os.environ.get("Platform"))
 
         # TODO need better dependency checking.
 
         # CPython 3.11+ have native support for OpenSSL 3.x. We anticipate this
         # will change in a future minor release once OpenSSL 1.1 goes out of support.
         # But who knows.
-        if args.python in ("cpython-3.9", "cpython-3.10"):
+        if args.python == "cpython-3.10":
             openssl_entry = "openssl-1.1"
         else:
-            openssl_entry = "openssl-3.0"
+            openssl_entry = "openssl-3.5"
 
         openssl_archive = BUILD / (
             "%s-%s-%s.tar" % (openssl_entry, target_triple, build_options)
@@ -1801,21 +1982,12 @@ def main() -> None:
             release_tag = release_tag_from_git()
 
         # Create, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
-        dest_path = compress_python_archive(
+        DIST.mkdir(exist_ok=True)
+        compress_python_archive(
             tar_path,
             DIST,
             "%s-%s" % (tar_path.stem, release_tag),
         )
-
-        # Copy to, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-shared-pgo.tar.zst`.
-        # The 'shared-' prefix is no longer needed, but we're double-publishing under
-        # both names during the transition period.
-        filename: str = dest_path.name
-        if not filename.endswith("-%s-%s.tar.zst" % (args.options, release_tag)):
-            raise ValueError("expected filename to end with profile: %s" % filename)
-        filename = filename.removesuffix("-%s-%s.tar.zst" % (args.options, release_tag))
-        filename = filename + "-shared-%s-%s.tar.zst" % (args.options, release_tag)
-        shutil.copy2(dest_path, dest_path.with_name(filename))
 
 
 if __name__ == "__main__":

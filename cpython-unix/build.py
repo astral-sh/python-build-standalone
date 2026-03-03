@@ -64,35 +64,7 @@ MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 
-def install_sccache(build_env):
-    """Attempt to install sccache into the build environment.
-
-    This will attempt to locate a sccache executable and copy it
-    into the root directory of the build environment.
-    """
-    candidates = [
-        # Prefer a binary in the project itself.
-        ROOT / "sccache",
-    ]
-
-    # Look for sccache in $PATH, but only if the build environment
-    # isn't isolated, as copying binaries into an isolated environment
-    # may not run. And running sccache in an isolated environment won't
-    # do anything meaningful unless an external cache is being used.
-    if not build_env.is_isolated:
-        for path in os.environ.get("PATH", "").split(":"):
-            if not path:
-                continue
-
-            candidates.append(pathlib.Path(path) / "sccache")
-
-    for candidate in candidates:
-        if candidate.exists():
-            build_env.copy_file(candidate)
-            return
-
-
-def add_target_env(env, build_platform, target_triple, build_env):
+def add_target_env(env, build_platform, target_triple, build_env, build_options):
     add_env_common(env)
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
@@ -101,6 +73,9 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["HOST_CC"] = settings["host_cc"]
     env["HOST_CXX"] = settings["host_cxx"]
     env["CC"] = settings["target_cc"]
+    # We always set CXX, otherwise a build could bypass our toolchain
+    # accidentally, e.g., on macOS where `g++` links to the system clang.
+    env["CXX"] = settings["target_cxx"]
 
     if settings.get("bolt_capable"):
         env["BOLT_CAPABLE"] = "1"
@@ -108,21 +83,36 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["PYBUILD_PLATFORM"] = build_platform
     env["TOOLS_PATH"] = build_env.tools_path
 
-    extra_target_cflags = list(settings.get("target_cflags", []))
+    if "debug" in build_options:
+        extra_target_cflags = ["-O0"]
+    else:
+        extra_target_cflags = ["-O3"]
+    extra_target_cflags += list(settings.get("target_cflags", []))
     extra_target_ldflags = list(settings.get("target_ldflags", []))
     extra_host_cflags = []
     extra_host_ldflags = []
 
-    if build_platform == "linux64":
-        env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
+    # Add compiler-rt for aarch64-musl to resolve missing builtins
+    if target_triple == "aarch64-unknown-linux-musl":
+        extra_target_cflags.append("--rtlib=compiler-rt")
+        extra_target_ldflags.append("--rtlib=compiler-rt")
 
-        env["TARGET_TRIPLE"] = (
-            target_triple.replace("x86_64_v2-", "x86_64-")
-            .replace("x86_64_v3-", "x86_64-")
-            .replace("x86_64_v4-", "x86_64-")
-            # TODO should the musl target be normalized?
-            .replace("-unknown-linux-musl", "-unknown-linux-gnu")
-        )
+    if build_platform.startswith("linux_"):
+        machine = platform.machine()
+
+        # arm64 allows building for Linux on a macOS host using Docker
+        if machine == "aarch64" or machine == "arm64":
+            env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
+            env["TARGET_TRIPLE"] = target_triple
+        elif machine == "x86_64":
+            env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            env["TARGET_TRIPLE"] = (
+                target_triple.replace("x86_64_v2-", "x86_64-")
+                .replace("x86_64_v3-", "x86_64-")
+                .replace("x86_64_v4-", "x86_64-")
+            )
+        else:
+            raise Exception("unhandled Linux machine value: %s" % machine)
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
         # semantically correct, since the current machine may not support
@@ -132,7 +122,7 @@ def add_target_env(env, build_platform, target_triple, build_env):
         ):
             env["CROSS_COMPILING"] = "1"
 
-    if build_platform == "macos":
+    elif build_platform.startswith("macos_"):
         machine = platform.machine()
 
         if machine == "arm64":
@@ -215,6 +205,8 @@ def add_target_env(env, build_platform, target_triple, build_env):
 
         extra_host_cflags.extend(["-isysroot", host_sdk_path])
         extra_host_ldflags.extend(["-isysroot", host_sdk_path])
+    else:
+        raise Exception("unhandled build platform: %s" % build_platform)
 
     env["EXTRA_HOST_CFLAGS"] = " ".join(extra_host_cflags)
     env["EXTRA_HOST_LDFLAGS"] = " ".join(extra_host_ldflags)
@@ -231,7 +223,7 @@ def toolchain_archive_path(package_name, host_platform):
 
 
 def install_binutils(platform):
-    return platform != "macos"
+    return not platform.startswith("macos_")
 
 
 def simple_build(
@@ -245,6 +237,7 @@ def simple_build(
     dest_archive,
     extra_archives=None,
     tools_path="deps",
+    python_host_version=None,
 ):
     archive = download_entry(entry, DOWNLOADS_PATH)
 
@@ -257,10 +250,20 @@ def simple_build(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         for a in extra_archives or []:
             build_env.install_artifact_archive(BUILD, a, target_triple, build_options)
+
+        if python_host_version:
+            majmin = ".".join(python_host_version.split(".")[0:2])
+            build_env.install_toolchain_archive(
+                BUILD,
+                f"cpython-{majmin}",
+                host_platform,
+                version=python_host_version,
+            )
 
         build_env.copy_file(archive)
         build_env.copy_file(SUPPORT / ("build-%s.sh" % entry))
@@ -271,9 +274,13 @@ def simple_build(
             ]["version"],
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        if "static" in build_options:
+            env["STATIC"] = 1
 
-        if entry in ("openssl-1.1", "openssl-3.0"):
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
+
+        # for OpenSSL, set the OPENSSL_TARGET environment variable
+        if entry.startswith("openssl-"):
             settings = get_targets(TARGETS_CONFIG)[target_triple]
             env["OPENSSL_TARGET"] = settings["openssl_target"]
 
@@ -287,8 +294,6 @@ def build_binutils(client, image, host_platform):
     archive = download_entry("binutils", DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
-        install_sccache(build_env)
-
         build_env.copy_file(archive)
         build_env.copy_file(SUPPORT / "build-binutils.sh")
 
@@ -322,26 +327,34 @@ def materialize_clang(host_platform: str, target_triple: str):
             dctx.copy_stream(ifh, ofh)
 
 
-def build_musl(client, image, host_platform: str, target_triple: str):
-    musl_archive = download_entry("musl", DOWNLOADS_PATH)
+def build_musl(client, image, host_platform: str, target_triple: str, build_options):
+    static = "static" in build_options
+    musl = "musl-static" if static else "musl"
+    musl_archive = download_entry(musl, DOWNLOADS_PATH)
 
     with build_environment(client, image) as build_env:
         build_env.install_toolchain(
-            BUILD, host_platform, target_triple, binutils=True, clang=True
+            BUILD,
+            host_platform,
+            target_triple,
+            binutils=True,
+            clang=True,
+            static=False,
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
 
         env = {
-            "MUSL_VERSION": DOWNLOADS["musl"]["version"],
+            "MUSL_VERSION": DOWNLOADS[musl]["version"],
             "TOOLCHAIN": "llvm",
         }
 
+        if static:
+            env["STATIC"] = 1
+
         build_env.run("build-musl.sh", environment=env)
 
-        build_env.get_tools_archive(
-            toolchain_archive_path("musl", host_platform), "host"
-        )
+        build_env.get_tools_archive(toolchain_archive_path(musl, host_platform), "host")
 
 
 def build_libedit(
@@ -358,6 +371,7 @@ def build_libedit(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
         build_env.install_artifact_archive(
@@ -370,50 +384,9 @@ def build_libedit(
             "LIBEDIT_VERSION": DOWNLOADS["libedit"]["version"],
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-libedit.sh", environment=env)
-        build_env.get_tools_archive(dest_archive, "deps")
-
-
-def build_tix(
-    settings, client, image, host_platform, target_triple, build_options, dest_archive
-):
-    tcl_archive = download_entry("tcl", DOWNLOADS_PATH)
-    tk_archive = download_entry("tk", DOWNLOADS_PATH)
-    tix_archive = download_entry("tix", DOWNLOADS_PATH)
-
-    with build_environment(client, image) as build_env:
-        if settings.get("needs_toolchain"):
-            build_env.install_toolchain(
-                BUILD,
-                host_platform,
-                target_triple,
-                binutils=install_binutils(host_platform),
-                clang=True,
-                musl="musl" in target_triple,
-            )
-
-        depends = {"tcl", "tk"}
-        if host_platform != "macos":
-            depends |= {"libX11", "xorgproto"}
-
-        for p in sorted(depends):
-            build_env.install_artifact_archive(BUILD, p, target_triple, build_options)
-
-        for p in (tcl_archive, tk_archive, tix_archive, SUPPORT / "build-tix.sh"):
-            build_env.copy_file(p)
-
-        env = {
-            "TOOLCHAIN": "clang-%s" % host_platform,
-            "TCL_VERSION": DOWNLOADS["tcl"]["version"],
-            "TIX_VERSION": DOWNLOADS["tix"]["version"],
-            "TK_VERSION": DOWNLOADS["tk"]["version"],
-        }
-
-        add_target_env(env, host_platform, target_triple, build_env)
-
-        build_env.run("build-tix.sh", environment=env)
         build_env.get_tools_archive(dest_archive, "deps")
 
 
@@ -425,27 +398,36 @@ def build_cpython_host(
     target_triple: str,
     build_options: list[str],
     dest_archive,
+    python_source=None,
+    entry_name=None,
 ):
     """Build binutils in the Docker image."""
-    archive = download_entry(entry, DOWNLOADS_PATH)
+    if not python_source:
+        python_version = entry["version"]
+        archive = download_entry(entry_name, DOWNLOADS_PATH)
+    else:
+        python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
+        print("Compressing %s to %s" % (python_source, archive))
+        with archive.open("wb") as fh:
+            create_tar_from_directory(
+                fh, python_source, path_prefix="Python-%s" % python_version
+            )
 
     with build_environment(client, image) as build_env:
-        python_version = DOWNLOADS[entry]["version"]
-
         build_env.install_toolchain(
             BUILD,
             host_platform,
             target_triple,
             binutils=install_binutils(host_platform),
             clang=True,
+            static="static" in build_options,
         )
 
         build_env.copy_file(archive)
 
         support = {
             "build-cpython-host.sh",
-            "patch-disable-multiarch.patch",
-            "patch-disable-multiarch-13.patch",
         }
         for s in sorted(support):
             build_env.copy_file(SUPPORT / s)
@@ -461,11 +443,11 @@ def build_cpython_host(
             "PYTHON_VERSION": python_version,
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -488,6 +470,7 @@ def python_build_info(
     target_triple,
     musl,
     lto,
+    static,
     extensions,
     extra_metadata,
 ):
@@ -499,14 +482,14 @@ def python_build_info(
 
     binary_suffix = ""
 
-    if platform == "linux64":
+    if platform in ("linux_x86_64", "linux_aarch64"):
+        arch = platform.removeprefix("linux_")
+
         bi["core"]["static_lib"] = (
-            "install/lib/python{version}/config-{version}{binary_suffix}-x86_64-linux-gnu/libpython{version}{binary_suffix}.a".format(
-                version=version, binary_suffix=binary_suffix
-            )
+            f"install/lib/python{version}/config-{version}{binary_suffix}-{arch}-linux-gnu/libpython{version}{binary_suffix}.a"
         )
 
-        if not musl:
+        if not static:
             bi["core"]["shared_lib"] = "install/lib/libpython%s%s.so.1.0" % (
                 version,
                 binary_suffix,
@@ -522,11 +505,9 @@ def python_build_info(
             object_file_format = f"llvm-bitcode:%{llvm_version}"
         else:
             object_file_format = "elf"
-    elif platform == "macos":
+    elif platform.startswith("macos_"):
         bi["core"]["static_lib"] = (
-            "install/lib/python{version}/config-{version}{binary_suffix}-darwin/libpython{version}{binary_suffix}.a".format(
-                version=version, binary_suffix=binary_suffix
-            )
+            f"install/lib/python{version}/config-{version}{binary_suffix}-darwin/libpython{version}{binary_suffix}.a"
         )
         bi["core"]["shared_lib"] = "install/lib/libpython%s%s.dylib" % (
             version,
@@ -544,7 +525,8 @@ def python_build_info(
 
     bi["object_file_format"] = object_file_format
 
-    # Determine allowed libaries on Linux
+    # Determine allowed libraries on Linux
+    libs = extra_metadata["python_config_vars"].get("LIBS", "").split()
     mips = target_triple.split("-")[0] in {"mips", "mipsel"}
     linux_allowed_system_libraries = LINUX_ALLOW_SYSTEM_LIBRARIES.copy()
     if mips and version == "3.13":
@@ -552,14 +534,26 @@ def python_build_info(
         linux_allowed_system_libraries.add("atomic")
     riscv = target_triple.split("-")[0] in {"riscv64"}
     if riscv:
-        # RISC-V binary often comes with libatomic on old GCC versions
+        # On older GCC versions, RISC-V sub-word atomic operations require a
+        # helper function found in libatomic. To facilitate this, GCC <15 adds
+        # "-latomic" to the definition of "-pthread". We think it's generally
+        # reasonable on RISC-V systems (but not all Linux systems in general)
+        # to expect a libatomic system library is installed.
+        #
+        # Because "-latomic" is implicitly added by "-pthread", it may not be
+        # found in the LIBS sysconfig variable, but we need to pretend it is so
+        # that it gets into PYTHON.json (in particular, so that the validation
+        # script accepts this dependency).
+        #
         # See https://github.com/riscvarchive/riscv-gcc/issues/12
         # https://github.com/riscvarchive/riscv-gcc/issues/337
         # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=86005
+        # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=104338
+        # https://github.com/gcc-mirror/gcc/commit/203f3060dd363361b172f7295f42bb6bf5ac0b3b
         linux_allowed_system_libraries.add("atomic")
+        libs.append("-latomic")
 
     # Add in core linking annotations.
-    libs = extra_metadata["python_config_vars"].get("LIBS", "").split()
     skip = False
     for i, lib in enumerate(libs):
         if skip:
@@ -569,9 +563,15 @@ def python_build_info(
         if lib.startswith("-l"):
             lib = lib[2:]
 
-            if platform == "linux64" and lib not in linux_allowed_system_libraries:
+            if (
+                platform in ("linux_x86_64", "linux_aarch64")
+                and lib not in linux_allowed_system_libraries
+            ):
                 raise Exception("unexpected library in LIBS (%s): %s" % (libs, lib))
-            elif platform == "macos" and lib not in MACOS_ALLOW_SYSTEM_LIBRARIES:
+            elif (
+                platform.startswith("macos_")
+                and lib not in MACOS_ALLOW_SYSTEM_LIBRARIES
+            ):
                 raise Exception("unexpected library in LIBS (%s): %s" % (libs, lib))
 
             log("adding core system link library: %s" % lib)
@@ -713,12 +713,15 @@ def build_cpython(
     """Build CPython in a Docker image'"""
     parsed_build_options = set(build_options.split("+"))
     entry_name = "cpython-%s" % version
-    entry = DOWNLOADS[entry_name]
     if not python_source:
+        entry = DOWNLOADS[entry_name]
         python_version = entry["version"]
         python_archive = download_entry(entry_name, DOWNLOADS_PATH)
     else:
+        entry = DOWNLOADS.get(entry_name, {})
         python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        entry.setdefault("licenses", ["Python-2.0", "CNRI-Python"])
+        entry.setdefault("python_tag", "cp" + "".join(version.split(".")))
         python_archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
         print("Compressing %s to %s" % (python_source, python_archive))
         with python_archive.open("wb") as fh:
@@ -735,6 +738,7 @@ def build_cpython(
         python_archive,
         python_version=python_version,
         target_triple=target_triple,
+        build_options=parsed_build_options,
         extension_modules=ems,
     )
 
@@ -751,9 +755,10 @@ def build_cpython(
                 binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
+                static="static" in build_options,
             )
 
-        packages = target_needs(TARGETS_CONFIG, target_triple, python_version)
+        packages = target_needs(TARGETS_CONFIG, target_triple)
         # Toolchain packages are handled specially.
         packages.discard("binutils")
         packages.discard("musl")
@@ -761,6 +766,7 @@ def build_cpython(
         for p in sorted(packages):
             build_env.install_artifact_archive(BUILD, p, target_triple, build_options)
 
+        # Install the host CPython.
         build_env.install_toolchain_archive(
             BUILD, entry_name, host_platform, version=python_version
         )
@@ -808,7 +814,7 @@ def build_cpython(
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -825,32 +831,52 @@ def build_cpython(
             env["CPYTHON_OPTIMIZED"] = "1"
         if "lto" in parsed_build_options:
             env["CPYTHON_LTO"] = "1"
+        if "static" in parsed_build_options:
+            env["CPYTHON_STATIC"] = "1"
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        # Extract LLVM major version for JIT configuration
+        llvm_full_version = DOWNLOADS[clang_toolchain(host_platform, target_triple)][
+            "version"
+        ]
+        if "+" in llvm_full_version:
+            llvm_full_version = llvm_full_version.split("+")[0]
+        # Get major version (e.g., "21" from "21.1.4")
+        env["LLVM_VERSION"] = llvm_full_version.split(".")[0]
+
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-cpython.sh", environment=env)
 
         extension_module_loading = ["builtin"]
         crt_features = []
 
-        if host_platform == "linux64":
-            if "musl" in target_triple:
+        if host_platform in ("linux_x86_64", "linux_aarch64"):
+            if "static" in parsed_build_options:
                 crt_features.append("static")
             else:
                 extension_module_loading.append("shared-library")
-                crt_features.append("glibc-dynamic")
 
-                glibc_max_version = build_env.get_file("glibc_version.txt").strip()
-                if not glibc_max_version:
-                    raise Exception("failed to retrieve glibc max symbol version")
+                if "musl" in target_triple:
+                    crt_features.append("musl-dynamic")
 
-                crt_features.append(
-                    "glibc-max-symbol-version:%s" % glibc_max_version.decode("ascii")
-                )
+                    musl_version = DOWNLOADS["musl"]["version"]
+                    crt_features.append("musl-version:%s" % musl_version)
+
+                else:
+                    crt_features.append("glibc-dynamic")
+
+                    glibc_max_version = build_env.get_file("glibc_version.txt").strip()
+                    if not glibc_max_version:
+                        raise Exception("failed to retrieve glibc max symbol version")
+
+                    crt_features.append(
+                        "glibc-max-symbol-version:%s"
+                        % glibc_max_version.decode("ascii")
+                    )
 
             python_symbol_visibility = "global-default"
 
-        elif host_platform == "macos":
+        elif host_platform.startswith("macos_"):
             python_symbol_visibility = "global-default"
             extension_module_loading.append("shared-library")
             crt_features.append("libSystem")
@@ -874,7 +900,9 @@ def build_cpython(
             "python_stdlib_test_packages": sorted(STDLIB_TEST_PACKAGES),
             "python_symbol_visibility": python_symbol_visibility,
             "python_extension_module_loading": extension_module_loading,
-            "libpython_link_mode": "static" if "musl" in target_triple else "shared",
+            "libpython_link_mode": (
+                "static" if "static" in parsed_build_options else "shared"
+            ),
             "crt_features": crt_features,
             "run_tests": "build/run_tests.py",
             "build_info": python_build_info(
@@ -884,6 +912,7 @@ def build_cpython(
                 target_triple,
                 "musl" in target_triple,
                 "lto" in parsed_build_options,
+                "static" in parsed_build_options,
                 enabled_extensions,
                 extra_metadata,
             ),
@@ -893,15 +922,10 @@ def build_cpython(
 
         python_info["tcl_library_path"] = "install/lib"
         python_info["tcl_library_paths"] = [
-            "itcl4.2.4",
-            "tcl8",
-            "tcl8.6",
-            "thread2.8.7",
-            "tk8.6",
+            "itcl4.3.5",
+            "thread3.0.4",
+            "tk9.0",
         ]
-
-        if "-apple" not in target_triple:
-            python_info["tcl_library_paths"].append("Tix8.4.3")
 
         if "-apple" in target_triple:
             python_info["apple_sdk_platform"] = env["APPLE_SDK_PLATFORM"]
@@ -946,6 +970,7 @@ def main():
             print("unable to connect to Docker: %s" % e, file=sys.stderr)
             return 1
 
+    # Note these arguments must be synced with `build-main.py`
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--host-platform", required=True, help="Platform we are building from"
@@ -955,13 +980,19 @@ def main():
         required=True,
         help="Host triple that we are building Python for",
     )
-    optimizations = {"debug", "noopt", "pgo", "lto", "pgo+lto"}
+
+    # Construct possible options
+    options = set()
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({f"freethreaded+{option}" for option in options})
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
     )
+
     parser.add_argument(
         "--toolchain",
         action="store_true",
@@ -975,6 +1006,11 @@ def main():
         "--python-source",
         default=None,
         help="A custom path to CPython source files to use",
+    )
+    parser.add_argument(
+        "--python-host-version",
+        default=None,
+        help="Python X.Y version for host Python installation",
     )
     parser.add_argument("action")
 
@@ -991,6 +1027,8 @@ def main():
     dest_archive = pathlib.Path(args.dest_archive)
     docker_image = args.docker_image
 
+    python_host_version = args.python_host_version
+
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
 
     if args.action == "dockerfiles":
@@ -1003,6 +1041,18 @@ def main():
         log_name = "%s-%s" % (action, host_platform)
     elif args.action.startswith("cpython-") and args.action.endswith("-host"):
         log_name = args.action
+    elif action.startswith("cpython-"):
+        version = (
+            os.environ["PYBUILD_PYTHON_VERSION"]
+            if python_source
+            else DOWNLOADS[action]["version"]
+        )
+        log_name = "%s-%s-%s-%s" % (
+            action,
+            version,
+            target_triple,
+            build_options,
+        )
     else:
         entry = DOWNLOADS[action]
         log_name = "%s-%s-%s-%s" % (
@@ -1036,10 +1086,14 @@ def main():
             with image_path.open("rb") as fh:
                 image_data = fh.read()
 
-            build_docker_image(client, image_data, BUILD, image_name)
+            build_docker_image(client, image_data, BUILD, image_name, host_platform)
 
         elif action == "binutils":
-            build_binutils(client, get_image(client, ROOT, BUILD, "gcc"), host_platform)
+            build_binutils(
+                client,
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                host_platform,
+            )
 
         elif action == "clang":
             materialize_clang(host_platform, target_triple)
@@ -1047,16 +1101,17 @@ def main():
         elif action == "musl":
             build_musl(
                 client,
-                get_image(client, ROOT, BUILD, "gcc"),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform,
                 target_triple,
+                build_options,
             )
 
         elif action == "autoconf":
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1070,7 +1125,7 @@ def main():
             build_libedit(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
@@ -1081,8 +1136,6 @@ def main():
             "bdb",
             "bzip2",
             "expat",
-            "inputproto",
-            "kbproto",
             "libffi-3.3",
             "libffi",
             "libpthread-stubs",
@@ -1090,30 +1143,33 @@ def main():
             "mpdecimal",
             "ncurses",
             "openssl-1.1",
-            "openssl-3.0",
+            "openssl-3.5",
             "patchelf",
             "sqlite",
             "tcl",
             "uuid",
             "x11-util-macros",
-            "xextproto",
             "xorgproto",
-            "xproto",
             "xtrans",
             "xz",
             "zlib",
+            "zstd",
         ):
             tools_path = "host" if action in ("m4", "patchelf") else "deps"
+            extra_archives = {
+                "tcl": {"zlib"},
+            }.get(action)
 
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                extra_archives=extra_archives,
                 tools_path=tools_path,
             )
 
@@ -1121,22 +1177,18 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
                 extra_archives={
-                    "inputproto",
-                    "kbproto",
                     "libpthread-stubs",
                     "libXau",
                     "libxcb",
                     "x11-util-macros",
-                    "xextproto",
                     "xorgproto",
-                    "xproto",
                     "xtrans",
                 },
             )
@@ -1145,54 +1197,45 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
-                extra_archives={"x11-util-macros", "xproto"},
+                extra_archives={"x11-util-macros", "xorgproto"},
             )
 
         elif action == "xcb-proto":
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                python_host_version=python_host_version,
             )
 
         elif action == "libxcb":
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
-                extra_archives={"libpthread-stubs", "libXau", "xcb-proto", "xproto"},
-            )
-
-        elif action == "tix":
-            build_tix(
-                settings,
-                client,
-                get_image(client, ROOT, BUILD, docker_image),
-                host_platform=host_platform,
-                target_triple=target_triple,
-                build_options=build_options,
-                dest_archive=dest_archive,
+                extra_archives={"libpthread-stubs", "libXau", "xcb-proto", "xorgproto"},
+                python_host_version=python_host_version,
             )
 
         elif action == "tk":
-            extra_archives = {"tcl"}
-            if host_platform != "macos":
+            extra_archives = {"tcl", "zlib"}
+            if not host_platform.startswith("macos_"):
                 extra_archives |= {
                     "libX11",
                     "libXau",
@@ -1204,38 +1247,46 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
                 extra_archives=extra_archives,
+                python_host_version=python_host_version,
             )
 
         elif action.startswith("cpython-") and action.endswith("-host"):
+            entry_name = action[:-5]
+            if not python_source:
+                entry = DOWNLOADS[entry_name]
+            else:
+                entry = DOWNLOADS.get(entry_name, {})
             build_cpython_host(
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
-                action[:-5],
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                entry,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                python_source=python_source,
+                entry_name=entry_name,
             )
 
         elif action in (
-            "cpython-3.9",
             "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         ):
             build_cpython(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image),
+                get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,

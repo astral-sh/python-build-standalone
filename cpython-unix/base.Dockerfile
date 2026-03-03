@@ -1,6 +1,6 @@
 # Debian Jessie.
 FROM debian@sha256:32ad5050caffb2c7e969dac873bce2c370015c2256ff984b70c1c08b3a2816a0
-MAINTAINER Gregory Szorc <gregory.szorc@gmail.com>
+LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
 
 RUN groupadd -g 1000 build && \
     useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
@@ -28,10 +28,6 @@ RUN for s in debian_jessie debian_jessie-updates debian-security_jessie/updates;
       echo 'Acquire::Check-Valid-Until "false";'; \
       echo 'Acquire::Retries "5";'; \
     ) > /etc/apt/apt.conf.d/99cpython-portable
-
-RUN ( echo 'amd64'; \
-      echo 'i386'; \
-    ) > /var/lib/dpkg/arch
 
 # apt iterates all available file descriptors up to rlim_max and calls
 # fcntl(fd, F_SETFD, FD_CLOEXEC). This can result in millions of system calls

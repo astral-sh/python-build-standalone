@@ -2,7 +2,6 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import collections
 import gzip
 import hashlib
 import http.client
@@ -30,6 +29,45 @@ from .downloads import DOWNLOADS
 from .logging import log
 
 
+def current_host_platform() -> str:
+    """Resolve the name of the current machine's host platform.
+
+    This is conceptually a simplified machine triple.
+    """
+    machine = platform.machine()
+    if sys.platform == "linux":
+        if machine == "x86_64":
+            return "linux_x86_64"
+        elif machine == "aarch64":
+            return "linux_aarch64"
+        else:
+            raise Exception(f"unsupported Linux host platform: {machine}")
+    elif sys.platform == "darwin":
+        if machine == "arm64":
+            return "macos_arm64"
+        elif machine == "x86_64":
+            return "macos_x86_64"
+        else:
+            raise Exception(f"unhanded macOS machine type: {machine}")
+    else:
+        raise Exception(f"unsupported host platform: {sys.platform}")
+
+
+def default_target_triple() -> str:
+    """Resolve the default target triple to build for."""
+    host = current_host_platform()
+    if host == "linux_x86_64":
+        return "x86_64-unknown-linux-gnu"
+    elif host == "linux_aarch64":
+        return "aarch64-unknown-linux-gnu"
+    elif host == "macos_arm64":
+        return "aarch64-apple-darwin"
+    elif host == "macos_x86_64":
+        return "x86_64-apple-darwin"
+    else:
+        raise Exception(f"unrecognized host platform: {host}")
+
+
 def get_targets(yaml_path: pathlib.Path):
     """Obtain the parsed targets YAML file."""
     with yaml_path.open("rb") as fh:
@@ -47,24 +85,24 @@ def supported_targets(yaml_path: pathlib.Path):
 
     for target, settings in get_targets(yaml_path).items():
         for host_platform in settings["host_platforms"]:
-            if sys.platform == "linux" and host_platform == "linux64":
+            if sys.platform == "linux" and host_platform == "linux_x86_64":
                 targets.add(target)
-            elif sys.platform == "darwin" and host_platform == "macos":
+            elif sys.platform == "linux" and host_platform == "linux_aarch64":
+                targets.add(target)
+            elif sys.platform == "darwin" and host_platform.startswith("macos_"):
                 targets.add(target)
 
     return targets
 
 
-def target_needs(yaml_path: pathlib.Path, target: str, python_version: str):
+def target_needs(yaml_path: pathlib.Path, target: str):
     """Obtain the dependencies needed to build the specified target."""
     settings = get_targets(yaml_path)[target]
 
     needs = set(settings["needs"])
 
-    # We only ship libedit linked readline extension on 3.10+ to avoid a GPL
-    # dependency.
-    if not python_version.startswith("3.9"):
-        needs.discard("readline")
+    # Ship libedit linked readline extension to avoid a GPL dependency.
+    needs.discard("readline")
 
     return needs
 
@@ -159,8 +197,13 @@ def write_triples_makefiles(
 
             image_suffix = settings.get("docker_image_suffix", "")
 
+            # On cross builds, we can just use the bare `gcc` image
+            gcc_image_suffix = (
+                image_suffix if not image_suffix.startswith(".cross") else ""
+            )
+
             lines.append("DOCKER_IMAGE_BUILD := build%s\n" % image_suffix)
-            lines.append("DOCKER_IMAGE_XCB := xcb%s\n" % image_suffix)
+            lines.append("DOCKER_IMAGE_GCC := gcc%s\n" % gcc_image_suffix)
 
             entry = clang_toolchain(host_platform, triple)
             lines.append(
@@ -247,7 +290,8 @@ def secure_download_stream(url, size, sha256):
     if length != size or digest != sha256:
         raise IntegrityError(
             "integrity mismatch on %s: wanted size=%d, sha256=%s; got size=%d, sha256=%s"
-            % (url, size, sha256, length, digest)
+            % (url, size, sha256, length, digest),
+            length=length,
         )
 
 
@@ -287,7 +331,7 @@ def download_to_path(url: str, path: pathlib.Path, size: int, sha256: str):
         )
     )
 
-    for attempt in range(5):
+    for attempt in range(8):
         try:
             try:
                 with tmp.open("wb") as fh:
@@ -429,17 +473,14 @@ def normalize_tar_archive(data: io.BytesIO) -> io.BytesIO:
 
 
 def clang_toolchain(host_platform: str, target_triple: str) -> str:
-    if host_platform == "linux64":
-        # musl currently has issues with LLVM 15+.
-        if "musl" in target_triple:
-            return "llvm-14-x86_64-linux"
-        else:
-            return "llvm-19-x86_64-linux"
-    elif host_platform == "macos":
-        if platform.mac_ver()[2] == "arm64":
-            return "llvm-aarch64-macos"
-        else:
-            return "llvm-x86_64-macos"
+    if host_platform == "linux_x86_64":
+        return "llvm-21-x86_64-linux"
+    elif host_platform == "linux_aarch64":
+        return "llvm-21-aarch64-linux"
+    elif host_platform == "macos_arm64":
+        return "llvm-aarch64-macos"
+    elif host_platform == "macos_x86_64":
+        return "llvm-x86_64-macos"
     else:
         raise Exception("unhandled host platform")
 
@@ -523,7 +564,7 @@ def add_env_common(env):
 
     env_path = os.path.expanduser("~/.python-build-standalone-env")
     try:
-        with open(env_path, "r") as fh:
+        with open(env_path) as fh:
             for line in fh:
                 line = line.strip()
                 if line.startswith("#"):
@@ -535,17 +576,6 @@ def add_env_common(env):
                 env[key] = value
     except FileNotFoundError:
         pass
-
-    # Proxy sccache settings.
-    for k, v in os.environ.items():
-        if k.startswith("SCCACHE_"):
-            env[k] = v
-
-    # Proxy cloud provider credentials variables to enable sccache to
-    # use stores in those providers.
-    for k in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
-        if k in os.environ:
-            env[k] = os.environ[k]
 
 
 def exec_and_log(args, cwd, env):
@@ -613,51 +643,3 @@ def validate_python_json(info, extension_modules):
                     "Missing license annotations for extension %s for library files %s"
                     % (name, ", ".join(sorted(local_links)))
                 )
-
-
-def release_download_statistics(mode="by_asset"):
-    with urllib.request.urlopen(
-        "https://api.github.com/repos/astral-sh/python-build-standalone/releases"
-    ) as fh:
-        data = json.load(fh)
-
-    by_tag = collections.Counter()
-    by_build = collections.Counter()
-    by_build_install_only = collections.Counter()
-
-    for release in data:
-        tag = release["tag_name"]
-
-        for asset in release["assets"]:
-            name = asset["name"]
-            count = asset["download_count"]
-
-            by_tag[tag] += count
-
-            if name.endswith(".tar.zst"):
-                # cpython-3.10.2-aarch64-apple-darwin-debug-20220220T1113.tar.zst
-                build_parts = name.split("-")
-                build = "-".join(build_parts[2:-1])
-                by_build[build] += count
-            elif name.endswith("install_only.tar.gz"):
-                # cpython-3.10.13+20240224-x86_64-apple-darwin-install_only.tar.gz
-                build_parts = name.split("-")
-                build = "-".join(build_parts[2:-1])
-                by_build_install_only[build] += count
-
-            if mode == "by_asset":
-                print("%d\t%s\t%s" % (count, tag, name))
-
-    if mode == "by_build":
-        for build, count in sorted(by_build.items()):
-            print("%d\t%s" % (count, build))
-    elif mode == "by_build_install_only":
-        for build, count in sorted(by_build_install_only.items()):
-            print("%d\t%s" % (count, build))
-    elif mode == "by_tag":
-        for tag, count in sorted(by_tag.items()):
-            print("%d\t%s" % (count, tag))
-    elif mode == "total":
-        print("%d" % by_tag.total())
-    else:
-        raise Exception("unhandled display mode: %s" % mode)

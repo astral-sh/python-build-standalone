@@ -1,0 +1,17 @@
+diff --git a/configure.ac b/configure.ac
+index 3fcb18922c5..2df614a3063 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2227,10 +2227,8 @@ then
+     [m4_normalize("
+       [-update-debug-sections]
+ 
+-      dnl At least LLVM 19.x doesn't support computed gotos in PIC compiled code.
+-      dnl Exclude functions containing computed gotos.
+-      dnl TODO this may be fixed in LLVM 20.x via https://github.com/llvm/llvm-project/pull/120267.
+-      [-skip-funcs=_PyEval_EvalFrameDefault,sre_ucs1_match/1,sre_ucs2_match/1,sre_ucs4_match/1]
++      dnl LLVM on at least 20.1.0 crashes on this symbol. Work around.
++      [-skip-funcs=RC4_options/1]
+     ")]
+   )
+ fi

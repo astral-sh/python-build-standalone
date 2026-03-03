@@ -4,12 +4,12 @@ darwin:
   aarch64-apple-darwin:
     arch: aarch64
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -22,12 +22,33 @@ darwin:
   x86_64-apple-darwin:
     arch: x86_64
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
+    build_options:
+      - debug
+      - pgo+lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+pgo+lto
+        minimum-python-version: "3.13"
+    run: true
+
+linux:
+  aarch64-unknown-linux-gnu:
+    arch: aarch64
+    libc: gnu
+    python_versions:
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -37,38 +58,16 @@ darwin:
           - freethreaded+pgo+lto
         minimum-python-version: "3.13"
 
-linux:
-  aarch64-unknown-linux-gnu:
-    arch: aarch64
-    libc: gnu
-    python_versions:
-      - "3.9"
-      - "3.10"
-      - "3.11"
-      - "3.12"
-      - "3.13"
-      - "3.14"
-    build_options:
-      - debug
-      - noopt
-      - lto
-    build_options_conditional:
-      - options:
-          - freethreaded+debug
-          - freethreaded+noopt
-          - freethreaded+lto
-        minimum-python-version: "3.13"
-
   armv7-unknown-linux-gnueabi:
     arch: armv7
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -84,12 +83,12 @@ linux:
     arch: armv7
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -105,12 +104,12 @@ linux:
     arch: s390x
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -126,12 +125,12 @@ linux:
     arch: ppc64le
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -147,12 +146,12 @@ linux:
     arch: riscv64
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - noopt
@@ -168,12 +167,12 @@ linux:
     arch: x86_64
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -189,12 +188,12 @@ linux:
     arch_variant: v2
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -210,12 +209,12 @@ linux:
     arch_variant: v3
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -231,12 +230,12 @@ linux:
     arch_variant: v4
     libc: gnu
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
     build_options:
       - debug
       - pgo+lto
@@ -251,15 +250,25 @@ linux:
     arch: x86_64
     libc: musl
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
+      - "3.15"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v2-unknown-linux-musl:
@@ -267,15 +276,25 @@ linux:
     arch_variant: v2
     libc: musl
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
+      - "3.15"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v3-unknown-linux-musl:
@@ -283,15 +302,25 @@ linux:
     arch_variant: v3
     libc: musl
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
+      - "3.15"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
   x86_64_v4-unknown-linux-musl:
@@ -299,15 +328,51 @@ linux:
     arch_variant: v4
     libc: musl
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
+      - "3.14"
+      - "3.15"
     build_options:
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
+    run: true
+
+  aarch64-unknown-linux-musl:
+    arch: aarch64
+    libc: musl
+    python_versions:
+      - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+      - "3.15"
+    build_options:
+      # TODO: Static support is current blocked by some compiler-rt linking issues
+      # - debug+static
+      # - noopt+static
+      # - lto+static
+      - debug
+      - noopt
+      - lto
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+noopt
+          - freethreaded+lto
+        minimum-python-version: "3.13"
     run: true
 
 windows:
@@ -315,12 +380,13 @@ windows:
     arch: x86
     vcvars: vcvars32.bat
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
+    vs_version: "2022"
     build_options:
       - pgo
     build_options_conditional:
@@ -332,12 +398,35 @@ windows:
     arch: x86_64
     vcvars: vcvars64.bat
     python_versions:
-      - "3.9"
       - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
       - "3.14"
+      - "3.15"
+    vs_version: "2022"
+    vs_version_override_conditional:
+      vs_version: "2026"
+      minimum-python-version: "3.15"
+    build_options:
+      - pgo
+    build_options_conditional:
+      - options:
+          - freethreaded+pgo
+        minimum-python-version: "3.13"
+
+  aarch64-pc-windows-msvc:
+    arch: aarch64
+    vcvars: vcvarsamd64_arm64.bat
+    python_versions:
+      # On 3.10, `_tkinter` is failing to be included in the build
+      # - "3.10"
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+      - "3.15"
+    vs_version: "2022"
     build_options:
       - pgo
     build_options_conditional:

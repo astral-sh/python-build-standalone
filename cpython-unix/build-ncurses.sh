@@ -5,41 +5,41 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf ncurses-${NCURSES_VERSION}.tar.gz
+tar -xf "ncurses-${NCURSES_VERSION}.tar.gz"
 
 # When cross-compiling, ncurses uses the host `tic` to build the terminfo
 # database. But our build environment's `tic` is too old to process this
 # ncurses version. Our workaround is to build ncurses for the host when
 # cross-compiling then make its `tic` available to the target ncurses
 # build.
-if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
   echo "building host ncurses to provide modern tic for cross-compile"
 
-  pushd ncurses-${NCURSES_VERSION}
+  pushd ncurses-"${NCURSES_VERSION}"
 
   CC="${HOST_CC}" ./configure \
-    --prefix=${TOOLS_PATH}/host \
+    --prefix="${TOOLS_PATH}/host" \
     --without-cxx \
     --without-tests \
     --without-manpages \
     --enable-widec \
     --disable-db-install \
     --enable-symlinks
-  make -j ${NUM_CPUS}
-  make -j ${NUM_CPUS} install
+  make -j "${NUM_CPUS}"
+  make -j "${NUM_CPUS}" install
 
   popd
 
   # Nuke and re-pave the source directory.
-  rm -rf ncurses-${NCURSES_VERSION}
-  tar -xf ncurses-${NCURSES_VERSION}.tar.gz
+  rm -rf "ncurses-${NCURSES_VERSION}"
+  tar -xf "ncurses-${NCURSES_VERSION}.tar.gz"
 fi
 
-pushd ncurses-${NCURSES_VERSION}
+pushd "ncurses-${NCURSES_VERSION}"
 
 # `make install` will strip installed programs (like tic) by default. This is
 # fine. However, cross-compiles can run into issues where `strip` doesn't
@@ -65,7 +65,7 @@ CONFIGURE_FLAGS="
 # ncurses wants --with-build-cc when cross-compiling. But it insists on CC
 # and this value not being equal, even though using the same binary with
 # different compiler flags is doable!
-if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != "macos" ]]; then
+if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
   CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-cc=$(which "${HOST_CC}")"
 fi
 
@@ -91,7 +91,7 @@ fi
 # binary. So we provide a suitable runtime value and then move files at install
 # time.
 
-if [ "${PYBUILD_PLATFORM}" = "macos" ]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
   CONFIGURE_FLAGS="${CONFIGURE_FLAGS}
     --datadir=/usr/share
     --sysconfdir=/etc
@@ -109,8 +109,10 @@ else
   "
 fi
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure ${CONFIGURE_FLAGS}
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+mkdir -p "${ROOT}/out/usr/lib"
 
-mv ${ROOT}/out/usr/share/terminfo ${ROOT}/out/tools/deps/usr/share/
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure ${CONFIGURE_FLAGS}
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"
+
+mv "${ROOT}/out/usr/share/terminfo" "${ROOT}/out/tools/deps/usr/share/"

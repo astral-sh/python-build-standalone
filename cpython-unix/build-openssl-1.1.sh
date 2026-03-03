@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf openssl-${OPENSSL_1_1_VERSION}.tar.gz
+tar -xf "openssl-${OPENSSL_1_1_VERSION}.tar.gz"
 
-pushd openssl-${OPENSSL_1_1_VERSION}
+pushd "openssl-${OPENSSL_1_1_VERSION}"
 
 # Otherwise it gets set to /tools/deps/ssl by default.
 case "${TARGET_TRIPLE}" in
@@ -37,7 +37,7 @@ EXTRA_TARGET_CFLAGS=${EXTRA_TARGET_CFLAGS/\-arch x86_64/}
 
 EXTRA_FLAGS="${EXTRA_FLAGS} ${EXTRA_TARGET_CFLAGS}"
 
-/usr/bin/perl ./Configure --prefix=/tools/deps ${OPENSSL_TARGET} no-shared no-tests ${EXTRA_FLAGS}
+/usr/bin/perl ./Configure --prefix=/tools/deps "${OPENSSL_TARGET}" no-shared no-tests ${EXTRA_FLAGS}
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install_sw install_ssldirs DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install_sw install_ssldirs DESTDIR="${ROOT}/out"

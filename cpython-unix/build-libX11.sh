@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig:/tools/deps/lib/pkgconfig
 
-tar -xf libX11-${LIBX11_VERSION}.tar.gz
-pushd libX11-${LIBX11_VERSION}
+tar -xf "libX11-${LIBX11_VERSION}.tar.gz"
+pushd "libX11-${LIBX11_VERSION}"
 
 patch -p1 << 'EOF'
 diff --git a/configure b/configure
@@ -54,7 +54,7 @@ if [ -n "${CROSS_COMPILING}" ]; then
     armv7-unknown-linux-gnueabihf)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
-    i686-unknown-linux-gnu)
+    loongarch64-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     mips-unknown-linux-gnu)
@@ -75,11 +75,40 @@ if [ -n "${CROSS_COMPILING}" ]; then
     s390x-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
+    x86_64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    aarch64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    loongarch64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    mips-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    mipsel-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    ppc64le-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    riscv64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    s390x-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
     *)
       echo "cross-compiling but malloc(0) override not set; failures possible"
       ;;
   esac
 fi
+
+# Avoid dlopen("libXcursor.so.1") from the OS, which can go horribly wrong. We
+# might not need to avoid this if we switch to shipping X11 as shared
+# libraries, and ideally if we ship libXcursor ourselves.
+EXTRA_FLAGS="${EXTRA_FLAGS} --disable-loadable-xcursor"
 
 # CC_FOR_BUILD is here because configure doesn't look for `clang` when
 # cross-compiling. So we force it.
@@ -90,11 +119,11 @@ CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   CFLAGS_FOR_BUILD="-I/tools/deps/include" \
   CPPFLAGS_FOR_BUILD="-I/tools/deps/include" \
   ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     --disable-silent-rules \
     ${EXTRA_FLAGS}
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=${ROOT}/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR="${ROOT}/out"

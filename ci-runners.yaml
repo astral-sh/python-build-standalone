@@ -5,14 +5,13 @@ depot-ubuntu-22.04:
   platform: linux
   free: false
 
-# TODO: Enable this runner to perform native builds for aarch64
-# depot-ubuntu-22.04-arm:
-#   arch: aarch64
-#   platform: linux
-#   free: false
+depot-ubuntu-22.04-arm:
+  arch: aarch64
+  platform: linux
+  free: false
 
 depot-macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: false
 
@@ -22,9 +21,14 @@ ubuntu-latest:
   free: true
 
 macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: true
+
+depot-windows-2022-8:
+  arch: x86_64
+  platform: windows
+  free: false
 
 windows-latest-large:
   arch: x86_64
@@ -35,3 +39,13 @@ windows-latest:
   arch: x86_64
   platform: windows
   free: true
+
+windows-2025-vs2026:
+  arch: x86_64
+  platform: windows
+  free: true
+
+windows-11-arm:
+  arch: aarch64
+  platform: windows
+  free: false

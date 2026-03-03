@@ -7,7 +7,7 @@ Building
 Linux
 =====
 
-The host system must be 64-bit. A Python 3.9+ interpreter must be
+The host system must be 64-bit. A Python 3.10+ interpreter must be
 available. The execution environment must have access to a Docker
 daemon (all build operations are performed in Docker containers for
 isolation from the host system).
@@ -39,11 +39,17 @@ As are various other targets::
     $ ./build-linux.py --target aarch64-unknown-linux-gnu
     $ ./build-linux.py --target armv7-unknown-linux-gnueabi
     $ ./build-linux.py --target armv7-unknown-linux-gnueabihf
+    $ ./build-linux.py --target loongarch64-unknown-linux-gnu
     $ ./build-linux.py --target mips-unknown-linux-gnu
     $ ./build-linux.py --target mipsel-unknown-linux-gnu
     $ ./build-linux.py --target ppc64le-unknown-linux-gnu
     $ ./build-linux.py --target riscv64-unknown-linux-gnu
     $ ./build-linux.py --target s390x-unknown-linux-gnu
+
+Additionally, an arm64 macOS host can be used to build Linux aarch64 targets
+using Docker::
+
+    $ ./build-linux.py --target aarch64-unknown-linux-gnu
 
 macOS
 =====
@@ -87,7 +93,7 @@ Visual Studio 2017 (or later) is required. A compatible Windows SDK is required
 (10.0.17763.0 as per CPython 3.7.2).
 
 * A ``git.exe`` on ``PATH`` (to clone ``libffi`` from source).
-* An installation of Cywgin with the ``autoconf``, ``automake``, ``libtool``,
+* An installation of Cygwin with the ``autoconf``, ``automake``, ``libtool``,
   and ``make`` packages installed. (``libffi`` build dependency.)
 
 To build a dynamically linked Python distribution for Windows x64::
@@ -104,38 +110,3 @@ You will need to specify the path to a ``sh.exe`` installed from cygwin. e.g.
 
 To build a 32-bit x86 binary, simply use an ``x86 Native Tools
 Command Prompt`` instead of ``x64``.
-
-Using sccache to Speed up Builds
-================================
-
-Builds can take a long time.
-
-python-build-standalone can automatically detect and use the
-`sccache <https://github.com/mozilla/sccache>`_ compiler cache to speed
-up subsequent builds on UNIX-like platforms. ``sccache`` can shave dozens
-of minutes from fresh builds, even on a 16 core CPU!
-
-If there is an executable ``sccache`` in the source directory, it will
-automatically be copied into the build environment and used. For non-container
-builds, an ``sccache`` executable is also searched for on ``PATH``.
-
-The ``~/.python-build-standalone-env`` file is read if it exists (the format is
-``key=value`` pairs) and variables are added to the build environment.
-
-In addition, environment variables ``AWS_ACCESS_KEY_ID``,
-``AWS_SECRET_ACCESS_KEY``, and any variable beginning with ``SCCACHE_`` are
-automatically added to the build environment.
-
-The environment variable support enables you to define remote build caches
-(such as S3 buckets) to provide a persistent, shared cache across builds and
-machines.
-
-Keep in mind that when performing builds in containers in Linux (the default
-behavior), the local filesystem is local to the container and does not survive
-the build of a single package. So sccache is practically meaningless unless
-configured to use an external store (such as S3).
-
-When using remote stores (such as S3), ``sccache`` can be constrained on
-network I/O. We recommend having at least a 100mbps network connection to
-a remote store and employing a network store with as little latency as possible
-for best results.

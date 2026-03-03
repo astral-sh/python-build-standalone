@@ -1,0 +1,71 @@
+From b7d722547bcc9e92dca4837b9fdbe7457788820b Mon Sep 17 00:00:00 2001
+From: Kumar Aditya <kumaraditya@python.org>
+Date: Wed, 16 Jul 2025 22:09:08 +0530
+Subject: [PATCH 1/1] gh-136669: build `_asyncio` as static module (#136670)
+
+`_asyncio` is now built as a static module so that thread states can be accessed directly via registers and avoids the overhead of function call.
+---
+ .../Library/2025-07-15-16-37-34.gh-issue-136669.Yexwah.rst | 1 +
+ Modules/Setup.stdlib.in                                    | 7 ++++++-
+ Modules/_remote_debugging_module.c                         | 6 +++---
+ 3 files changed, 10 insertions(+), 4 deletions(-)
+ create mode 100644 Misc/NEWS.d/next/Library/2025-07-15-16-37-34.gh-issue-136669.Yexwah.rst
+
+diff --git a/Misc/NEWS.d/next/Library/2025-07-15-16-37-34.gh-issue-136669.Yexwah.rst b/Misc/NEWS.d/next/Library/2025-07-15-16-37-34.gh-issue-136669.Yexwah.rst
+new file mode 100644
+index 00000000000..0d93397ff35
+--- /dev/null
++++ b/Misc/NEWS.d/next/Library/2025-07-15-16-37-34.gh-issue-136669.Yexwah.rst
+@@ -0,0 +1 @@
++:mod:`!_asyncio` is now statically linked for improved performance.
+diff --git a/Modules/Setup.stdlib.in b/Modules/Setup.stdlib.in
+index 3a38a60a152..86c8eb27c0a 100644
+--- a/Modules/Setup.stdlib.in
++++ b/Modules/Setup.stdlib.in
+@@ -32,7 +32,6 @@
+ ############################################################################
+ # Modules that should always be present (POSIX and Windows):
+ @MODULE_ARRAY_TRUE@array arraymodule.c
+-@MODULE__ASYNCIO_TRUE@_asyncio _asynciomodule.c
+ @MODULE__BISECT_TRUE@_bisect _bisectmodule.c
+ @MODULE__CSV_TRUE@_csv _csv.c
+ @MODULE__HEAPQ_TRUE@_heapq _heapqmodule.c
+@@ -193,3 +192,9 @@
+ # Limited API template modules; must be built as shared modules.
+ @MODULE_XXLIMITED_TRUE@xxlimited xxlimited.c
+ @MODULE_XXLIMITED_35_TRUE@xxlimited_35 xxlimited_35.c
++
++
++# for performance
++*static*
++
++@MODULE__ASYNCIO_TRUE@_asyncio _asynciomodule.c
+diff --git a/Modules/_remote_debugging_module.c b/Modules/_remote_debugging_module.c
+index d72031137e0..b50e5e403a1 100644
+--- a/Modules/_remote_debugging_module.c
++++ b/Modules/_remote_debugging_module.c
+@@ -811,7 +811,7 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
+     }
+ #elif defined(__linux__)
+     // On Linux, search for asyncio debug in executable or DLL
+-    address = search_linux_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython");
++    address = search_linux_map_for_section(handle, "AsyncioDebug", "python");
+     if (address == 0) {
+         // Error out: 'python' substring covers both executable and DLL
+         PyObject *exc = PyErr_GetRaisedException();
+@@ -820,10 +820,10 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
+     }
+ #elif defined(__APPLE__) && TARGET_OS_OSX
+     // On macOS, try libpython first, then fall back to python
+-    address = search_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython");
++    address = search_map_for_section(handle, "AsyncioDebug", "libpython");
+     if (address == 0) {
+         PyErr_Clear();
+-        address = search_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython");
++        address = search_map_for_section(handle, "AsyncioDebug", "python");
+     }
+     if (address == 0) {
+         // Error out: 'python' substring covers both executable and DLL
+-- 
+2.39.5 (Apple Git-154)
+

@@ -112,7 +112,7 @@ python_implementation_cache_tag
    (Version 5 or above only.)
 
 python_implementation_hex_version
-   Hexidecimal expression of implementation version.
+   Hexadecimal expression of implementation version.
 
    This is the value exposed by ``sys.implementation.hexversion``.
 
@@ -237,7 +237,7 @@ python_suffixes
    (Version 5 or above only.)
 
 python_bytecode_magic_number
-   Magic number to use for bytecode files, expressed as a hexidecimal
+   Magic number to use for bytecode files, expressed as a hexadecimal
    string.
 
    (Version 5 or above only.)
@@ -388,8 +388,8 @@ license_path
 tcl_library_path
    Relative path to location of tcl library files. The path should be a
    directory tree containing tcl files to support the tkinter extension.
-   This will include a subset of the library files provided by the tcl, tk,
-   and tix packages.
+   This will include a subset of the library files provided by the tcl
+   and tk packages.
 
    This points to the root directory containing tcl resources. Actual
    tcl resources are in sub-directories underneath, as identified by

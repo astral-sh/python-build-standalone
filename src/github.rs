@@ -4,23 +4,22 @@
 
 use {
     crate::release::{
-        bootstrap_llvm, produce_install_only, produce_install_only_stripped, RELEASE_TRIPLES,
+        RELEASE_TRIPLES, bootstrap_llvm, produce_install_only, produce_install_only_stripped,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     bytes::Bytes,
     clap::ArgMatches,
     futures::StreamExt,
     octocrab::{
+        Octocrab, OctocrabBuilder,
         models::{repos::Release, workflows::WorkflowListArtifact},
         params::actions::ArchiveFormat,
-        Octocrab, OctocrabBuilder,
     },
     rayon::prelude::*,
     reqwest::{Client, StatusCode},
-    reqwest_middleware::{self, ClientWithMiddleware},
     reqwest_retry::{
-        default_on_request_failure, policies::ExponentialBackoff, RetryTransientMiddleware,
-        Retryable, RetryableStrategy,
+        RetryPolicy, Retryable, RetryableStrategy, default_on_request_failure,
+        policies::ExponentialBackoff,
     },
     sha2::{Digest, Sha256},
     std::{
@@ -28,6 +27,7 @@ use {
         io::Read,
         path::PathBuf,
         str::FromStr,
+        time::{Duration, SystemTime},
     },
     url::Url,
     zip::ZipArchive,
@@ -65,12 +65,20 @@ async fn fetch_artifact(
     Ok(res)
 }
 
+enum UploadSource {
+    Filename(PathBuf),
+    Data(Bytes),
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn upload_release_artifact(
-    client: &ClientWithMiddleware,
+    client: &Client,
+    retry_policy: &impl RetryPolicy,
+    retryable_strategy: &impl RetryableStrategy,
     auth_token: String,
     release: &Release,
     filename: String,
-    data: Bytes,
+    body: UploadSource,
     dry_run: bool,
 ) -> Result<()> {
     if release.assets.iter().any(|asset| asset.name == filename) {
@@ -93,23 +101,72 @@ async fn upload_release_artifact(
         return Ok(());
     }
 
-    // Octocrab doesn't yet support release artifact upload. And the low-level HTTP API
-    // forces the use of strings on us. So we have to make our own HTTP client.
+    // Octocrab's high-level API for uploading release artifacts doesn't yet support streaming
+    // bodies, and their low-level API isn't more helpful than using our own HTTP client.
+    //
+    // Because we are streaming the body, we can't use the standard retry middleware for reqwest
+    // (see e.g. https://github.com/seanmonstar/reqwest/issues/2416), so we have to recreate the
+    // request on each retry and handle the retry logic ourself. This logic is inspired by
+    // uv/crates/uv-publish/src/lib.rs (which has the same problem), which in turn is inspired by
+    // reqwest-middleware/reqwest-retry/src/middleware.rs.
+    //
+    // (While Octocrab's API would work fine for the non-streaming case, we just use this function
+    // for both cases so that we can make a homogeneous Vec<impl Future> later in the file.)
 
-    let response = client
-        .put(url)
-        .header("Authorization", format!("Bearer {auth_token}"))
-        .header("Content-Length", data.len())
-        .header("Content-Type", "application/x-tar")
-        .body(data)
-        .send()
-        .await?;
+    let mut n_past_retries = 0;
+    let start_time = SystemTime::now();
+    let response = loop {
+        let request = client
+            .put(url.clone())
+            .timeout(Duration::from_secs(60))
+            .header("Authorization", format!("Bearer {auth_token}"))
+            .header("Content-Type", "application/octet-stream");
+        let request = match body {
+            UploadSource::Filename(ref path) => {
+                let file = tokio::fs::File::open(&path).await?;
+                let len = file.metadata().await?.len();
+                request.header("Content-Length", len).body(file)
+            }
+            UploadSource::Data(ref bytes) => request
+                .header("Content-Length", bytes.len())
+                .body(bytes.clone()),
+        };
+        let result = request.send().await.map_err(|e| e.into());
+
+        if retryable_strategy.handle(&result) == Some(Retryable::Transient) {
+            let retry_decision = retry_policy.should_retry(start_time, n_past_retries);
+            if let reqwest_retry::RetryDecision::Retry { execute_after } = retry_decision {
+                println!("retrying upload to {url} after {result:?}");
+                let duration = execute_after
+                    .duration_since(SystemTime::now())
+                    .unwrap_or_else(|_| Duration::default());
+                tokio::time::sleep(duration).await;
+                n_past_retries += 1;
+                continue;
+            }
+        }
+        break result?;
+    };
 
     if !response.status().is_success() {
         return Err(anyhow!("HTTP {}", response.status()));
     }
 
     Ok(())
+}
+
+fn new_github_client(args: &ArgMatches) -> Result<(Octocrab, String)> {
+    let token = args
+        .get_one::<String>("token")
+        .expect("token should be specified")
+        .to_string();
+    let github_uri = args.get_one::<String>("github-uri");
+
+    let mut builder = OctocrabBuilder::new().personal_token(token.clone());
+    if let Some(github_uri) = github_uri {
+        builder = builder.base_uri(github_uri.clone())?;
+    }
+    Ok((builder.build()?, token))
 }
 
 pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()> {
@@ -121,15 +178,9 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
         .expect("organization should be set");
     let repo = args.get_one::<String>("repo").expect("repo should be set");
 
-    let client = OctocrabBuilder::new()
-        .personal_token(
-            args.get_one::<String>("token")
-                .expect("token should be required argument")
-                .to_string(),
-        )
-        .build()?;
+    let (client, _) = new_github_client(args)?;
 
-    let release_version_range = pep440_rs::VersionSpecifier::from_str(">=3.9")?;
+    let release_version_range = pep440_rs::VersionSpecifier::from_str(">=3.10")?;
 
     let workflows = client.workflows(org, repo);
 
@@ -207,10 +258,11 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             .await?;
 
         for artifact in artifacts {
-            if matches!(
-                artifact.name.as_str(),
-                "pythonbuild" | "sccache" | "toolchain"
-            ) || artifact.name.contains("install-only")
+            if matches!(artifact.name.as_str(), "pythonbuild" | "toolchain")
+                || artifact.name.contains("install-only")
+                || artifact.name.contains("dockerbuild")
+                || artifact.name.contains("crate-")
+                || artifact.name.contains("image-")
             {
                 continue;
             }
@@ -235,16 +287,13 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             let parts = name.split('-').collect::<Vec<_>>();
 
             if parts[0] != "cpython" {
-                println!("ignoring {} not a cpython artifact", name);
+                println!("ignoring {name} not a cpython artifact");
                 continue;
             };
 
             let python_version = pep440_rs::Version::from_str(parts[1])?;
             if !release_version_range.contains(&python_version) {
-                println!(
-                    "{} not in release version range {}",
-                    name, release_version_range
-                );
+                println!("{name} not in release version range {release_version_range}");
                 continue;
             }
 
@@ -259,17 +308,14 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
                     }
                 })
             else {
-                println!(
-                    "ignoring {} does not match any registered release triples",
-                    name
-                );
+                println!("ignoring {name} does not match any registered release triples");
                 continue;
             };
 
             let stripped_name = if let Some(s) = name.strip_suffix(".tar.zst") {
                 s
             } else {
-                println!("ignoring {} not a .tar.zst artifact", name);
+                println!("ignoring {name} not a .tar.zst artifact");
                 continue;
             };
 
@@ -282,7 +328,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             let build_suffix = &stripped_name[triple_start + triple.len() + 1..];
 
             if !release.suffixes(None).any(|suffix| build_suffix == suffix) {
-                println!("ignoring {} not a release artifact for triple", name);
+                println!("ignoring {name} not a release artifact for triple");
                 continue;
             }
 
@@ -291,7 +337,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
             zf.read_to_end(&mut buf)?;
             std::fs::write(&dest_path, &buf)?;
 
-            println!("prepared {} for release", name);
+            println!("prepared {name} for release");
 
             if build_suffix == release.install_only_suffix(Some(&python_version)) {
                 install_paths.push(dest_path);
@@ -358,10 +404,6 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .get_one::<String>("tag")
         .expect("tag should be specified");
     let ignore_missing = args.get_flag("ignore_missing");
-    let token = args
-        .get_one::<String>("token")
-        .expect("token should be specified")
-        .to_string();
     let organization = args
         .get_one::<String>("organization")
         .expect("organization should be specified");
@@ -405,34 +447,19 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
             for suffix in release.suffixes(Some(&python_version)) {
                 wanted_filenames.insert(
-                    format!(
-                        "cpython-{}-{}-{}-{}.tar.zst",
-                        version, triple, suffix, datetime
-                    ),
-                    format!(
-                        "cpython-{}+{}-{}-{}-full.tar.zst",
-                        version, tag, triple, suffix
-                    ),
+                    format!("cpython-{version}-{triple}-{suffix}-{datetime}.tar.zst"),
+                    format!("cpython-{version}+{tag}-{triple}-{suffix}-full.tar.zst"),
                 );
             }
 
             wanted_filenames.insert(
-                format!(
-                    "cpython-{}-{}-install_only-{}.tar.gz",
-                    version, triple, datetime
-                ),
-                format!("cpython-{}+{}-{}-install_only.tar.gz", version, tag, triple),
+                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
             );
 
             wanted_filenames.insert(
-                format!(
-                    "cpython-{}-{}-install_only_stripped-{}.tar.gz",
-                    version, triple, datetime
-                ),
-                format!(
-                    "cpython-{}+{}-{}-install_only_stripped.tar.gz",
-                    version, tag, triple
-                ),
+                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
             );
         }
     }
@@ -443,7 +470,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .collect::<Vec<_>>();
 
     for f in &missing {
-        println!("missing release artifact: {}", f);
+        println!("missing release artifact: {f}");
     }
     if missing.is_empty() {
         println!("found all {} release artifacts", wanted_filenames.len());
@@ -451,9 +478,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         return Err(anyhow!("missing {} release artifacts", missing.len()));
     }
 
-    let client = OctocrabBuilder::new()
-        .personal_token(token.clone())
-        .build()?;
+    let (client, token) = new_github_client(args)?;
     let repo_handler = client.repos(organization, repo);
     let releases = repo_handler.releases();
 
@@ -473,12 +498,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
     let mut digests = BTreeMap::new();
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-    let raw_client = reqwest_middleware::ClientBuilder::new(Client::new())
-        .with(RetryTransientMiddleware::new_with_policy_and_strategy(
-            retry_policy,
-            GitHubUploadRetryStrategy,
-        ))
-        .build();
+    let raw_client = Client::new();
 
     {
         let mut fs = vec![];
@@ -488,31 +508,31 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
                 continue;
             }
 
-            let file_data = Bytes::copy_from_slice(&std::fs::read(dist_dir.join(&source))?);
-
-            let mut digest = Sha256::new();
-            digest.update(&file_data);
-
-            let digest = hex::encode(digest.finalize());
-
-            digests.insert(dest.clone(), digest.clone());
-
+            let local_filename = dist_dir.join(&source);
             fs.push(upload_release_artifact(
                 &raw_client,
+                &retry_policy,
+                &GitHubUploadRetryStrategy,
                 token.clone(),
                 &release,
                 dest.clone(),
-                file_data,
+                UploadSource::Filename(local_filename.clone()),
                 dry_run,
             ));
-            fs.push(upload_release_artifact(
-                &raw_client,
-                token.clone(),
-                &release,
-                format!("{}.sha256", dest),
-                Bytes::copy_from_slice(format!("{}\n", digest).as_bytes()),
-                dry_run,
-            ));
+
+            // reqwest wants to take ownership of the body, so it's hard for us to do anything
+            // clever with reading the file once and calculating the sha256sum while we read.
+            // So we open and read the file again.
+            let digest = {
+                let file = tokio::fs::File::open(local_filename).await?;
+                let mut stream = tokio_util::io::ReaderStream::with_capacity(file, 1048576);
+                let mut hasher = Sha256::new();
+                while let Some(chunk) = stream.next().await {
+                    hasher.update(&chunk?);
+                }
+                hex::encode(hasher.finalize())
+            };
+            digests.insert(dest.clone(), digest.clone());
         }
 
         let mut buffered = futures::stream::iter(fs).buffer_unordered(16);
@@ -524,7 +544,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     let shasums = digests
         .iter()
-        .map(|(filename, digest)| format!("{}  {}\n", digest, filename))
+        .map(|(filename, digest)| format!("{digest}  {filename}\n"))
         .collect::<Vec<_>>()
         .join("");
 
@@ -532,10 +552,12 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     upload_release_artifact(
         &raw_client,
+        &retry_policy,
+        &GitHubUploadRetryStrategy,
         token.clone(),
         &release,
         "SHA256SUMS".to_string(),
-        Bytes::copy_from_slice(shasums.as_bytes()),
+        UploadSource::Data(Bytes::copy_from_slice(shasums.as_bytes())),
         dry_run,
     )
     .await?;
@@ -559,8 +581,8 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     let mut stream = client
         .repos(organization, repo)
-        .releases()
-        .stream_asset(shasums_asset.id)
+        .release_assets()
+        .stream(shasums_asset.id.into_inner())
         .await?;
 
     let mut asset_bytes = Vec::<u8>::new();

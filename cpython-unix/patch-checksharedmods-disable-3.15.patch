@@ -1,0 +1,13 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index a6beb96d12a..bb4e1ecd49b 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -1610,7 +1610,7 @@ checksharedmods: sharedmods $(PYTHON_FOR_BUILD_DEPS) $(BUILDPYTHON)
+ 	else \
+ 		$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/check_extension_modules.py --generate-missing-stdlib-info; \
+ 	fi
+-	@$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/check_extension_modules.py
++	@echo "module checking disabled"
+ 
+ .PHONY: rundsymutil
+ rundsymutil: sharedmods $(PYTHON_FOR_BUILD_DEPS) $(BUILDPYTHON)

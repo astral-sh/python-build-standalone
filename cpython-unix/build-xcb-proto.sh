@@ -5,20 +5,20 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 pkg-config --version
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig
 
-tar -xf xcb-proto-${XCB_PROTO_VERSION}.tar.gz
-pushd xcb-proto-${XCB_PROTO_VERSION}
+tar -xf "xcb-proto-${XCB_PROTO_VERSION}.tar.xz"
+pushd "xcb-proto-${XCB_PROTO_VERSION}"
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=${ROOT}/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR="${ROOT}/out"

@@ -1,4 +1,4 @@
-# Diff 2 releases using diffocope.
+# Diff 2 releases using diffoscope.
 diff a b:
   diffoscope \
     --html build/diff.html \
@@ -67,6 +67,28 @@ release-set-latest-release tag:
     echo "No changes to commit."
   fi
 
+# Create a GitHub release object, or reuse an existing prerelease.
+release-create tag:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  prerelease_exists=$(gh release view {{tag}} --json isPrerelease -t '{{{{.isPrerelease}}' 2>&1 || true)
+  case "$prerelease_exists" in
+    true)
+      echo "note: updating existing prerelease {{tag}}"
+      ;;
+    false)
+      echo "error: release {{tag}} already exists"
+      exit 1
+      ;;
+    "release not found")
+      gh release create {{tag}} --prerelease --notes TBD --verify-tag
+      ;;
+    *)
+      echo "error: unexpected gh cli output: $prerelease_exists"
+      exit 1
+      ;;
+  esac
+
 # Perform the release job. Assumes that the GitHub Release has been created.
 release-run token commit tag:
   #!/bin/bash
@@ -88,25 +110,3 @@ release-dry-run token commit tag:
   datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
   just release-upload-distributions-dry-run {{token}} ${datetime} {{tag}}
 
-_download-stats mode:
-    build/venv.*/bin/python3 -c 'import pythonbuild.utils as u; u.release_download_statistics(mode="{{mode}}")'
-
-# Show download counts of every release asset.
-download-stats:
-    just _download-stats by_asset
-
-# Show download counts of release assets by build configuration.
-download-stats-by-build:
-    just _download-stats by_build
-
-# Show download counts of "install only" release assets by build configuration.
-download-stats-by-build-install-only:
-    just _download-stats by_build_install_only
-
-# Show download counts of release assets by release tag.
-download-stats-by-tag:
-    just _download-stats by_tag
-
-# Show a total count of all release asset downloads.
-download-stats-total:
-    just _download-stats total

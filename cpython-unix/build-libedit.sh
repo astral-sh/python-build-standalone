@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf libedit-${LIBEDIT_VERSION}.tar.gz
+tar -xf "libedit-${LIBEDIT_VERSION}.tar.gz"
 
-pushd libedit-${LIBEDIT_VERSION}
+pushd "libedit-${LIBEDIT_VERSION}"
 
 # libedit's configure isn't smart enough to look for ncursesw. So we teach it
 # to. Ideally we would edit configure.ac and run autoconf. But Jessie's autoconf
@@ -82,6 +82,32 @@ index 614795f..4671f1b 100755
  fi
 EOF
 
+# When libedit receives a signal, it re-broadcasts it to its entire pgroup.
+# This seems intended to preserve normal ^C behavior in "raw" mode when the
+# terminal's ISIG flag is cleared? However, libedit does not in fact clear
+# ISIG. (And Jack can't find any evidence of any version that ever did.) This
+# sometimes results in the parent process receiving ^C twice back-to-back,
+# depending on the vagaries of signal coalescing. More pathologically, if the
+# parent tries to signal the child directly with e.g. `kill(pid, SIGTERM)`,
+# libedit *signals the parent right back* (not to mention any other pgroup
+# siblings or grandparents). This is just wild behavior, even though it's
+# probably rare that it matters in practice. Patch it out. See also:
+# https://github.com/astral-sh/uv/issues/13919#issuecomment-2960501229.
+patch -p1 << "EOF"
+diff --git i/src/sig.c w/src/sig.c
+index d2b77e7..884b2dd 100644
+--- i/src/sig.c
++++ w/src/sig.c
+@@ -107,7 +107,7 @@ sig_handler(int signo)
+ 	sel->el_signal->sig_action[i].sa_flags = 0;
+ 	sigemptyset(&sel->el_signal->sig_action[i].sa_mask);
+ 	(void) sigprocmask(SIG_SETMASK, &oset, NULL);
+-	(void) kill(0, signo);
++	(void) raise(signo);
+ 	errno = save_errno;
+ }
+EOF
+
 cflags="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
 ldflags="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib"
 
@@ -92,17 +118,17 @@ fi
 
 CFLAGS="${cflags}" CPPFLAGS="${cflags}" LDFLAGS="${ldflags}" \
     ./configure \
-        --build=${BUILD_TRIPLE} \
-        --host=${TARGET_TRIPLE} \
+        --build="${BUILD_TRIPLE}" \
+        --host="${TARGET_TRIPLE}" \
         --prefix=/tools/deps \
         --disable-shared
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"
 
 # Alias readline/{history.h, readline.h} for readline compatibility.
-if [ -e ${ROOT}/out/tools/deps/include ]; then
-    mkdir ${ROOT}/out/tools/deps/include/readline
-    ln -s ../editline/readline.h ${ROOT}/out/tools/deps/include/readline/readline.h
-    ln -s ../editline/readline.h ${ROOT}/out/tools/deps/include/readline/history.h
+if [ -e "${ROOT}/out/tools/deps/include" ]; then
+    mkdir "${ROOT}/out/tools/deps/include/readline"
+    ln -s ../editline/readline.h "${ROOT}/out/tools/deps/include/readline/readline.h"
+    ln -s ../editline/readline.h "${ROOT}/out/tools/deps/include/readline/history.h"
 fi

@@ -7,7 +7,6 @@ import argparse
 import multiprocessing
 import os
 import pathlib
-import platform
 import subprocess
 import sys
 
@@ -15,6 +14,8 @@ from pythonbuild.cpython import meets_python_minimum_version
 from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.utils import (
     compress_python_archive,
+    current_host_platform,
+    default_target_triple,
     get_target_settings,
     release_tag_from_git,
     supported_targets,
@@ -28,48 +29,38 @@ TARGETS_CONFIG = SUPPORT / "targets.yml"
 
 
 def main():
-    if sys.platform == "linux":
-        host_platform = "linux64"
-        default_target_triple = "x86_64-unknown-linux-gnu"
-    elif sys.platform == "darwin":
-        host_platform = "macos"
-        machine = platform.machine()
+    host_platform = current_host_platform()
 
-        if machine == "arm64":
-            default_target_triple = "aarch64-apple-darwin"
-        elif machine == "x86_64":
-            default_target_triple = "x86_64-apple-darwin"
-        else:
-            raise Exception("unhandled macOS machine value: %s" % machine)
-    else:
-        print("Unsupported build platform: %s" % sys.platform)
-        return 1
-
+    # Note these arguments must be synced with `build.py`
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         "--target-triple",
-        default=default_target_triple,
+        default=default_target_triple(),
         choices=supported_targets(TARGETS_CONFIG),
         help="Target host triple to build for",
     )
 
-    optimizations = {"debug", "noopt", "pgo", "lto", "pgo+lto"}
+    # Construct possible options, we use a set here for canonical ordering
+    options = set()
+    options.update({"debug", "noopt", "pgo", "lto", "pgo+lto"})
+    options.update({f"freethreaded+{option}" for option in options})
+    options.update({f"{option}+static" for option in options})
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
     )
     parser.add_argument(
         "--python",
         choices={
-            "cpython-3.9",
             "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         },
         default="cpython-3.11",
         help="Python distribution to build",
@@ -88,7 +79,7 @@ def main():
         "--no-docker",
         action="store_true",
         default=True if sys.platform == "darwin" else False,
-        help="Disable building in Docker",
+        help="Disable building in Docker on Linux hosts.",
     )
     parser.add_argument(
         "--serial",
@@ -104,6 +95,8 @@ def main():
             "toolchain-image-build",
             "toolchain-image-build.cross",
             "toolchain-image-build.cross-riscv64",
+            "toolchain-image-build.cross-loongarch64",
+            "toolchain-image-build.debian9",
             "toolchain-image-gcc",
             "toolchain-image-xcb",
             "toolchain-image-xcb.cross",
@@ -136,9 +129,26 @@ def main():
 
     musl = "musl" in target_triple
 
+    # Linux targets can be built on a macOS host using Docker.
+    building_linux_from_macos = sys.platform == "darwin" and "linux" in target_triple
+    if building_linux_from_macos:
+        print("Note: Using Docker to build for Linux on macOS")
+        args.no_docker = False
+
     env = dict(os.environ)
 
-    env["PYBUILD_HOST_PLATFORM"] = host_platform
+    # When building Linux targets from macOS using Docker, map to the equivalent
+    # Linux host platform.
+    effective_host_platform = host_platform
+    if building_linux_from_macos:
+        if host_platform == "macos_arm64":
+            effective_host_platform = "linux_aarch64"
+        else:
+            raise Exception(f"Unhandled macOS platform: {host_platform}")
+        print(
+            f"Building Linux target from macOS using Docker ({effective_host_platform} toolchain)"
+        )
+    env["PYBUILD_HOST_PLATFORM"] = effective_host_platform
     env["PYBUILD_TARGET_TRIPLE"] = target_triple
     env["PYBUILD_BUILD_OPTIONS"] = args.options
     env["PYBUILD_PYTHON_SOURCE"] = python_source
@@ -190,7 +200,7 @@ def main():
     # because we can get some speedup from parallel operations. But we also don't
     # share a make job server with each build. So if we didn't limit the
     # parallelism we could easily oversaturate the CPU. Higher levels of
-    # parallelism don't result in meaningful build speedups because tk/tix has
+    # parallelism don't result in meaningful build speedups because tk has
     # a long, serial dependency chain that can't be built in parallel.
     parallelism = min(1 if args.serial else 4, multiprocessing.cpu_count())
 

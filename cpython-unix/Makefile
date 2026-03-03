@@ -6,7 +6,7 @@ BUILD := $(HERE)/build.py
 NULL :=
 SPACE := $(subst ,, )
 
-ALL_PYTHON_VERSIONS := 3.9 3.10 3.11 3.12 3.13 3.14
+ALL_PYTHON_VERSIONS := 3.10 3.11 3.12 3.13 3.14 3.15
 
 ifndef PYBUILD_TARGET_TRIPLE
     $(error PYBUILD_TARGET_TRIPLE not defined)
@@ -66,27 +66,29 @@ TOOLCHAIN_DEPENDS := \
 
 PYTHON_DEP_DEPENDS := \
     $(OUTDIR)/targets/$(TARGET_TRIPLE) \
-    $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).tar) \
+    $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).$(HOST_PLATFORM).tar) \
     $(TOOLCHAIN_DEPENDS) \
     $(NULL)
+
+HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(HOST_PLATFORM).tar
 
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
 ifndef PYBUILD_NO_DOCKER
-$(OUTDIR)/image-%.tar: $(OUTDIR)/%.Dockerfile
+$(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
 
-$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(OUTDIR)/image-gcc.tar $(HERE)/build-binutils.sh
-	$(RUN_BUILD) --toolchain binutils
+$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar $(HERE)/build-binutils.sh
+	$(RUN_BUILD) --toolchain --docker-image $(DOCKER_IMAGE_GCC) binutils
 
 $(OUTDIR)/$(CLANG_FILENAME):
 	$(RUN_BUILD) --toolchain clang --target-triple $(TARGET_TRIPLE)
 
 $(OUTDIR)/musl-$(MUSL_VERSION)-$(HOST_PLATFORM).tar: $(BASE_TOOLCHAIN_DEPENDS) $(HERE)/build-musl.sh
-	$(RUN_BUILD) --toolchain musl
+	$(RUN_BUILD) --toolchain musl --docker-image $(DOCKER_IMAGE_GCC)
 
-ifeq ($(HOST_PLATFORM),linux64)
+ifeq ($(HOST_PLATFORM),linux_x86_64)
     TOOLCHAIN_TARGET := $(OUTDIR)/musl-$(MUSL_VERSION)-$(HOST_PLATFORM).tar
 else
     TOOLCHAIN_TARGET :=
@@ -117,28 +119,18 @@ $(OUTDIR)/bzip2-$(BZIP2_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(
 $(OUTDIR)/expat-$(EXPAT_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-expat.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) expat
 
-$(OUTDIR)/inputproto-$(INPUTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-inputproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) inputproto
-
-$(OUTDIR)/kbproto-$(KBPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-kbproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) kbproto
-
 $(OUTDIR)/libffi-3.3-$(LIBFFI_3.3_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libffi-3.3.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libffi-3.3
 
 $(OUTDIR)/libffi-$(LIBFFI_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libffi.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libffi
 
-$(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libpthread-stubs.sh $(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).tar
+$(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-libpthread-stubs.sh $(OUTDIR)/image-$(DOCKER_IMAGE_BUILD).$(HOST_PLATFORM).tar
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) libpthread-stubs
 
 LIBX11_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
     $(HERE)/build-libX11.sh \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xextproto-$(XEXTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/kbproto-$(KBPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/inputproto-$(INPUTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libxcb-$(LIBXCB_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/xtrans-$(XTRANS_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
@@ -151,7 +143,7 @@ LIBXAU_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
     $(HERE)/build-libXau.sh \
     $(OUTDIR)/x11-util-macros-$(X11_UTIL_MACROS_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(NULL)
 
 $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXAU_DEPENDS)
@@ -159,16 +151,16 @@ $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXAU_DEPENDS)
 
 LIBXCB_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
+    $(HOST_PYTHON_DEPENDS) \
     $(HERE)/build-libxcb.sh \
-    $(OUTDIR)/image-$(DOCKER_IMAGE_XCB).tar \
     $(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libXau-$(LIBXAU_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/libpthread-stubs-$(LIBPTHREAD_STUBS_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(NULL)
 
 $(OUTDIR)/libxcb-$(LIBXCB_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBXCB_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) libxcb
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) libxcb
 
 $(OUTDIR)/m4-$(M4_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-m4.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) m4
@@ -182,8 +174,8 @@ $(OUTDIR)/ncurses-$(NCURSES_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS
 $(OUTDIR)/openssl-1.1-$(OPENSSL_1.1_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-1.1.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-1.1
 
-$(OUTDIR)/openssl-3.0-$(OPENSSL_3.0_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-3.0.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-3.0
+$(OUTDIR)/openssl-3.5-$(OPENSSL_3.5_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-3.5.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-3.5
 
 LIBEDIT_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
@@ -200,27 +192,24 @@ $(OUTDIR)/patchelf-$(PATCHELF_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPEN
 $(OUTDIR)/sqlite-$(SQLITE_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-sqlite.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) sqlite
 
-$(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-tcl.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tcl
-
-TIX_DEPENDS = \
-    $(HERE)/build-tix.sh \
-    $(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(OUTDIR)/tk-$(TK_VERSION)-$(PACKAGE_SUFFIX).tar \
-    $(if $(NEED_LIBX11),$(OUTDIR)/libX11-$(LIBX11_VERSION)-$(PACKAGE_SUFFIX).tar) \
+TCL_DEPENDS = \
+    $(PYTHON_DEP_DEPENDS) \
+    $(HERE)/build-tcl.sh \
+    $(OUTDIR)/zlib-$(ZLIB_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(NULL)
 
-$(OUTDIR)/tix-$(TIX_VERSION)-$(PACKAGE_SUFFIX).tar: $(TIX_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tix
+$(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar: $(TCL_DEPENDS)
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) tcl
 
 TK_DEPENDS = \
+    $(HOST_PYTHON_DEPENDS) \
     $(HERE)/build-tk.sh \
     $(OUTDIR)/tcl-$(TCL_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(if $(NEED_LIBX11),$(OUTDIR)/libX11-$(LIBX11_VERSION)-$(PACKAGE_SUFFIX).tar) \
     $(NULL)
 
 $(OUTDIR)/tk-$(TK_VERSION)-$(PACKAGE_SUFFIX).tar: $(TK_DEPENDS)
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) tk
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) tk
 
 $(OUTDIR)/uuid-$(UUID_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-uuid.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) uuid
@@ -228,17 +217,11 @@ $(OUTDIR)/uuid-$(UUID_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HE
 $(OUTDIR)/x11-util-macros-$(X11_UTIL_MACROS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-x11-util-macros.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) x11-util-macros
 
-$(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xcb-proto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_XCB) xcb-proto
-
-$(OUTDIR)/xextproto-$(XEXTPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xextproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xextproto
+$(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HOST_PYTHON_DEPENDS) $(HERE)/build-xcb-proto.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) --python-host-version $(PYBUILD_PYTHON_VERSION) xcb-proto
 
 $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xorgproto.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xorgproto
-
-$(OUTDIR)/xproto-$(XPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xproto.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xproto
 
 $(OUTDIR)/xtrans-$(XTRANS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xtrans.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xtrans
@@ -248,6 +231,9 @@ $(OUTDIR)/xz-$(XZ_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/
 
 $(OUTDIR)/zlib-$(ZLIB_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-zlib.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) zlib
+
+$(OUTDIR)/zstd-$(ZSTD_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-zstd.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) zstd
 
 PYTHON_HOST_DEPENDS := \
   $(PYTHON_DEP_DEPENDS) \
@@ -276,15 +262,15 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_MPDECIMAL),$$(OUTDIR)/mpdecimal-$$(MPDECIMAL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_NCURSES),$$(OUTDIR)/ncurses-$$(NCURSES_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_OPENSSL_1_1),$$(OUTDIR)/openssl-1.1-$$(OPENSSL_1.1_VERSION)-$$(PACKAGE_SUFFIX).tar) \
-    $$(if $$(NEED_OPENSSL_3_0),$$(OUTDIR)/openssl-3.0-$$(OPENSSL_3.0_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_OPENSSL_3_5),$$(OUTDIR)/openssl-3.5-$$(OPENSSL_3.5_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_PATCHELF),$$(OUTDIR)/patchelf-$$(PATCHELF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_SQLITE),$$(OUTDIR)/sqlite-$$(SQLITE_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TCL),$$(OUTDIR)/tcl-$$(TCL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TK),$$(OUTDIR)/tk-$$(TK_VERSION)-$$(PACKAGE_SUFFIX).tar) \
-    $$(if $$(NEED_TIX),$$(OUTDIR)/tix-$$(TIX_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_UUID),$$(OUTDIR)/uuid-$$(UUID_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_XZ),$$(OUTDIR)/xz-$$(XZ_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_ZLIB),$$(OUTDIR)/zlib-$$(ZLIB_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_ZSTD),$$(OUTDIR)/zstd-$$(ZSTD_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(NULL)
 
 ALL_PYTHON_DEPENDS_$(1) = \

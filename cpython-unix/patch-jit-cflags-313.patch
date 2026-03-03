@@ -1,0 +1,80 @@
+diff --git a/Tools/jit/_targets.py b/Tools/jit/_targets.py
+index 50b5d923a35..4a71476026f 100644
+--- a/Tools/jit/_targets.py
++++ b/Tools/jit/_targets.py
+@@ -10,6 +10,7 @@
+ import sys
+ import tempfile
+ import typing
++import shlex
+ 
+ import _llvm
+ import _schema
+@@ -44,6 +45,17 @@ class _Target(typing.Generic[_S, _R]):
+     stable: bool = False
+     debug: bool = False
+     verbose: bool = False
++    cflags: str = ""
++    known_symbols: dict[str, int] = dataclasses.field(default_factory=dict)
++
++    def _get_nop(self) -> bytes:
++        if re.fullmatch(r"aarch64-.*", self.triple):
++            nop = b"\x1f\x20\x03\xD5"
++        elif re.fullmatch(r"x86_64-.*|i686.*", self.triple):
++            nop = b"\x90"
++        else:
++            raise ValueError(f"NOP not defined for {self.triple}")
++        return nop
+ 
+     def _compute_digest(self, out: pathlib.Path) -> str:
+         hasher = hashlib.sha256()
+@@ -114,6 +126,7 @@ async def _compile(
+             return _stencils.StencilGroup()
+         o = tempdir / f"{opname}.o"
+         args = [
++            *shlex.split(self.cflags),
+             f"--target={self.triple}",
+             "-DPy_BUILD_CORE_MODULE",
+             "-D_DEBUG" if self.debug else "-DNDEBUG",
+diff --git a/Tools/jit/build.py b/Tools/jit/build.py
+index 4a23c6f0afa..618b53804db 100644
+--- a/Tools/jit/build.py
++++ b/Tools/jit/build.py
+@@ -22,7 +22,11 @@
+     parser.add_argument(
+         "-v", "--verbose", action="store_true", help="echo commands as they are run"
+     )
++    parser.add_argument(
++        "--with-cflags", help="additional flags to pass to the compiler", default=""
++    )
+     args = parser.parse_args()
+     args.target.debug = args.debug
+     args.target.verbose = args.verbose
++    args.target.cflags = args.with_cflags
+     args.target.build(pathlib.Path.cwd(), comment=comment, force=args.force)
+diff --git a/configure b/configure
+index 1cd1f690f7b..7fb6c4adfea 100755
+--- a/configure
++++ b/configure
+@@ -8326,7 +8326,7 @@ then :
+ 
+ else $as_nop
+   as_fn_append CFLAGS_NODIST " $jit_flags"
+-           REGEN_JIT_COMMAND="\$(PYTHON_FOR_REGEN) \$(srcdir)/Tools/jit/build.py $host"
++           REGEN_JIT_COMMAND="\$(PYTHON_FOR_REGEN) \$(srcdir)/Tools/jit/build.py $host --with-cflags=\"\$(CONFIGURE_CFLAGS)\""
+            JIT_STENCILS_H="jit_stencils.h"
+            if test "x$Py_DEBUG" = xtrue
+ then :
+diff --git a/configure.ac b/configure.ac
+index 3fcb18922c5..616999a96b2 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1846,7 +1846,7 @@ AS_VAR_IF([jit_flags],
+           [],
+           [AS_VAR_APPEND([CFLAGS_NODIST], [" $jit_flags"])
+            AS_VAR_SET([REGEN_JIT_COMMAND],
+-                      ["\$(PYTHON_FOR_REGEN) \$(srcdir)/Tools/jit/build.py $host"])
++                      ["\$(PYTHON_FOR_REGEN) \$(srcdir)/Tools/jit/build.py $host --with-cflags=\"\$(CONFIGURE_CFLAGS)\""])
+            AS_VAR_SET([JIT_STENCILS_H], ["jit_stencils.h"])
+            AS_VAR_IF([Py_DEBUG],
+                      [true],

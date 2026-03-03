@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf libffi-${LIBFFI_VERSION}.tar.gz
+tar -xf "libffi-${LIBFFI_VERSION}.tar.gz"
 
-pushd libffi-${LIBFFI_VERSION}
+pushd "libffi-${LIBFFI_VERSION}"
 
 # Patches needed to fix compilation on aarch64. Will presumably be in libffi
 # 3.4.7 or 3.5.
@@ -225,7 +225,7 @@ index 60cfa50..6a9a561 100644
  	BTI_C
 -	/* Sign the lr with x1 since that is where it will be stored */
 +	PAC_CFI_WINDOW_SAVE
-+	/* Sign the lr with x1 since that is the CFA which is the modifer used in auth instructions */
++	/* Sign the lr with x1 since that is the CFA which is the modifier used in auth instructions */
  	SIGN_LR_WITH_REG(x1)
 
 -	/* Use a stack frame allocated by our caller.  */
@@ -352,7 +352,7 @@ index 6a9a561..e83bc65 100644
 +	cfi_startproc
  	BTI_C
  	PAC_CFI_WINDOW_SAVE
- 	/* Sign the lr with x1 since that is the CFA which is the modifer used in auth instructions */
+ 	/* Sign the lr with x1 since that is the CFA which is the modifier used in auth instructions */
 @@ -348,8 +348,8 @@ CNAME(ffi_closure_SYSV_V):
  #endif
 
@@ -384,11 +384,11 @@ if [ "${APPLE_MIN_DEPLOYMENT_TARGET}" = "10.9" ]; then
 fi
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     --disable-shared \
     ${EXTRA_CONFIGURE}
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"

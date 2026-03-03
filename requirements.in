@@ -7,4 +7,5 @@ six
 # This is a transitive dependency that doesn't get picked up when running on
 # modern Python. So include to force it in requirements.txt.
 tomli
+typing-extensions
 zstandard

@@ -23,7 +23,7 @@ from .utils import (
 )
 
 
-class ContainerContext(object):
+class ContainerContext:
     def __init__(self, container):
         self.container = container
 
@@ -76,6 +76,7 @@ class ContainerContext(object):
         binutils=False,
         musl=False,
         clang=False,
+        static=False,
     ):
         if binutils:
             self.install_toolchain_archive(build_dir, "binutils", host_platform)
@@ -86,7 +87,9 @@ class ContainerContext(object):
             )
 
         if musl:
-            self.install_toolchain_archive(build_dir, "musl", host_platform)
+            self.install_toolchain_archive(
+                build_dir, "musl-static" if static else "musl", host_platform
+            )
 
     def run(self, program, user="build", environment=None):
         if isinstance(program, str) and not program.startswith("/"):
@@ -136,7 +139,7 @@ class ContainerContext(object):
             yield line[len("/build/out/%s/" % base_path) :].decode("ascii")
 
 
-class TempdirContext(object):
+class TempdirContext:
     def __init__(self, td):
         self.td = pathlib.Path(td)
 
@@ -161,10 +164,9 @@ class TempdirContext(object):
     def install_toolchain_archive(
         self, build_dir, package_name, host_platform, version=None
     ):
-        entry = DOWNLOADS[package_name]
         basename = "%s-%s-%s.tar" % (
             package_name,
-            version or entry["version"],
+            version or DOWNLOADS[package_name]["version"],
             host_platform,
         )
 
@@ -197,6 +199,7 @@ class TempdirContext(object):
         binutils=False,
         musl=False,
         clang=False,
+        static=False,
     ):
         if binutils:
             self.install_toolchain_archive(build_dir, "binutils", platform)
@@ -207,7 +210,9 @@ class TempdirContext(object):
             )
 
         if musl:
-            self.install_toolchain_archive(build_dir, "musl", platform)
+            self.install_toolchain_archive(
+                build_dir, "musl-static" if static else "musl", platform
+            )
 
     def run(self, program, user="build", environment=None):
         if user != "build":

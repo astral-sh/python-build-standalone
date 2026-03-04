@@ -73,7 +73,7 @@ index 8d939f07505..25737e3f9d6 100644
       -reorder-blocks=ext-tsp
       -reorder-functions=cdsort
       -split-functions
-      -split-strategy=cdsplit
+      -split-strategy=profile2
 -     -icf=1
 +     ${py_bolt_icf_flag}
       -inline-all

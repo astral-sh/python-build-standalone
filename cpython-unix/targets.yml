@@ -131,6 +131,9 @@ aarch64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -567,6 +570,9 @@ x86_64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -614,6 +620,9 @@ x86_64_v2-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -661,6 +670,9 @@ x86_64_v3-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -708,6 +720,9 @@ x86_64_v4-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -754,6 +769,9 @@ x86_64-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -799,6 +817,9 @@ x86_64_v2-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -844,6 +865,9 @@ x86_64_v3-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -889,6 +913,9 @@ x86_64_v4-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -937,6 +964,9 @@ aarch64-unknown-linux-musl:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb

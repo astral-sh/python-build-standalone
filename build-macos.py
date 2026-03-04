@@ -53,7 +53,8 @@ if __name__ == "__main__":
     warnings.warn(
         "build-macos.py is deprecated and will be removed in the future.\n"
         + "Please use ./build.py to build a distribution.",
-        DeprecationWarning,
+        FutureWarning,
+        stacklevel=2,
     )
     try:
         if "PYBUILD_BOOTSTRAPPED" not in os.environ:

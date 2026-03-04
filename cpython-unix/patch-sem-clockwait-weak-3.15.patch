@@ -1,0 +1,51 @@
+--- a/Python/parking_lot.c
++++ b/Python/parking_lot.c
+@@ -10,7 +10,21 @@
+ 
+ #include <stdbool.h>
+ 
++/* When building against glibc headers older than 2.30, configure cannot
++ * detect sem_clockwait. Declare it as a weak symbol so it
++ * resolves to NULL on old glibc and to the real function on glibc 2.30+.
++ * This enables monotonic clock waits at runtime when available, preventing
++ * hangs when the system clock jumps backward (e.g., NTP sync). */
++#if defined(__linux__) && defined(_Py_USE_SEMAPHORES) && \
++    !defined(HAVE_SEM_CLOCKWAIT) && !defined(_Py_THREAD_SANITIZER)
++#include <time.h>
++__attribute__((weak)) extern int sem_clockwait(sem_t *, clockid_t,
++                                               const struct timespec *);
++#define HAVE_SEM_CLOCKWAIT 1
++#define _Py_SEM_CLOCKWAIT_WEAK 1
++#endif
+ 
++
+ typedef struct {
+     // The mutex protects the waiter queue and the num_waiters counter.
+     _PyRawMutex mutex;
+@@ -150,6 +164,9 @@
+         struct timespec ts;
+ 
+ #if defined(CLOCK_MONOTONIC) && defined(HAVE_SEM_CLOCKWAIT) && !defined(_Py_THREAD_SANITIZER)
++#ifdef _Py_SEM_CLOCKWAIT_WEAK
++        if (sem_clockwait != NULL) {
++#endif
+         PyTime_t now;
+         // silently ignore error: cannot report error to the caller
+         (void)PyTime_MonotonicRaw(&now);
+@@ -157,6 +174,16 @@
+         _PyTime_AsTimespec_clamp(deadline, &ts);
+ 
+         err = sem_clockwait(&sema->platform_sem, CLOCK_MONOTONIC, &ts);
++#ifdef _Py_SEM_CLOCKWAIT_WEAK
++        } else {
++            PyTime_t now;
++            (void)PyTime_TimeRaw(&now);
++            PyTime_t deadline = _PyTime_Add(now, timeout);
++            _PyTime_AsTimespec_clamp(deadline, &ts);
++
++            err = sem_timedwait(&sema->platform_sem, &ts);
++        }
++#endif
+ #else
+         PyTime_t now;
+         // silently ignore error: cannot report error to the caller

@@ -54,8 +54,13 @@ jobs:
     name: Generate build matrix
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      matrix-x86_64: ${{ steps.set-matrix.outputs.matrix-x86_64 }}
+      matrix-i686: ${{ steps.set-matrix.outputs.matrix-i686 }}
+      matrix-aarch64: ${{ steps.set-matrix.outputs.matrix-aarch64 }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
+      dependencies-build-matrix-x86_64: ${{ steps.set-matrix.outputs.dependencies-build-matrix-x86_64 }}
+      dependencies-build-matrix-i686: ${{ steps.set-matrix.outputs.dependencies-build-matrix-i686 }}
+      dependencies-build-matrix-aarch64: ${{ steps.set-matrix.outputs.dependencies-build-matrix-aarch64 }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -92,16 +97,23 @@ jobs:
       - name: Generate build matrix
         id: set-matrix
         run: |
-          uv run ci-matrix.py --platform windows --labels "${STEPS_GET_LABELS_OUTPUTS_LABELS}" ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
+          uv run ci-matrix.py --platform windows --facet-by-triple --labels "${STEPS_GET_LABELS_OUTPUTS_LABELS}" ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} > matrix.json
 
           # Extract python-build matrix
-          echo "matrix=$(jq -c '."python-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "matrix-x86_64=$(jq -c '."python-build"?["x86_64-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
+          echo "matrix-i686=$(jq -c '."python-build"?["i686-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
+          echo "matrix-aarch64=$(jq -c '."python-build"?["aarch64-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
+
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
+
+          echo "dependencies-build-matrix-x86_64=$(jq -c '."dependencies-build"?["x86_64-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
+          echo "dependencies-build-matrix-i686=$(jq -c '."dependencies-build"?["i686-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
+          echo "dependencies-build-matrix-aarch64=$(jq -c '."dependencies-build"?["aarch64-pc-windows-msvc"]? // {"include": []}' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
           cat matrix.json | jq
 
-          if jq -e '."python-build".include | length > 0' matrix.json > /dev/null; then
+          if jq -e '."python-build" | length > 0' matrix.json > /dev/null; then
             # Build matrix has entries
             echo "any_builds=true" >> $GITHUB_OUTPUT
           else
@@ -111,21 +123,23 @@ jobs:
         env:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
-  build:
+
+  build-python-x86_64:
     timeout-minutes: 90
     needs:
       - generate-matrix
       - crate-build
+      - build-dependencies-x86_64
     # Permissions used for actions/attest-build-provenance
     permissions:
       id-token: write
       attestations: write
     runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-x86_64) }}
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
-    steps:
+    steps: &build-python-steps
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           fetch-depth: 0
@@ -152,10 +166,17 @@ jobs:
         run: |
           uv run build.py --help
 
+      - name: Download build dependencies
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: build-deps-${{ matrix.target_triple }}-${{ matrix.build_options}}
+          path: build
+
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
+          DIR
           IF "%MATRIX_VS_VERSION%"=="2026" (
             call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
           ) ELSE (
@@ -185,3 +206,111 @@ jobs:
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution --run $Dists
+
+  build-python-i686:
+    timeout-minutes: 90
+    needs:
+      - generate-matrix
+      - crate-build
+      - build-dependencies-i686
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-i686) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps: *build-python-steps
+
+  build-python-aarch64:
+    timeout-minutes: 90
+    needs:
+      - generate-matrix
+      - crate-build
+      - build-dependencies-aarch64
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix-aarch64) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps: *build-python-steps
+
+  build-dependencies-x86_64:
+    timeout-minutes: 20
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.dependencies-build-matrix-x86_64) }}
+      fail-fast: false
+    name: build-dependencies / ${{ matrix.target_triple }} / ${{ matrix.build_options }}
+    steps: &build-dependencies-steps
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Cygwin Environment
+        uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
+        with:
+          packages: autoconf automake libtool
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@1e862dfacbd1d6d858c55d9b792c756523627244 # v7.1.4
+        with:
+          enable-cache: false
+
+      # We need to do this before we activate the VC++ environment or else binary packages
+      # don't get compiled properly.
+      - name: Bootstrap Python environment
+        run: |
+          uv run build.py --help
+
+      - name: Build
+        if: ${{ ! matrix.dry-run }}
+        shell: cmd
+        run: |
+          IF "%MATRIX_VS_VERSION%"=="2026" (
+            call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          ) ELSE (
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          )
+          uv run build.py --only-deps --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
+        env:
+          MATRIX_VCVARS: ${{ matrix.vcvars }}
+          MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+          MATRIX_VS_VERSION: ${{ matrix.vs_version }}
+
+      - name: Upload Build Dependencies
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: build-deps-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: build/*.tar
+
+  build-dependencies-i686:
+    timeout-minutes: 20
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.dependencies-build-matrix-i686) }}
+      fail-fast: false
+    name: build-dependencies / ${{ matrix.target_triple }} / ${{ matrix.build_options }}
+    steps: *build-dependencies-steps
+
+  build-dependencies-aarch64:
+    timeout-minutes: 20
+    needs:
+      - generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.dependencies-build-matrix-aarch64) }}
+      fail-fast: false
+    name: build-dependencies / ${{ matrix.target_triple }} / ${{ matrix.build_options }}
+    steps: *build-dependencies-steps

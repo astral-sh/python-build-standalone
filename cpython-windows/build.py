@@ -1909,6 +1909,11 @@ def main() -> None:
         default="10.0.26100.0",
         help="Windows SDK version to build with",
     )
+    parser.add_argument(
+        "--only-deps",
+        action="store_true",
+        help="Build only dependencies, not CPython",
+    )
 
     args = parser.parse_args()
     build_options = args.options
@@ -1962,6 +1967,10 @@ def main() -> None:
                 args.vs,
                 libffi_archive,
             )
+
+        # Stop if only building dependencies
+        if args.only_deps:
+            return
 
         LOG_PREFIX[0] = "cpython"
         tar_path = build_cpython(

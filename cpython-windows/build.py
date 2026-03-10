@@ -753,7 +753,6 @@ def run_msbuild(
 
     # Build tail-calling Python for 3.15+
     if python_version.startswith("3.15") and platform == "x64":
-        args.append("/property:PlatformToolset=v145")
         args.append("/property:UseTailCallInterp=true")
 
     exec_and_log(args, str(pcbuild_path), os.environ)

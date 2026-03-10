@@ -158,10 +158,12 @@ fi
 # executable. This behavior is kinda suspect on all platforms, as it could be adding
 # library dependencies that shouldn't need to be there.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
-        patch -p1 -i "${ROOT}/patch-python-link-modules-3.10.patch"
-    else
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+        patch -p1 -i "${ROOT}/patch-python-link-modules-3.15.patch"
+    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
         patch -p1 -i "${ROOT}/patch-python-link-modules-3.11.patch"
+    elif [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
+        patch -p1 -i "${ROOT}/patch-python-link-modules-3.10.patch"
     fi
 fi
 

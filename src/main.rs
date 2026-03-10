@@ -298,6 +298,14 @@ fn main_impl() -> Result<()> {
 }
 
 fn main() {
+    // rustls 0.23+ requires an explicit crypto provider when multiple backends are
+    // compiled into the same binary. Both ring (via reqwest) and aws-lc-rs (via
+    // aws-sdk-s3) are present here, so we must pick one before any TLS connection
+    // is attempted.
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("failed to install rustls crypto provider");
+
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {

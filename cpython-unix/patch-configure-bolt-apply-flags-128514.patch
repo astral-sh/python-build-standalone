@@ -8,7 +8,7 @@ index ee034e5a962..f1a69b7d4a7 100644
       -reorder-blocks=ext-tsp
       -reorder-functions=cdsort
       -split-functions
-+     -split-strategy=cdsplit
++     -split-strategy=profile2
       -icf=1
       -inline-all
       -split-eh

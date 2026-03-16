@@ -340,7 +340,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
 
             println!("prepared {name} for release");
 
-            if build_suffix == release.install_only_suffix(Some(&python_version)) {
+            if release.install_only_suffixes(None).any(|suffix| build_suffix == suffix) {
                 install_paths.push(dest_path);
             }
         }

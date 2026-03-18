@@ -47,9 +47,9 @@ diff --git a/unix/Makefile.in b/unix/Makefile.in
 EOF
 fi
 
-# Disable the use of fts64_* functions on the 32-bit armv7 platform as these
-# functions are not available in glibc 2.17
-if [[ ${TARGET_TRIPLE} = armv7* ]]; then
+# Disable the use of fts64_* functions on 32-bit ARM platforms as these
+# functions are not available in glibc 2.17.
+if [[ ${TARGET_TRIPLE} = armv6* || ${TARGET_TRIPLE} = armv7* ]]; then
     EXTRA_CONFIGURE="${EXTRA_CONFIGURE} tcl_cv_flag__file_offset_bits=no"
 fi
 

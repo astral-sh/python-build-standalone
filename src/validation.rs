@@ -35,6 +35,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "aarch64-pc-windows-msvc",
     "aarch64-unknown-linux-gnu",
     "aarch64-unknown-linux-musl",
+    "armv6-unknown-linux-gnueabi",
     "armv7-unknown-linux-gnueabi",
     "armv7-unknown-linux-gnueabihf",
     "i686-pc-windows-msvc",
@@ -164,6 +165,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
+            "armv6-unknown-linux-gnueabi",
+            version_compare::Version::from("2.17").unwrap(),
+        );
+        versions.insert(
             "armv7-unknown-linux-gnueabi",
             version_compare::Version::from("2.17").unwrap(),
         );
@@ -244,6 +249,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
 static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static str>>> =
     Lazy::new(|| {
         [
+            (
+                "armv6-unknown-linux-gnueabi",
+                vec!["ld-linux.so.3", "libgcc_s.so.1"],
+            ),
             (
                 "armv7-unknown-linux-gnueabi",
                 vec!["ld-linux.so.3", "libgcc_s.so.1"],
@@ -521,6 +530,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("aarch64-pc-windows-msvc", "win-arm64"),
         ("aarch64-unknown-linux-gnu", "linux-aarch64"),
         ("aarch64-unknown-linux-musl", "linux-aarch64"),
+        ("armv6-unknown-linux-gnueabi", "linux-arm"),
         ("armv7-unknown-linux-gnueabi", "linux-arm"),
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),
         ("i686-pc-windows-msvc", "win32"),
@@ -912,6 +922,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     let wanted_cpu_type = match target_triple {
         "aarch64-unknown-linux-gnu" => object::elf::EM_AARCH64,
         "aarch64-unknown-linux-musl" => object::elf::EM_AARCH64,
+        "armv6-unknown-linux-gnueabi" => object::elf::EM_ARM,
         "armv7-unknown-linux-gnueabi" => object::elf::EM_ARM,
         "armv7-unknown-linux-gnueabihf" => object::elf::EM_ARM,
         "i686-unknown-linux-gnu" => object::elf::EM_386,

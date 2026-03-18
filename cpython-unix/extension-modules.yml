@@ -247,6 +247,7 @@ _decimal:
   defines-conditional:
     - define: CONFIG_32=1
       targets:
+        - armv6-.*
         - armv7-.*
         - mips-.*
         - mipsel-.*

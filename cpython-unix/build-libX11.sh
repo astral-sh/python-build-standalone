@@ -48,6 +48,9 @@ if [ -n "${CROSS_COMPILING}" ]; then
     aarch64-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
+    armv6-unknown-linux-gnueabi)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
     armv7-unknown-linux-gnueabi)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;

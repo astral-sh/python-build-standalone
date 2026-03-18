@@ -1158,6 +1158,9 @@ aarch64-unknown-linux-*)
 *-apple-*)
     PYTHON_ARCH="darwin"
     ;;
+armv6-unknown-linux-gnueabi)
+    PYTHON_ARCH="arm-linux-gnueabi"
+    ;;
 armv7-unknown-linux-gnueabi)
     PYTHON_ARCH="arm-linux-gnueabi"
     ;;

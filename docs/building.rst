@@ -49,6 +49,7 @@ This option can be used to build for musl libc::
 Or on a x86-64 host for different architectures::
 
     $ ./build.py --target-triple i686-unknown-linux-gnu
+    $ ./build.py --target-triple armv6-unknown-linux-gnueabi
     $ ./build.py --target-triple armv7-unknown-linux-gnueabi
     $ ./build.py --target-triple armv7-unknown-linux-gnueabihf
     $ ./build.py --target-triple loongarch64-unknown-linux-gnu

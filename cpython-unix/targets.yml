@@ -164,6 +164,47 @@ aarch64-unknown-linux-gnu:
   # See https://github.com/llvm/llvm-project/issues/146541
   # bolt_capable: true
 
+armv6-unknown-linux-gnueabi:
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+    - '3.15'
+  docker_image_suffix: .cross
+  host_cc: /usr/bin/x86_64-linux-gnu-gcc
+  host_cxx: /usr/bin/x86_64-linux-gnu-g++
+  target_cc: /usr/bin/arm-linux-gnueabi-gcc
+  target_cxx: /usr/bin/arm-linux-gnueabi-g++
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux-armv4
+
 armv7-unknown-linux-gnueabi:
   host_platforms:
     - linux_x86_64

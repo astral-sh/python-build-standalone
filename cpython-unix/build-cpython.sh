@@ -1035,6 +1035,8 @@ replace_in_all("-I%s/deps/include/ncursesw" % tools_path, "")
 replace_in_all("-I%s/deps/include/uuid" % tools_path, "")
 replace_in_all("-I%s/deps/include" % tools_path, "")
 replace_in_all("-L%s/deps/lib" % tools_path, "")
+# See https://github.com/python/cpython/issues/145810#issuecomment-4068139183
+replace_in_all("-LModules/_hacl", "")
 
 EOF
 

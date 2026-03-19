@@ -342,6 +342,8 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
 
             if build_suffix == release.install_only_suffix {
                 install_paths.push(dest_path);
+            } else if build_suffix == release.freethreaded_install_only_suffix {
+                install_paths.push(dest_path);
             }
         }
     }

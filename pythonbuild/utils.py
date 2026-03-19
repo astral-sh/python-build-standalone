@@ -474,9 +474,9 @@ def normalize_tar_archive(data: io.BytesIO) -> io.BytesIO:
 
 def clang_toolchain(host_platform: str, target_triple: str) -> str:
     if host_platform == "linux_x86_64":
-        return "llvm-21-x86_64-linux"
+        return "llvm-x86_64-linux"
     elif host_platform == "linux_aarch64":
-        return "llvm-21-aarch64-linux"
+        return "llvm-aarch64-linux"
     elif host_platform == "macos_arm64":
         return "llvm-aarch64-macos"
     elif host_platform == "macos_x86_64":

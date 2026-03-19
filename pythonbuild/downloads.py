@@ -177,14 +177,14 @@ DOWNLOADS = {
         "license_file": "LICENSE.libxcb.txt",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
-    "llvm-21-aarch64-linux": {
+    "llvm-aarch64-linux": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
         "size": 237665010,
         "sha256": "0f7ef68a9d6239336aa073366edd5377a47192c32d40c96ff72b416a15259999",
         "version": "22.1.1+20260312",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
-    "llvm-21-x86_64-linux": {
+    "llvm-x86_64-linux": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
         "size": 281108139,
         "sha256": "2a2f2e51bb9c621c6b00a42d8349f27edcb3aacaa750040000ac95a0298e97c1",

@@ -426,6 +426,22 @@ pub fn build_wanted_filenames(
                 format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
                 format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
             );
+
+            // Free-threading only available for Python 3.13+
+            let freethreaded_conditional = VersionSpecifier::from_str(">=3.13.0rc0").unwrap();
+            if freethreaded_conditional.contains(&python_version) {
+                wanted_filenames.insert(
+                    format!(
+                        "cpython-{version}-{triple}-freethreaded-install_only-{datetime}.tar.gz"
+                    ),
+                    format!("cpython-{version}+{tag}-{triple}-freethreaded-install_only.tar.gz"),
+                );
+
+                wanted_filenames.insert(
+                    format!("cpython-{version}-{triple}-freethreaded-install_only_stripped-{datetime}.tar.gz"),
+                    format!("cpython-{version}+{tag}-{triple}-freethreaded-install_only_stripped.tar.gz"),
+                );
+            }
         }
     }
 

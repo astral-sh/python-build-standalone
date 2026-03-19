@@ -13,6 +13,33 @@ tar -xf "openssl-${OPENSSL_3_5_VERSION}.tar.gz"
 
 pushd "openssl-${OPENSSL_3_5_VERSION}"
 
+# Fedora and RHEL patch OpenSSL to selectively disallow SHA1 signatures via the
+# 'rh-allow-sha1-signatures' configuration entry.
+# Patch OpenSSL so that this key is allowed in configuration files but has no effect.
+# For details see: https://github.com/astral-sh/python-build-standalone/issues/999
+if [[ "$TARGET_TRIPLE" =~ "linux" ]]; then
+	patch -p1 << 'EOF'
+diff --git a/crypto/evp/evp_cnf.c b/crypto/evp/evp_cnf.c
+index 184bab9..7dc8037 100644
+--- a/crypto/evp/evp_cnf.c
++++ b/crypto/evp/evp_cnf.c
+@@ -51,6 +51,13 @@ static int alg_module_init(CONF_IMODULE *md, const CONF *cnf)
+                 ERR_raise(ERR_LIB_EVP, EVP_R_SET_DEFAULT_PROPERTY_FAILURE);
+                 return 0;
+             }
++        } else if (strcmp(oval->name, "rh-allow-sha1-signatures") == 0) {
++            int m;
++
++            /* Detailed error already reported. */
++            if (!X509V3_get_value_bool(oval, &m))
++                return 0;
++
+         } else if (strcmp(oval->name, "default_properties") == 0) {
+             if (!evp_set_default_properties_int(NCONF_get0_libctx((CONF *)cnf),
+                     oval->value, 0, 0)) {
+EOF
+fi
+
 # Otherwise it gets set to /tools/deps/ssl by default.
 case "${TARGET_TRIPLE}" in
     *apple*)

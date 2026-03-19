@@ -171,9 +171,6 @@ $(OUTDIR)/mpdecimal-$(MPDECIMAL_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEP
 $(OUTDIR)/ncurses-$(NCURSES_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-ncurses.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) ncurses
 
-$(OUTDIR)/openssl-1.1-$(OPENSSL_1.1_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-1.1.sh
-	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-1.1
-
 $(OUTDIR)/openssl-3.5-$(OPENSSL_3.5_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-openssl-3.5.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) openssl-3.5
 

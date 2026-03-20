@@ -20,6 +20,8 @@ from junitparser import JUnitXml
 from .cpython import (
     TEST_ANNOTATION_HARNESS_SKIP,
     TEST_ANNOTATION_MODULE_EXCLUDE,
+    TEST_ANNOTATION_PROFILING_EXCLUDE,
+    TEST_ANNOTATION_PROFILING_SKIP,
     TEST_ANNOTATION_TEST_FAILURE,
     TestAnnotation,
     meets_python_minimum_version,
@@ -165,6 +167,14 @@ def run_stdlib_tests(
                 intermittent.add(name)
             if annotation.dont_verify:
                 dont_verify.add(name)
+
+        elif flavor == TEST_ANNOTATION_PROFILING_EXCLUDE:
+            print(f"profiling exclude module ignored {name}")
+            continue
+
+        elif flavor == TEST_ANNOTATION_PROFILING_SKIP:
+            print(f"profiling skip test ignored {name}")
+            continue
 
         else:
             raise Exception(f"unhandled test annotation flavor: {flavor}")

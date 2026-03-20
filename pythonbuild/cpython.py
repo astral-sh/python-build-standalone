@@ -197,6 +197,30 @@ STDLIB_TEST_ANNOTATIONS_SCHEMA = {
                 "required": ["name", "reason"],
             },
         },
+        "profiling-excludes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    **STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES,
+                },
+                "additionalProperties": False,
+                "required": ["name", "reason"],
+            },
+        },
+        "profiling-skips": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    **STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES,
+                },
+                "additionalProperties": False,
+                "required": ["name", "reason"],
+            },
+        },
     },
 }
 
@@ -817,6 +841,8 @@ def extension_modules_config(yaml_path: pathlib.Path):
 TEST_ANNOTATION_HARNESS_SKIP = "harness-skip"
 TEST_ANNOTATION_MODULE_EXCLUDE = "module-exclude"
 TEST_ANNOTATION_TEST_FAILURE = "test-failure"
+TEST_ANNOTATION_PROFILING_EXCLUDE = "profiling-exclude"
+TEST_ANNOTATION_PROFILING_SKIP = "profiling-skip"
 
 
 @dataclasses.dataclass
@@ -836,6 +862,17 @@ class TestAnnotation:
     intermittent_test_failure: bool
     # Whether to exclude loading the test module when running tests.
     exclude_testing: bool
+
+    def profile_training_skip(self) -> bool:
+        """Whether to ignore this test during PGO training."""
+        return self.flavor in (
+            TEST_ANNOTATION_TEST_FAILURE,
+            TEST_ANNOTATION_PROFILING_SKIP,
+        )
+
+    def profile_training_exclude_module(self) -> Optional[str]:
+        """Name of module to exclude from profiling."""
+        return self.name if self.flavor == TEST_ANNOTATION_PROFILING_EXCLUDE else None
 
 
 @dataclasses.dataclass
@@ -936,6 +973,12 @@ def stdlib_test_annotations(
 
     for entry in data["expected-failures"]:
         raw_entries.append((TEST_ANNOTATION_TEST_FAILURE, entry))
+
+    for entry in data["profiling-excludes"]:
+        raw_entries.append((TEST_ANNOTATION_PROFILING_EXCLUDE, entry))
+
+    for entry in data["profiling-skips"]:
+        raw_entries.append((TEST_ANNOTATION_PROFILING_SKIP, entry))
 
     for flavor, entry in raw_entries:
         if a := filter_stdlib_test_entry(

@@ -821,12 +821,28 @@ def build_cpython(
 
             build_env.copy_file(fh.name, dest_name="stdlib-test-annotations.json")
 
+        # Install a file with tests to skip during profile training.
+        # Also collect module excludes for the profiling run of the test harness.
+        profiling_exclude_modules = []
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8") as fh:
+            os.chmod(fh.name, 0o644)
+
+            for ann in test_annotations.annotations:
+                if ann.profile_training_skip():
+                    fh.write(f"{ann.name}\n")
+                if m := ann.profile_training_exclude_module():
+                    profiling_exclude_modules.append(m)
+
+            fh.flush()
+            build_env.copy_file(fh.name, dest_name="profiling-training-ignores.txt")
+
         env = {
             "PIP_VERSION": DOWNLOADS["pip"]["version"],
             "PYTHON_VERSION": python_version,
             "PYTHON_MAJMIN_VERSION": ".".join(python_version.split(".")[0:2]),
             "SETUPTOOLS_VERSION": DOWNLOADS["setuptools"]["version"],
             "TOOLCHAIN": "clang-%s" % host_platform,
+            "PROFILING_EXCLUDE_MODULES": " ".join(profiling_exclude_modules),
         }
 
         # Set environment variables allowing convenient testing for Python

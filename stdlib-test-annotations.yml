@@ -2777,3 +2777,255 @@ expected-failures:
     reason: "segfault"
     no-build-option: "static"
     intermittent: true
+
+profiling-excludes:
+  - name: test_capi
+    reason: "a lot of random segfaults"
+
+  - name: test_ctypes
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "tons of random segfaults"
+
+  - name: test_frame
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "segfault during BOLT instrumentation"
+
+profiling-skips:
+  - name: test.test_ast.test_ast.AST_Tests.test_ast_recursion_limit
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised : Compiling ('a' + '()' * 500000)"
+
+  - name: test.test_asyncio.test_base_events.BaseEventLoopWithSelectorTests.test_create_connection_service_name
+    reason: "socket.gaierror: [Errno -8] Servname not supported for ai_socktype"
+
+  - name: test.test_asyncio.test_subprocess.SubprocessThreadedWatcherTests.test_create_subprocess_env_shell
+    reason: "AssertionError: b'' != b'bar'"
+
+  - name: test.test_audit.AuditTest.test_ctypes_call_function
+    minimum-python-version: "3.14"
+    reason: "AssertionError (possibly intermittent)"
+
+  - name: test.test_bytes.BytesTest.test_from_format
+    minimum-python-version: "3.12"
+    targets:
+      - "x86_64.+"
+    reason: "PGO optimized / BOLT instrumented binaries segfault"
+
+  - name: test.test_call.TestRecursion.test_super_deep
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised"
+
+  - name: test.test_capi.test_unicode.CAPITest.test_from_format
+    reason: "segfault in PyUnicode_FromFormat"
+
+  - name: test.test_code.CoExtra.*
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "SystemError: Objects/codeobject.c:1613: bad argument to internal function"
+
+  - name: test.test_compile.TestSpecifics.test_compiler_recursion_limit
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised : Compiling ('a' + '.b' * 500000)"
+
+  - name: test.test_ctypes.test_find.FindLibraryLinux.test_find_library_with_gcc
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: None == None"
+
+  - name: test.test_ctypes.test_find.FindLibraryLinux.test_find_library_with_ld
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: None == None"
+
+  # This error sometimes goes away during PGO optimized builds.
+  - name: test.test_dict.DictTest.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_embed.InitConfigTests.test_global_pathconfig
+    reason: "ValueError: character U+67e58ee0 is not in range [U+0000; U+10ffff] during BOLT"
+
+  - name: test.test_exception_group.DeepRecursionInSplitAndSubgroup.test_deep_split
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_exception_group.DeepRecursionInSplitAndSubgroup.test_deep_subgroup
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_exceptions.ExceptionTests.test_recursion_normalizing_exception
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_frame.FrameLocalsProxyMappingTests.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_linecache.LineCacheInvalidationTests.*
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_list.ListTest.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_os.*
+    reason: "env changed (unclear which test)"
+
+  - name: test.test_free_threading.test_capi.TestImportCAPI.test_pyimport_addmoduleref_thread_safe
+    minimum-python-version: "3.14"
+    build-option: "freethreaded"
+    reason: "segfault"
+
+  - name: test.test_free_threading.test_code.*
+    build-option: "freethreaded"
+    reason: "ystemError: Objects/codeobject.c:1676: bad argument to internal function"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_nonmanaged_dict
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_inline_values_invalid
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_no_shared_keys
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_shared_keys
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_functools.TestLRUCache.*
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_heapq.TestHeapq.test_racing_heappush_max
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_heapq.TestHeapq.test_racing_heapreplace
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_type.TestType.test_attr_cache_consistency_subclass
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_itertools.TestBasicOps.test_count_threading
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_itertools.TestBasicOps.test_count_with_step_threading
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_lazy_import.ThreadSafetyTests.test_concurrent_lazy_modules_set_updates
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_peg_generator.test_c_parser.TestCParser.*
+    reason: "doesn't seem to sniff PGO correctly and compiler invocations in tests can cause failures"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_sys_api
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 'py::spam:/tmp/test_python_p8t76wgm/tmp6irl7ctw/perftest.py' not found in '7f380e676000 40 py::baz:/tmp/test_python_p8t76wgm/tmp6irl7ctw/perftest.py\n'"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: unexpectedly None : Could not find py::foo:/tmp/test_python_p8t76wgm/tmp66dkos4l/perftest.py in perf file"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works_with_forks
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: -11 != 0 (-11 might be segfault)"
+
+  - name: test.test_popen.PopenTest.test_popen
+    targets:
+      - ".*-apple-darwin"
+    reason: "SyntaxError: invalid syntax"
+
+  - name: test.test_profiling.test_sampling_profiler.test_advanced.TestNativeFrameTracking.test_native_frames_enabled
+    minimum-python-version: "3.15"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: True is not false in BOLT instrumented training"
+
+  - name: test.test_pyrepl.test_unix_console.TestUnixConsoleEIOHandling.test_repl_eio
+    minimum-python-version: "3.13"
+    reason: "intermittent timeout"
+
+  - name: test.test_queue.*
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed in multiple tests"
+
+  - name: test.test_socket.GeneralModuleTests.testGetServBy
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: OSError
+
+  - name: test.test_socket.GeneralModuleTests.testGetaddrinfo
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "socket.gaierror: [Errno -8] Servname not supported for ai_socktype"
+
+  - name: test.test_subprocess.POSIXProcessTestCase.test_args_string
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: -6 != 47"
+
+  - name: test.test_subprocess.POSIXProcessTestCase.test_call_string
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: -6 != 47"
+
+  - name: test.test_syslog.Test.test_syslog_threaded
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_threading.ThreadTests.test_PyThreadState_SetAsyncExc
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 0 != 1"
+
+  - name: test.test_tools.test_compute_changes.TestProcessChangedFiles.test_ci_fuzz_stdlib
+    minimum-python-version: "3.15"
+    reason: "AssertionError: LIBRARY_FUZZER_PATHS contains an invalid entry: PosixPath('.github/workflows/reusable-cifuzz.yml')"
+
+  - name: test.test_venv.*
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "env changed (unclear which test)"
+
+  - name: test.test_zipfile.test_core.TestExecutablePrependedZip.test_execute_zip2
+    targets:
+      - ".+-apple-darwin"
+    reason: "sometimes crashes"
+
+  - name: test.test_zipfile.test_core.TestExecutablePrependedZip.test_execute_zip64
+    targets:
+      - ".+-apple-darwin"
+    reason: "sometimes crashes"

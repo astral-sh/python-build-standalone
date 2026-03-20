@@ -52,7 +52,7 @@ PIP_WHEEL="${ROOT}/pip-${PIP_VERSION}-py3-none-any.whl"
 SETUPTOOLS_WHEEL="${ROOT}/setuptools-${SETUPTOOLS_VERSION}-py3-none-any.whl"
 
 # Put critical config files in logs to aid debugging.
-for f in Setup.local Makefile.extra stdlib-test-annotations.json; do
+for f in Setup.local Makefile.extra stdlib-test-annotations.json profiling-training-ignores.txt; do
   echo "BEGIN $f"
   cat $f
   echo "END $f"
@@ -599,7 +599,27 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}"  ]; then
 fi
 
 # Define the base PGO profiling task, which we'll extend below with ignores
-export PROFILE_TASK='-m test --pgo'
+#
+# --pgo-extended implies --pgo. And --pgo mode significantly changes the behavior
+# of the test harness. Notably, it disables richer reporting of test failures,
+# making it vastly more difficult to debug test failures. This behavior undermines
+# our ability to debug failures when running tests for PGO instrumentation.
+#
+# The only material downside to not using --pgo is some tests that self-skip
+# when run under PGO don't do so. When we audited for such tests in 2026-03,
+# all such tests had the reason "PGO isn't useful" or some such. There were
+# ~10 such tests. Since we run the entire test suite anyway, the inclusion of
+# such "worthless" tests isn't impactful. The test failure observability is
+# worth their loss.
+export PROFILE_TASK='-m test'
+
+# Display test output on failure. This helps immensely with debugging PGO
+# failures.
+PROFILE_TASK="${PROFILE_TASK} -W"
+
+# Force kill tests taking too long. This prevents deadlocks that can cause
+# CI jobs to run for potentially hours while doing nothing.
+PROFILE_TASK="${PROFILE_TASK} --timeout 300"
 
 # Run tests in parallel to reduce wall time.
 #
@@ -614,21 +634,13 @@ export PROFILE_TASK='-m test --pgo'
 # and there will be no loss in profile quality.
 PROFILE_TASK="${PROFILE_TASK} -j ${NUM_CPUS}"
 
-# On 3.14+ `test_strftime_y2k` fails when cross-compiling for `x86_64_v2` and `x86_64_v3` targets on
-# Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_strftime_y2k"
-fi
+PROFILE_TASK="${PROFILE_TASK} --ignorefile ${ROOT}/profiling-training-ignores.txt"
 
-# On 3.14+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
-# PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
-fi
-
-# PGO optimized / BOLT instrumented binaries segfault in a test_bytes test. Skip it.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && "${TARGET_TRIPLE}" == x86_64* ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
+# Exclude whole modules from profiling based on stdlib test annotations.
+# Note: --exclude is a bool flag that changes behavior of positional arguments
+# to mean "exclude" instead of "include."
+if [ -n "${PROFILING_EXCLUDE_MODULES}" ]; then
+    PROFILE_TASK="${PROFILE_TASK} --exclude ${PROFILING_EXCLUDE_MODULES}"
 fi
 
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,

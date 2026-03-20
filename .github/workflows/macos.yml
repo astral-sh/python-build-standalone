@@ -181,7 +181,15 @@ jobs:
           build/pythonbuild validate-distribution --macos-sdks-path macosx-sdks dist/*.tar.zst
           
           if [ "${MATRIX_RUN}" == "true" ]; then
-            ./test-distribution.py dist/*.tar.zst
+            ./test-distribution.py --junit-xml "${JUNIT_FILENAME}" --stdlib dist/*.tar.zst
           fi
         env:
+          JUNIT_FILENAME: "junit-cpython-${{ matrix.python }}-${{ matrix.target_triple}}-${{ matrix.build_options }}.xml"
           MATRIX_RUN: ${{ matrix.run }}
+
+      - name: Upload Junit Test Results
+        if: ${{ matrix.run == 'true' }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}-junit
+          path: "junit-cpython-${{ matrix.python }}-${{ matrix.target_triple}}-${{ matrix.build_options }}.xml"

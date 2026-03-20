@@ -601,6 +601,15 @@ wheels = [
 ]
 
 [[package]]
+name = "junitparser"
+version = "4.0.2"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/97/954ee1ef04e50d8494e9f5d82d4051ed71a7618aa2c1514c1b3f24691174/junitparser-4.0.2.tar.gz", hash = "sha256:d5d07cece6d4a600ff3b7b96c8db5ffa45a91eed695cb86c45c3db113c1ca0f8", size = 25646, upload-time = "2025-06-24T04:37:32.664Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/44/87/b444f934f62ee2a1be45bb52563cf17a66b0d790eba43af4df9929e7107f/junitparser-4.0.2-py3-none-any.whl", hash = "sha256:94c3570e41fcaedc64cc3c634ca99457fe41a84dd1aa8ff74e9e12e66223a155", size = 14592, upload-time = "2025-06-24T04:37:31.322Z" },
+]
+
+[[package]]
 name = "lazy-object-proxy"
 version = "1.12.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1191,6 +1200,7 @@ dependencies = [
     { name = "docker" },
     { name = "jinja2" },
     { name = "jsonschema" },
+    { name = "junitparser" },
     { name = "pyyaml" },
     { name = "six" },
     { name = "tomli" },
@@ -1217,6 +1227,7 @@ requires-dist = [
     { name = "docker", specifier = ">=7.1.0" },
     { name = "jinja2", specifier = ">=3.1.5" },
     { name = "jsonschema", specifier = ">=4.23.0" },
+    { name = "junitparser", specifier = ">=4.0.2" },
     { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "six", specifier = ">=1.17.0" },
     { name = "tomli", specifier = ">=2.2.1" },

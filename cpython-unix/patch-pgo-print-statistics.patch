@@ -1,0 +1,54 @@
+Commit ID: c4fe7216d13cc238d74b58b636adc166a7a779f1
+Change ID: nsupxmoltwsmtrxtwxznkqopuwyyrwnk
+Author   : Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 10:11:11)
+Committer: Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 15:31:30)
+
+    Print PGO statistics
+
+    This can be useful for debugging PGO behavior.
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 80a1b590c2..2e61cd1019 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -49,9 +49,11 @@
+ GITBRANCH=	@GITBRANCH@
+ PGO_PROF_GEN_FLAG=@PGO_PROF_GEN_FLAG@
+ PGO_PROF_USE_FLAG=@PGO_PROF_USE_FLAG@
++LLVM_PROFDATA=@LLVM_PROFDATA@
+ LLVM_PROF_MERGER=@LLVM_PROF_MERGER@
+ LLVM_PROF_FILE=@LLVM_PROF_FILE@
+ LLVM_PROF_ERR=@LLVM_PROF_ERR@
++LLVM_MERGED_DATA_FILE=@LLVM_MERGED_DATA_FILE@
+ DTRACE=         @DTRACE@
+ DFLAGS=         @DFLAGS@
+ DTRACE_HEADERS= @DTRACE_HEADERS@
+@@ -858,6 +860,8 @@
+ 	@ # FIXME: can't run for a cross build
+ 	$(LLVM_PROF_FILE) $(RUNSHARED) ./$(BUILDPYTHON) $(PROFILE_TASK)
+ 	$(LLVM_PROF_MERGER)
++	# Show details of profile coverage to aid PGO debugging.
++	$(LLVM_PROFDATA) show --detailed-summary --topn=500 $(LLVM_MERGED_DATA_FILE)
+ 	# Remove profile generation binary since we are done with it.
+ 	$(MAKE) clean-retain-profile
+ 	# This is an expensive target to build and it does not have proper
+diff --git a/configure.ac b/configure.ac
+index a1f4a56709..82cf6f938a 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2029,6 +2029,7 @@
+ AC_SUBST([LLVM_PROF_FILE])
+ AC_SUBST([LLVM_PROF_ERR])
+ AC_SUBST([LLVM_PROFDATA])
++AC_SUBST([LLVM_MERGED_DATA_FILE])
+ AC_PATH_TOOL([LLVM_PROFDATA], [llvm-profdata], [''], [${llvm_path}])
+ AC_SUBST([LLVM_PROF_FOUND])
+ if test -n "${LLVM_PROFDATA}" -a -x "${LLVM_PROFDATA}"
+@@ -2062,6 +2063,7 @@
+             \"\$(shell pwd)\"/*.profclangr
+     ")
+     LLVM_PROF_FILE="LLVM_PROFILE_FILE=\"\$(shell pwd)/code-%p.profclangr\""
++    LLVM_MERGED_DATA_FILE="\$(shell pwd)/code.profclangd"
+     if test $LLVM_PROF_FOUND = not-found
+     then
+       LLVM_PROF_ERR=yes

@@ -266,6 +266,13 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-make-targets.patch"
 fi
 
+# Show PGO instrumentation statistics to aid debugging PGO.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i "${ROOT}/patch-pgo-print-statistics.patch"
+else
+    patch -p1 -i "${ROOT}/patch-pgo-print-statistics-3.11.patch"
+fi
+
 # There's a post-build Python script that verifies modules were
 # built correctly. Ideally we'd invoke this. But our nerfing of
 # the configure-based module building and replacing it with our

@@ -186,4 +186,12 @@ jobs:
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution $Dists
-          uv run --no-dev test-distribution.py $Dists
+          uv run --no-dev test-distribution.py --junit-xml $env:JUNIT_FILENAME --stdlib $Dists
+        env:
+          JUNIT_FILENAME: "junit-cpython-${{ matrix.python }}-${{ matrix.target_triple}}-${{ matrix.build_options }}.xml"
+
+      - name: Upload Junit Test Results
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}-junit
+          path: "junit-cpython-${{ matrix.python }}-${{ matrix.target_triple}}-${{ matrix.build_options }}.xml"

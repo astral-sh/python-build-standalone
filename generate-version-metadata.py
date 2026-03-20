@@ -19,7 +19,7 @@ FILENAME_RE = re.compile(
         cpython-
         (?P<py>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)(?:\+\d+)?\+
         (?P<tag>\d+)-
-        (?P<triple>[a-z\d_]+-[a-z\d]+(?:-[a-z\d]+)?-[a-z\d_]+)-
+        (?P<triple>[a-z\d_]+-[a-z\d]+-[a-z\d]+(?:-(?:gnu(?:eabi(?:hf)?)?|musl|msvc))?)-
         (?:(?P<build>.+)-)?
         (?P<flavor>[a-z_]+)?
         \.tar\.(?:gz|zst)

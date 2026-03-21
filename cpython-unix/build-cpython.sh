@@ -591,6 +591,19 @@ fi
 # Define the base PGO profiling task, which we'll extend below with ignores
 export PROFILE_TASK='-m test --pgo'
 
+# Run tests in parallel to reduce wall time.
+#
+# LLVM's PGO instruments compiled code to increment counters to track
+# call count. Same story for BOLT in instrumented mode, which we also use.
+# This approach is in contrast to sample based profiling where the program is
+# sampled periodically to see which code is active. In instrumented mode,
+# the wall time execution doesn't matter: a counter will be incremented
+# regardless of how fast the code runs.
+#
+# Use of instrumented mode means that it is safe to profile in parallel
+# and there will be no loss in profile quality.
+PROFILE_TASK="${PROFILE_TASK} -j ${NUM_CPUS}"
+
 # On 3.14+ `test_strftime_y2k` fails when cross-compiling for `x86_64_v2` and `x86_64_v3` targets on
 # Linux, so we ignore it. See https://github.com/python/cpython/issues/128104
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then

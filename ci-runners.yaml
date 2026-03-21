@@ -1,11 +1,11 @@
 # Describes the runners that the CI system can use
 
-depot-ubuntu-22.04:
+depot-ubuntu-22.04-4:
   arch: x86_64
   platform: linux
   free: false
 
-depot-ubuntu-22.04-arm:
+depot-ubuntu-22.04-arm-4:
   arch: aarch64
   platform: linux
   free: false

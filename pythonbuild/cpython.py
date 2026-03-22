@@ -274,7 +274,12 @@ def derive_setup_local(
             python_version, info.get("maximum-python-version", "100.0")
         )
 
-        if info.get("build-mode") not in (None, "shared", "static"):
+        if info.get("build-mode") not in (
+            None,
+            "shared",
+            "static",
+            "shared-or-disabled",
+        ):
             raise Exception("unsupported build-mode for extension module %s" % name)
 
         if not (python_min_match and python_max_match):
@@ -289,6 +294,11 @@ def derive_setup_local(
                     % name
                 )
                 disabled.add(name)
+
+        # Extension is demanding it be built as shared. If this isn't possible due to
+        # a static build, disable the extension.
+        if info.get("build-mode") == "shared-or-disabled" and "static" in build_options:
+            disabled.add(name)
 
         if info.get("setup-enabled", False):
             setup_enabled_wanted.add(name)
@@ -507,6 +517,11 @@ def derive_setup_local(
         section = (
             "static" if "static" in build_options else info.get("build-mode", "static")
         )
+
+        # shared-or-disabled maps to shared or disabled.
+        if section == "shared-or-disabled":
+            section = "shared"
+
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's

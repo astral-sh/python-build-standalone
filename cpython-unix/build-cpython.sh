@@ -616,6 +616,11 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
 fi
 
+# PGO optimized / BOLT instrumented binaries segfault in a test_bytes test. Skip it.
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && "${TARGET_TRIPLE}" == x86_64* ]]; then
+    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
+fi
+
 # ./configure tries to auto-detect whether it can build 128-bit and 256-bit SIMD helpers for HACL,
 # but on x86-64 that requires v2 and v3 respectively, and on arm64 the performance is bad as noted
 # in the comments, so just don't even try. (We should check if we can make this conditional)
@@ -1315,7 +1320,7 @@ ${BUILD_PYTHON} "${ROOT}/fix_shebangs.py" "${ROOT}/out/python/install"
 # downstream consumers.
 OBJECT_DIRS="Objects Parser Parser/lexer Parser/pegen Parser/tokenizer Programs Python Python/deepfreeze"
 OBJECT_DIRS="${OBJECT_DIRS} Modules"
-for ext in _blake2 cjkcodecs _ctypes _ctypes/darwin _decimal _expat _hacl _io _multiprocessing _remote_debugging _sha3 _sqlite _sre _testinternalcapi _xxtestfuzz _zstd; do
+for ext in _blake2 cjkcodecs _ctypes _ctypes/darwin _decimal _expat _hacl _io _multiprocessing _remote_debugging _sha3 _sqlite _sre _testcapi _testinternalcapi _testlimitedcapi _xxtestfuzz _zstd; do
     OBJECT_DIRS="${OBJECT_DIRS} Modules/${ext}"
 done
 

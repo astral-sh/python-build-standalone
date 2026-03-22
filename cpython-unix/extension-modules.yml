@@ -607,32 +607,133 @@ _sysconfig:
 
 _testbuffer:
   minimum-python-version: '3.10'
+  build-mode: shared
   sources:
     - _testbuffer.c
 
-# _testcapi exists to test the public C APIs. It makes assumptions that it is
-# built as a shared library. Our static extension module builds invalidate this
-# assumption. So just disable globally.
 _testcapi:
-  disabled-targets:
-    - .*
+  # Must link against public API, which isn't available in static build.
+  build-mode: shared-or-disabled
   sources:
     - _testcapimodule.c
+  sources-conditional:
+    - source: _testcapi/abstract.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/buffer.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/bytearray.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/bytes.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/code.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/codec.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/complex.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/config.c
+      minimum-python-version: "3.14"
+    - source: _testcapi/datetime.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/dict.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/docstring.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/eval.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/exceptions.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/file.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/float.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/frame.c
+      minimum-python-version: "3.14"
+    - source: _testcapi/function.c
+      minimum-python-version: "3.14"
+    - source: _testcapi/gc.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/getargs.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/hash.c
+      minimum-python-version: "3.13"
+    - source: _testcapi/heaptype.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/heaptype_relative.c
+      maximum-python-version: "3.12"
+      minimum-python-version: "3.12"
+    - source: _testcapi/immortal.c
+      minimum-python-version: "3.12"
+    # import.c was added in 3.12, removed in 3.13, and added again in 3.14.
+    - source: _testcapi/import.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/import.c
+      minimum-python-version: "3.14"
+    - source: _testcapi/list.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/long.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/mem.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/modsupport.c
+      minimum-python-version: "3.15"
+    - source: _testcapi/module.c
+      minimum-python-version: "3.15"
+    - source: _testcapi/monitoring.c
+      minimum-python-version: "3.13"
+    - source: _testcapi/numbers.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/object.c
+      minimum-python-version: "3.13"
+    - source: _testcapi/pyatomic.c
+      minimum-python-version: "3.13"
+    - source: _testcapi/pyos.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/pytime.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/run.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/set.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/structmember.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/sys.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/time.c
+      minimum-python-version: "3.13"
+    - source: _testcapi/tuple.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/type.c
+      minimum-python-version: "3.14"
+    - source: _testcapi/unicode.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/vectorcall.c
+      minimum-python-version: "3.12"
+    - source: _testcapi/vectorcall_limited.c
+      minimum-python-version: "3.12"
+      maximum-python-version: "3.12"
+    - source: _testcapi/watchers.c
+      minimum-python-version: "3.12"
 
 _testexternalinspection:
   minimum-python-version: '3.13'
   maximum-python-version: '3.13'
+  build-mode: shared
   sources:
     - _testexternalinspection.c
 
 _testimportmultiple:
   minimum-python-version: '3.10'
+  build-mode: shared
   sources:
     - _testimportmultiple.c
 
-# Ideally we disable all test extensions. However, this one is used by a bunch
-# of tests, including tests that run during PGO profiling. We keep it enabled
-# so it doesn't break tests and undermine PGO.
 _testinternalcapi:
   includes:
     - Include/internal
@@ -657,13 +758,48 @@ _testinternalcapi:
     - source: _testinternalcapi/tuple.c
       minimum-python-version: "3.15"
 
+_testlimitedcapi:
+  minimum-python-version: "3.13"
+  # Must link against public API, which isn't available in static build.
+  build-mode: shared-or-disabled
+  sources:
+    - _testlimitedcapi.c
+    - _testlimitedcapi/abstract.c
+    - _testlimitedcapi/bytearray.c
+    - _testlimitedcapi/bytes.c
+    - _testlimitedcapi/complex.c
+    - _testlimitedcapi/dict.c
+    - _testlimitedcapi/eval.c
+    - _testlimitedcapi/file.c
+    - _testlimitedcapi/float.c
+    - _testlimitedcapi/heaptype_relative.c
+    - _testlimitedcapi/import.c
+    - _testlimitedcapi/list.c
+    - _testlimitedcapi/long.c
+    - _testlimitedcapi/object.c
+    - _testlimitedcapi/pyos.c
+    - _testlimitedcapi/set.c
+    - _testlimitedcapi/sys.c
+    - _testlimitedcapi/tuple.c
+    - _testlimitedcapi/unicode.c
+    - _testlimitedcapi/vectorcall_limited.c
+  sources-conditional:
+    - source: _testlimitedcapi/codec.c
+      minimum-python-version: "3.14"
+    - source: _testlimitedcapi/threadstate.c
+      minimum-python-version: "3.15"
+    - source: _testlimitedcapi/version.c
+      minimum-python-version: "3.14"
+
 _testmultiphase:
   minimum-python-version: '3.10'
+  build-mode: shared
   sources:
     - _testmultiphase.c
 
 _testsinglephase:
   minimum-python-version: '3.12'
+  build-mode: shared
   sources:
     - _testsinglephase.c
 
@@ -946,18 +1082,13 @@ unicodedata:
     - unicodedata.c
 
 xxlimited:
-  # Similar story as _testcapi. The extension exists to test the limited API,
-  # which we don't really care about. Statically building it runs into problems
-  # and cross-compiling emits wrong machine type when built via setup.py.
+  # Example extension. We don't care about it.
   disabled-targets:
     - .*
 
 xxlimited_35:
   minimum-python-version: '3.10'
-
-  # Similar story as _testcapi. The extension exists to test the limited API,
-  # which we don't really care about. Statically building it runs into problems
-  # and cross-compiling emits wrong machine type when built via setup.py.
+  # Example extension. We don't care about it.
   disabled-targets:
     - .*
 

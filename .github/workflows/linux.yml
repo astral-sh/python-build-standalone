@@ -26,8 +26,11 @@ jobs:
     steps:
       - name: Install System Dependencies
         run: |
-          sudo apt update
-          sudo apt install -y --no-install-recommends libssl-dev pkg-config
+          count=$(dpkg -l | grep -E '^(libssl-dev|pkg-config)$' | wc -l)
+          if [ "${count}" != "2" ]; then
+            sudo apt update
+            sudo apt install -y --no-install-recommends libssl-dev pkg-config
+          fi
 
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:

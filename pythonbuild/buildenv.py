@@ -266,7 +266,10 @@ class TempdirContext:
 def build_environment(client, image):
     if client is not None:
         container = client.containers.run(
-            image, command=["/bin/sleep", "86400"], detach=True
+            image,
+            command=["/bin/sleep", "86400"],
+            detach=True,
+            platform=client._pbs_platform,
         )
         td = None
         context = ContainerContext(container)

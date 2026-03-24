@@ -60,12 +60,12 @@ release-set-latest-release tag:
   if ! git diff --quiet; then
     git add latest-release.json
     git commit -m 'set latest release to {{tag}}'
-    git switch main
-
     git push origin latest-release
   else
     echo "No changes to commit."
   fi
+
+  git switch main
 
 # Create a GitHub release object, or reuse an existing prerelease.
 release-create tag:

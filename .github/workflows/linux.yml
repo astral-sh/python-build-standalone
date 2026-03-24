@@ -2,7 +2,7 @@ name: linux
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 concurrency:
@@ -12,7 +12,7 @@ concurrency:
 env:
   FORCE_COLOR: 1
 
-permissions: {}
+permissions: { }
 
 jobs:
   crate-build:
@@ -248,15 +248,41 @@ jobs:
 
       - name: Load Docker Images
         run: |
+          set -euo pipefail
+          
+          # We need to keep the image-*.tar file since it is used as a
+          # Makefile dependency.
+          load() {
+            image="${1%.tar.zst}"
+            echo "decompressing ${image}.tar.zst"
+            zstd -d --rm "${image}.tar.zst"
+            docker load --input "${image}.tar"
+          }
+          
+          # Avoid loading images that aren't used.
+          case "$(uname -m)" in
+          aarch64)
+            want_suffix=linux_aarch64.tar.zst
+            ;;
+          x86_64)
+            want_suffix=linux_x86_64.tar.zst
+            ;;
+          *)
+            echo "unsupported host arch: $(uname -m)"
+            exit 1
+            ;;
+          esac
+          
           for f in build/image-*.tar.zst; do
-            echo "decompressing $f"
-            zstd -d --rm ${f}
+            if [[ "$f" == *"${want_suffix}" ]]; then
+              load "${f}" &
+            else
+              echo "skipping ${f}"
+              rm "${f}"
+            fi
           done
-
-          for f in build/image-*.tar; do
-            echo "loading $f"
-            docker load --input $f
-          done
+          
+          wait
 
       - name: Build
         if: ${{ ! matrix.dry-run }}

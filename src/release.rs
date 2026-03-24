@@ -448,6 +448,19 @@ pub fn build_wanted_filenames(
     Ok(wanted_filenames)
 }
 
+/// Extension modules that should not be included in "install only" archives.
+const INSTALL_ONLY_DROP_EXTENSIONS: &[&str] = &[
+    "_ctypes_test",
+    "_testbuffer",
+    "_testcapi",
+    "_testexternalinspection",
+    "_testimportmultiple",
+    "_testinternalcapi",
+    "_testlimitedcapi",
+    "_testmultiphase",
+    "_testsinglephase",
+];
+
 /// Convert a .tar.zst archive to an install-only .tar.gz archive.
 pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Result<W> {
     let dctx = zstd::stream::Decoder::new(reader)?;
@@ -475,6 +488,21 @@ pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Res
         .python_paths
         .get("stdlib")
         .expect("stdlib entry expected");
+
+    let mut drop_paths = BTreeSet::new();
+
+    for (extension, info) in &json_main.build_info.extensions {
+        if !INSTALL_ONLY_DROP_EXTENSIONS.contains(&extension.as_str()) {
+            continue;
+        }
+
+        for entry in info {
+            if let Some(rel_path) = entry.shared_lib.as_ref() {
+                let full_path = format!("python/{}", rel_path);
+                drop_paths.insert(full_path.into_bytes());
+            }
+        }
+    }
 
     for entry in entries {
         let mut entry = entry?;
@@ -508,6 +536,10 @@ pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Res
                 path_bytes.starts_with(package_path.as_bytes())
             })
         {
+            continue;
+        }
+
+        if drop_paths.contains(&path_bytes.to_vec()) {
             continue;
         }
 

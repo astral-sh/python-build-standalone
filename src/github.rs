@@ -465,6 +465,16 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         };
     };
 
+    // Determine which files are already present on the release so we can write
+    // a manifest of only the newly-uploaded files (used for attestation on retry).
+    let existing_assets: BTreeSet<String> = release.assets.iter().map(|a| a.name.clone()).collect();
+
+    let newly_uploaded_sources: Vec<String> = wanted_filenames
+        .iter()
+        .filter(|(source, dest)| filenames.contains(*source) && !existing_assets.contains(*dest))
+        .map(|(source, _)| source.clone())
+        .collect();
+
     let mut digests = BTreeMap::new();
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
@@ -564,6 +574,20 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
     if shasums.as_bytes() != asset_bytes {
         return Err(anyhow!("SHA256SUM content mismatch; release might be bad!"));
     }
+
+    // Write manifest of newly-uploaded files for downstream steps (e.g., attestation).
+    // On a first run this includes all files; on a retry it includes only the files
+    // that were not already present on the release.
+    let manifest_lines: Vec<String> = newly_uploaded_sources
+        .iter()
+        .map(|source| dist_dir.join(source).display().to_string())
+        .collect();
+    std::fs::write(dist_dir.join("UPLOADED_FILES"), manifest_lines.join("\n"))?;
+    println!(
+        "{} of {} release artifacts are new",
+        newly_uploaded_sources.len(),
+        filenames.len()
+    );
 
     Ok(())
 }

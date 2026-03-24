@@ -1,3 +1,4 @@
+#!/usr/bin/env -S uv run --group check
 #!/usr/bin/env python3
 # This Source Code Form is subject to the terms of the Mozilla Public
 # License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -7,30 +8,8 @@ from __future__ import annotations
 
 import argparse
 import os
-import pathlib
 import subprocess
 import sys
-import venv
-
-ROOT = pathlib.Path(os.path.abspath(__file__)).parent
-VENV = ROOT / "venv.dev"
-PIP = VENV / "bin" / "pip"
-PYTHON = VENV / "bin" / "python"
-REQUIREMENTS = ROOT / "requirements.dev.txt"
-
-
-def bootstrap():
-    venv.create(VENV, with_pip=True)
-
-    subprocess.run([str(PIP), "install", "-r", str(REQUIREMENTS)], check=True)
-
-    os.environ["PYBUILD_BOOTSTRAPPED"] = "1"
-    os.environ["PATH"] = "%s:%s" % (str(VENV / "bin"), os.environ["PATH"])
-    os.environ["PYTHONPATH"] = str(ROOT)
-
-    args = [str(PYTHON), __file__, *sys.argv[1:]]
-
-    os.execv(str(PYTHON), args)
 
 
 def run_command(command: list[str]) -> int:
@@ -76,9 +55,6 @@ def run():
 
 if __name__ == "__main__":
     try:
-        if "PYBUILD_BOOTSTRAPPED" not in os.environ:
-            bootstrap()
-        else:
-            run()
+        run()
     except subprocess.CalledProcessError as e:
         sys.exit(e.returncode)

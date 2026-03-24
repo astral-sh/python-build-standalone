@@ -14,6 +14,13 @@ use {
     },
 };
 
+/// Maximum number of concurrent S3 uploads.
+const UPLOAD_CONCURRENCY: usize = 4;
+
+/// Maximum number of attempts per S3 request (includes the initial attempt).
+/// The AWS SDK uses exponential backoff with jitter between attempts.
+const S3_MAX_ATTEMPTS: u32 = 5;
+
 /// Upload a single file to S3 under `key`, setting an immutable cache-control header.
 async fn upload_s3_file(
     s3: &aws_sdk_s3::Client,
@@ -32,9 +39,9 @@ async fn upload_s3_file(
         return Ok(());
     }
     // A single PUT is sufficient here: individual artifacts are well under the 5 GB
-    // single-request limit, and we already upload up to 8 files concurrently, so
-    // splitting each file into multipart chunks would add complexity without
-    // meaningfully improving throughput.
+    // single-request limit, and we already upload up to UPLOAD_CONCURRENCY files
+    // concurrently, so splitting each file into multipart chunks would add complexity
+    // without meaningfully improving throughput.
     let body = ByteStream::from_path(path).await?;
     s3.put_object()
         .bucket(bucket)
@@ -101,11 +108,16 @@ pub async fn command_upload_mirror_distributions(args: &ArgMatches) -> Result<()
 
     // Initialise the AWS S3 client. Credentials and endpoint are read from the standard
     // AWS environment variables (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY,
-    // AWS_ENDPOINT_URL, AWS_DEFAULT_REGION)
+    // AWS_ENDPOINT_URL, AWS_DEFAULT_REGION).
+    let retry_config =
+        aws_sdk_s3::config::retry::RetryConfig::standard().with_max_attempts(S3_MAX_ATTEMPTS);
     let config = aws_config::load_defaults(aws_config::BehaviorVersion::latest()).await;
-    let s3 = aws_sdk_s3::Client::new(&config);
+    let s3_config = aws_sdk_s3::config::Builder::from(&config)
+        .retry_config(retry_config)
+        .build();
+    let s3 = aws_sdk_s3::Client::from_conf(s3_config);
 
-    // Upload all files concurrently (up to 8 in-flight at a time).
+    // Upload all files concurrently (up to UPLOAD_CONCURRENCY in-flight at a time).
     let upload_futs = wanted_filenames
         .iter()
         .filter(|(source, _)| filenames.contains(*source))
@@ -118,7 +130,7 @@ pub async fn command_upload_mirror_distributions(args: &ArgMatches) -> Result<()
         });
 
     futures::stream::iter(upload_futs)
-        .buffer_unordered(8)
+        .buffer_unordered(UPLOAD_CONCURRENCY)
         .try_collect::<Vec<_>>()
         .await?;
 

@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
     name: crate / ${{ matrix.arch }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
 
@@ -45,7 +45,7 @@ jobs:
           cargo build --release
 
       - name: Upload executable
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: ${{ matrix.crate_artifact_name }}
           path: target/release/pythonbuild.exe
@@ -58,7 +58,7 @@ jobs:
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -126,13 +126,13 @@ jobs:
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
           persist-credentials: false
 
       - name: Install Cygwin Environment
-        uses: cygwin/cygwin-install-action@f2009323764960f80959895c7bc3bb30210afe4d # v6
+        uses: cygwin/cygwin-install-action@711d29f3da23c9f4a1798e369a6f01198c13b11a # v6
         with:
           packages: autoconf automake libtool
 
@@ -169,13 +169,13 @@ jobs:
           MATRIX_VS_VERSION: ${{ matrix.vs_version }}
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           subject-path: dist/*
 
       - name: Upload Distributions
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
           path: dist/*

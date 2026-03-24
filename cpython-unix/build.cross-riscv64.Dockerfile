@@ -1,6 +1,6 @@
 # Debian Buster.
 FROM debian@sha256:2a0c1b9175adf759420fe0fbd7f5b449038319171eb76554bb76cbe172b62b42
-MAINTAINER Gregory Szorc <gregory.szorc@gmail.com>
+LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
 
 RUN groupadd -g 1000 build && \
     useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
@@ -48,6 +48,15 @@ RUN apt-get install \
 
 # Cross-building.
 RUN apt-get install \
+    g++-aarch64-linux-gnu \
+    g++-arm-linux-gnueabi \
+    g++-arm-linux-gnueabihf \
+    g++-mips-linux-gnu \
+    g++-mips64el-linux-gnuabi64 \
+    g++-mipsel-linux-gnu \
+    g++-powerpc64le-linux-gnu \
+    g++-riscv64-linux-gnu \
+    g++-s390x-linux-gnu \
     gcc-aarch64-linux-gnu \
     gcc-arm-linux-gnueabi \
     gcc-arm-linux-gnueabihf \

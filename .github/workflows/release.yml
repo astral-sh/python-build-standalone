@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "The version to release (e.g., '20250414')."
+        description: "The version to release (e.g., '20260414')."
         type: string
       sha:
         description: "The full SHA of the commit to be released (e.g., 'd09ff921d92d6da8d8a608eaa850dc8c0f638194')."
@@ -91,9 +91,33 @@ jobs:
           GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Generate attestations
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         if: ${{ github.event.inputs.dry-run == 'false' }}
         with:
           subject-path: |
             dist/*.tar.gz
             dist/*.tar.zst
+
+      - name: Publish to Astral mirror
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MIRROR_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MIRROR_R2_SECRET_ACCESS_KEY }}
+          AWS_ENDPOINT_URL: https://${{ secrets.MIRROR_R2_CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
+          AWS_DEFAULT_REGION: auto
+          R2_BUCKET: ${{ secrets.MIRROR_R2_BUCKET_NAME }}
+          PROJECT: python-build-standalone
+          VERSION: ${{ github.event.inputs.tag }}
+        run: |
+          just release-upload-mirror \
+            ${R2_BUCKET} \
+            github/${PROJECT}/releases/download/${VERSION}/ \
+            ${VERSION}
+
+  publish-versions:
+    needs: release
+    if: ${{ github.event.inputs.dry-run == 'false' }}
+    uses: ./.github/workflows/publish-versions.yml
+    with:
+      tag: ${{ github.event.inputs.tag }}
+    secrets: inherit

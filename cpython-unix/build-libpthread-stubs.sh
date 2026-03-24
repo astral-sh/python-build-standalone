@@ -5,20 +5,20 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 pkg-config --version
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig
 
-tar -xf libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz
-pushd libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}
+tar -xf "libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz"
+pushd "libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}"
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=${ROOT}/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR="${ROOT}/out"

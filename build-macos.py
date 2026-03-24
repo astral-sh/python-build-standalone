@@ -8,6 +8,7 @@ import pathlib
 import subprocess
 import sys
 import venv
+import warnings
 
 ROOT = pathlib.Path(os.path.abspath(__file__)).parent
 BUILD = ROOT / "build"
@@ -49,6 +50,12 @@ def run():
 
 
 if __name__ == "__main__":
+    warnings.warn(
+        "build-macos.py is deprecated and will be removed in the future.\n"
+        + "Please use ./build.py to build a distribution.",
+        FutureWarning,
+        stacklevel=2,
+    )
     try:
         if "PYBUILD_BOOTSTRAPPED" not in os.environ:
             bootstrap()

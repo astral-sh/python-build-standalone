@@ -1,17 +1,17 @@
 # Describes the runners that the CI system can use
 
-depot-ubuntu-22.04:
+depot-ubuntu-22.04-4:
   arch: x86_64
   platform: linux
   free: false
 
-depot-ubuntu-22.04-arm:
+depot-ubuntu-22.04-arm-4:
   arch: aarch64
   platform: linux
   free: false
 
 depot-macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: false
 
@@ -21,7 +21,7 @@ ubuntu-latest:
   free: true
 
 macos-latest:
-  arch: x86_64
+  arch: aarch64
   platform: darwin
   free: true
 
@@ -36,6 +36,11 @@ windows-latest-large:
   free: false
 
 windows-latest:
+  arch: x86_64
+  platform: windows
+  free: true
+
+windows-2025-vs2026:
   arch: x86_64
   platform: windows
   free: true

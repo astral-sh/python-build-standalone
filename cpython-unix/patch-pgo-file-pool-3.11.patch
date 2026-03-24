@@ -1,0 +1,31 @@
+Commit ID: 06a31572dd8267a1806209367de6758237851086
+Change ID: sxvospwszzwyqqtollwuxpnvrytuszuv
+Author   : Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 10:19:41)
+Committer: Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 11:30:28)
+
+    Use %Nm filename pattern for PGO
+
+    %p expands to the process ID. While unlikely, PID collisions can occur,
+    leading to loss of data.
+
+    The %Nm syntax creates a pool of files of size N and the PGO instrumentation
+    code picks a file (based on PID % N). If there is a conflict, merging mode
+    is used, which utilizes file locking to update the file in place so data
+    loss cannot occur.
+
+    See the source code at 
+    https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/profile/InstrProfilingFile.c.
+
+diff --git a/configure.ac b/configure.ac
+index bd851bb626..b138499d1b 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1479,7 +1479,7 @@
+     PGO_PROF_GEN_FLAG="-fprofile-instr-generate"
+     PGO_PROF_USE_FLAG="-fprofile-instr-use=code.profclangd"
+     LLVM_PROF_MERGER="${LLVM_PROFDATA} merge -output=code.profclangd *.profclangr"
+-    LLVM_PROF_FILE="LLVM_PROFILE_FILE=\"code-%p.profclangr\""
++    LLVM_PROF_FILE="LLVM_PROFILE_FILE=\"code-%128m.profclangr\""
+     LLVM_MERGED_DATA_FILE=code.profclangd
+     if test $LLVM_PROF_FOUND = not-found
+     then

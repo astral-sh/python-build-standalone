@@ -1,0 +1,8 @@
+The upstream xz sources requires cmake to build on windows.
+This can be avoided by extracting a config.h file extracted from the CMake's 
+results, as is done by CPython.
+This file may need to be updated when upgrading the xz version.
+The file in this directory is taken from the xz branch of 
+https://github.com/python/cpython-source-deps.
+Specifically:
+https://github.com/python/cpython-source-deps/blob/665d407bd6bc941944db2152e4b5dca388ea586e/windows/config.h

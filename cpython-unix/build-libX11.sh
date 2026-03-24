@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig:/tools/deps/lib/pkgconfig
 
-tar -xf libX11-${LIBX11_VERSION}.tar.gz
-pushd libX11-${LIBX11_VERSION}
+tar -xf "libX11-${LIBX11_VERSION}.tar.gz"
+pushd "libX11-${LIBX11_VERSION}"
 
 patch -p1 << 'EOF'
 diff --git a/configure b/configure
@@ -54,6 +54,9 @@ if [ -n "${CROSS_COMPILING}" ]; then
     armv7-unknown-linux-gnueabihf)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
+    loongarch64-unknown-linux-gnu)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
     mips-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
@@ -76,6 +79,9 @@ if [ -n "${CROSS_COMPILING}" ]; then
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     aarch64-unknown-linux-musl)
+      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
+      ;;
+    loongarch64-unknown-linux-musl)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     mips-unknown-linux-musl)
@@ -113,11 +119,11 @@ CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   CFLAGS_FOR_BUILD="-I/tools/deps/include" \
   CPPFLAGS_FOR_BUILD="-I/tools/deps/include" \
   ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     --disable-silent-rules \
     ${EXTRA_FLAGS}
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=${ROOT}/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR="${ROOT}/out"

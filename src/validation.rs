@@ -4,13 +4,14 @@
 
 use {
     crate::{json::*, macho::*},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     clap::ArgMatches,
     normalize_path::NormalizePath,
     object::{
+        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT,
-            STV_HIDDEN,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
+            STV_DEFAULT, STV_HIDDEN,
         },
         macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
@@ -18,7 +19,6 @@ use {
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
-        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
     },
     once_cell::sync::Lazy,
     std::{
@@ -32,13 +32,11 @@ use {
 
 const RECOGNIZED_TRIPLES: &[&str] = &[
     "aarch64-apple-darwin",
-    "aarch64-apple-ios",
     "aarch64-pc-windows-msvc",
     "aarch64-unknown-linux-gnu",
     "aarch64-unknown-linux-musl",
     "armv7-unknown-linux-gnueabi",
     "armv7-unknown-linux-gnueabihf",
-    "arm64-apple-tvos",
     "i686-pc-windows-msvc",
     "i686-unknown-linux-gnu",
     // Note there's build support for mips* targets but they are not tested
@@ -49,11 +47,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "ppc64le-unknown-linux-gnu",
     "riscv64-unknown-linux-gnu",
     "s390x-unknown-linux-gnu",
-    "thumbv7k-apple-watchos",
     "x86_64-apple-darwin",
-    "x86_64-apple-ios",
-    "x86_64-apple-tvos",
-    "x86_64-apple-watchos",
     "x86_64-pc-windows-msvc",
     "x86_64-unknown-linux-gnu",
     "x86_64_v2-unknown-linux-gnu",
@@ -137,6 +131,8 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "python313t.dll",
     "python314.dll",
     "python314t.dll",
+    "python315.dll",
+    "python315t.dll",
     "sqlite3.dll",
     "tcl86t.dll",
     "tk86t.dll",
@@ -152,6 +148,15 @@ const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
     "msvcrt.dll",                        // zlib loads this library
 ];
 const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
+    // See `PE_ALLOWED_LIBRARIES_314` for zlib-related libraries
+    "zlib1.dll",
+    "api-ms-win-crt-private-l1-1-0.dll",
+    "msvcrt.dll",
+    // `_remote_debugging` loads `ntdll`
+    // See https://github.com/python/cpython/pull/138710
+    "ntdll.dll",
+];
 
 static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
     Lazy::new(|| {
@@ -284,7 +289,7 @@ static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<HashMap<&'static str, Vec<&'static 
             (
                 // libtcl and libtk are shipped in our distribution.
                 "_tkinter",
-                vec!["libtcl8.6.so", "libtk8.6.so"],
+                vec!["libtcl9.0.so", "libtcl9tk9.0.so"],
             ),
         ]
         .iter()
@@ -295,83 +300,93 @@ static ELF_ALLOWED_LIBRARIES_BY_MODULE: Lazy<HashMap<&'static str, Vec<&'static 
 static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
     [
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.9.dylib".to_string(),
-                max_compatibility_version: "3.9.0".try_into().unwrap(),
-                required: false,
-            },
-            MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.9d.dylib".to_string(),
-                max_compatibility_version: "3.9.0".try_into().unwrap(),
-                required: false,
-            },
-            MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.10.dylib".to_string(),
+                name: "@rpath/libpython3.10.dylib".to_string(),
                 max_compatibility_version: "3.10.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.10d.dylib".to_string(),
+                name: "@rpath/libpython3.10d.dylib".to_string(),
                 max_compatibility_version: "3.10.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.11.dylib".to_string(),
+                name: "@rpath/libpython3.11.dylib".to_string(),
                 max_compatibility_version: "3.11.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.11d.dylib".to_string(),
+                name: "@rpath/libpython3.11d.dylib".to_string(),
                 max_compatibility_version: "3.11.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.12.dylib".to_string(),
+                name: "@rpath/libpython3.12.dylib".to_string(),
                 max_compatibility_version: "3.12.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.12d.dylib".to_string(),
+                name: "@rpath/libpython3.12d.dylib".to_string(),
                 max_compatibility_version: "3.12.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.13.dylib".to_string(),
+                name: "@rpath/libpython3.13.dylib".to_string(),
                 max_compatibility_version: "3.13.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.13d.dylib".to_string(),
+                name: "@rpath/libpython3.13d.dylib".to_string(),
                 max_compatibility_version: "3.13.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.13t.dylib".to_string(),
+                name: "@rpath/libpython3.13t.dylib".to_string(),
                 max_compatibility_version: "3.13.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.13td.dylib".to_string(),
+                name: "@rpath/libpython3.13td.dylib".to_string(),
                 max_compatibility_version: "3.13.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.14.dylib".to_string(),
+                name: "@rpath/libpython3.14.dylib".to_string(),
                 max_compatibility_version: "3.14.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.14d.dylib".to_string(),
+                name: "@rpath/libpython3.14d.dylib".to_string(),
                 max_compatibility_version: "3.14.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.14t.dylib".to_string(),
+                name: "@rpath/libpython3.14t.dylib".to_string(),
                 max_compatibility_version: "3.14.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
-                name: "@executable_path/../lib/libpython3.14td.dylib".to_string(),
+                name: "@rpath/libpython3.14td.dylib".to_string(),
                 max_compatibility_version: "3.14.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.15.dylib".to_string(),
+                max_compatibility_version: "3.15.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.15d.dylib".to_string(),
+                max_compatibility_version: "3.15.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.15t.dylib".to_string(),
+                max_compatibility_version: "3.15.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.15td.dylib".to_string(),
+                max_compatibility_version: "3.15.0".try_into().unwrap(),
                 required: false,
             },
             MachOAllowedDylib {
@@ -442,6 +457,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: true,
             },
             MachOAllowedDylib {
+                name: "/System/Library/Frameworks/Security.framework/Versions/A/Security".to_string(),
+                max_compatibility_version: "1.0.0".try_into().unwrap(),
+                required: true,
+            },
+            MachOAllowedDylib {
                 name: "/usr/lib/libedit.3.dylib".to_string(),
                 max_compatibility_version: "2.0.0".try_into().unwrap(),
                 required: true,
@@ -475,59 +495,6 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
         .to_vec()
 });
 
-static IOS_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
-    [
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.9.dylib".to_string(),
-            max_compatibility_version: "3.9.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.9d.dylib".to_string(),
-            max_compatibility_version: "3.9.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.10.dylib".to_string(),
-            max_compatibility_version: "3.10.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.10d.dylib".to_string(),
-            max_compatibility_version: "3.10.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.11.dylib".to_string(),
-            max_compatibility_version: "3.11.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "@executable_path/../lib/libpython3.11d.dylib".to_string(),
-            max_compatibility_version: "3.11.0".try_into().unwrap(),
-            required: false,
-        },
-        // For some reason, CoreFoundation is present in debug/noopt builds but not
-        // LTO builds.
-        MachOAllowedDylib {
-            name: "/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation".to_string(),
-            max_compatibility_version: "150.0.0".try_into().unwrap(),
-            required: false,
-        },
-        MachOAllowedDylib {
-            name: "/usr/lib/libSystem.B.dylib".to_string(),
-            max_compatibility_version: "1.0.0".try_into().unwrap(),
-            required: true,
-        },
-        MachOAllowedDylib {
-            name: "/usr/lib/libz.1.dylib".to_string(),
-            max_compatibility_version: "1.0.0".try_into().unwrap(),
-            required: true,
-        },
-    ]
-    .to_vec()
-});
-
 static ALLOWED_DYLIBS_BY_MODULE: Lazy<HashMap<&'static str, Vec<MachOAllowedDylib>>> =
     Lazy::new(|| {
         [(
@@ -535,13 +502,13 @@ static ALLOWED_DYLIBS_BY_MODULE: Lazy<HashMap<&'static str, Vec<MachOAllowedDyli
             "_tkinter",
             vec![
                 MachOAllowedDylib {
-                    name: "@rpath/libtcl8.6.dylib".to_string(),
-                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    name: "@rpath/libtcl9.0.dylib".to_string(),
+                    max_compatibility_version: "9.0.0".try_into().unwrap(),
                     required: true,
                 },
                 MachOAllowedDylib {
-                    name: "@rpath/libtk8.6.dylib".to_string(),
-                    max_compatibility_version: "8.6.0".try_into().unwrap(),
+                    name: "@rpath/libtcl9tk9.0.dylib".to_string(),
+                    max_compatibility_version: "9.0.0".try_into().unwrap(),
                     required: true,
                 },
             ],
@@ -554,7 +521,6 @@ static ALLOWED_DYLIBS_BY_MODULE: Lazy<HashMap<&'static str, Vec<MachOAllowedDyli
 static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
     [
         ("aarch64-apple-darwin", "macosx-11.0-arm64"),
-        ("aarch64-apple-ios", "iOS-aarch64"),
         ("aarch64-pc-windows-msvc", "win-arm64"),
         ("aarch64-unknown-linux-gnu", "linux-aarch64"),
         ("aarch64-unknown-linux-musl", "linux-aarch64"),
@@ -569,7 +535,6 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("riscv64-unknown-linux-gnu", "linux-riscv64"),
         ("s390x-unknown-linux-gnu", "linux-s390x"),
         ("x86_64-apple-darwin", "macosx-10.15-x86_64"),
-        ("x86_64-apple-ios", "iOS-x86_64"),
         ("x86_64-pc-windows-msvc", "win-amd64"),
         ("x86_64-unknown-linux-gnu", "linux-x86_64"),
         ("x86_64_v2-unknown-linux-gnu", "linux-x86_64"),
@@ -718,6 +683,7 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
     "_json",
     "_locale",
     "_lsprof",
+    "_zoneinfo",
     "_lzma",
     "_md5",
     "_multibytecodec",
@@ -766,8 +732,6 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
     "zlib",
 ];
 
-// _zoneinfo added in 3.9.
-// parser removed in 3.10.
 // _tokenize added in 3.11.
 // _typing added in 3.11.
 // _testsinglephase added in 3.12.
@@ -775,26 +739,8 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
 // _xxinterpchannels added in 3.12.
 // audioop removed in 3.13.
 
-// We didn't build ctypes_test until 3.9.
-// We didn't build some test extensions until 3.9.
-
-const GLOBAL_EXTENSIONS_PYTHON_3_9: &[&str] = &[
-    "audioop",
-    "_peg_parser",
-    "_sha256",
-    "_sha512",
-    "_xxsubinterpreters",
-    "_zoneinfo",
-    "parser",
-];
-
-const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] = &[
-    "audioop",
-    "_sha256",
-    "_sha512",
-    "_xxsubinterpreters",
-    "_zoneinfo",
-];
+const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] =
+    &["audioop", "_sha256", "_sha512", "_xxsubinterpreters"];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_11: &[&str] = &[
     "audioop",
@@ -803,7 +749,6 @@ const GLOBAL_EXTENSIONS_PYTHON_3_11: &[&str] = &[
     "_tokenize",
     "_typing",
     "_xxsubinterpreters",
-    "_zoneinfo",
 ];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_12: &[&str] = &[
@@ -813,7 +758,6 @@ const GLOBAL_EXTENSIONS_PYTHON_3_12: &[&str] = &[
     "_typing",
     "_xxinterpchannels",
     "_xxsubinterpreters",
-    "_zoneinfo",
 ];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_13: &[&str] = &[
@@ -825,7 +769,6 @@ const GLOBAL_EXTENSIONS_PYTHON_3_13: &[&str] = &[
     "_sysconfig",
     "_tokenize",
     "_typing",
-    "_zoneinfo",
 ];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
@@ -838,7 +781,22 @@ const GLOBAL_EXTENSIONS_PYTHON_3_14: &[&str] = &[
     "_sysconfig",
     "_tokenize",
     "_typing",
-    "_zoneinfo",
+    "_hmac",
+    "_types",
+    "_zstd",
+];
+
+const GLOBAL_EXTENSIONS_PYTHON_3_15: &[&str] = &[
+    "_interpchannels",
+    "_interpqueues",
+    "_interpreters",
+    "_math_integer",
+    "_remote_debugging",
+    "_sha2",
+    "_suggestions",
+    "_sysconfig",
+    "_tokenize",
+    "_typing",
     "_hmac",
     "_types",
     "_zstd",
@@ -885,7 +843,7 @@ const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 const GLOBAL_EXTENSIONS_WINDOWS_NO_STATIC: &[&str] = &["_testinternalcapi", "_tkinter"];
 
 /// Extension modules that should be built as shared libraries.
-const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt", "_ctypes_test", "_tkinter"];
+const SHARED_LIBRARY_EXTENSIONS: &[&str] = &["_crypt", "_ctypes_test", "_dbm", "_tkinter"];
 
 const PYTHON_VERIFICATIONS: &str = include_str!("verify_distribution.py");
 
@@ -893,8 +851,6 @@ fn allowed_dylibs_for_triple(triple: &str) -> Vec<MachOAllowedDylib> {
     match triple {
         "aarch64-apple-darwin" => DARWIN_ALLOWED_DYLIBS.clone(),
         "x86_64-apple-darwin" => DARWIN_ALLOWED_DYLIBS.clone(),
-        "aarch64-apple-ios" => IOS_ALLOWED_DYLIBS.clone(),
-        "x86_64-apple-ios" => IOS_ALLOWED_DYLIBS.clone(),
         _ => vec![],
     }
 }
@@ -976,7 +932,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "x86_64_v2-unknown-linux-musl" => object::elf::EM_X86_64,
         "x86_64_v3-unknown-linux-musl" => object::elf::EM_X86_64,
         "x86_64_v4-unknown-linux-musl" => object::elf::EM_X86_64,
-        _ => panic!("unhandled target triple: {}", target_triple),
+        _ => panic!("unhandled target triple: {target_triple}"),
     };
 
     let endian = elf.endian()?;
@@ -1001,27 +957,23 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     if json.libpython_link_mode == "shared" {
         if target_triple.contains("-musl") {
             // On musl, we link to `libpython` and rely on `RUN PATH`
-            allowed_libraries.push(format!("libpython{}.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}d.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}t.so.1.0", python_major_minor));
-            allowed_libraries.push(format!("libpython{}td.so.1.0", python_major_minor));
+            allowed_libraries.push(format!("libpython{python_major_minor}.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}d.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}t.so.1.0"));
+            allowed_libraries.push(format!("libpython{python_major_minor}td.so.1.0"));
         } else {
             // On glibc, we can use `$ORIGIN` for relative, reloctable linking
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}d.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}d.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}t.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}t.so.1.0"
             ));
             allowed_libraries.push(format!(
-                "$ORIGIN/../lib/libpython{}td.so.1.0",
-                python_major_minor
+                "$ORIGIN/../lib/libpython{python_major_minor}td.so.1.0"
             ));
         }
     }
@@ -1232,16 +1184,14 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     bytes: &[u8],
 ) -> Result<()> {
     let advertised_target_version =
-        semver::Version::parse(&format!("{}.0", advertised_target_version))?;
-    let advertised_sdk_version = semver::Version::parse(&format!("{}.0", advertised_sdk_version))?;
+        semver::Version::parse(&format!("{advertised_target_version}.0"))?;
+    let advertised_sdk_version = semver::Version::parse(&format!("{advertised_sdk_version}.0"))?;
 
     let endian = header.endian()?;
 
     let wanted_cpu_type = match target_triple {
         "aarch64-apple-darwin" => object::macho::CPU_TYPE_ARM64,
-        "aarch64-apple-ios" => object::macho::CPU_TYPE_ARM64,
         "x86_64-apple-darwin" => object::macho::CPU_TYPE_X86_64,
-        "x86_64-apple-ios" => object::macho::CPU_TYPE_X86_64,
         _ => return Err(anyhow!("unhandled target triple: {}", target_triple)),
     };
 
@@ -1502,6 +1452,11 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
                         continue;
                     }
                 }
+                "3.15" => {
+                    if PE_ALLOWED_LIBRARIES_315.contains(&lib.as_str()) {
+                        continue;
+                    }
+                }
                 _ => {}
             }
 
@@ -1631,23 +1586,14 @@ fn validate_extension_modules(
 ) -> Result<Vec<String>> {
     let mut errors = vec![];
 
-    let is_ios = target_triple.contains("-apple-ios");
     let is_macos = target_triple.contains("-apple-darwin");
     let is_linux = target_triple.contains("-unknown-linux-");
     let is_windows = target_triple.contains("-pc-windows-");
     let is_linux_musl = target_triple.contains("-unknown-linux-musl");
 
-    // iOS isn't well supported. So don't do any validation.
-    if is_ios {
-        return Ok(errors);
-    }
-
     let mut wanted = BTreeSet::from_iter(GLOBAL_EXTENSIONS.iter().copied());
 
     match python_major_minor {
-        "3.9" => {
-            wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_9);
-        }
         "3.10" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_10);
         }
@@ -1663,15 +1609,18 @@ fn validate_extension_modules(
         "3.14" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_14);
         }
+        "3.15" => {
+            wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_15);
+        }
         _ => {
-            panic!("unhandled Python version: {}", python_major_minor);
+            panic!("unhandled Python version: {python_major_minor}");
         }
     }
 
     if is_macos {
         wanted.extend(GLOBAL_EXTENSIONS_POSIX);
 
-        if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_POSIX_PRE_3_13);
         }
 
@@ -1681,11 +1630,11 @@ fn validate_extension_modules(
     if is_windows {
         wanted.extend(GLOBAL_EXTENSIONS_WINDOWS);
 
-        if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13);
         }
 
-        if matches!(python_major_minor, "3.14") {
+        if matches!(python_major_minor, "3.14" | "3.15") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_3_14);
         }
 
@@ -1699,15 +1648,15 @@ fn validate_extension_modules(
     if is_linux {
         wanted.extend(GLOBAL_EXTENSIONS_POSIX);
 
-        if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_POSIX_PRE_3_13);
         }
 
-        if matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_LINUX_PRE_3_13);
         }
 
-        if !is_linux_musl && matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12") {
+        if !is_linux_musl && matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.insert("ossaudiodev");
         }
     }
@@ -1725,7 +1674,7 @@ fn validate_extension_modules(
         wanted.insert("_testexternalinspection");
     }
 
-    if (is_linux || is_macos) && matches!(python_major_minor, "3.12" | "3.13" | "3.14") {
+    if (is_linux || is_macos) && matches!(python_major_minor, "3.12" | "3.13" | "3.14" | "3.15") {
         wanted.insert("_testsinglephase");
     }
 
@@ -1735,11 +1684,11 @@ fn validate_extension_modules(
     }
 
     for extra in have_extensions.difference(&wanted) {
-        errors.push(format!("extra/unknown extension module: {}", extra));
+        errors.push(format!("extra/unknown extension module: {extra}"));
     }
 
     for missing in wanted.difference(have_extensions) {
-        errors.push(format!("missing extension module: {}", missing));
+        errors.push(format!("missing extension module: {missing}"));
     }
 
     Ok(errors)
@@ -1794,7 +1743,7 @@ fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<
 
     for extension in json.build_info.extensions.keys() {
         if GLOBALLY_BANNED_EXTENSIONS.contains(&extension.as_str()) {
-            errors.push(format!("banned extension detected: {}", extension));
+            errors.push(format!("banned extension detected: {extension}"));
         }
     }
 
@@ -1831,11 +1780,7 @@ fn validate_distribution(
 
     let triple = RECOGNIZED_TRIPLES
         .iter()
-        .find(|triple| {
-            dist_path
-                .to_string_lossy()
-                .contains(&format!("-{}-", triple))
-        })
+        .find(|triple| dist_path.to_string_lossy().contains(&format!("-{triple}-")))
         .ok_or_else(|| {
             anyhow!(
                 "could not identify triple from distribution filename: {}",
@@ -1843,9 +1788,7 @@ fn validate_distribution(
             )
         })?;
 
-    let python_major_minor = if dist_filename.starts_with("cpython-3.9.") {
-        "3.9"
-    } else if dist_filename.starts_with("cpython-3.10.") {
+    let python_major_minor = if dist_filename.starts_with("cpython-3.10.") {
         "3.10"
     } else if dist_filename.starts_with("cpython-3.11.") {
         "3.11"
@@ -1855,6 +1798,8 @@ fn validate_distribution(
         "3.13"
     } else if dist_filename.starts_with("cpython-3.14.") {
         "3.14"
+    } else if dist_filename.starts_with("cpython-3.15.") {
+        "3.15"
     } else {
         return Err(anyhow!("could not parse Python version from filename"));
     };
@@ -1886,7 +1831,7 @@ fn validate_distribution(
                 .unwrap()
                 .python_paths
                 .values()
-                .map(|x| format!("python/{}", x)),
+                .map(|x| format!("python/{x}")),
         );
     } else {
         context.errors.push(format!(
@@ -2034,8 +1979,7 @@ fn validate_distribution(
 
     for path in wanted_python_paths {
         context.errors.push(format!(
-            "path prefix {} seen in python_paths does not appear in archive",
-            path
+            "path prefix {path} seen in python_paths does not appear in archive"
         ));
     }
 
@@ -2049,7 +1993,7 @@ fn validate_distribution(
     for lib in wanted_dylibs.difference(&context.seen_dylibs) {
         context
             .errors
-            .push(format!("required library dependency {} not seen", lib));
+            .push(format!("required library dependency {lib} not seen"));
     }
 
     if triple.contains("-windows-") && is_static {
@@ -2086,8 +2030,7 @@ fn validate_distribution(
             if let Some(shared) = &ext.shared_lib {
                 if !seen_paths.contains(&PathBuf::from("python").join(shared)) {
                     context.errors.push(format!(
-                        "extension module {} references missing shared library path {}",
-                        name, shared
+                        "extension module {name} references missing shared library path {shared}"
                     ));
                 }
             }
@@ -2109,13 +2052,11 @@ fn validate_distribution(
 
             if want_shared && ext.shared_lib.is_none() {
                 context.errors.push(format!(
-                    "extension module {} does not have a shared library",
-                    name
+                    "extension module {name} does not have a shared library"
                 ));
             } else if !want_shared && ext.shared_lib.is_some() {
                 context.errors.push(format!(
-                    "extension module {} contains a shared library unexpectedly",
-                    name
+                    "extension module {name} contains a shared library unexpectedly"
                 ));
             }
 
@@ -2138,7 +2079,7 @@ fn validate_distribution(
             } else if name == "_warnings" {
                 // But not on Python 3.13 on Windows
                 if triple.contains("-windows-") {
-                    matches!(python_major_minor, "3.9" | "3.10" | "3.11" | "3.12")
+                    matches!(python_major_minor, "3.10" | "3.11" | "3.12")
                 } else {
                     true
                 }
@@ -2168,7 +2109,7 @@ fn validate_distribution(
     if triple.contains("-apple-darwin") {
         if let Some(sdks) = macos_sdks {
             if let Some(value) = json.as_ref().unwrap().apple_sdk_deployment_target.as_ref() {
-                let target_minimum_sdk = semver::Version::parse(&format!("{}.0", value))?;
+                let target_minimum_sdk = semver::Version::parse(&format!("{value}.0"))?;
 
                 sdks.validate_context(&mut context, target_minimum_sdk, triple)?;
             } else {
@@ -2256,7 +2197,7 @@ pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
             println!("  {} OK", path.display());
         } else {
             for error in errors {
-                println!("  error: {}", error);
+                println!("  error: {error}");
             }
 
             success = false;

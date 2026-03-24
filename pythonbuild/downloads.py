@@ -2,9 +2,20 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+# Several files here are mirrored from their upstream sources due to flaky
+# downloads from upstream hosts (either intentional rate limiting or general
+# low-availability / non-CDN infrastructure) and to reduce load on them. To
+# update a file, push the new artifact to github.com/astral-sh/mirror (without
+# removing the old artifact) and then update here once GitHub Pages has
+# deployed. Feel free to point directly to the upstream source while working on
+# a PR, especially if you don't have push access to astral-sh/mirror or are
+# unsure if the PR will land, but we should make sure to switch back to the
+# mirror shortly after landing the dependency.
+
 DOWNLOADS = {
     "autoconf": {
-        "url": "https://ftp.gnu.org/gnu/autoconf/autoconf-2.72.tar.gz",
+        # Mirrored from https://ftp.gnu.org/gnu/autoconf/autoconf-2.72.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/autoconf-2.72.tar.gz",
         "size": 2143794,
         "sha256": "afb181a76e1ee72832f6581c0eddf8df032b83e2e0239ef79ebedc4467d92d6e",
         "version": "2.72",
@@ -20,14 +31,14 @@ DOWNLOADS = {
         "license_file": "LICENSE.bdb.txt",
     },
     "binutils": {
-        "url": "https://ftp.gnu.org/gnu/binutils/binutils-2.43.tar.xz",
+        # Mirrored from https://ftp.gnu.org/gnu/binutils/binutils-2.43.tar.xz
+        "url": "https://astral-sh.github.io/mirror/files/binutils-2.43.tar.xz",
         "size": 28175768,
         "sha256": "b53606f443ac8f01d1d5fc9c39497f2af322d99e14cea5c0b4b124d630379365",
         "version": "2.43",
     },
     "bzip2": {
-        # Mirror of `https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz` due to
-        # rate limiting
+        # Mirrored from https://sourceware.org/pub/bzip2/bzip2-1.0.8.tar.gz
         "url": "https://astral-sh.github.io/mirror/files/bzip2-1.0.8.tar.gz",
         "size": 810029,
         "sha256": "ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269",
@@ -36,59 +47,59 @@ DOWNLOADS = {
         "licenses": ["bzip2-1.0.6"],
         "license_file": "LICENSE.bzip2.txt",
     },
-    "cpython-3.9": {
-        "url": "https://www.python.org/ftp/python/3.9.23/Python-3.9.23.tar.xz",
-        "size": 19659284,
-        "sha256": "61a42919e13d539f7673cf11d1c404380e28e540510860b9d242196e165709c9",
-        "version": "3.9.23",
-        "licenses": ["Python-2.0", "CNRI-Python"],
-        "license_file": "LICENSE.cpython.txt",
-        "python_tag": "cp39",
-    },
     "cpython-3.10": {
-        "url": "https://www.python.org/ftp/python/3.10.18/Python-3.10.18.tar.xz",
-        "size": 19619316,
-        "sha256": "ae665bc678abd9ab6a6e1573d2481625a53719bc517e9a634ed2b9fefae3817f",
-        "version": "3.10.18",
+        "url": "https://www.python.org/ftp/python/3.10.20/Python-3.10.20.tar.xz",
+        "size": 19868028,
+        "sha256": "de6517421601e39a9a3bc3e1bc4c7b2f239297423ee05e282598c83ec0647505",
+        "version": "3.10.20",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp310",
     },
     "cpython-3.11": {
-        "url": "https://www.python.org/ftp/python/3.11.13/Python-3.11.13.tar.xz",
-        "size": 20117496,
-        "sha256": "8fb5f9fbc7609fa822cb31549884575db7fd9657cbffb89510b5d7975963a83a",
-        "version": "3.11.13",
+        "url": "https://www.python.org/ftp/python/3.11.15/Python-3.11.15.tar.xz",
+        "size": 20332596,
+        "sha256": "272179ddd9a2e41a0fc8e42e33dfbdca0b3711aa5abf372d3f2d51543d09b625",
+        "version": "3.11.15",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp311",
     },
     "cpython-3.12": {
-        "url": "https://www.python.org/ftp/python/3.12.11/Python-3.12.11.tar.xz",
-        "size": 20525812,
-        "sha256": "c30bb24b7f1e9a19b11b55a546434f74e739bb4c271a3e3a80ff4380d49f7adb",
-        "version": "3.12.11",
+        "url": "https://www.python.org/ftp/python/3.12.13/Python-3.12.13.tar.xz",
+        "size": 20801708,
+        "sha256": "c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684",
+        "version": "3.12.13",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp312",
     },
     "cpython-3.13": {
-        "url": "https://www.python.org/ftp/python/3.13.7/Python-3.13.7.tar.xz",
-        "size": 22769492,
-        "sha256": "5462f9099dfd30e238def83c71d91897d8caa5ff6ebc7a50f14d4802cdaaa79a",
-        "version": "3.13.7",
+        "url": "https://www.python.org/ftp/python/3.13.12/Python-3.13.12.tar.xz",
+        "size": 22926488,
+        "sha256": "2a84cd31dd8d8ea8aaff75de66fc1b4b0127dd5799aa50a64ae9a313885b4593",
+        "version": "3.13.12",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp313",
     },
     "cpython-3.14": {
-        "url": "https://www.python.org/ftp/python/3.14.0/Python-3.14.0rc2.tar.xz",
-        "size": 23566140,
-        "sha256": "bc62854cf232345bd22c9091a68464e01e056c6473a3fffa84572c8a342da656",
-        "version": "3.14.0rc2",
+        "url": "https://www.python.org/ftp/python/3.14.3/Python-3.14.3.tar.xz",
+        "size": 23778568,
+        "sha256": "a97d5549e9ad81fe17159ed02c68774ad5d266c72f8d9a0b5a9c371fe85d902b",
+        "version": "3.14.3",
         "licenses": ["Python-2.0", "CNRI-Python"],
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp314",
+    },
+    "cpython-3.15": {
+        "url": "https://www.python.org/ftp/python/3.15.0/Python-3.15.0a7.tar.xz",
+        "size": 35004684,
+        "sha256": "8f590c428b7f0d406df928b85737e7a3afa28eddd4d1419410ea809687ed1ea7",
+        "version": "3.15.0a7",
+        "licenses": ["Python-2.0", "CNRI-Python"],
+        "license_file": "LICENSE.cpython.txt",
+        "python_tag": "cp315",
     },
     "expat": {
         "url": "https://github.com/libexpat/libexpat/releases/download/R_2_6_3/expat-2.6.3.tar.xz",
@@ -165,42 +176,37 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.libxcb.txt",
     },
-    "llvm-14-x86_64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20220508/llvm-14.0.3+20220508-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
-        "size": 158614671,
-        "sha256": "04cb77c660f09df017a57738ae9635ef23a506024789f2f18da1304b45af2023",
-        "version": "14.0.3+20220508",
+    # Remember to update LLVM_URL in src/release.rs whenever upgrading.
+    "llvm-aarch64-linux": {
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
+        "size": 237665010,
+        "sha256": "0f7ef68a9d6239336aa073366edd5377a47192c32d40c96ff72b416a15259999",
+        "version": "22.1.1+20260312",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
-    "llvm-20-aarch64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
-        "size": 255946687,
-        "sha256": "e70753f294b8f83fffbaf07af36857c27ceaef0291cb10f724ada6af11b0a5bc",
-        "version": "20.1.4+20250511",
-    },
-    # Remember to update LLVM_URL in src/release.rs whenever upgrading.
-    "llvm-20-x86_64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
-        "size": 299883811,
-        "sha256": "32374eb8b32fc79e9022f21eefc848d75fa3c46e68054a5dfc1f68d6f2f20429",
-        "version": "20.1.4+20250511",
+    "llvm-x86_64-linux": {
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
+        "size": 281108139,
+        "sha256": "2a2f2e51bb9c621c6b00a42d8349f27edcb3aacaa750040000ac95a0298e97c1",
+        "version": "22.1.1+20260312",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-aarch64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-aarch64-apple-darwin.tar.zst",
-        "size": 152858186,
-        "sha256": "d44bf8256b2468339c3b4491edb9c799ab89e466d98d098391286dc86e86a63b",
-        "version": "20.1.4+20250511",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-aarch64-apple-darwin.tar.zst",
+        "size": 159781503,
+        "sha256": "04df05eed3dde711a5962f031f3075e3d46bad92eb0520bc4c2814ac0210c56f",
+        "version": "22.1.1+20260312",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-x86_64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-x86_64-apple-darwin.tar.zst",
-        "size": 160140682,
-        "sha256": "31b35734b678ad22471e31cf6a173c54819a3bca9ffefd4a70d8cdb935d67501",
-        "version": "20.1.4+20250511",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-x86_64-apple-darwin.tar.zst",
+        "size": 167381561,
+        "sha256": "aef8508bef17a2d40b07ff955917ff7f36c1a609116ee8c052e12307ec748314",
+        "version": "22.1.1+20260312",
     },
     "m4": {
-        "url": "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz",
+        # Mirrored from https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz
+        "url": "https://astral-sh.github.io/mirror/files/m4-1.4.19.tar.xz",
         "size": 1654908,
         "sha256": "63aede5c6d33b6d9b13511cd0be2cac046f2e70fd0a07aa9573a04a82783af96",
         "version": "1.4.19",
@@ -229,7 +235,8 @@ DOWNLOADS = {
         "version": "1.2.5",
     },
     "ncurses": {
-        "url": "https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz",
+        # Mirrored from https://ftp.gnu.org/pub/gnu/ncurses/ncurses-6.5.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/ncurses-6.5.tar.gz",
         "size": 3688489,
         "sha256": "136d91bc269a9a5785e5f9e980bc76ab57428f604ce3e5a5a90cebc767971cc6",
         "version": "6.5",
@@ -247,24 +254,22 @@ DOWNLOADS = {
         "licenses": ["OpenSSL"],
         "license_file": "LICENSE.openssl-1.1.txt",
     },
-    # We use OpenSSL 3.0 because it is an LTS release and has a longer support
-    # window. If CPython ends up gaining support for 3.1+ releases, we can consider
-    # using the latest available.
     # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
-    "openssl-3.0": {
-        "url": "https://www.openssl.org/source/openssl-3.0.16.tar.gz",
-        "size": 15334967,
-        "sha256": "57e03c50feab5d31b152af2b764f10379aecd8ee92f16c985983ce4a99f7ef86",
-        "version": "3.0.16",
+    "openssl-3.5": {
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.5/openssl-3.5.5.tar.gz",
+        "size": 53104821,
+        "sha256": "b28c91532a8b65a1f983b4c28b7488174e4a01008e29ce8e69bd789f28bc2a89",
+        "version": "3.5.5",
         "library_names": ["crypto", "ssl"],
         "licenses": ["Apache-2.0"],
         "license_file": "LICENSE.openssl-3.txt",
     },
     "nasm-windows-bin": {
-        "url": "https://github.com/python/cpython-bin-deps/archive/nasm-2.11.06.tar.gz",
-        "size": 384826,
-        "sha256": "8af0ae5ceed63fa8a2ded611d44cc341027a91df22aaaa071efedc81437412a5",
-        "version": "2.11.06",
+        # Mirrored from https://www.nasm.us/pub/nasm/releasebuilds/2.16.03/win64/nasm-2.16.03-win64.zip
+        "url": "https://astral-sh.github.io/mirror/files/nasm-2.16.03-win64.zip",
+        "size": 513543,
+        "sha256": "3ee4782247bcb874378d02f7eab4e294a84d3d15f3f6ee2de2f47a46aa7226e6",
+        "version": "2.16.03",
     },
     "patchelf": {
         "url": "https://github.com/NixOS/patchelf/releases/download/0.13.1/patchelf-0.13.1.tar.bz2",
@@ -273,13 +278,14 @@ DOWNLOADS = {
         "version": "0.13.1",
     },
     "pip": {
-        "url": "https://files.pythonhosted.org/packages/ef/7d/500c9ad20238fcfcb4cb9243eede163594d7020ce87bd9610c9e02771876/pip-24.3.1-py3-none-any.whl",
-        "size": 1822182,
-        "sha256": "3790624780082365f47549d032f3770eeb2b1e8bd1f7b2e02dace1afa361b4ed",
-        "version": "24.3.1",
+        "url": "https://files.pythonhosted.org/packages/de/f0/c81e05b613866b76d2d1066490adf1a3dbc4ee9d9c839961c3fc8a6997af/pip-26.0.1-py3-none-any.whl",
+        "size": 1787723,
+        "sha256": "bdb1b08f4274833d62c1aa29e20907365a2ceb950410df15fc9521bad440122b",
+        "version": "26.0.1",
     },
     "readline": {
-        "url": "https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz",
+        # Mirrored from https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/readline-8.2.tar.gz",
         "size": 3043952,
         "sha256": "3feb7171f16a84ee82ca18a36d7b9be109a52c04f492a053331d7d1095007c35",
         "version": "8.2",
@@ -288,10 +294,10 @@ DOWNLOADS = {
         "license_file": "LICENSE.readline.txt",
     },
     "setuptools": {
-        "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
-        "size": 1201486,
-        "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922",
-        "version": "80.9.0",
+        "url": "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl",
+        "size": 1006223,
+        "sha256": "a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb",
+        "version": "82.0.1",
     },
     # Remember to update verify_distribution.py when version changed.
     "sqlite": {
@@ -312,11 +318,11 @@ DOWNLOADS = {
         "version": "5.38.2.2",
     },
     "tcl": {
-        "url": "https://prdownloads.sourceforge.net/tcl/tcl8.6.14-src.tar.gz",
-        "size": 11627322,
-        "sha256": "5880225babf7954c58d4fb0f5cf6279104ce1cd6aa9b71e9a6322540e1c4de66",
-        "version": "8.6.14",
-        "library_names": ["tcl8.6"],
+        "url": "https://prdownloads.sourceforge.net/tcl/tcl9.0.3-src.tar.gz",
+        "size": 11922915,
+        "sha256": "2537ba0c86112c8c953f7c09d33f134dd45c0fb3a71f2d7f7691fd301d2c33a6",
+        "version": "9.0.3",
+        "library_names": ["tcl9.0"],
         "licenses": ["TCL"],
         "license_file": "LICENSE.tcl.txt",
     },
@@ -329,11 +335,11 @@ DOWNLOADS = {
         "license_file": "LICENSE.tix.txt",
     },
     "tk": {
-        "url": "https://prdownloads.sourceforge.net/tcl/tk8.6.14-src.tar.gz",
-        "size": 4510695,
-        "sha256": "8ffdb720f47a6ca6107eac2dd877e30b0ef7fac14f3a84ebbd0b3612cee41a94",
-        "version": "8.6.14",
-        "library_names": ["tk8.6"],
+        "url": "https://prdownloads.sourceforge.net/tcl/tk9.0.3-src.tar.gz",
+        "size": 4644835,
+        "sha256": "bf344efadb618babb7933f69275620f72454d1c8220130da93e3f7feb0efbf9b",
+        "version": "9.0.3",
+        "library_names": ["tk9.0"],
         "licenses": ["TCL"],
         "license_file": "LICENSE.tcl.txt",
     },
@@ -377,19 +383,18 @@ DOWNLOADS = {
         "sha256": "936b74c60b19c317c3f3cb1b114575032528dbdaf428740483200ea874c2ca0a",
         "version": "1.6.0",
     },
-    # IMPORTANT: xz 5.6 has a backdoor. Be extremely cautious before taking any xz
-    # upgrade since it isn't clear which versions are safe.
+    # IMPORTANT: xz 5.6.0 was released with a backdoor (CVE-2024-3094). This has been resolved.
+    # Be cautious before taking any xz upgrades given this past behavior.
     "xz": {
-        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20240224/xz-5.2.12.tar.gz",
-        "size": 2190541,
-        "sha256": "61bda930767dcb170a5328a895ec74cab0f5aac4558cdda561c83559db582a13",
-        "version": "5.2.12",
+        "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz",
+        "size": 2587189,
+        "sha256": "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543",
+        "version": "5.8.1",
         "library_names": ["lzma"],
-        # liblzma is in the public domain. Other parts of code have licenses. But
-        # we only use liblzma.
-        "licenses": [],
+        # liblzma is licensed as 0BSD. Other parts of code have different licenses.
+        # But we only use liblzma.
+        "licenses": ["0BSD"],
         "license_file": "LICENSE.liblzma.txt",
-        "license_public_domain": True,
     },
     "zlib": {
         "url": "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz",

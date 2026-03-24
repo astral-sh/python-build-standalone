@@ -1,4 +1,4 @@
-# Diff 2 releases using diffocope.
+# Diff 2 releases using diffoscope.
 diff a b:
   diffoscope \
     --html build/diff.html \
@@ -89,6 +89,20 @@ release-create tag:
       ;;
   esac
 
+# Upload release artifacts to an S3-compatible mirror bucket with the correct release names.
+# AWS credentials are read from the standard AWS_* environment variables.
+# Requires `release-run` to have been run.
+release-upload-mirror bucket prefix tag:
+  #!/bin/bash
+  set -eo pipefail
+  datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz | awk -F- '{print $8}' | awk -F. '{print $1}')
+  cargo run --release -- upload-mirror-distributions \
+    --dist dist \
+    --datetime ${datetime} \
+    --tag {{tag}} \
+    --bucket {{bucket}} \
+    --prefix {{prefix}}
+
 # Perform the release job. Assumes that the GitHub Release has been created.
 release-run token commit tag:
   #!/bin/bash
@@ -109,26 +123,3 @@ release-dry-run token commit tag:
   just release-download-distributions {{token}} {{commit}}
   datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
   just release-upload-distributions-dry-run {{token}} ${datetime} {{tag}}
-
-_download-stats mode:
-    build/venv.*/bin/python3 -c 'import pythonbuild.utils as u; u.release_download_statistics(mode="{{mode}}")'
-
-# Show download counts of every release asset.
-download-stats:
-    just _download-stats by_asset
-
-# Show download counts of release assets by build configuration.
-download-stats-by-build:
-    just _download-stats by_build
-
-# Show download counts of "install only" release assets by build configuration.
-download-stats-by-build-install-only:
-    just _download-stats by_build_install_only
-
-# Show download counts of release assets by release tag.
-download-stats-by-tag:
-    just _download-stats by_tag
-
-# Show a total count of all release asset downloads.
-download-stats-total:
-    just _download-stats total

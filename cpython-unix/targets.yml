@@ -64,12 +64,12 @@ aarch64-apple-darwin:
     - macos_arm64
     - macos_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -102,7 +102,7 @@ aarch64-apple-darwin:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - tcl
     - tk
@@ -111,61 +111,18 @@ aarch64-apple-darwin:
     - zstd
   openssl_target: darwin64-arm64-cc
 
-aarch64-apple-ios:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: iphoneos
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'arm64'
-    - '-mios-version-min=12.3'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'arm64'
-    - '-mios-version-min=12.3'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - libffi
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: ios64-cross
-
 aarch64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
     - linux_aarch64
+    - macos_arm64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .debian9
   needs_toolchain: true
   host_cc: clang
@@ -174,6 +131,9 @@ aarch64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -190,7 +150,7 @@ aarch64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -207,59 +167,16 @@ aarch64-unknown-linux-gnu:
   # See https://github.com/llvm/llvm-project/issues/146541
   # bolt_capable: true
 
-arm64-apple-tvos:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: appletvos
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'arm64'
-    - '-mappletvos-version-min=12.3'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'arm64'
-    - '-mappletvos-version-min=12.3'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: todo
-
 armv7-unknown-linux-gnueabi:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -279,7 +196,7 @@ armv7-unknown-linux-gnueabi:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -295,12 +212,12 @@ armv7-unknown-linux-gnueabihf:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -320,7 +237,7 @@ armv7-unknown-linux-gnueabihf:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -332,16 +249,56 @@ armv7-unknown-linux-gnueabihf:
     - zstd
   openssl_target: linux-armv4
 
-mips-unknown-linux-gnu:
+loongarch64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+  docker_image_suffix: .cross-loongarch64
+  host_cc: /usr/bin/x86_64-linux-gnu-gcc
+  host_cxx: /usr/bin/x86_64-linux-gnu-g++
+  target_cc: /usr/bin/loongarch64-linux-gnu-gcc
+  target_cxx: /usr/bin/loongarch64-linux-gnu-g++
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux64-loongarch64
+
+mips-unknown-linux-gnu:
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.10'
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -361,7 +318,7 @@ mips-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -377,12 +334,12 @@ mipsel-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -402,7 +359,7 @@ mipsel-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -418,12 +375,12 @@ ppc64le-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -443,7 +400,7 @@ ppc64le-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -459,12 +416,12 @@ riscv64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross-riscv64
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
@@ -484,7 +441,7 @@ riscv64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -500,17 +457,20 @@ s390x-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   docker_image_suffix: .cross
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/s390x-linux-gnu-gcc
   target_cxx: /usr/bin/s390x-linux-gnu-g++
+  target_cflags:
+    # set the minimum compatibility level to z10 (released 2008)
+    - '-march=z10'
   needs:
     - autoconf
     - bdb
@@ -525,7 +485,7 @@ s390x-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -537,49 +497,6 @@ s390x-unknown-linux-gnu:
     - zstd
   openssl_target: linux64-s390x
 
-thumb7k-apple-watchos:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: watchos
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'armv7k'
-    - '-mwatchos-version-min-7.0'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'armv7k'
-    - '-mwatchos-version-min-7.0'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: todo
-
 # Intel macOS.
 #
 # We target compatibility with macOS 10.15+ for compatibility with older Apple
@@ -589,12 +506,12 @@ x86_64-apple-darwin:
     - macos_arm64
     - macos_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   apple_sdk_platform: macosx
   host_cc: clang
@@ -627,7 +544,7 @@ x86_64-apple-darwin:
     - libffi
     - m4
     - mpdecimal
-    - openssl-3.0
+    - openssl-3.5
     - sqlite
     - tcl
     - tk
@@ -636,146 +553,16 @@ x86_64-apple-darwin:
     - zstd
   openssl_target: darwin64-x86_64-cc
 
-x86_64-apple-ios:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: iphonesimulator
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mios-simulator-version-min=12.3'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mios-simulator-version-min=12.3'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - libffi
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: darwin64-x86_64-cc
-
-x86_64-apple-tvos:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: appletvsimulator
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mappletvsimulator-version-min=12.3'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mappletvsimulator-version-min=12.3'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: todo
-
-x86_64-apple-watchos:
-  host_platforms:
-    - macos_arm64
-    - macos_x86_64
-  pythons_supported:
-    - '3.9'
-  needs_toolchain: true
-  apple_sdk_platform: watchsimulator
-  host_cc: clang
-  host_cxx: clang++
-  target_cc: clang
-  target_cxx: clang++
-  target_cflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mwatchsimulator-version-min=7.0'
-    # Suppress extremely verbose warnings we see with LLVM 10.
-    - '-Wno-nullability-completeness'
-    - '-Wno-expansion-to-defined'
-    # LLVM 11 contains commit https://reviews.llvm.org/D83250,
-    # which enables -Werror for undef-prefix=TARGET_OS_.
-    # However, the macOS SDK has headers that reference deprecated
-    # TARGET_OS defines, like TARGET_OS_EMBEDDED. So LLVM 11 refuses
-    # to work with the macOS SDKs out of the box. We work around
-    # this by undoing the -Werror=undef-prefix in that commit.
-    - '-Wno-undef-prefix'
-    - '-fvisibility=hidden'
-  target_ldflags:
-    - '-arch'
-    - 'x86_64'
-    - '-mwatchsimulator-version-min=7.0'
-  needs:
-    - autoconf
-    - bzip2
-    - expat
-    - m4
-    - mpdecimal
-    - openssl-3.0
-    - sqlite
-    - xz
-    - zstd
-  openssl_target: todo
-
 x86_64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -783,6 +570,9 @@ x86_64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -799,7 +589,7 @@ x86_64-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -816,12 +606,12 @@ x86_64_v2-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -830,6 +620,9 @@ x86_64_v2-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -846,7 +639,7 @@ x86_64_v2-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -863,12 +656,12 @@ x86_64_v3-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -877,6 +670,9 @@ x86_64_v3-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -893,7 +689,7 @@ x86_64_v3-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -910,12 +706,12 @@ x86_64_v4-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -924,6 +720,9 @@ x86_64_v4-unknown-linux-gnu:
   target_cflags:
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   needs:
@@ -940,7 +739,7 @@ x86_64_v4-unknown-linux-gnu:
     - m4
     - mpdecimal
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -957,12 +756,12 @@ x86_64-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -970,6 +769,9 @@ x86_64-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -985,7 +787,7 @@ x86_64-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1001,12 +803,12 @@ x86_64_v2-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -1015,6 +817,9 @@ x86_64_v2-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -1030,7 +835,7 @@ x86_64_v2-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1046,12 +851,12 @@ x86_64_v3-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -1060,6 +865,9 @@ x86_64_v3-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -1075,7 +883,7 @@ x86_64_v3-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1091,12 +899,12 @@ x86_64_v4-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -1105,6 +913,9 @@ x86_64_v4-unknown-linux-musl:
   target_cflags:
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -1120,7 +931,7 @@ x86_64_v4-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl
@@ -1136,13 +947,14 @@ aarch64-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
     - linux_aarch64
+    - macos_arm64
   pythons_supported:
-    - '3.9'
     - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
     - '3.14'
+    - '3.15'
   needs_toolchain: true
   docker_image_suffix: .debian9
   needs_toolchain: true
@@ -1152,6 +964,9 @@ aarch64-unknown-linux-musl:
   target_cxx: clang++
   target_cflags:
     - '-fvisibility=hidden'
+    # Enable frame pointers
+    - '-fno-omit-frame-pointer'
+    - '-mno-omit-leaf-frame-pointer'
   needs:
     - autoconf
     - bdb
@@ -1167,7 +982,7 @@ aarch64-unknown-linux-musl:
     - mpdecimal
     - musl
     - ncurses
-    - openssl-3.0
+    - openssl-3.5
     - patchelf
     - sqlite
     - tcl

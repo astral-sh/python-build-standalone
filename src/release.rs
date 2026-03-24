@@ -13,11 +13,11 @@ use std::{
 use url::Url;
 use {
     crate::json::parse_python_json,
-    anyhow::{anyhow, Result},
+    anyhow::{Result, anyhow},
     once_cell::sync::Lazy,
     pep440_rs::VersionSpecifier,
     std::{
-        collections::BTreeMap,
+        collections::{BTreeMap, BTreeSet},
         io::{BufRead, Read, Write},
         path::{Path, PathBuf},
     },
@@ -29,6 +29,8 @@ pub struct TripleRelease {
     pub suffixes: Vec<&'static str>,
     /// Build suffix to use for the `install_only` artifact.
     pub install_only_suffix: &'static str,
+    /// Build suffix to use for the freethreaded `install_only` artifact.
+    pub freethreaded_install_only_suffix: &'static str,
     /// Minimum Python version this triple is released for.
     pub python_version_requirement: Option<VersionSpecifier>,
     /// Additional build suffixes to release conditional on the Python version.
@@ -84,6 +86,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: macos_suffixes.clone(),
             install_only_suffix: "pgo+lto",
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13.0rc0").unwrap(),
@@ -96,6 +99,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: macos_suffixes,
             install_only_suffix: "pgo+lto",
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13.0rc0").unwrap(),
@@ -110,6 +114,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
+            freethreaded_install_only_suffix: "freethreaded+pgo",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -122,6 +127,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
+            freethreaded_install_only_suffix: "freethreaded+pgo",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -134,6 +140,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["pgo"],
             install_only_suffix: "pgo",
+            freethreaded_install_only_suffix: "freethreaded+pgo",
             python_version_requirement: Some(VersionSpecifier::from_str(">=3.11").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -170,6 +177,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),
             install_only_suffix: "pgo+lto",
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -183,7 +191,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
@@ -196,7 +205,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
@@ -209,7 +219,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
@@ -222,7 +233,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
@@ -235,7 +247,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_nopgo.clone(),
             install_only_suffix: "lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_nopgo_freethreaded.clone(),
@@ -248,6 +261,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),
             install_only_suffix: "pgo+lto",
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -260,7 +274,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),
             install_only_suffix: "pgo+lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
@@ -272,7 +287,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),
             install_only_suffix: "pgo+lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
@@ -284,7 +300,8 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),
             install_only_suffix: "pgo+lto",
-            python_version_requirement: Some(VersionSpecifier::from_str(">=3.9").unwrap()),
+            freethreaded_install_only_suffix: "freethreaded+pgo+lto",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.10").unwrap()),
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
                 suffixes: linux_suffixes_pgo_freethreaded.clone(),
@@ -296,6 +313,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
+            freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -308,6 +326,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
+            freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -320,6 +339,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
+            freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -332,6 +352,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
+            freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -344,6 +365,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         TripleRelease {
             suffixes: vec!["debug", "lto", "noopt"],
             install_only_suffix: "lto",
+            freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,
             conditional_suffixes: vec![ConditionalSuffixes {
                 python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
@@ -354,6 +376,77 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
 
     h
 });
+
+/// Build a mapping from local artifact filenames (as found in the dist directory after
+/// `fetch-release-distributions`) to their corresponding GitHub Release asset names.
+///
+/// Both the source and destination names are derived from the same set of build artifacts;
+/// the difference is that GitHub Release names embed the release tag and use a normalised
+/// suffix (`-full`, no datetime component), while the local artifact names embed the build
+/// datetime and no tag.
+///
+/// Example:
+/// * source: `cpython-3.12.4-x86_64-unknown-linux-gnu-pgo+lto-20240722T0909.tar.zst`
+/// * dest:   `cpython-3.12.4+20240722-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst`
+pub fn build_wanted_filenames(
+    // `filenames` must already be filtered to entries that contain `datetime` and start with `cpython-`.
+    filenames: &BTreeSet<String>,
+    datetime: &str,
+    tag: &str,
+) -> Result<BTreeMap<String, String>> {
+    let mut python_versions = BTreeSet::new();
+    for filename in filenames {
+        let parts = filename.split('-').collect::<Vec<_>>();
+        python_versions.insert(parts[1].to_string());
+    }
+
+    let mut wanted_filenames = BTreeMap::new();
+    for version in &python_versions {
+        for (triple, release) in RELEASE_TRIPLES.iter() {
+            let python_version = pep440_rs::Version::from_str(version)?;
+            if let Some(req) = &release.python_version_requirement {
+                if !req.contains(&python_version) {
+                    continue;
+                }
+            }
+
+            for suffix in release.suffixes(Some(&python_version)) {
+                wanted_filenames.insert(
+                    format!("cpython-{version}-{triple}-{suffix}-{datetime}.tar.zst"),
+                    format!("cpython-{version}+{tag}-{triple}-{suffix}-full.tar.zst"),
+                );
+            }
+
+            wanted_filenames.insert(
+                format!("cpython-{version}-{triple}-install_only-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only.tar.gz"),
+            );
+
+            wanted_filenames.insert(
+                format!("cpython-{version}-{triple}-install_only_stripped-{datetime}.tar.gz"),
+                format!("cpython-{version}+{tag}-{triple}-install_only_stripped.tar.gz"),
+            );
+
+            // Free-threading only available for Python 3.13+
+            let freethreaded_conditional = VersionSpecifier::from_str(">=3.13.0rc0").unwrap();
+            if freethreaded_conditional.contains(&python_version) {
+                wanted_filenames.insert(
+                    format!(
+                        "cpython-{version}-{triple}-freethreaded-install_only-{datetime}.tar.gz"
+                    ),
+                    format!("cpython-{version}+{tag}-{triple}-freethreaded-install_only.tar.gz"),
+                );
+
+                wanted_filenames.insert(
+                    format!("cpython-{version}-{triple}-freethreaded-install_only_stripped-{datetime}.tar.gz"),
+                    format!("cpython-{version}+{tag}-{triple}-freethreaded-install_only_stripped.tar.gz"),
+                );
+            }
+        }
+    }
+
+    Ok(wanted_filenames)
+}
 
 /// Convert a .tar.zst archive to an install-only .tar.gz archive.
 pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Result<W> {
@@ -511,8 +604,12 @@ pub fn convert_to_stripped<W: Write>(
                 | FileKind::Pe32
                 | FileKind::Pe64)
         ) {
-            data = llvm_strip(&data, llvm_dir)
-                .with_context(|| format!("failed to strip {}", path.display()))?;
+            // Skip stripping MSVC runtime DLLs
+            let filename = path.file_name().and_then(|n| n.to_str());
+            if !matches!(filename, Some("vcruntime140.dll" | "vcruntime140_1.dll")) {
+                data = llvm_strip(&data, llvm_dir)
+                    .with_context(|| format!("failed to strip {}", path.display()))?;
+            }
         }
 
         let mut header = entry.header().clone();
@@ -546,8 +643,18 @@ pub fn produce_install_only(tar_zst_path: &Path) -> Result<PathBuf> {
         .map(|x| x.to_string())
         .collect::<Vec<_>>();
     let parts_len = name_parts.len();
+    let flavor_idx = parts_len - 2;
 
-    name_parts[parts_len - 2] = "install_only".to_string();
+    if name_parts[flavor_idx].contains("freethreaded") {
+        name_parts
+            .splice(
+                flavor_idx..flavor_idx + 1,
+                ["freethreaded".to_string(), "install_only".to_string()],
+            )
+            .for_each(drop);
+    } else {
+        name_parts[flavor_idx] = "install_only".to_string();
+    }
 
     let install_only_name = name_parts.join("-");
     let install_only_name = install_only_name.replace(".tar.zst", ".tar.gz");
@@ -610,14 +717,14 @@ pub fn produce_install_only_stripped(tar_gz_path: &Path, llvm_dir: &Path) -> Res
 static LLVM_URL: Lazy<Url> = Lazy::new(|| {
     if cfg!(target_os = "macos") {
         if std::env::consts::ARCH == "aarch64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-aarch64-apple-darwin.tar.zst").unwrap()
+            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-aarch64-apple-darwin.tar.zst").unwrap()
         } else if std::env::consts::ARCH == "x86_64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-x86_64-apple-darwin.tar.zst").unwrap()
+            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-x86_64-apple-darwin.tar.zst").unwrap()
         } else {
             panic!("unsupported macOS architecture");
         }
     } else if cfg!(target_os = "linux") {
-        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20250511/llvm-20.1.4+20250511-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
+        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
     } else {
         panic!("unsupported platform");
     }
@@ -628,7 +735,7 @@ static LLVM_URL: Lazy<Url> = Lazy::new(|| {
 /// Returns the path to the top-level `llvm` directory.
 pub async fn bootstrap_llvm() -> Result<PathBuf> {
     let url = &*LLVM_URL;
-    let filename = url.path_segments().unwrap().last().unwrap();
+    let filename = url.path_segments().unwrap().next_back().unwrap();
 
     let llvm_dir = Path::new("build").join("llvm");
     std::fs::create_dir_all(&llvm_dir)?;
@@ -646,7 +753,7 @@ pub async fn bootstrap_llvm() -> Result<PathBuf> {
     // Download the tarball.
     let tarball_path = temp_dir
         .path()
-        .join(url.path_segments().unwrap().last().unwrap());
+        .join(url.path_segments().unwrap().next_back().unwrap());
     let mut tarball_file = tokio::fs::File::create(&tarball_path).await?;
     let mut bytes_stream = reqwest::Client::new()
         .get(url.clone())
@@ -669,7 +776,7 @@ pub async fn bootstrap_llvm() -> Result<PathBuf> {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
         Err(err) => return Err(err).context("failed to remove existing llvm directory"),
     }
-    tokio::fs::rename(temp_dir.into_path(), &llvm_dir).await?;
+    tokio::fs::rename(temp_dir.keep(), &llvm_dir).await?;
 
     Ok(llvm_dir.join("llvm"))
 }

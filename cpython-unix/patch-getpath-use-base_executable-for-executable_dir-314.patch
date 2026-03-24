@@ -1,0 +1,14 @@
+diff --git a/Modules/getpath.py b/Modules/getpath.py
+index ceb605a75c8..164d708ffca 100644
+--- a/Modules/getpath.py
++++ b/Modules/getpath.py
+@@ -411,6 +411,9 @@ def search_up(prefix, *landmarks, test=isfile):
+                             if isfile(candidate):
+                                 base_executable = candidate
+                                 break
++                if base_executable and isfile(base_executable):
++                    # Update the executable directory to be based on the resolved base executable
++                    executable_dir = real_executable_dir = dirname(base_executable)
+             # home key found; stop iterating over lines
+             break
+ 

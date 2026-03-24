@@ -5,14 +5,14 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 export PREFIX="/tools/deps"
 
-tar -xf zstd-${ZSTD_VERSION}.tar.gz
+tar -xf "zstd-${ZSTD_VERSION}.tar.gz"
 
-pushd cpython-source-deps-zstd-${ZSTD_VERSION}/lib
+pushd "cpython-source-deps-zstd-${ZSTD_VERSION}/lib"
 
 if [ "${CC}" = "musl-clang" ]; then
     # In order to build the library with intrinsics, we need musl-clang to find
@@ -25,7 +25,7 @@ if [ "${CC}" = "musl-clang" ]; then
             if [ -e "${TOOLS_PATH}/host/include/${filename}" ]; then
                 echo "warning: ${filename} already exists"
             fi
-            cp "$h" ${TOOLS_PATH}/host/include/
+            cp "$h" "${TOOLS_PATH}/host/include/"
         else
             echo "warning: ${filename} not found (skipping)"
         fi
@@ -79,7 +79,7 @@ index 2ef33c7..078e2ee 100644
 EOF
 fi
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -DZSTD_MULTITHREAD -O3" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" make -j ${NUM_CPUS} VERBOSE=1 libzstd.a
-make -j ${NUM_CPUS} install-static DESTDIR=${ROOT}/out
-make -j ${NUM_CPUS} install-includes DESTDIR=${ROOT}/out
-MT=1 make -j ${NUM_CPUS} install-pc DESTDIR=${ROOT}/out
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -DZSTD_MULTITHREAD -O3" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" make -j "${NUM_CPUS}" VERBOSE=1 libzstd.a
+make -j "${NUM_CPUS}" install-static DESTDIR="${ROOT}/out"
+make -j "${NUM_CPUS}" install-includes DESTDIR="${ROOT}/out"
+MT=1 make -j "${NUM_CPUS}" install-pc DESTDIR="${ROOT}/out"

@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf libffi-${LIBFFI_VERSION}.tar.gz
+tar -xf "libffi-${LIBFFI_VERSION}.tar.gz"
 
-pushd libffi-${LIBFFI_VERSION}
+pushd "libffi-${LIBFFI_VERSION}"
 
 # Patches needed to fix compilation on aarch64. Will presumably be in libffi
 # 3.4.7 or 3.5.
@@ -384,11 +384,11 @@ if [ "${APPLE_MIN_DEPLOYMENT_TARGET}" = "10.9" ]; then
 fi
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     --disable-shared \
     ${EXTRA_CONFIGURE}
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"

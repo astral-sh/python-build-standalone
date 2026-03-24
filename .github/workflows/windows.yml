@@ -63,8 +63,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Python
-        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        with:
+          enable-cache: false
 
       - name: Get pull request labels
         id: get-labels
@@ -134,10 +136,10 @@ jobs:
         with:
           packages: autoconf automake libtool
 
-      - name: Install Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
         with:
-          python-version: "3.12"
+          enable-cache: false
 
       - name: Download pythonbuild Executable
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
@@ -148,21 +150,26 @@ jobs:
       # don't get compiled properly.
       - name: Bootstrap Python environment
         run: |
-          py.exe -3.12 build-windows.py --help
+          uv run build.py --help
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
-          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          py.exe -3.12 build-windows.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS%
+          IF "%MATRIX_VS_VERSION%"=="2026" (
+            call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          ) ELSE (
+            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
+          )
+          uv run build.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
         env:
           MATRIX_VCVARS: ${{ matrix.vcvars }}
           MATRIX_PYTHON: ${{ matrix.python }}
           MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+          MATRIX_VS_VERSION: ${{ matrix.vs_version }}
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           subject-path: dist/*

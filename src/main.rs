@@ -6,11 +6,12 @@ mod github;
 mod json;
 mod macho;
 mod release;
+mod s3;
 mod validation;
 
 use {
-    anyhow::{anyhow, Context, Result},
-    clap::{value_parser, Arg, ArgAction, Command},
+    anyhow::{Context, Result, anyhow},
+    clap::{Arg, ArgAction, Command, value_parser},
     std::{
         io::Read,
         path::{Path, PathBuf},
@@ -170,6 +171,59 @@ fn main_impl() -> Result<()> {
     );
 
     let app = app.subcommand(
+        Command::new("upload-mirror-distributions")
+            .about("Upload release distributions to an S3-compatible mirror bucket")
+            .arg(
+                Arg::new("dist")
+                    .long("dist")
+                    .action(ArgAction::Set)
+                    .required(true)
+                    .value_parser(value_parser!(PathBuf))
+                    .help("Directory with release artifacts"),
+            )
+            .arg(
+                Arg::new("datetime")
+                    .long("datetime")
+                    .action(ArgAction::Set)
+                    .required(true)
+                    .help("Date/time tag associated with builds"),
+            )
+            .arg(
+                Arg::new("tag")
+                    .long("tag")
+                    .action(ArgAction::Set)
+                    .required(true)
+                    .help("Release tag"),
+            )
+            .arg(
+                Arg::new("bucket")
+                    .long("bucket")
+                    .action(ArgAction::Set)
+                    .required(true)
+                    .help("S3 bucket name"),
+            )
+            .arg(
+                Arg::new("prefix")
+                    .long("prefix")
+                    .action(ArgAction::Set)
+                    .default_value("")
+                    .help("Key prefix within the bucket (e.g. 'github/python-build-standalone/releases/download/20250317/')"),
+            )
+            .arg(
+                Arg::new("dry_run")
+                    .short('n')
+                    .action(ArgAction::SetTrue)
+                    .help("Dry run mode; do not actually upload"),
+            )
+            .arg(
+                Arg::new("ignore_missing")
+                    .long("ignore-missing")
+                    .action(ArgAction::SetTrue)
+                    .help("Continue even if there are missing artifacts"),
+            ),
+    );
+
+    let app = app.subcommand(
         Command::new("validate-distribution")
             .about("Ensure a distribution archive conforms to standards")
             .arg(
@@ -231,16 +285,31 @@ fn main_impl() -> Result<()> {
                 .unwrap()
                 .block_on(github::command_upload_release_distributions(args))
         }
+        Some(("upload-mirror-distributions", args)) => {
+            tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap()
+                .block_on(s3::command_upload_mirror_distributions(args))
+        }
         Some(("validate-distribution", args)) => validation::command_validate_distribution(args),
         _ => Err(anyhow!("invalid sub-command")),
     }
 }
 
 fn main() {
+    // rustls 0.23+ requires an explicit crypto provider when multiple backends are
+    // compiled into the same binary. Both ring (via reqwest) and aws-lc-rs (via
+    // aws-sdk-s3) are present here, so we must pick one before any TLS connection
+    // is attempted.
+    rustls::crypto::aws_lc_rs::default_provider()
+        .install_default()
+        .expect("failed to install rustls crypto provider");
+
     let exit_code = match main_impl() {
         Ok(()) => 0,
         Err(err) => {
-            eprintln!("Error: {:?}", err);
+            eprintln!("Error: {err:?}");
             1
         }
     };

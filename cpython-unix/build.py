@@ -64,7 +64,7 @@ MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 
-def add_target_env(env, build_platform, target_triple, build_env):
+def add_target_env(env, build_platform, target_triple, build_env, build_options):
     add_env_common(env)
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
@@ -83,7 +83,11 @@ def add_target_env(env, build_platform, target_triple, build_env):
     env["PYBUILD_PLATFORM"] = build_platform
     env["TOOLS_PATH"] = build_env.tools_path
 
-    extra_target_cflags = list(settings.get("target_cflags", []))
+    if "debug" in build_options:
+        extra_target_cflags = ["-O0"]
+    else:
+        extra_target_cflags = ["-O3"]
+    extra_target_cflags += list(settings.get("target_cflags", []))
     extra_target_ldflags = list(settings.get("target_ldflags", []))
     extra_host_cflags = []
     extra_host_ldflags = []
@@ -96,7 +100,8 @@ def add_target_env(env, build_platform, target_triple, build_env):
     if build_platform.startswith("linux_"):
         machine = platform.machine()
 
-        if machine == "aarch64":
+        # arm64 allows building for Linux on a macOS host using Docker
+        if machine == "aarch64" or machine == "arm64":
             env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
             env["TARGET_TRIPLE"] = target_triple
         elif machine == "x86_64":
@@ -272,9 +277,10 @@ def simple_build(
         if "static" in build_options:
             env["STATIC"] = 1
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
-        if entry in ("openssl-1.1", "openssl-3.0"):
+        # for OpenSSL, set the OPENSSL_TARGET environment variable
+        if entry.startswith("openssl-"):
             settings = get_targets(TARGETS_CONFIG)[target_triple]
             env["OPENSSL_TARGET"] = settings["openssl_target"]
 
@@ -378,7 +384,7 @@ def build_libedit(
             "LIBEDIT_VERSION": DOWNLOADS["libedit"]["version"],
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-libedit.sh", environment=env)
         build_env.get_tools_archive(dest_archive, "deps")
@@ -392,13 +398,23 @@ def build_cpython_host(
     target_triple: str,
     build_options: list[str],
     dest_archive,
+    python_source=None,
+    entry_name=None,
 ):
     """Build binutils in the Docker image."""
-    archive = download_entry(entry, DOWNLOADS_PATH)
+    if not python_source:
+        python_version = entry["version"]
+        archive = download_entry(entry_name, DOWNLOADS_PATH)
+    else:
+        python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
+        print("Compressing %s to %s" % (python_source, archive))
+        with archive.open("wb") as fh:
+            create_tar_from_directory(
+                fh, python_source, path_prefix="Python-%s" % python_version
+            )
 
     with build_environment(client, image) as build_env:
-        python_version = DOWNLOADS[entry]["version"]
-
         build_env.install_toolchain(
             BUILD,
             host_platform,
@@ -412,8 +428,6 @@ def build_cpython_host(
 
         support = {
             "build-cpython-host.sh",
-            "patch-disable-multiarch.patch",
-            "patch-disable-multiarch-13.patch",
         }
         for s in sorted(support):
             build_env.copy_file(SUPPORT / s)
@@ -429,11 +443,11 @@ def build_cpython_host(
             "PYTHON_VERSION": python_version,
         }
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -472,11 +486,7 @@ def python_build_info(
         arch = platform.removeprefix("linux_")
 
         bi["core"]["static_lib"] = (
-            "install/lib/python{version}/config-{version}{binary_suffix}-{arch}-linux-gnu/libpython{version}{binary_suffix}.a".format(
-                version=version,
-                binary_suffix=binary_suffix,
-                arch=arch,
-            )
+            f"install/lib/python{version}/config-{version}{binary_suffix}-{arch}-linux-gnu/libpython{version}{binary_suffix}.a"
         )
 
         if not static:
@@ -497,9 +507,7 @@ def python_build_info(
             object_file_format = "elf"
     elif platform.startswith("macos_"):
         bi["core"]["static_lib"] = (
-            "install/lib/python{version}/config-{version}{binary_suffix}-darwin/libpython{version}{binary_suffix}.a".format(
-                version=version, binary_suffix=binary_suffix
-            )
+            f"install/lib/python{version}/config-{version}{binary_suffix}-darwin/libpython{version}{binary_suffix}.a"
         )
         bi["core"]["shared_lib"] = "install/lib/libpython%s%s.dylib" % (
             version,
@@ -705,12 +713,15 @@ def build_cpython(
     """Build CPython in a Docker image'"""
     parsed_build_options = set(build_options.split("+"))
     entry_name = "cpython-%s" % version
-    entry = DOWNLOADS[entry_name]
     if not python_source:
+        entry = DOWNLOADS[entry_name]
         python_version = entry["version"]
         python_archive = download_entry(entry_name, DOWNLOADS_PATH)
     else:
+        entry = DOWNLOADS.get(entry_name, {})
         python_version = os.environ["PYBUILD_PYTHON_VERSION"]
+        entry.setdefault("licenses", ["Python-2.0", "CNRI-Python"])
+        entry.setdefault("python_tag", "cp" + "".join(version.split(".")))
         python_archive = DOWNLOADS_PATH / ("Python-%s.tar.xz" % python_version)
         print("Compressing %s to %s" % (python_source, python_archive))
         with python_archive.open("wb") as fh:
@@ -747,7 +758,7 @@ def build_cpython(
                 static="static" in build_options,
             )
 
-        packages = target_needs(TARGETS_CONFIG, target_triple, python_version)
+        packages = target_needs(TARGETS_CONFIG, target_triple)
         # Toolchain packages are handled specially.
         packages.discard("binutils")
         packages.discard("musl")
@@ -803,7 +814,7 @@ def build_cpython(
 
         # Set environment variables allowing convenient testing for Python
         # version ranges.
-        for v in ("3.9", "3.10", "3.11", "3.12", "3.13", "3.14"):
+        for v in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
             normal_version = v.replace(".", "_")
 
             if meets_python_minimum_version(python_version, v):
@@ -823,7 +834,16 @@ def build_cpython(
         if "static" in parsed_build_options:
             env["CPYTHON_STATIC"] = "1"
 
-        add_target_env(env, host_platform, target_triple, build_env)
+        # Extract LLVM major version for JIT configuration
+        llvm_full_version = DOWNLOADS[clang_toolchain(host_platform, target_triple)][
+            "version"
+        ]
+        if "+" in llvm_full_version:
+            llvm_full_version = llvm_full_version.split("+")[0]
+        # Get major version (e.g., "21" from "21.1.4")
+        env["LLVM_VERSION"] = llvm_full_version.split(".")[0]
+
+        add_target_env(env, host_platform, target_triple, build_env, build_options)
 
         build_env.run("build-cpython.sh", environment=env)
 
@@ -902,11 +922,9 @@ def build_cpython(
 
         python_info["tcl_library_path"] = "install/lib"
         python_info["tcl_library_paths"] = [
-            "itcl4.2.4",
-            "tcl8",
-            "tcl8.6",
-            "thread2.8.7",
-            "tk8.6",
+            "itcl4.3.5",
+            "thread3.0.4",
+            "tk9.0",
         ]
 
         if "-apple" in target_triple:
@@ -1023,6 +1041,18 @@ def main():
         log_name = "%s-%s" % (action, host_platform)
     elif args.action.startswith("cpython-") and args.action.endswith("-host"):
         log_name = args.action
+    elif action.startswith("cpython-"):
+        version = (
+            os.environ["PYBUILD_PYTHON_VERSION"]
+            if python_source
+            else DOWNLOADS[action]["version"]
+        )
+        log_name = "%s-%s-%s-%s" % (
+            action,
+            version,
+            target_triple,
+            build_options,
+        )
     else:
         entry = DOWNLOADS[action]
         log_name = "%s-%s-%s-%s" % (
@@ -1112,8 +1142,7 @@ def main():
             "m4",
             "mpdecimal",
             "ncurses",
-            "openssl-1.1",
-            "openssl-3.0",
+            "openssl-3.5",
             "patchelf",
             "sqlite",
             "tcl",
@@ -1228,23 +1257,30 @@ def main():
             )
 
         elif action.startswith("cpython-") and action.endswith("-host"):
+            entry_name = action[:-5]
+            if not python_source:
+                entry = DOWNLOADS[entry_name]
+            else:
+                entry = DOWNLOADS.get(entry_name, {})
             build_cpython_host(
                 client,
                 get_image(client, ROOT, BUILD, docker_image, host_platform),
-                action[:-5],
+                entry,
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
                 dest_archive=dest_archive,
+                python_source=python_source,
+                entry_name=entry_name,
             )
 
         elif action in (
-            "cpython-3.9",
             "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         ):
             build_cpython(
                 settings,

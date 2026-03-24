@@ -2,7 +2,6 @@
 
 ruff
 mypy
-PyGithub
 types-jsonschema
 types-PyYAML
 types-jinja2

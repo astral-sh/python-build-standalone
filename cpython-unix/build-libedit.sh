@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf libedit-${LIBEDIT_VERSION}.tar.gz
+tar -xf "libedit-${LIBEDIT_VERSION}.tar.gz"
 
-pushd libedit-${LIBEDIT_VERSION}
+pushd "libedit-${LIBEDIT_VERSION}"
 
 # libedit's configure isn't smart enough to look for ncursesw. So we teach it
 # to. Ideally we would edit configure.ac and run autoconf. But Jessie's autoconf
@@ -118,17 +118,17 @@ fi
 
 CFLAGS="${cflags}" CPPFLAGS="${cflags}" LDFLAGS="${ldflags}" \
     ./configure \
-        --build=${BUILD_TRIPLE} \
-        --host=${TARGET_TRIPLE} \
+        --build="${BUILD_TRIPLE}" \
+        --host="${TARGET_TRIPLE}" \
         --prefix=/tools/deps \
         --disable-shared
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"
 
 # Alias readline/{history.h, readline.h} for readline compatibility.
-if [ -e ${ROOT}/out/tools/deps/include ]; then
-    mkdir ${ROOT}/out/tools/deps/include/readline
-    ln -s ../editline/readline.h ${ROOT}/out/tools/deps/include/readline/readline.h
-    ln -s ../editline/readline.h ${ROOT}/out/tools/deps/include/readline/history.h
+if [ -e "${ROOT}/out/tools/deps/include" ]; then
+    mkdir "${ROOT}/out/tools/deps/include/readline"
+    ln -s ../editline/readline.h "${ROOT}/out/tools/deps/include/readline/readline.h"
+    ln -s ../editline/readline.h "${ROOT}/out/tools/deps/include/readline/history.h"
 fi

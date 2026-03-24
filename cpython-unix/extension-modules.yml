@@ -152,11 +152,6 @@ _ctypes_test:
     - m
 
 _curses:
-  # ncurses not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - _cursesmodule.c
   defines:
@@ -178,11 +173,6 @@ _curses:
         - .*-apple-darwin
 
 _curses_panel:
-  # ncurses not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - _curses_panel.c
   defines:
@@ -246,6 +236,8 @@ _dbm:
     - name: db
       targets:
         - .*-unknown-linux-.*
+  # Allow people who want to avoid the Sleepycat license to remove _dbm entirely.
+  build-mode: shared
 
 _decimal:
   sources:
@@ -261,6 +253,7 @@ _decimal:
     - define: CONFIG_64=1
       targets:
         - aarch64-.*
+        - loongarch64-unknown-linux.*
         - ppc64le-unknown-linux.*
         - riscv64-unknown-linux.*
         - s390x-unknown-linux-.*
@@ -369,6 +362,11 @@ _lzma:
   links:
     - lzma
 
+_math_integer:
+  minimum-python-version: "3.15"
+  sources:
+   - mathintegermodule.c
+
 _md5:
   sources:
     - md5module.c
@@ -404,11 +402,6 @@ _opcode:
 _operator:
   setup-enabled: true
 
-_peg_parser:
-  minimum-python-version: "3.9"
-  maximum-python-version: "3.9"
-  setup-enabled: true
-
 _pickle:
   sources:
     - _pickle.c
@@ -438,14 +431,27 @@ _random:
 
 _remote_debugging:
   minimum-python-version: "3.14"
-  sources:
-    - _remote_debugging_module.c
+  sources-conditional:
+    - sources:
+      - _remote_debugging_module.c
+      maximum-python-version: "3.14"
+    - sources:
+      - _remote_debugging/asyncio.c
+      - _remote_debugging/binary_io_reader.c
+      - _remote_debugging/binary_io_writer.c
+      - _remote_debugging/code_objects.c
+      - _remote_debugging/frame_cache.c
+      - _remote_debugging/frames.c
+      - _remote_debugging/module.c
+      - _remote_debugging/object_reading.c
+      - _remote_debugging/subprocess.c
+      - _remote_debugging/threads.c
+      minimum-python-version: "3.15"
 
 _scproxy:
   # _scproxy is Apple OS only.
   # APIs required by _scproxy not available on iOS.
   disabled-targets:
-    - .*-apple-ios
     - .*-unknown-linux-.*
   sources:
     - _scproxy.c
@@ -534,7 +540,7 @@ _sqlite3:
   includes:
     - Modules/_sqlite
   defines-conditional:
-    # Require dynamic binaries to load extensions. Cannot load on iOS.
+    # Require dynamic binaries to load extensions.
     # 3.11+ uses opt in. <3.11 uses opt out.
     - define: PY_SQLITE_ENABLE_LOAD_EXTENSION=1
       targets:
@@ -543,11 +549,6 @@ _sqlite3:
         # linked. But this would break verification code. So enabled for
         # backwards compatibility.
         - .*-unknown-linux-.*
-    - define: SQLITE_OMIT_LOAD_EXTENSION=1
-      targets:
-        - .*-ios
-    - define: "MODULE_NAME=\\\"sqlite3\\\""
-      maximum-python-version: "3.9"
   links:
     - sqlite3
 
@@ -605,7 +606,7 @@ _sysconfig:
     - _sysconfig.c
 
 _testbuffer:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testbuffer.c
 
@@ -625,7 +626,7 @@ _testexternalinspection:
     - _testexternalinspection.c
 
 _testimportmultiple:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testimportmultiple.c
 
@@ -651,9 +652,13 @@ _testinternalcapi:
       minimum-python-version: "3.13"
     - source: _testinternalcapi/complex.c
       minimum-python-version: "3.14"
+    - source: _testinternalcapi/interpreter.c
+      minimum-python-version: "3.15"
+    - source: _testinternalcapi/tuple.c
+      minimum-python-version: "3.15"
 
 _testmultiphase:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _testmultiphase.c
 
@@ -668,9 +673,6 @@ _thread:
     - .*
 
 _tkinter:
-  # tk not available on iOS.
-  disabled-targets:
-    - .*-apple-ios
   sources:
     - _tkinter.c
     - tkappinit.c
@@ -680,8 +682,8 @@ _tkinter:
     - include/X11
   build-mode: shared
   links:
-    - tcl8.6
-    - tk8.6
+    - tcl9.0
+    - tcl9tk9.0
   links-conditional:
     - name: X11
       targets:
@@ -746,13 +748,13 @@ _xxinterpchannels:
     - _xxinterpchannelsmodule.c
 
 _xxsubinterpreters:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   maximum-python-version: '3.12'
   sources:
     - _xxsubinterpretersmodule.c
 
 _xxtestfuzz:
-  minimum-python-version: '3.9'
+  minimum-python-version: '3.10'
   sources:
     - _xxtestfuzz/_xxtestfuzz.c
     - _xxtestfuzz/fuzzer.c
@@ -768,7 +770,7 @@ _zstd:
     - zstd
 
 _zoneinfo:
-  minimum-python-version: "3.9"
+  minimum-python-version: "3.10"
   sources:
     - _zoneinfo.c
 
@@ -874,11 +876,6 @@ ossaudiodev:
   sources:
     - ossaudiodev.c
 
-parser:
-  maximum-python-version: "3.9"
-  sources:
-    - parsermodule.c
-
 posix:
   setup-enabled: true
   required-targets:
@@ -895,10 +892,6 @@ pyexpat:
     - expat
 
 readline:
-  disabled-targets:
-    - .*-apple-ios
-    - .*-apple-tvos
-    - .*-apple-watchos
   sources:
     - readline.c
   defines:

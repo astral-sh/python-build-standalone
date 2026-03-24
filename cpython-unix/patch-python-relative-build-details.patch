@@ -1,0 +1,53 @@
+From 5bb9be38eae4afe6246691a7affe0c7681f45ca2 Mon Sep 17 00:00:00 2001
+From: Geoffrey Thomas <geofft@ldpreload.com>
+Date: Mon, 6 Oct 2025 18:07:47 -0400
+Subject: [PATCH 1/1] Makefile: Generate relative paths for build-details.json
+
+---
+ Makefile.pre.in                       | 2 +-
+ Tools/build/generate-build-details.py | 5 ++++-
+ 2 files changed, 5 insertions(+), 2 deletions(-)
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 764eef5be3e..4dbbf8ad8bc 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -1004,7 +1004,7 @@ pybuilddir.txt: $(PYTHON_FOR_BUILD_DEPS)
+ 	fi
+ 
+ build-details.json: pybuilddir.txt
+-	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py `cat pybuilddir.txt`/build-details.json
++	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py --relative-paths --config-file-path $(LIBDEST)/build-details.json `cat pybuilddir.txt`/build-details.json
+ 
+ # Build static library
+ $(LIBRARY): $(LIBRARY_OBJS)
+diff --git a/Tools/build/generate-build-details.py b/Tools/build/generate-build-details.py
+index ed9ab2844d2..8d086ce3b32 100644
+--- a/Tools/build/generate-build-details.py
++++ b/Tools/build/generate-build-details.py
+@@ -131,11 +131,12 @@ def generate_data(schema_version: str) -> collections.defaultdict[str, Any]:
+ 
+ 
+ def make_paths_relative(data: dict[str, Any], config_path: str | None = None) -> None:
++    base_prefix = data['base_prefix']
++
+     # Make base_prefix relative to the config_path directory
+     if config_path:
+         data['base_prefix'] = relative_path(data['base_prefix'],
+                                             os.path.dirname(config_path))
+-    base_prefix = data['base_prefix']
+ 
+     # Update path values to make them relative to base_prefix
+     PATH_KEYS = (
+@@ -203,6 +204,8 @@ def main() -> None:
+     if args.relative_paths:
+         make_paths_relative(data, args.config_file_path)
+ 
++    print(f"generate-build-details debug: {sysconfig=} {sysconfig.get_platform()=}", file=sys.stderr)
++
+     json_output = json.dumps(data, indent=2)
+     with open(args.location, 'w', encoding='utf-8') as f:
+         f.write(json_output)
+-- 
+2.39.5 (Apple Git-154)
+

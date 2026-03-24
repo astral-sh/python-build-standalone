@@ -5,7 +5,7 @@ Project Status
 ==============
 
 There is support for producing CPython distributions for Windows,
-macOS, Linux, and iOS. All distributions are highly self-contained and have
+macOS, and Linux. All distributions are highly self-contained and have
 limited shared library dependencies.
 
 Planned and features include:
@@ -18,15 +18,6 @@ Planned and features include:
 
 Target Notes
 ============
-
-Non-Darwin Apple Targets
-------------------------
-
-Apple targets that aren't Darwin/macOS (iOS, tvOS, watchOS, and corresponding
-simulators) are considered alpha quality. The builds may or may not work. The
-builds haven't been widely tested.
-
-Only Python 3.9 is currently supported.
 
 Non-x86 Linux Targets
 ---------------------

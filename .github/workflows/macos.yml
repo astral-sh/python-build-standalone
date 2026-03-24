@@ -63,8 +63,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Python
-        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        with:
+          enable-cache: false
 
       - name: Get pull request labels
         id: get-labels
@@ -128,10 +130,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Install Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+      - name: Set up uv
+        uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
         with:
-          python-version: "3.11"
+          enable-cache: false
 
       - name: Download pythonbuild
         uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
@@ -142,23 +144,14 @@ jobs:
       - name: Build
         if: ${{ ! matrix.dry-run }}
         run: |
-          if [ "${MATRIX_TARGET_TRIPLE}" = "aarch64-apple-darwin" ]; then
-            export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
-          elif [ "${MATRIX_TARGET_TRIPLE}" = "x86_64-apple-darwin" ]; then
-            export APPLE_SDK_PATH=/Applications/Xcode_15.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX14.2.sdk
-          else
-            echo "unhandled target triple: ${MATRIX_TARGET_TRIPLE}"
-            exit 1
-          fi
-
-          ./build-macos.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS}
+          ./build.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS}
         env:
           MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
           MATRIX_PYTHON: ${{ matrix.python }}
           MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
 
       - name: Generate attestations
-        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3.0.0
         if: ${{ github.ref == 'refs/heads/main' }}
         with:
           subject-path: dist/*
@@ -184,4 +177,10 @@ jobs:
         run: |
           chmod +x build/pythonbuild
 
-          build/pythonbuild validate-distribution --macos-sdks-path macosx-sdks --run dist/*.tar.zst
+          if [ "${MATRIX_RUN}" == "true" ]; then
+            EXTRA_ARGS="--run"
+          fi
+
+          build/pythonbuild validate-distribution --macos-sdks-path macosx-sdks ${EXTRA_ARGS} dist/*.tar.zst
+        env:
+          MATRIX_RUN: ${{ matrix.run }}

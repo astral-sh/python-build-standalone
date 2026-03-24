@@ -1,0 +1,54 @@
+Commit ID: 909b38686377da571cede31fdeb1904adbf63976
+Change ID: sustussslnyzvxnlryomvvsnqlmznlto
+Author   : Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 10:11:11)
+Committer: Gregory Szorc <gregory.szorc@gmail.com> (2026-03-21 15:34:47)
+
+    Print PGO statistics
+
+    This can be useful for debugging PGO behavior.
+
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index fa99dd86c4..53044b22a2 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -47,9 +47,11 @@
+ GITBRANCH=	@GITBRANCH@
+ PGO_PROF_GEN_FLAG=@PGO_PROF_GEN_FLAG@
+ PGO_PROF_USE_FLAG=@PGO_PROF_USE_FLAG@
++LLVM_PROFDATA=@LLVM_PROFDATA@
+ LLVM_PROF_MERGER=@LLVM_PROF_MERGER@
+ LLVM_PROF_FILE=@LLVM_PROF_FILE@
+ LLVM_PROF_ERR=@LLVM_PROF_ERR@
++LLVM_MERGED_DATA_FILE=@LLVM_MERGED_DATA_FILE@
+ DTRACE=         @DTRACE@
+ DFLAGS=         @DFLAGS@
+ DTRACE_HEADERS= @DTRACE_HEADERS@
+@@ -508,6 +510,8 @@
+ 	# Next, run the profile task to generate the profile information.
+ 	$(MAKE) run_profile_task
+ 	$(MAKE) build_all_merge_profile
++	# Show details of profile coverage to aid PGO debugging.
++	$(LLVM_PROFDATA) show --detailed-summary --topn=500 $(LLVM_MERGED_DATA_FILE)
+ 	# Remove profile generation binary since we are done with it.
+ 	$(MAKE) clean-retain-profile
+ 	# This is an expensive target to build and it does not have proper
+diff --git a/configure.ac b/configure.ac
+index ac3be3850a..bd851bb626 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1451,6 +1451,7 @@
+ AC_SUBST(LLVM_PROF_FILE)
+ AC_SUBST(LLVM_PROF_ERR)
+ AC_SUBST(LLVM_PROFDATA)
++AC_SUBST([LLVM_MERGED_DATA_FILE])
+ AC_PATH_TOOL(LLVM_PROFDATA, llvm-profdata, '', ${llvm_path})
+ AC_SUBST(LLVM_PROF_FOUND)
+ if test -n "${LLVM_PROFDATA}" -a -x "${LLVM_PROFDATA}"
+@@ -1479,6 +1480,7 @@
+     PGO_PROF_USE_FLAG="-fprofile-instr-use=code.profclangd"
+     LLVM_PROF_MERGER="${LLVM_PROFDATA} merge -output=code.profclangd *.profclangr"
+     LLVM_PROF_FILE="LLVM_PROFILE_FILE=\"code-%p.profclangr\""
++    LLVM_MERGED_DATA_FILE=code.profclangd
+     if test $LLVM_PROF_FOUND = not-found
+     then
+       LLVM_PROF_ERR=yes

@@ -10,9 +10,9 @@ cd /build
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export CC=clang
 
-tar -xf musl-${MUSL_VERSION}.tar.gz
+tar -xf "musl-${MUSL_VERSION}.tar.gz"
 
-pushd musl-${MUSL_VERSION}
+pushd "musl-${MUSL_VERSION}"
 
 # Debian as of at least bullseye ships musl 1.2.1. musl 1.2.2
 # added reallocarray(), which gets used by at least OpenSSL.
@@ -102,7 +102,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
     --prefix=/tools/host \
     "${SHARED}"
 
-make -j `nproc`
-make -j `nproc` install DESTDIR=/build/out
+make -j "$(nproc)"
+make -j "$(nproc)" install DESTDIR=/build/out
 
 popd

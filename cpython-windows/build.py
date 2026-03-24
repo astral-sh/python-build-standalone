@@ -243,6 +243,8 @@ def find_vs_path(path, msvc_version):
         version = "[16,17)"
     elif msvc_version == "2022":
         version = "[17,18)"
+    elif msvc_version == "2026":
+        version = "[18,19)"
     else:
         raise ValueError(f"unsupported Visual Studio version: {msvc_version}")
 
@@ -467,7 +469,7 @@ def hack_props(
         raise Exception("unhandled architecture: %s" % arch)
 
     try:
-        # CPython 3.11+ builds with OpenSSL 3.0 by default.
+        # CPython 3.11+ builds with OpenSSL 3.x by default.
         static_replace_in_file(
             openssl_props,
             b"<_DLLSuffix>-3</_DLLSuffix>",
@@ -565,23 +567,70 @@ def hack_project_files(
         rb"<SqlitePatchVersion>%s</SqlitePatchVersion>" % sqlite3_version_parts[3],
     )
 
-    # Our version of the xz sources is newer than what's in cpython-source-deps
-    # and the xz sources changed the path to config.h. Hack the project file
+    # Please try to keep these in sync with cpython-unix/build-sqlite.sh
+    sqlite_build_flags = {
+        b"SQLITE_ENABLE_DBSTAT_VTAB",
+        b"SQLITE_ENABLE_FTS3",
+        b"SQLITE_ENABLE_FTS3_PARENTHESIS",
+        b"SQLITE_ENABLE_FTS4",
+        b"SQLITE_ENABLE_FTS5",
+        b"SQLITE_ENABLE_GEOPOLY",
+        b"SQLITE_ENABLE_RTREE",
+    }
+    with sqlite3_path.open("rb") as fh:
+        data = fh.read()
+    sqlite_preprocessor_regex = (
+        rb"<PreprocessorDefinitions>(SQLITE_ENABLE.*)</PreprocessorDefinitions>"
+    )
+    m = re.search(sqlite_preprocessor_regex, data)
+    if m is None:
+        raise NoSearchStringError(
+            "search string (%s) not in %s" % (sqlite_preprocessor_regex, sqlite3_path)
+        )
+    current_flags = set(m.group(1).split(b";"))
+    data = (
+        data[: m.start(1)]
+        + b";".join(sqlite_build_flags - current_flags)
+        + b";"
+        + data[m.start(1) :]
+    )
+    with sqlite3_path.open("wb") as fh:
+        fh.write(data)
+
+    # Our version of the xz sources may be newer than what's in cpython-source-deps.
+    # The source files and locations may have changed. Hack the project file
     # accordingly.
     #
-    # ... but CPython finally upgraded liblzma in 2022, so newer CPython releases
-    # already have this patch. So we're phasing it out.
+    # CPython updates xz occasionally. When these changes make it into a release
+    # these modification to the project file are not needed.
+    # The most recent change was an update to version 5.8.1:
+    # https://github.com/python/cpython/pull/141022
     try:
         liblzma_path = pcbuild_path / "liblzma.vcxproj"
         static_replace_in_file(
             liblzma_path,
+            rb"$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;",
             rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
-            rb"$(lzmaDir)windows\vs2019;$(lzmaDir)src/liblzma/common;",
         )
         static_replace_in_file(
             liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_table.c" />\r\n',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n ',
+        )
+        static_replace_in_file(
+            liblzma_path,
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
+            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />',
+        )
+        static_replace_in_file(
+            liblzma_path,
             rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
+            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
         )
     except NoSearchStringError:
         pass
@@ -699,6 +748,10 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
+    # Build tail-calling Python for 3.15+
+    if python_version.startswith("3.15") and platform == "x64":
+        args.append("/property:UseTailCallInterp=true")
+
     exec_and_log(args, str(pcbuild_path), os.environ)
 
 
@@ -717,11 +770,11 @@ def build_openssl_for_arch(
     log("extracting %s to %s" % (openssl_archive, build_root))
     extract_tar_to_directory(openssl_archive, build_root)
     log("extracting %s to %s" % (nasm_archive, build_root))
-    extract_tar_to_directory(nasm_archive, build_root)
+    extract_zip_to_directory(nasm_archive, build_root)
     log("extracting %s to %s" % (jom_archive, build_root))
     extract_zip_to_directory(jom_archive, build_root / "jom")
 
-    nasm_path = build_root / ("cpython-bin-deps-nasm-%s" % nasm_version)
+    nasm_path = build_root / ("nasm-%s" % nasm_version)
     jom_path = build_root / "jom"
 
     env = dict(os.environ)
@@ -1366,6 +1419,15 @@ def build_cpython(
             for f in fs:
                 f.result()
 
+        # Copy the config.h file used by upstream CPython for xz 5.8.1
+        # https://github.com/python/cpython-source-deps/blob/665d407bd6bc941944db2152e4b5dca388ea586e/windows/config.h
+        xz_version = DOWNLOADS["xz"]["version"]
+        xz_path = td / ("xz-%s" % xz_version)
+        config_src = SUPPORT / "xz-support" / "config.h"
+        config_dest = xz_path / "windows" / "config.h"
+        log(f"copying {config_src} to {config_dest}")
+        shutil.copyfile(config_src, config_dest)
+
         extract_tar_to_directory(libffi_archive, td)
 
         # We need all the OpenSSL library files in the same directory to appease
@@ -1439,7 +1501,8 @@ def build_cpython(
                 p for p in env["PATH"].split(";") if p != str(BUILD / "venv" / "bin")
             ]
             env["PATH"] = ";".join(paths)
-            del env["PYTHONPATH"]
+            if "PYTHONPATH" in env:
+                del env["PYTHONPATH"]
 
             env["PYTHONHOME"] = str(cpython_source_path)
 
@@ -1796,19 +1859,19 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--vs",
-        choices={"2019", "2022"},
+        choices={"2019", "2022", "2026"},
         default="2022",
         help="Visual Studio version to use",
     )
     parser.add_argument(
         "--python",
         choices={
-            "cpython-3.9",
             "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",
             "cpython-3.14",
+            "cpython-3.15",
         },
         default="cpython-3.11",
         help="Python distribution to build",
@@ -1854,10 +1917,10 @@ def main() -> None:
         # CPython 3.11+ have native support for OpenSSL 3.x. We anticipate this
         # will change in a future minor release once OpenSSL 1.1 goes out of support.
         # But who knows.
-        if args.python in ("cpython-3.9", "cpython-3.10"):
+        if args.python == "cpython-3.10":
             openssl_entry = "openssl-1.1"
         else:
-            openssl_entry = "openssl-3.0"
+            openssl_entry = "openssl-3.5"
 
         openssl_archive = BUILD / (
             "%s-%s-%s.tar" % (openssl_entry, target_triple, build_options)
@@ -1901,6 +1964,7 @@ def main() -> None:
             release_tag = release_tag_from_git()
 
         # Create, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
+        DIST.mkdir(exist_ok=True)
         compress_python_archive(
             tar_path,
             DIST,

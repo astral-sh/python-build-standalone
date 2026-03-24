@@ -53,7 +53,7 @@ the *terminfo database* in an uncommon location, you can set the
 
 For instance, you may need to do something like:
 
-   $ TERMINFO_DIRS=/uncommon/place/terminfo install/bin/python3.9
+   $ TERMINFO_DIRS=/uncommon/place/terminfo install/bin/python3.10
 
 If you are running on a relatively standard OS and this does not work
 out of the box, please file a bug report so we can add the location of
@@ -106,7 +106,7 @@ about the ``python`` executable that pip uses.)
 Linking Static Library on macOS
 ===============================
 
-Python 3.9+ makes use of the ``__builtin_available()`` compiler feature.
+Python 3.10+ makes use of the ``__builtin_available()`` compiler feature.
 This functionality requires a symbol from ``libclang_rt``, which may not
 be linked by default. Failure to link against ``libclang_rt`` could result
 in a linker error due to an undefined symbol ``___isOSVersionAtLeast``.

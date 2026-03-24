@@ -53,6 +53,7 @@ EXTENSION_MODULE_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "path": {"type": "string"},
+                    "includes": {"type": "array", "items": {"type": "string"}},
                     "targets": {"type": "array", "items": {"type": "string"}},
                     "minimum-python-version": {"type": "string"},
                     "maximum-python-version": {"type": "string"},
@@ -109,12 +110,20 @@ EXTENSION_MODULE_SCHEMA = {
                 "type": "object",
                 "properties": {
                     "source": {"type": "string"},
+                    "sources": {"type": "array", "items": {"type": "string"}},
                     "targets": {"type": "array", "items": {"type": "string"}},
                     "minimum-python-version": {"type": "string"},
                     "maximum-python-version": {"type": "string"},
                 },
                 "additionalProperties": False,
-                "required": ["source"],
+                "oneOf": [
+                    {
+                        "required": ["source"],
+                    },
+                    {
+                        "required": ["sources"],
+                    },
+                ],
             },
         },
     },
@@ -124,7 +133,7 @@ EXTENSION_MODULE_SCHEMA = {
 EXTENSION_MODULES_SCHEMA = {
     "type": "object",
     "patternProperties": {
-        "^[a-z_]+$": EXTENSION_MODULE_SCHEMA,
+        "^[a-z0-9_]+$": EXTENSION_MODULE_SCHEMA,
     },
 }
 

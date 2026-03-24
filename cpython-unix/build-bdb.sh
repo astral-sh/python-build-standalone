@@ -5,13 +5,13 @@
 
 set -ex
 
-ROOT=`pwd`
+ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf db-${BDB_VERSION}.tar.gz
+tar -xf "db-${BDB_VERSION}.tar.gz"
 
-pushd db-${BDB_VERSION}/build_unix
+pushd "db-${BDB_VERSION}/build_unix"
 
 CONFIGURE_FLAGS="--enable-dbm --disable-shared"
 
@@ -29,10 +29,10 @@ if [ "${CC}" = "clang" ]; then
 fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" ../dist/configure \
-    --build=${BUILD_TRIPLE} \
-    --host=${TARGET_TRIPLE} \
+    --build="${BUILD_TRIPLE}" \
+    --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
     ${CONFIGURE_FLAGS}
 
-make -j ${NUM_CPUS}
-make -j ${NUM_CPUS} install DESTDIR=${ROOT}/out
+make -j "${NUM_CPUS}"
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"

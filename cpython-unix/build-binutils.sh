@@ -7,7 +7,7 @@ set -ex
 
 cd /build
 
-tar -xf binutils-${BINUTILS_VERSION}.tar.xz
+tar -xf "binutils-${BINUTILS_VERSION}.tar.xz"
 mkdir binutils-objdir
 pushd binutils-objdir
 
@@ -18,7 +18,7 @@ else
 fi
 
 # gprofng requires a bison newer than what we have. So just disable it.
-../binutils-${BINUTILS_VERSION}/configure \
+"../binutils-${BINUTILS_VERSION}/configure" \
     --build=${triple} \
     --prefix=/tools/host \
     --enable-plugins \
@@ -26,7 +26,7 @@ fi
     --disable-nls \
     --with-sysroot=/
 
-make -j `nproc`
-make install -j `nproc` DESTDIR=/build/out
+make -j "$(nproc)"
+make install -j "$(nproc)" DESTDIR=/build/out
 
 popd

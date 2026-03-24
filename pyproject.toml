@@ -22,3 +22,12 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 module-name = "pythonbuild"
 module-root = ""
+
+[dependency-groups]
+check = [
+    "mypy>=1.19.1",
+    "ruff>=0.15.7",
+    "types-jinja2>=2.11.9",
+    "types-jsonschema>=4.26.0.20260324",
+    "types-pyyaml>=6.0.12.20250915",
+]

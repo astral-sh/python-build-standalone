@@ -1,15 +1,5 @@
 version: 2
 updates:
-  - package-ecosystem: "pip"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    cooldown:
-      default-days: 14
-    groups:
-      python:
-        patterns:
-          - "*"
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:

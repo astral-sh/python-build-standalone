@@ -1,7 +1,0 @@
--r requirements.txt
-
-ruff
-mypy
-types-jsonschema
-types-PyYAML
-types-jinja2

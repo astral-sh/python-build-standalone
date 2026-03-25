@@ -26,6 +26,10 @@ jobs:
         with:
           python-version: "3.12"
 
+      - uses: astral-sh/setup-uv@e06108dd0aef18192324c70427afc47652e63a82 # v7.5.0
+        with:
+          enable-cache: false
+
       - name: "Run checks"
         run: |
           python ./check.py

@@ -9,6 +9,7 @@ anyhow = "1.0.100"
 apple-sdk = "0.6.0"
 aws-config = { version = "1", features = ["behavior-version-latest"] }
 aws-sdk-s3 = "1"
+base64 = "0.22"
 bytes = "1.11.0"
 clap = "4.5.52"
 duct = "1.1.1"

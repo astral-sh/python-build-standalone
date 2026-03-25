@@ -10,25 +10,25 @@ Additional operating system requirements are needed and outlined in the followin
 
 Regardless of the host, to build a Python distribution::
 
-    $ uv run build.py
+    $ uv run --no-dev build.py
 
-On Linux and macOS, ``./build.py`` can also be used.
+On Linux and macOS, ``./build.py`` can also be used; it uses ``uv run --no-dev`` via its shebang.
 
 To build a different version of Python::
 
-    $ uv run build.py --python cpython-3.14
+    $ uv run --no-dev build.py --python cpython-3.14
 
 Various build options can be specified::
 
     # With profile-guided optimizations (generated code should be faster)
-    $ uv run build.py --options pgo
+    $ uv run --no-dev build.py --options pgo
     # Produce a debug build.
-    $ uv run build.py --options debug
+    $ uv run --no-dev build.py --options debug
     # Produce a free-threaded build without extra optimizations
-    $ uv run build.py --options freethreaded+noopt
+    $ uv run --no-dev build.py --options freethreaded+noopt
 
 Different platforms  support different build options. 
-``uv run build.py --help`` will show the available build options and other usage information.
+``uv run --no-dev build.py --help`` will show the available build options and other usage information.
 
 
 Linux
@@ -102,6 +102,6 @@ the vcvars batch file, or by adjusting the ``PATH`` and environment variables.
 
 You will need to specify the path to ``sh.exe`` from cygwin::
 
-   $ uv run build.py --sh c:\cygwin\bin\sh.exe
+   $ uv run --no-dev build.py --sh c:\cygwin\bin\sh.exe
 
 To build a 32-bit x86 binary, simply use an ``x86 Native Tools Command Prompt`` instead of ``x64``.

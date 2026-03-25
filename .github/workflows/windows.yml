@@ -150,7 +150,7 @@ jobs:
       # don't get compiled properly.
       - name: Bootstrap Python environment
         run: |
-          uv run build.py --help
+          uv run --no-dev build.py --help
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
@@ -161,7 +161,7 @@ jobs:
           ) ELSE (
             call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
           )
-          uv run build.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
+          uv run --no-dev build.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
         env:
           MATRIX_VCVARS: ${{ matrix.vcvars }}
           MATRIX_PYTHON: ${{ matrix.python }}

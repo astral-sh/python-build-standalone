@@ -25,6 +25,10 @@ diff-python-json a b:
 cat-python-json archive:
   tar -x --to-stdout -f {{ archive }} python/PYTHON.json
 
+# Run the mirror uploader integration test against a local moto S3 server.
+test-mirror-integration:
+  uv run python -m unittest tests/test_mirror_integration.py
+
 # Download release artifacts from GitHub Actions
 release-download-distributions token commit:
   mkdir -p dist
@@ -91,14 +95,10 @@ release-create tag:
 
 # Upload release artifacts to an S3-compatible mirror bucket with the correct release names.
 # AWS credentials are read from the standard AWS_* environment variables.
-# Requires `release-run` to have been run.
+# Requires `release-run` to have been run so that dist/SHA256SUMS exists.
 release-upload-mirror bucket prefix tag:
-  #!/bin/bash
-  set -eo pipefail
-  datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz | awk -F- '{print $8}' | awk -F. '{print $1}')
-  cargo run --release -- upload-mirror-distributions \
+  uv run python -m pythonbuild.mirror \
     --dist dist \
-    --datetime ${datetime} \
     --tag {{tag}} \
     --bucket {{bucket}} \
     --prefix {{prefix}}

@@ -45,6 +45,8 @@ jobs:
           repo: casey/just
           version: 1.42.4
 
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+
       # Perform a release in dry-run mode.
       - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
         if: ${{ github.event.inputs.dry-run == 'true' }}

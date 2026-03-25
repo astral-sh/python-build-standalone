@@ -30,3 +30,11 @@ jobs:
       - name: "Run checks"
         run: |
           ./check.py
+
+      - name: "Run unit tests"
+        run: |
+          uv run python -m unittest tests/test_mirror.py
+
+      - name: "Run mirror integration test"
+        run: |
+          uv run python -m unittest tests/test_mirror_integration.py

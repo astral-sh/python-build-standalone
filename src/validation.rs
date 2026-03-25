@@ -4,21 +4,21 @@
 
 use {
     crate::{json::*, macho::*},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     clap::ArgMatches,
     normalize_path::NormalizePath,
     object::{
+        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
             STV_DEFAULT, STV_HIDDEN,
         },
-        macho::{MachHeader32, MachHeader64, LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL},
+        macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
             elf::{Dyn, FileHeader, SectionHeader, Sym},
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
-        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
     },
     once_cell::sync::Lazy,
     std::{

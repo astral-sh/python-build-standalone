@@ -4,7 +4,7 @@
 
 use {
     crate::validation::ValidationContext,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     apple_sdk::{AppleSdk, SdkSearch, SdkSearchLocation, SdkSorting, SdkVersion, SimpleSdk},
     semver::Version,
     std::{

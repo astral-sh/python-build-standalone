@@ -1136,6 +1136,7 @@ def main():
             "bdb",
             "bzip2",
             "expat",
+            "gdbm",
             "libffi-3.3",
             "libffi",
             "libpthread-stubs",

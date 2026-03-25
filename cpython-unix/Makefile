@@ -113,6 +113,9 @@ $(OUTDIR)/autoconf-$(AUTOCONF_VERSION)-$(PACKAGE_SUFFIX).tar: $(AUTOCONF_DEPENDS
 $(OUTDIR)/bdb-$(BDB_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-bdb.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) bdb
 
+$(OUTDIR)/gdbm-$(GDBM_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-gdbm.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) gdbm
+
 $(OUTDIR)/bzip2-$(BZIP2_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-bzip2.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) bzip2
 

@@ -271,9 +271,9 @@ _functools:
   setup-enabled: true
 
 _gdbm:
-  # Disable GDBM everywhere because it is GPL v3.
+  # GDBM enabled on Linux (GPL v3 licensed), disabled on macOS (uses NDBM)
   disabled-targets:
-    - .*
+    - .*-apple-.*
   # Configs never tested in YAML world since extension disabled globally. See
   # VCS history from old static-modules* files for possible config changes if
   # we ever need to revive this.

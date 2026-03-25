@@ -110,6 +110,15 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.expat.txt",
     },
+    "gdbm": {
+        "url": "https://ftp.gnu.org/gnu/gdbm/gdbm-1.24.tar.gz",
+        "size": 1195931,
+        "sha256": "695e9827fdf763513f133910bc7e6cfdb9187943a4fec943e57449723d2b8dbf",
+        "version": "1.24",
+        "library_names": ["gdbm"],
+        "licenses": ["GPL-3.0-or-later"],
+        "license_file": "LICENSE.gdbm.txt",
+    },
     "jom-windows-bin": {
         "url": "http://download.qt.io/official_releases/jom/jom_1_1_4.zip",
         "size": 1696930,

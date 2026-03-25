@@ -57,8 +57,11 @@ older are licensed under the Sleepycat License. The Sleepycat License
 is more permissive. So we build the ``_dbm`` extension against BDB
 6.0.19.
 
-We explicitly disable the ``_gdbm`` extension on all targets to avoid
-the GPL dependency.
+On Linux, the ``_gdbm`` extension is enabled by default. Note that GDBM is
+licensed under GNU GPL Version 3, which may have implications for your use case.
+
+On macOS, the ``_gdbm`` extension is disabled and the ``_dbm`` extension uses
+the system's NDBM implementation instead.
 
 readline / libedit / ncurses
 ----------------------------

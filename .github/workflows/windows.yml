@@ -2,7 +2,7 @@ name: windows
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
 
 concurrency:
@@ -12,7 +12,7 @@ concurrency:
 env:
   FORCE_COLOR: 1
 
-permissions: {}
+permissions: { }
 
 jobs:
   crate-build:
@@ -179,6 +179,7 @@ jobs:
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
           path: dist/*
+          compression-level: '0'
 
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}

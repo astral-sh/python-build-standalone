@@ -311,6 +311,7 @@ jobs:
         with:
           name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
           path: dist/*
+          compression-level: '0'
 
       - name: Validate Distribution
         if: ${{ ! matrix.dry-run }}

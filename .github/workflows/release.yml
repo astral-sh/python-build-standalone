@@ -101,7 +101,6 @@ jobs:
             dist/*.tar.zst
 
       - name: Publish to Astral mirror
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MIRROR_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MIRROR_R2_SECRET_ACCESS_KEY }}
@@ -110,11 +109,19 @@ jobs:
           R2_BUCKET: ${{ secrets.MIRROR_R2_BUCKET_NAME }}
           PROJECT: python-build-standalone
           VERSION: ${{ github.event.inputs.tag }}
+          DRY_RUN: ${{ github.event.inputs.dry-run }}
         run: |
-          just release-upload-mirror \
-            ${R2_BUCKET} \
-            github/${PROJECT}/releases/download/${VERSION}/ \
-            ${VERSION}
+          if [ "${DRY_RUN}" = 'true' ]; then
+            just release-upload-mirror-dry-run \
+              ${R2_BUCKET} \
+              github/${PROJECT}/releases/download/${VERSION}/ \
+              ${VERSION}
+          else
+            just release-upload-mirror \
+              ${R2_BUCKET} \
+              github/${PROJECT}/releases/download/${VERSION}/ \
+              ${VERSION}
+          fi
 
   publish-versions:
     needs: release

@@ -103,6 +103,16 @@ release-upload-mirror bucket prefix tag:
     --bucket {{bucket}} \
     --prefix {{prefix}}
 
+# Dry-run the mirror upload without writing to the bucket.
+# Requires `release-run` or `release-dry-run` to have been run so that dist/SHA256SUMS exists.
+release-upload-mirror-dry-run bucket prefix tag:
+  uv run python -m pythonbuild.mirror \
+    --dist dist \
+    --tag {{tag}} \
+    --bucket {{bucket}} \
+    --prefix {{prefix}} \
+    -n
+
 # Perform the release job. Assumes that the GitHub Release has been created.
 release-run token commit tag:
   #!/bin/bash

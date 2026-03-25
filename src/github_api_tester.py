@@ -328,6 +328,47 @@ async def test_upload(server, upload_release_distributions, tag):
     assert assets[0].contents == f"{SHA256_20MEG}  {filename}\n".encode()
 
 
+async def test_dry_run_writes_shasums_without_contacting_github(tmp_path):
+    dist = tmp_path / "dist"
+    dist.mkdir()
+
+    filename = dist / FILENAME
+    filename.touch()
+    os.truncate(filename, 20_000_000)
+
+    tag = "missing-release"
+    with trio.fail_after(300):
+        await trio.run_process(
+            [
+                "cargo",
+                "run",
+                "--",
+                "upload-release-distributions",
+                "--github-uri",
+                # Use a guaranteed-bad loopback port so this fails fast if the
+                # command unexpectedly tries to contact GitHub in dry-run mode.
+                "http://127.0.0.1:1",
+                "--token",
+                "no-token-needed",
+                "--dist",
+                dist,
+                "--datetime",
+                "19700101T1234",
+                "--ignore-missing",
+                "--tag",
+                tag,
+                "-n",
+            ]
+        )
+
+    release_filename = FILENAME.replace("3.0.0", f"3.0.0+{tag}").replace(
+        "-19700101T1234", ""
+    )
+    assert (dist / "SHA256SUMS").read_bytes() == (
+        f"{SHA256_20MEG}  {release_filename}\n".encode()
+    )
+
+
 # Work around https://github.com/pgjones/hypercorn/issues/238 not being in a release
 # Without it, test failures are unnecessarily noisy
 hypercorn.trio.lifespan.LifespanFailureError = trio.Cancelled

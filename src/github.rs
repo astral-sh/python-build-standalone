@@ -448,68 +448,28 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         return Err(anyhow!("missing {} release artifacts", missing.len()));
     }
 
-    let (client, token) = new_github_client(args)?;
-    let repo_handler = client.repos(organization, repo);
-    let releases = repo_handler.releases();
-
-    let release = if let Ok(release) = releases.get_by_tag(tag).await {
-        release
-    } else {
-        return if dry_run {
-            println!("release {tag} does not exist; exiting dry-run mode...");
-            Ok(())
-        } else {
-            Err(anyhow!(
-                "release {tag} does not exist; create it via GitHub web UI"
-            ))
-        };
-    };
-
     let mut digests = BTreeMap::new();
 
-    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
-    let raw_client = Client::new();
+    for (source, dest) in &wanted_filenames {
+        if !filenames.contains(source) {
+            continue;
+        }
 
-    {
-        let mut fs = vec![];
+        let local_filename = dist_dir.join(source);
 
-        for (source, dest) in wanted_filenames {
-            if !filenames.contains(&source) {
-                continue;
+        // Compute digests in a separate pass so we can always materialize
+        // SHA256SUMS locally before any GitHub interaction, including in dry-run
+        // mode. This also avoids trying to reuse the streamed upload body for hashing.
+        let digest = {
+            let file = tokio::fs::File::open(local_filename).await?;
+            let mut stream = tokio_util::io::ReaderStream::with_capacity(file, 1048576);
+            let mut hasher = Sha256::new();
+            while let Some(chunk) = stream.next().await {
+                hasher.update(&chunk?);
             }
-
-            let local_filename = dist_dir.join(&source);
-            fs.push(upload_release_artifact(
-                &raw_client,
-                &retry_policy,
-                &GitHubUploadRetryStrategy,
-                token.clone(),
-                &release,
-                dest.clone(),
-                UploadSource::Filename(local_filename.clone()),
-                dry_run,
-            ));
-
-            // reqwest wants to take ownership of the body, so it's hard for us to do anything
-            // clever with reading the file once and calculating the sha256sum while we read.
-            // So we open and read the file again.
-            let digest = {
-                let file = tokio::fs::File::open(local_filename).await?;
-                let mut stream = tokio_util::io::ReaderStream::with_capacity(file, 1048576);
-                let mut hasher = Sha256::new();
-                while let Some(chunk) = stream.next().await {
-                    hasher.update(&chunk?);
-                }
-                hex::encode(hasher.finalize())
-            };
-            digests.insert(dest.clone(), digest.clone());
-        }
-
-        let mut buffered = futures::stream::iter(fs).buffer_unordered(16);
-
-        while let Some(res) = buffered.next().await {
-            res?;
-        }
+            hex::encode(hasher.finalize())
+        };
+        digests.insert(dest.clone(), digest);
     }
 
     let shasums = digests
@@ -519,6 +479,50 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
         .join("");
 
     std::fs::write(dist_dir.join("SHA256SUMS"), shasums.as_bytes())?;
+
+    if dry_run {
+        println!("wrote local SHA256SUMS; skipping GitHub upload and verification");
+        return Ok(());
+    }
+
+    let (client, token) = new_github_client(args)?;
+    let repo_handler = client.repos(organization, repo);
+    let releases = repo_handler.releases();
+    let release = releases
+        .get_by_tag(tag)
+        .await
+        .map_err(|_| anyhow!("release {tag} does not exist; create it via GitHub web UI"))?;
+
+    let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
+    let raw_client = Client::new();
+
+    {
+        let mut fs = vec![];
+
+        for (source, dest) in &wanted_filenames {
+            if !filenames.contains(source) {
+                continue;
+            }
+
+            let local_filename = dist_dir.join(source);
+            fs.push(upload_release_artifact(
+                &raw_client,
+                &retry_policy,
+                &GitHubUploadRetryStrategy,
+                token.clone(),
+                &release,
+                dest.clone(),
+                UploadSource::Filename(local_filename),
+                dry_run,
+            ));
+        }
+
+        let mut buffered = futures::stream::iter(fs).buffer_unordered(16);
+
+        while let Some(res) = buffered.next().await {
+            res?;
+        }
+    }
 
     upload_release_artifact(
         &raw_client,
@@ -534,11 +538,6 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     // Check that content wasn't munged as part of uploading. This once happened
     // and created a busted release. Never again.
-    if dry_run {
-        println!("skipping SHA256SUMs check");
-        return Ok(());
-    }
-
     let release = releases
         .get_by_tag(tag)
         .await

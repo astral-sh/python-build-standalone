@@ -510,6 +510,24 @@ def compress_python_archive(
     return dest_path
 
 
+def extract_python_archive(
+    archive: pathlib.Path, dest_dir: pathlib.Path
+) -> pathlib.Path:
+    """Extract a PBS .tar.zst distribution archive to the given directory.
+
+    Returns the path to the `python` directory, which is equivalent to
+    `dest_dir / "python"`.
+    """
+    with archive.open("rb") as fh:
+        dctx = zstandard.ZstdDecompressor()
+        with dctx.stream_reader(fh) as reader:
+            with tarfile.open(mode="r|", fileobj=reader) as tf:
+                dest_dir.mkdir(exist_ok=True, parents=True)
+                tf.extractall(dest_dir)
+
+    return dest_dir / "python"
+
+
 def add_licenses_to_extension_entry(entry):
     """Add licenses keys to a ``extensions`` entry for JSON distribution info."""
 

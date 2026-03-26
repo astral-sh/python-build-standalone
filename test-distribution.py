@@ -5,15 +5,19 @@
 
 """Script to run Python tests from a distribution archive."""
 
+import os
+import pathlib
 import sys
 
 from pythonbuild.testdist import main
+
+ROOT = pathlib.Path(os.path.abspath(__file__)).parent
 
 if __name__ == "__main__":
     # Unbuffer stdout.
     sys.stdout.reconfigure(line_buffering=True)
 
     try:
-        sys.exit(main(sys.argv[1:]))
+        sys.exit(main(ROOT, sys.argv[1:]))
     except KeyboardInterrupt:
         sys.exit(1)

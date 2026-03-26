@@ -185,4 +185,5 @@ jobs:
         if: ${{ ! matrix.dry-run }}
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
-          .\pythonbuild.exe validate-distribution --run $Dists
+          .\pythonbuild.exe validate-distribution $Dists
+          uv run test-distribution.py $Dists

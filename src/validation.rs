@@ -4,21 +4,21 @@
 
 use {
     crate::{json::*, macho::*},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result, anyhow},
     clap::ArgMatches,
     normalize_path::NormalizePath,
     object::{
+        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            FileHeader32, FileHeader64, ET_DYN, ET_EXEC, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
             STV_DEFAULT, STV_HIDDEN,
         },
-        macho::{MachHeader32, MachHeader64, LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL},
+        macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
             elf::{Dyn, FileHeader, SectionHeader, Sym},
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
-        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
     },
     once_cell::sync::Lazy,
     std::{
@@ -853,8 +853,6 @@ const SHARED_LIBRARY_EXTENSIONS: &[&str] = &[
     "_testsinglephase",
     "_tkinter",
 ];
-
-const PYTHON_VERIFICATIONS: &str = include_str!("verify_distribution.py");
 
 fn allowed_dylibs_for_triple(triple: &str) -> Vec<MachOAllowedDylib> {
     match triple {
@@ -2153,47 +2151,7 @@ fn validate_distribution(
     Ok(context.errors)
 }
 
-fn verify_distribution_behavior(dist_path: &Path) -> Result<Vec<String>> {
-    let mut errors = vec![];
-
-    let temp_dir = tempfile::TempDir::new()?;
-
-    let mut tf = crate::open_distribution_archive(dist_path)?;
-
-    tf.unpack(temp_dir.path())?;
-
-    let python_json_path = temp_dir.path().join("python").join("PYTHON.json");
-    let python_json_data = std::fs::read(python_json_path)?;
-    let python_json = parse_python_json(&python_json_data)?;
-
-    let python_exe = temp_dir.path().join("python").join(python_json.python_exe);
-
-    let test_file = temp_dir.path().join("verify.py");
-    std::fs::write(&test_file, PYTHON_VERIFICATIONS.as_bytes())?;
-
-    eprintln!("  running interpreter tests (output should follow)");
-    let output = duct::cmd(&python_exe, [test_file.display().to_string()])
-        .stdout_to_stderr()
-        .unchecked()
-        .env("TARGET_TRIPLE", &python_json.target_triple)
-        .env("BUILD_OPTIONS", &python_json.build_options)
-        .run()
-        .context(format!(
-            "Failed to run `{} {}`",
-            python_exe.display(),
-            test_file.display()
-        ))?;
-
-    if !output.status.success() {
-        errors.push("errors running interpreter tests".to_string());
-    }
-
-    Ok(errors)
-}
-
 pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
-    let run = args.get_flag("run");
-
     let macos_sdks = if let Some(path) = args.get_one::<String>("macos_sdks_path") {
         Some(IndexedSdks::new(path)?)
     } else {
@@ -2204,11 +2162,7 @@ pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
 
     for path in args.get_many::<PathBuf>("path").unwrap() {
         println!("validating {}", path.display());
-        let mut errors = validate_distribution(path, macos_sdks.as_ref())?;
-
-        if run {
-            errors.extend(verify_distribution_behavior(path)?.into_iter());
-        }
+        let errors = validate_distribution(path, macos_sdks.as_ref())?;
 
         if errors.is_empty() {
             println!("  {} OK", path.display());

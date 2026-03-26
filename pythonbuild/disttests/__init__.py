@@ -10,6 +10,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Optional
 
 TERMINFO_DIRS = [
     "/etc/terminfo",
@@ -123,12 +124,12 @@ class TestPythonInterpreter(unittest.TestCase):
         "_testcapi not available on statically-linked distributions",
     )
     def test_testcapi(self):
-        import _testcapi
+        import _testcapi  # type: ignore
 
         self.assertIsNotNone(_testcapi)
 
         if sys.version_info[0:2] >= (3, 13):
-            import _testlimitedcapi
+            import _testlimitedcapi  # type: ignore
 
             self.assertIsNotNone(_testlimitedcapi)
 
@@ -235,7 +236,7 @@ class TestPythonInterpreter(unittest.TestCase):
         "zstd is only available in 3.14+",
     )
     def test_zstd_multithreaded(self):
-        from compression import zstd
+        from compression import zstd  # type: ignore
 
         max_threads = zstd.CompressionParameter.nb_workers.bounds()[1]
         assert max_threads > 0, (
@@ -294,7 +295,7 @@ class TestPythonInterpreter(unittest.TestCase):
     )
     @unittest.skipIf(os.name == "nt", "no symlinks or argv[0] on Windows")
     def test_getpath(self):
-        def assertPythonWorks(path: Path, argv0: str = None):
+        def assertPythonWorks(path: Path, argv0: Optional[str] = None):
             output = subprocess.check_output(
                 [argv0 or path, "-c", "print(42)"], executable=path, text=True
             )

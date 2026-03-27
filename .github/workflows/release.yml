@@ -92,13 +92,23 @@ jobs:
         env:
           GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+      - name: Determine files to attest
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        id: attest-check
+        run: |
+          if [ -s dist/UPLOADED_FILES ]; then
+            {
+              echo 'subject_path<<EOF'
+              cat dist/UPLOADED_FILES
+              echo 'EOF'
+            } >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Generate attestations
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        if: ${{ github.event.inputs.dry-run == 'false' }}
+        if: ${{ github.event.inputs.dry-run == 'false' && steps.attest-check.outputs.subject_path != '' }}
         with:
-          subject-path: |
-            dist/*.tar.gz
-            dist/*.tar.zst
+          subject-path: ${{ steps.attest-check.outputs.subject_path }}
 
       - name: Publish to Astral mirror
         if: ${{ github.event.inputs.dry-run == 'false' }}

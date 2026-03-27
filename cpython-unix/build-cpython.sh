@@ -257,6 +257,12 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     else
         patch -p1 -i "${ROOT}/patch-configure-bolt-skip-funcs.patch"
     fi
+
+    # Remove -use-gnu-stack from the BOLT optimization flags as it incorrectly
+    # removes the PT_GNU_STACK segment. This patch can be removed when this bug
+    # is fixed in LLVM.
+    # https://github.com/llvm/llvm-project/issues/174191
+    patch -p1 -i "${ROOT}/patch-configure-bolt-remove-use-gnu-stack.patch"
 fi
 
 # The optimization make targets are both phony and non-phony. This leads

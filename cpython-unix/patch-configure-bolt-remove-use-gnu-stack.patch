@@ -1,0 +1,12 @@
+diff --git a/configure.ac b/configure.ac
+index a1f4a567095..03264f87d4c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -2205,7 +2205,6 @@ then
+      -inline-ap
+      -indirect-call-promotion=all
+      -dyno-stats
+-     -use-gnu-stack
+      -frame-opt=hot
+    ")]
+   )

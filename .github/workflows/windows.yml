@@ -186,4 +186,4 @@ jobs:
         run: |
           $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
           .\pythonbuild.exe validate-distribution $Dists
-          uv run test-distribution.py $Dists
+          uv run --no-dev test-distribution.py $Dists

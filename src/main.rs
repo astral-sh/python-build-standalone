@@ -173,6 +173,12 @@ fn main_impl() -> Result<()> {
         Command::new("validate-distribution")
             .about("Ensure a distribution archive conforms to standards")
             .arg(
+                Arg::new("run")
+                    .long("run")
+                    .action(ArgAction::SetTrue)
+                    .help("Run the interpreter to verify behavior"),
+            )
+            .arg(
                 Arg::new("macos_sdks_path")
                     .long("macos-sdks-path")
                     .action(ArgAction::Set)

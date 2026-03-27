@@ -41,7 +41,7 @@ This repository contains ``test-distribution.py`` script that can be
 used to run the Python test harness from a distribution archive.
 
 Here, we track the various known failures when running
-``test-distribution.py --stdlib -- /path/to/distribution.tar.zst -u all``.
+``test-distribution.py /path/to/distribution.tar.zst -u all``.
 
 ``test__locale``
 ----------------

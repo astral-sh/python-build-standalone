@@ -318,19 +318,18 @@ jobs:
         run: |
           chmod +x build/pythonbuild
 
-          build/pythonbuild validate-distribution dist/*.tar.zst
-          
           if [ "${MATRIX_RUN}" == "true" ]; then
             if [ "${MATRIX_LIBC}" == "musl" ]; then
               sudo apt install musl-dev
-          
+
               # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
               # as used in the musl builds.
               unset LD_LIBRARY_PATH
             fi
-          
-            ./test-distribution.py dist/*.tar.zst
+            EXTRA_ARGS="--run"
           fi
+
+          build/pythonbuild validate-distribution ${EXTRA_ARGS} dist/*.tar.zst
         env:
           MATRIX_RUN: ${{ matrix.run }}
           MATRIX_LIBC: ${{ matrix.libc }}

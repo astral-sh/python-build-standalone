@@ -10,12 +10,12 @@ use {
     object::{
         Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
-            STV_DEFAULT, STV_HIDDEN,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, PF_X, PT_GNU_STACK, SHN_UNDEF, STB_GLOBAL,
+            STB_WEAK, STV_DEFAULT, STV_HIDDEN,
         },
         macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
-            elf::{Dyn, FileHeader, SectionHeader, Sym},
+            elf::{Dyn, FileHeader, ProgramHeader, SectionHeader, Sym},
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
             pe::{ImageNtHeaders, PeFile, PeFile32, PeFile64},
         },
@@ -1159,6 +1159,25 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                 }
             }
         }
+    }
+
+    let mut found_pt_gnu_stack = false;
+    for phdr in elf.program_headers(endian, data)? {
+        if phdr.p_type(endian) != PT_GNU_STACK {
+            continue;
+        }
+        found_pt_gnu_stack = true;
+        if (phdr.p_flags(endian) & PF_X) != 0 {
+            context
+                .errors
+                .push(format!("{} requests executable stack", path.display()));
+        }
+    }
+    if !found_pt_gnu_stack {
+        context.errors.push(format!(
+            "{} missing PT_GNU_STACK section (defaults to executable stack)",
+            path.display(),
+        ));
     }
 
     Ok(())

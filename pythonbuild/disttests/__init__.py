@@ -320,6 +320,42 @@ class TestPythonInterpreter(unittest.TestCase):
         with self.subTest(msg="weird argv[0]"):
             assertPythonWorks(sys.executable, argv0="/dev/null")
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific prctl")
+    @unittest.skipIf(
+        "static" in os.environ["BUILD_OPTIONS"],
+        "cannot import libc on static builds",
+    )
+    def test_nx_thread_creation(self):
+        "Test that thread creation works under e.g. systemd's MemoryDenyWriteExecute."
+        # Note that NX cannot be unset so this pollutes the current process,
+        # but if something else breaks under NX we probably want to know!
+        import ctypes
+        import threading
+
+        libc = ctypes.CDLL(None, use_errno=True)
+        # <linux/prctl.h>
+        PR_SET_MDWE = 65
+        PR_GET_MDWE = 66
+        PR_MDWE_REFUSE_EXEC_GAIN = 1 << 0
+        PR_MDWE_NO_INHERIT = 1 << 1
+        mdwe = libc.prctl(PR_GET_MDWE, 0, 0, 0, 0)
+        if mdwe < 0:
+            self.skipTest("prctl(PR_SET_MDWE) unsupported")
+        elif not (mdwe & PR_MDWE_REFUSE_EXEC_GAIN):
+            if (
+                libc.prctl(
+                    PR_SET_MDWE, PR_MDWE_REFUSE_EXEC_GAIN | PR_MDWE_NO_INHERIT, 0, 0, 0
+                )
+                != 0
+            ):
+                self.fail("prctl(PR_SET_MDWE): " + os.strerror(ctypes.get_errno()))
+
+        a = []
+        t = threading.Thread(target=a.append, args=("Thread was here",))
+        t.start()
+        t.join()
+        self.assertEqual(a, ["Thread was here"])
+
 
 if __name__ == "__main__":
     unittest.main()

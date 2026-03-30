@@ -1161,23 +1161,37 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         }
     }
 
-    let mut found_pt_gnu_stack = false;
-    for phdr in elf.program_headers(endian, data)? {
-        if phdr.p_type(endian) != PT_GNU_STACK {
-            continue;
+    // Verify that objects are not requesting an executable stack. For backwards compatibility,
+    // Linux (the kernel when loading an executable, and glibc when loading a shared library)
+    // assumes you need an executable stack unless you request otherwise. In linked outputs
+    // (executables and shared libraries) this is in the program header: the flags of a
+    // PT_GNU_STACK entry specify stack permissions, and the default if unspecified is RWX. In
+    // intermediate objects (.o files) this is conveyed via the presence of an empty-length
+    // .note.GNU-stack, which is marked as an executable section (SHF_EXECINSTR) if the object
+    // needs an executable stack.
+    //
+    // For now we only check binaries because of an LLVM bug that causes .o files to be missing a
+    // .note.GNU-stack section, which we are overriding with -Wl,-z,noexecstack.
+
+    if matches!(elf.e_type(endian), ET_EXEC | ET_DYN) {
+        let mut found_pt_gnu_stack = false;
+        for phdr in elf.program_headers(endian, data)? {
+            if phdr.p_type(endian) != PT_GNU_STACK {
+                continue;
+            }
+            found_pt_gnu_stack = true;
+            if (phdr.p_flags(endian) & PF_X) != 0 {
+                context
+                    .errors
+                    .push(format!("{} requests executable stack", path.display()));
+            }
         }
-        found_pt_gnu_stack = true;
-        if (phdr.p_flags(endian) & PF_X) != 0 {
-            context
-                .errors
-                .push(format!("{} requests executable stack", path.display()));
+        if !found_pt_gnu_stack {
+            context.errors.push(format!(
+                "{} missing PT_GNU_STACK header (defaults to executable stack)",
+                path.display(),
+            ));
         }
-    }
-    if !found_pt_gnu_stack {
-        context.errors.push(format!(
-            "{} missing PT_GNU_STACK section (defaults to executable stack)",
-            path.display(),
-        ));
     }
 
     Ok(())

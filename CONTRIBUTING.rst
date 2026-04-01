@@ -8,28 +8,40 @@ Building distributions
 See the [documentation](https://gregoryszorc.com/docs/python-build-standalone/main/building.html)
 for instructions on building distributions locally.
 
-CI labels
-=========
-By default, submitting a pull request triggers a complete build of all
-distributions in CI, which can be time-consuming.
+Pull request labels
+===================
+By default, pull requests build a small subset of targets defined in
+``pr-targets.yaml``. Pushes to ``main`` build the full matrix from
+``ci-targets.yaml``.
 
-To conserve CI resources and reduce build times, you can limit the matrix of
-distributions built by applying specific labels to your pull request. Only
-distributions matching the specified labels will be built.
+Pull request labels can be used to change what CI builds:
 
-The following label prefixes can be used to customize the build matrix:
+* ``platform:<value>`` filters the selected targets by platform.
+* ``arch:<value>`` filters the selected targets by architecture.
+* ``libc:<value>`` filters the selected targets by libc.
+* ``python:<value>`` filters the selected Python versions.
+* ``build:<value>`` filters the selected build options.
 
-* `platform`
-* `python`
-* `build`
-* `arch`
-* `libc`
+The ``:all`` labels expand only their own dimension:
 
-To bypass CI entirely for changes that do not affect the build (such as
-documentation updates), use the `ci:skip` label.
+* ``platform:all`` expands the selected platforms.
+* ``arch:all`` expands the selected architectures.
+* ``libc:all`` expands the selected libc variants.
+* ``python:all`` expands the selected Python versions.
+* ``build:all`` expands the selected build options.
 
-Please utilize these tags when appropriate for your changes to minimize CI
-resource consumption.
+Use ``ci:all-targets`` to build the full matrix from ``ci-targets.yaml``.
+
+Examples:
+
+* ``platform:linux`` builds only the Linux targets from ``pr-targets.yaml``.
+* ``python:3.13`` builds the default targets with Python 3.13.
+* ``platform:linux,arch:all,libc:all,python:all,build:all`` builds the full
+  Linux matrix.
+
+To bypass CI entirely for changes that do not affect the build, use the
+``ci:skip`` label. The ``documentation`` label is treated the same way. To run
+a dry-run build matrix, use ``ci:dry-run``.
 
 Releases
 ========

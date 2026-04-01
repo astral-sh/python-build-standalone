@@ -11,8 +11,8 @@ for instructions on building distributions locally.
 Pull request labels
 ===================
 By default, pull requests build a small subset of targets defined in
-``pr-targets.yaml``. Pushes to ``main`` build the full matrix from
-``ci-targets.yaml``.
+``ci-defaults.yaml`` under ``pull_request``. Pushes to ``main`` build the full
+matrix from ``ci-targets.yaml``.
 
 Pull request labels can be used to change what CI builds:
 
@@ -20,7 +20,7 @@ Pull request labels can be used to change what CI builds:
 * ``arch:<value>`` filters the selected targets by architecture.
 * ``libc:<value>`` filters the selected targets by libc.
 * ``python:<value>`` filters the selected Python versions.
-* ``build:<value>`` filters the selected build options.
+* ``build:<value>`` filters the selected build options by component.
 
 The ``:all`` labels expand only their own dimension:
 
@@ -34,8 +34,9 @@ Use ``ci:all-targets`` to build the full matrix from ``ci-targets.yaml``.
 
 Examples:
 
-* ``platform:linux`` builds only the Linux targets from ``pr-targets.yaml``.
+* ``platform:linux`` builds only the Linux targets from ``ci-defaults.yaml``.
 * ``python:3.13`` builds the default targets with Python 3.13.
+* ``build:pgo`` builds the selected targets whose build options include ``pgo``.
 * ``platform:linux,arch:all,libc:all,python:all,build:all`` builds the full
   Linux matrix.
 

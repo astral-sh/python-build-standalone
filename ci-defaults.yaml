@@ -1,0 +1,30 @@
+# Describes the default targets that CI will build for different events.
+#
+# `*:all` labels expand their category using ci-targets.yaml.
+
+pull_request:
+  python_version: "3.14"
+
+  targets:
+    x86_64-pc-windows-msvc:
+      build_options:
+        - pgo
+
+    aarch64-apple-darwin:
+      build_options:
+        - pgo+lto
+
+    x86_64-unknown-linux-gnu:
+      build_options:
+        - pgo+lto
+        - freethreaded+pgo+lto
+
+    x86_64-unknown-linux-musl:
+      build_options:
+        - lto
+        - lto+static
+        - freethreaded+lto
+
+    armv7-unknown-linux-gnueabihf:
+      build_options:
+        - lto

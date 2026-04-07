@@ -71,27 +71,34 @@ release-set-latest-release tag:
 
   git switch main
 
-# Create a GitHub release object, or reuse an existing prerelease.
+# Create a GitHub release object, or reuse an existing draft release.
 release-create tag:
   #!/usr/bin/env bash
   set -euo pipefail
-  prerelease_exists=$(gh release view {{tag}} --json isPrerelease -t '{{{{.isPrerelease}}' 2>&1 || true)
-  case "$prerelease_exists" in
+  draft_exists=$(gh release view {{tag}} --json isDraft -t '{{{{.isDraft}}' 2>&1 || true)
+  case "$draft_exists" in
     true)
-      echo "note: updating existing prerelease {{tag}}"
+      echo "note: updating existing draft release {{tag}}"
       ;;
     false)
-      echo "error: release {{tag}} already exists"
+      echo "error: release {{tag}} already exists and is not a draft"
       exit 1
       ;;
     "release not found")
-      gh release create {{tag}} --prerelease --notes TBD --verify-tag
+      gh release create {{tag}} --draft --notes TBD --verify-tag
       ;;
     *)
-      echo "error: unexpected gh cli output: $prerelease_exists"
+      echo "error: unexpected gh cli output: $draft_exists"
       exit 1
       ;;
   esac
+
+# Publish the draft GitHub release and promote the tag to latest-release.
+release-finalize tag:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  gh release edit {{tag}} --draft=false --latest
+  just release-set-latest-release {{tag}}
 
 # Upload release artifacts to an S3-compatible mirror bucket with the correct release names.
 # AWS credentials are read from the standard AWS_* environment variables.
@@ -122,7 +129,7 @@ release-run token commit tag:
   just release-download-distributions {{token}} {{commit}}
   datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
   just release-upload-distributions {{token}} ${datetime} {{tag}}
-  just release-set-latest-release {{tag}}
+  just release-finalize {{tag}}
 
 # Perform a release in dry-run mode.
 release-dry-run token commit tag:

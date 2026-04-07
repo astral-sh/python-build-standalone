@@ -332,6 +332,13 @@ fi
 # /etc/pki/tls/cert.pem instead, if that file exists and /etc/ssl/cert.pem does not.
 patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
 
+# Cherry-pick an upstream change in Python 3.15 to build _asyncio as
+# static (which we do anyway in our own fashion) and more importantly to
+# take this into account when finding the AsyncioDebug section.
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
+    patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
+fi
+
 # Ensure the new build-details.json file reports relocatable paths.
 # There is not yet a flag in ./configure for this, sadly.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then

@@ -138,6 +138,8 @@ class Release:
     release_id: int
     tag_name: str
     assets: list = dataclasses.field(default_factory=list)
+    draft: bool = True
+    prerelease: bool = False
     # fault0 and fault1 are called before and after receiving the first
     # chunk of a PUT request, respectively. Each is called once per
     # release - the first upload that hits it will disarm it.
@@ -157,14 +159,15 @@ class Release:
             "node_id": "fakenode",
             "tag_name": self.tag_name,
             "target_commitish": "main",
-            "draft": False,
-            "prerelease": True,
+            "draft": self.draft,
+            "prerelease": self.prerelease,
             "assets": [i.render() for i in self.assets],
         }
 
 
 releases = [
     Release(1, "basic"),
+    Release(2, "draft"),
     Release(11, "early-drop", fault0=drop_connection),
     Release(12, "late-drop", fault1=drop_connection),
     Release(4011, "early-401", fault0=lambda: quart.abort(401)),
@@ -195,7 +198,17 @@ def get_release(*, tag=None, release=None) -> Release:
 
 @app.route("/repos/<org>/<repo>/releases/tags/<tag>")
 async def get_release_by_tag(org, repo, tag):
-    return get_release(tag=tag).render()
+    release = get_release(tag=tag)
+    if release.draft:
+        quart.abort(
+            404, response=quart.jsonify({"message": "Not Found", "status": "404"})
+        )
+    return release.render()
+
+
+@app.route("/repos/<org>/<repo>/releases")
+async def list_releases(org, repo):
+    return quart.jsonify([release.render() for release in releases])
 
 
 @app.route("/repos/<org>/<repo>/releases/<int:release>")
@@ -311,7 +324,7 @@ def upload_release_distributions(tmp_path_factory):
 
 
 # TODO: test all of [r.tag_name for r in releases]
-TAGS_TO_TEST = ["basic", "early-drop", "late-drop", "early-403", "late-403"]
+TAGS_TO_TEST = ["basic", "draft", "early-drop", "late-drop", "early-403", "late-403"]
 
 
 @pytest.mark.parametrize("tag", TAGS_TO_TEST)

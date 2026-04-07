@@ -85,7 +85,7 @@ release-create tag:
       exit 1
       ;;
     "release not found")
-      gh release create {{tag}} --draft --notes TBD --verify-tag
+      gh release create {{tag}} --draft --title {{tag}} --notes TBD --verify-tag
       ;;
     *)
       echo "error: unexpected gh cli output: $draft_exists"

@@ -7,7 +7,7 @@ use {
         RELEASE_TRIPLES, bootstrap_llvm, build_wanted_filenames, produce_install_only,
         produce_install_only_stripped,
     },
-    anyhow::{Result, anyhow},
+    anyhow::{Context, Result, anyhow},
     bytes::Bytes,
     clap::ArgMatches,
     futures::StreamExt,
@@ -168,6 +168,43 @@ fn new_github_client(args: &ArgMatches) -> Result<(Octocrab, String)> {
         builder = builder.base_uri(github_uri.clone())?;
     }
     Ok((builder.build()?, token))
+}
+
+async fn get_draft_release_by_tag(
+    client: &Octocrab,
+    organization: &str,
+    repo: &str,
+    tag: &str,
+) -> Result<Release> {
+    let mut page = client
+        .repos(organization, repo)
+        .releases()
+        .list()
+        .send()
+        .await?;
+
+    let release = loop {
+        if let Some(release) = page
+            .take_items()
+            .into_iter()
+            .find(|release| release.tag_name == tag)
+        {
+            break Some(release);
+        }
+
+        page = match client.get_page::<Release>(&page.next).await? {
+            Some(page) => page,
+            None => break None,
+        };
+    };
+
+    let release = release.ok_or_else(|| anyhow!("release {tag} does not exist"))?;
+
+    if !release.draft {
+        return Err(anyhow!("release {tag} exists but is not a draft"));
+    }
+
+    Ok(release)
 }
 
 pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()> {
@@ -486,12 +523,7 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
     }
 
     let (client, token) = new_github_client(args)?;
-    let repo_handler = client.repos(organization, repo);
-    let releases = repo_handler.releases();
-    let release = releases
-        .get_by_tag(tag)
-        .await
-        .map_err(|_| anyhow!("release {tag} does not exist; create it via GitHub web UI"))?;
+    let release = get_draft_release_by_tag(&client, organization, repo, tag).await?;
 
     let retry_policy = ExponentialBackoff::builder().build_with_max_retries(5);
     let raw_client = Client::new();
@@ -538,10 +570,9 @@ pub async fn command_upload_release_distributions(args: &ArgMatches) -> Result<(
 
     // Check that content wasn't munged as part of uploading. This once happened
     // and created a busted release. Never again.
-    let release = releases
-        .get_by_tag(tag)
+    let release = get_draft_release_by_tag(&client, organization, repo, tag)
         .await
-        .map_err(|_| anyhow!("could not find release; this should not happen!"))?;
+        .with_context(|| format!("could not find draft release {tag}; this should not happen"))?;
     let shasums_asset = release
         .assets
         .into_iter()

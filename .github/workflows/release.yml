@@ -26,6 +26,7 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: depot-ubuntu-24.04-8
+    environment: release
 
     permissions:
       contents: write
@@ -123,11 +124,72 @@ jobs:
               ${VERSION}
           fi
 
-  publish-versions:
-    needs: release
-    if: ${{ github.event.inputs.dry-run == 'false' }}
-    uses: ./.github/workflows/publish-versions.yml
-    with:
-      tag: ${{ github.event.inputs.tag }}
-    secrets: inherit
+      - name: Generate versions metadata
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: uv run generate-version-metadata.py > dist/versions.ndjson
+
+      - name: Validate metadata
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        run: |
+          echo "Generated $(wc -l < dist/versions.ndjson) version entries"
+          head -c 1000 dist/versions.ndjson
+
+      - name: Set branch name
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        run: echo "BRANCH_NAME=update-versions-$TAG-$(date +%s)" >> $GITHUB_ENV
+
+      - name: Clone versions repo
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        run: git clone https://${{ secrets.ASTRAL_VERSIONS_PAT }}@github.com/astral-sh/versions.git astral-versions
+
+      - name: Update versions
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        run: cat dist/versions.ndjson | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
+
+      - name: Commit versions
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+        working-directory: astral-versions
+        run: |
+          git config user.name "astral-versions-bot"
+          git config user.email "176161322+astral-versions-bot@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          git add -A
+          git commit -m "Update python-build-standalone to $TAG"
+
+      - name: Create Pull Request
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          TAG: ${{ github.event.inputs.tag }}
+          GH_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
+        working-directory: astral-versions
+        run: |
+          pull_request_title="Update python-build-standalone versions for $TAG"
+
+          gh pr list --state open --json title --jq ".[] | select(.title == \"$pull_request_title\") | .number" | \
+            xargs -I {} gh pr close {}
+
+          git push origin "$BRANCH_NAME"
+
+          gh pr create --base main --head "$BRANCH_NAME" \
+            --title "$pull_request_title" \
+            --body "Automated versions update for $TAG" \
+            --label "automation"
+
+      - name: Merge Pull Request
+        if: ${{ github.event.inputs.dry-run == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.ASTRAL_VERSIONS_PAT }}
+        working-directory: astral-versions
+        run: |
+          # Wait for PR to be created before merging
+          sleep 10
+          gh pr merge --squash "$BRANCH_NAME"
 

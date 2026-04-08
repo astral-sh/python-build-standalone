@@ -244,7 +244,7 @@ DOWNLOADS = {
         "licenses": ["X11"],
         "license_file": "LICENSE.ncurses.txt",
     },
-    # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
+    # Remember to update OPENSSL_VERSION_INFO in pythonbuild/disttests/ whenever upgrading.
     "openssl-1.1": {
         "url": "https://www.openssl.org/source/openssl-1.1.1w.tar.gz",
         "size": 9893384,
@@ -254,12 +254,12 @@ DOWNLOADS = {
         "licenses": ["OpenSSL"],
         "license_file": "LICENSE.openssl-1.1.txt",
     },
-    # Remember to update OPENSSL_VERSION_INFO in verify_distribution.py whenever upgrading.
+    # Remember to update OPENSSL_VERSION_INFO in pythonbuild/disttests/ whenever upgrading.
     "openssl-3.5": {
-        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.5/openssl-3.5.5.tar.gz",
-        "size": 53104821,
-        "sha256": "b28c91532a8b65a1f983b4c28b7488174e4a01008e29ce8e69bd789f28bc2a89",
-        "version": "3.5.5",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.6/openssl-3.5.6.tar.gz",
+        "size": 53121812,
+        "sha256": "deae7c80cba99c4b4f940ecadb3c3338b13cb77418409238e57d7f31f2a3b736",
+        "version": "3.5.6",
         "library_names": ["crypto", "ssl"],
         "licenses": ["Apache-2.0"],
         "license_file": "LICENSE.openssl-3.txt",
@@ -299,7 +299,7 @@ DOWNLOADS = {
         "sha256": "a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb",
         "version": "82.0.1",
     },
-    # Remember to update verify_distribution.py when version changed.
+    # Remember to update pythonbuild/disttests/ when version changed.
     "sqlite": {
         "url": "https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz",
         "size": 3173050,

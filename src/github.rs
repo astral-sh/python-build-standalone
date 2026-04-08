@@ -180,6 +180,7 @@ async fn get_draft_release_by_tag(
         .repos(organization, repo)
         .releases()
         .list()
+        .per_page(1)
         .send()
         .await?;
 

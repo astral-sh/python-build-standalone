@@ -530,6 +530,9 @@ def main() -> None:
     with open(CI_RUNNERS_YAML) as f:
         runners = yaml.safe_load(f)
 
+    with open(CI_DEFAULTS_YAML) as f:
+        ci_defaults = yaml.safe_load(f) or {}
+
     # If only free runners are allowed, reduce to a subset
     if args.free_runners:
         runners = {
@@ -556,29 +559,14 @@ def main() -> None:
         print(json.dumps(result))
         return
 
-    # Load PR defaults for pull request events
-    pull_request_defaults = None
+    event_defaults = ci_defaults.get(args.event) if args.event else None
+    if "all-targets" in labels.get("directives", set()):
+        event_defaults = None
+
     allowed_triples = None
-    full_matrix = args.event != "pull_request" or "all-targets" in labels.get(
-        "directives", set()
-    )
-
-    if not full_matrix:
-        with open(CI_DEFAULTS_YAML) as f:
-            ci_defaults = yaml.safe_load(f)
-
-        pull_request_defaults = ci_defaults.get("pull_request")
-        if pull_request_defaults is None:
-            print(
-                f"error: {CI_DEFAULTS_YAML} is missing a pull_request section",
-                file=sys.stderr,
-            )
-            sys.exit(1)
-
-        validate_pull_request_defaults(ci_config, pull_request_defaults)
-        allowed_triples = expand_default_triples(
-            ci_config, pull_request_defaults, labels
-        )
+    if event_defaults is not None:
+        validate_pull_request_defaults(ci_config, event_defaults)
+        allowed_triples = expand_default_triples(ci_config, event_defaults, labels)
 
     result = {}
 
@@ -592,7 +580,7 @@ def main() -> None:
     python_entries = [
         entry
         for entry in python_entries
-        if should_include_entry(entry, labels, pull_request_defaults, allowed_triples)
+        if should_include_entry(entry, labels, event_defaults, allowed_triples)
     ]
 
     # Output python-build matrix if requested

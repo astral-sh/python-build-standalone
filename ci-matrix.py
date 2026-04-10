@@ -164,7 +164,6 @@ def should_include_entry(
     the curated build options — unless overridden by labels. For pushes
     (pull_request_defaults is None), only label filters apply.
     """
-    # PR default restrictions
     if pull_request_defaults is not None:
         triple = entry["target_triple"]
         default_targets = pull_request_defaults["targets"]

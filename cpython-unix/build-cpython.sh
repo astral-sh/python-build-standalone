@@ -339,6 +339,11 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
 
+# Backport GH-142001 to 3.14 (revert GC "work_to_do" logic changes).
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
+    patch -p1 -i "${ROOT}/patch-gc-collect-increment-3.14.patch"
+fi
+
 # Ensure the new build-details.json file reports relocatable paths.
 # There is not yet a flag in ./configure for this, sadly.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then

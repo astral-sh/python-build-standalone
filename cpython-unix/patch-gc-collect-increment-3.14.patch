@@ -1,0 +1,104 @@
+From fef3eed829b8f69f38708059e75d25bd72825a6a Mon Sep 17 00:00:00 2001
+From: Neil Schemenauer <nas@arctrix.com>
+Date: Wed, 26 Nov 2025 20:40:48 -0800
+Subject: [PATCH] Revert GC changes to "work_to_do" logic.
+
+This reverts parts of the GH-140262 change.  The changes that affect the
+tuple untracking are left unchanged.  Revert the changes to the
+calculation of the increment size, based on the "work_to_do" variable.
+This causes cyclic garbage to be collected more quickly.  Revert also
+the change to test_gc.py, which was done because the expected GC
+collection was taking longer to happen.
+
+With the tuple untrack change, the performance regression as reported by
+bug GH-139951 is still resolved (work_to_do changes are not required).
+---
+ Lib/test/test_gc.py | 17 ++++++++---------
+ Python/gc.c         |  6 ++----
+ 2 files changed, 10 insertions(+), 13 deletions(-)
+
+diff --git a/Lib/test/test_gc.py b/Lib/test/test_gc.py
+index ec5df4d20e7085..5d610c38579bd6 100644
+--- a/Lib/test/test_gc.py
++++ b/Lib/test/test_gc.py
+@@ -1493,11 +1493,10 @@ def callback(ignored):
+             # The free-threaded build doesn't have multiple generations, so
+             # just trigger a GC manually.
+             gc.collect()
+-        assert not detector.gc_happened
+         while not detector.gc_happened:
+             i += 1
+-            if i > 100000:
+-                self.fail("gc didn't happen after 100000 iterations")
++            if i > 10000:
++                self.fail("gc didn't happen after 10000 iterations")
+             self.assertEqual(len(ouch), 0)
+             junk.append([])  # this will eventually trigger gc
+ 
+@@ -1569,8 +1568,8 @@ def __del__(self):
+             gc.collect()
+         while not detector.gc_happened:
+             i += 1
+-            if i > 50000:
+-                self.fail("gc didn't happen after 50000 iterations")
++            if i > 10000:
++                self.fail("gc didn't happen after 10000 iterations")
+             self.assertEqual(len(ouch), 0)
+             junk.append([])  # this will eventually trigger gc
+ 
+@@ -1587,8 +1586,8 @@ def test_indirect_calls_with_gc_disabled(self):
+         detector = GC_Detector()
+         while not detector.gc_happened:
+             i += 1
+-            if i > 100000:
+-                self.fail("gc didn't happen after 100000 iterations")
++            if i > 10000:
++                self.fail("gc didn't happen after 10000 iterations")
+             junk.append([])  # this will eventually trigger gc
+ 
+         try:
+@@ -1598,11 +1597,11 @@ def test_indirect_calls_with_gc_disabled(self):
+             detector = GC_Detector()
+             while not detector.gc_happened:
+                 i += 1
+-                if i > 100000:
++                if i > 10000:
+                     break
+                 junk.append([])  # this may eventually trigger gc (if it is enabled)
+ 
+-            self.assertEqual(i, 100001)
++            self.assertEqual(i, 10001)
+         finally:
+             gc.enable()
+ 
+diff --git a/Python/gc.c b/Python/gc.c
+index d067a6144b0763..c4c56e319f4853 100644
+--- a/Python/gc.c
++++ b/Python/gc.c
+@@ -1644,7 +1644,7 @@ assess_work_to_do(GCState *gcstate)
+         scale_factor = 2;
+     }
+     intptr_t new_objects = gcstate->young.count;
+-    intptr_t max_heap_fraction = new_objects*2;
++    intptr_t max_heap_fraction = new_objects*3/2;
+     intptr_t heap_fraction = gcstate->heap_size / SCAN_RATE_DIVISOR / scale_factor;
+     if (heap_fraction > max_heap_fraction) {
+         heap_fraction = max_heap_fraction;
+@@ -1659,9 +1659,6 @@ gc_collect_increment(PyThreadState *tstate, struct gc_collection_stats *stats)
+     GC_STAT_ADD(1, collections, 1);
+     GCState *gcstate = &tstate->interp->gc;
+     gcstate->work_to_do += assess_work_to_do(gcstate);
+-    if (gcstate->work_to_do < 0) {
+-        return;
+-    }
+     untrack_tuples(&gcstate->young.head);
+     if (gcstate->phase == GC_PHASE_MARK) {
+         Py_ssize_t objects_marked = mark_at_start(tstate);
+@@ -1705,6 +1702,7 @@ gc_collect_increment(PyThreadState *tstate, struct gc_collection_stats *stats)
+     gc_collect_region(tstate, &increment, &survivors, stats);
+     gc_list_merge(&survivors, visited);
+     assert(gc_list_is_empty(&increment));
++    gcstate->work_to_do += gcstate->heap_size / SCAN_RATE_DIVISOR / scale_factor;
+     gcstate->work_to_do -= increment_size;
+ 
+     if (gc_list_is_empty(not_visited)) {

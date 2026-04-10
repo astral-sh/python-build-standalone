@@ -749,14 +749,14 @@ pub fn produce_install_only_stripped(tar_gz_path: &Path, llvm_dir: &Path) -> Res
 static LLVM_URL: Lazy<Url> = Lazy::new(|| {
     if cfg!(target_os = "macos") {
         if std::env::consts::ARCH == "aarch64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-aarch64-apple-darwin.tar.zst").unwrap()
+            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-aarch64-apple-darwin.tar.zst").unwrap()
         } else if std::env::consts::ARCH == "x86_64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-x86_64-apple-darwin.tar.zst").unwrap()
+            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst").unwrap()
         } else {
             panic!("unsupported macOS architecture");
         }
     } else if cfg!(target_os = "linux") {
-        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
+        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
     } else {
         panic!("unsupported platform");
     }

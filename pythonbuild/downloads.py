@@ -178,31 +178,31 @@ DOWNLOADS = {
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-aarch64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
-        "size": 237665010,
-        "sha256": "0f7ef68a9d6239336aa073366edd5377a47192c32d40c96ff72b416a15259999",
-        "version": "22.1.1+20260312",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
+        "size": 237655768,
+        "sha256": "9cb4b562323a3d899fffe6393148e92447e17b69a2501d7c6e7f2a86c32cddc1",
+        "version": "22.1.3+20260410",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-x86_64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
-        "size": 281108139,
-        "sha256": "2a2f2e51bb9c621c6b00a42d8349f27edcb3aacaa750040000ac95a0298e97c1",
-        "version": "22.1.1+20260312",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
+        "size": 281109065,
+        "sha256": "0ee8e4f89c20983d62547b1e665147ee08a7413f478e9e443fa991548da1030d",
+        "version": "22.1.3+20260410",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-aarch64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-aarch64-apple-darwin.tar.zst",
-        "size": 159781503,
-        "sha256": "04df05eed3dde711a5962f031f3075e3d46bad92eb0520bc4c2814ac0210c56f",
-        "version": "22.1.1+20260312",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-aarch64-apple-darwin.tar.zst",
+        "size": 159775425,
+        "sha256": "98171836c31c04edec074e5f3fee67fcace4bf3859b68a770dd9ff2039ea127d",
+        "version": "22.1.3+20260410",
     },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-x86_64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260312/llvm-22.1.1+20260312-x86_64-apple-darwin.tar.zst",
-        "size": 167381561,
-        "sha256": "aef8508bef17a2d40b07ff955917ff7f36c1a609116ee8c052e12307ec748314",
-        "version": "22.1.1+20260312",
+        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst",
+        "size": 167376011,
+        "sha256": "15bfda1bc8bc920658c09ef1ebb4593f0705b3314beab23989f14775f2e3f3f0",
+        "version": "22.1.3+20260410",
     },
     "m4": {
         # Mirrored from https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz

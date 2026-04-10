@@ -1,0 +1,25 @@
+diff --git a/Python/gc.c b/Python/gc.c
+index 91d77237620..53643ce5c5d 100644
+--- a/Python/gc.c
++++ b/Python/gc.c
+@@ -1616,17 +1616,16 @@ gc_collect_increment(PyThreadState *tstate, struct gc_collection_stats *stats)
+     GC_STAT_ADD(1, collections, 1);
+     GCState *gcstate = &tstate->interp->gc;
+     gcstate->work_to_do += assess_work_to_do(gcstate);
+-    if (gcstate->work_to_do < 0) {
+-        return;
+-    }
+     untrack_tuples(&gcstate->young.head);
+     if (gcstate->phase == GC_PHASE_MARK) {
++        /* Start a new scavenge and immediately continue into the collect phase.
++         * Otherwise, sparse cycles created continuously can wait for another
++         * threshold crossing before the collector reclaims them.
++         */
+         Py_ssize_t objects_marked = mark_at_start(tstate);
+         GC_STAT_ADD(1, objects_transitively_reachable, objects_marked);
+-        gcstate->work_to_do -= objects_marked;
+         validate_spaces(gcstate);
+-        return;
+     }
+     PyGC_Head *not_visited = &gcstate->old[gcstate->visited_space^1].head;
+     PyGC_Head *visited = &gcstate->old[gcstate->visited_space].head;

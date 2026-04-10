@@ -1,6 +1,4 @@
 # Describes the default targets that CI will build for different events.
-#
-# `*:all` labels expand their category using ci-targets.yaml.
 
 pull_request:
   python_version: "3.14"

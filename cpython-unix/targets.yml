@@ -185,6 +185,9 @@ armv7-unknown-linux-gnueabi:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/arm-linux-gnueabi-gcc
   target_cxx: /usr/bin/arm-linux-gnueabi-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -226,6 +229,9 @@ armv7-unknown-linux-gnueabihf:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/arm-linux-gnueabihf-gcc
   target_cxx: /usr/bin/arm-linux-gnueabihf-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -266,6 +272,9 @@ loongarch64-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/loongarch64-linux-gnu-gcc
   target_cxx: /usr/bin/loongarch64-linux-gnu-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -307,6 +316,9 @@ mips-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/mips-linux-gnu-gcc
   target_cxx: /usr/bin/mips-linux-gnu-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -348,6 +360,9 @@ mipsel-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/mipsel-linux-gnu-gcc
   target_cxx: /usr/bin/mipsel-linux-gnu-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -389,6 +404,9 @@ ppc64le-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/powerpc64le-linux-gnu-gcc
   target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -430,6 +448,9 @@ riscv64-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/riscv64-linux-gnu-gcc
   target_cxx: /usr/bin/riscv64-linux-gnu-g++
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb
@@ -474,6 +495,9 @@ s390x-unknown-linux-gnu:
   target_cflags:
     # set the minimum compatibility level to z10 (released 2008)
     - '-march=z10'
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
   needs:
     - autoconf
     - bdb

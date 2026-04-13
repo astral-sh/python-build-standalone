@@ -67,7 +67,7 @@ rm -rf pkgs/sqlite* pkgs/tdbc*
 pushd unix
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include"
-LDFLAGS="${EXTRA_TARGET_CFLAGS} -L${TOOLS_PATH}/deps/lib"
+LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib"
 if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
 fi

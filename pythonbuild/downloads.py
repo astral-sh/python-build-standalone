@@ -212,7 +212,8 @@ DOWNLOADS = {
         "version": "1.4.19",
     },
     "mpdecimal": {
-        "url": "https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.0.tar.gz",
+        # Mirrored from https://www.bytereef.org/software/mpdecimal/releases/mpdecimal-4.0.0.tar.gz
+        "url": "https://astral-sh.github.io/mirror/files/mpdecimal-4.0.0.tar.gz",
         "size": 315325,
         "sha256": "942445c3245b22730fd41a67a7c5c231d11cb1b9936b9c0f76334fb7d0b4468c",
         "version": "4.0.0",

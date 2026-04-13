@@ -72,7 +72,16 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
 fi
 
-CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \
+# Tcl configures and builds packages (itcl, threads, ...) as make targets.
+# These do not pick up environment variables passed to ./configure
+# Export compiler flags to make them available when configuring and building
+# these packages.
+# An alternative is to include these when calling ./configure AND make
+export CFLAGS="${CFLAGS}"
+export CPPFLAGS="${CFLAGS}"
+export LDFLAGS="${LDFLAGS}"
+
+./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \

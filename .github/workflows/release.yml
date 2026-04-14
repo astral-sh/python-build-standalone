@@ -21,8 +21,16 @@ env:
 permissions: {}
 
 jobs:
+  release-gate:
+    name: Release gate
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - run: echo "Release approved"
+
   release:
     name: Release
+    needs: release-gate
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: depot-ubuntu-24.04-8

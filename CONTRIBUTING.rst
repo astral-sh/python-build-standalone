@@ -37,9 +37,10 @@ Releases
 To cut a release, wait for the "MacOS Python build", "Linux Python build", and
 "Windows Python build" GitHub Actions to complete successfully on the target commit.
 
-Then, run the "Release" GitHub Action to create a draft release, populate the release artifacts
-(by downloading the artifacts from each workflow, and uploading them to the GitHub Release),
-publish the release, and promote the SHA via the `latest-release` branch.
+Then, run the "Release" GitHub Action to create a draft release for the target commit,
+populate the release artifacts (by downloading the artifacts from each workflow, and uploading
+them to the GitHub Release), publish the release, and promote the SHA via the `latest-release`
+branch.
 
 The "Release" GitHub Action takes, as input, a tag (assumed to be a date in `YYYYMMDD` format) and
 the commit SHA referenced above.

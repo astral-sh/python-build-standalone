@@ -60,32 +60,13 @@ jobs:
           git config --global user.name "$GITHUB_ACTOR"
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
-      # Fetch the commit so that it exists locally.
-      - name: Fetch commit
-        if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git fetch origin ${GITHUB_EVENT_INPUTS_SHA}
-        env:
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
-
-      # Associate the commit with the tag.
-      - name: Create tag
-        if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git tag ${GITHUB_EVENT_INPUTS_TAG} ${GITHUB_EVENT_INPUTS_SHA}
-        env:
-          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
-      - name: Push tag
-        if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: git push origin ${GITHUB_EVENT_INPUTS_TAG}
-        env:
-          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
-
-      # Create a GitHub release.
+      # Create a GitHub draft release for the target commit.
       - name: Create GitHub Release
         if: ${{ github.event.inputs.dry-run == 'false' }}
-        run: just release-create ${GITHUB_EVENT_INPUTS_TAG}
+        run: just release-create ${GITHUB_EVENT_INPUTS_TAG} ${GITHUB_EVENT_INPUTS_SHA}
         env:
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
 
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}

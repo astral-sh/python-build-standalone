@@ -71,8 +71,8 @@ release-set-latest-release tag:
 
   git switch main
 
-# Create a GitHub release object, or reuse an existing draft release.
-release-create tag:
+# Create a GitHub draft release for the target commit, or reuse an existing draft release.
+release-create tag commit:
   #!/usr/bin/env bash
   set -euo pipefail
   draft_exists=$(gh release view {{tag}} --json isDraft -t '{{{{.isDraft}}' 2>&1 || true)
@@ -85,7 +85,7 @@ release-create tag:
       exit 1
       ;;
     "release not found")
-      gh release create {{tag}} --draft --title {{tag}} --notes TBD --verify-tag
+      gh release create {{tag}} --draft --title {{tag}} --notes TBD --target {{commit}}
       ;;
     *)
       echo "error: unexpected gh cli output: $draft_exists"

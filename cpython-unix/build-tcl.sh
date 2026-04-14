@@ -77,7 +77,8 @@ fi
 # Export compiler flags to make them available when configuring and building
 # these packages.
 # An alternative is to include these when calling ./configure AND make
-export CFLAGS CPPFLAGS LDFLAGS
+export CFLAGS LDFLAGS
+export CPPFLAGS="${CFLAGS}"
 
 ./configure \
     --build="${BUILD_TRIPLE}" \

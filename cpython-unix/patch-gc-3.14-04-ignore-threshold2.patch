@@ -1,0 +1,34 @@
+diff --git a/Lib/test/test_gc.py b/Lib/test/test_gc.py
+index 3879f116731..daa6de32e9d 100644
+--- a/Lib/test/test_gc.py
++++ b/Lib/test/test_gc.py
+@@ -1182,6 +1182,12 @@ def test_tuple_untrack_counts(self):
+ 
+ 
+ class IncrementalGCTests(unittest.TestCase):
++    @requires_gil_enabled("Free threading does not support incremental GC")
++    def test_incremental_gc_ignores_threshold2(self):
++        code = "import gc; gc.set_threshold(111, 222, 333); print(gc.get_threshold())"
++        _, stdout, _ = assert_python_ok("-X", "inc_gc", "-c", code)
++        self.assertEqual(stdout.strip(), b"(111, 222, 0)")
++
+     @unittest.skipIf(_testinternalcapi is None, "requires _testinternalcapi")
+     @requires_gil_enabled("Free threading does not support incremental GC")
+     def test_incremental_gc_handles_fast_cycle_creation(self):
+diff --git a/Modules/gcmodule.c b/Modules/gcmodule.c
+index 7594e729222..7a9ea177c75 100644
+--- a/Modules/gcmodule.c
++++ b/Modules/gcmodule.c
+@@ -164,9 +164,9 @@ gc_set_threshold_impl(PyObject *module, int threshold0, int group_right_1,
+         if (group_right_1) {
+             gcstate->old[0].threshold = threshold1;
+         }
+-        if (group_right_2) {
+-            gcstate->old[1].threshold = threshold2;
+-        }
++        /* threshold2 is ignored for incremental GC. */
++        (void)group_right_2;
++        (void)threshold2;
+     }
+     else {
+         gcstate->generations[0].threshold = threshold0;

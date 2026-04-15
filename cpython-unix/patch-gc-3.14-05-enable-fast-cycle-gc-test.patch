@@ -1,0 +1,22 @@
+diff --git a/Lib/test/test_gc.py b/Lib/test/test_gc.py
+index daa6de32e9d..01cbcfa5ac6 100644
+--- a/Lib/test/test_gc.py
++++ b/Lib/test/test_gc.py
+@@ -7,7 +7,7 @@
+                           Py_GIL_DISABLED)
+ from test.support.import_helper import import_module
+ from test.support.os_helper import temp_dir, TESTFN, unlink
+-from test.support.script_helper import assert_python_ok, make_script, run_test_script
++from test.support.script_helper import assert_python_ok, make_script
+ from test.support import threading_helper, gc_threshold
+ 
+ import gc
+@@ -1195,7 +1195,7 @@ def test_incremental_gc_handles_fast_cycle_creation(self):
+         # be from unit tests run before this one) can influence how quickly cyclic
+         # garbage is found.
+         script = support.findfile("_test_gc_fast_cycles.py")
+-        run_test_script(script)
++        assert_python_ok("-X", "inc_gc", "-u", script, "-v")
+ 
+ 
+ class GCCallbackTests(unittest.TestCase):

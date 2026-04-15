@@ -1,129 +1,131 @@
-diff --git a/Include/cpython/initconfig.h b/Include/cpython/initconfig.h
-index 7ce4acfeb71..b40988c73dd 100644
---- a/Include/cpython/initconfig.h
-+++ b/Include/cpython/initconfig.h
-@@ -187,6 +187,7 @@ typedef struct PyConfig {
- #endif
- 
-     int cpu_count;
-+    int gc_incremental;
- #ifdef Py_GIL_DISABLED
-     int enable_gil;
-     int tlbc_enabled;
 diff --git a/Include/internal/pycore_gc.h b/Include/internal/pycore_gc.h
-index fd284d0e4ec..6dba4804127 100644
+index fd284d0e4ec..c0515dd0899 100644
 --- a/Include/internal/pycore_gc.h
 +++ b/Include/internal/pycore_gc.h
-@@ -207,7 +207,7 @@ static inline void _PyGC_CLEAR_FINALIZED(PyObject *op) {
+@@ -131,7 +131,9 @@ static inline void _PyObject_GC_SET_SHARED(PyObject *op) {
+  * When object are moved from the pending space, old[gcstate->visited_space^1]
+  * into the increment, the old space bit is flipped.
+ */
++#ifdef Py_GC_INCREMENTAL
+ #define _PyGC_NEXT_MASK_OLD_SPACE_1    1
++#endif
+ 
+ #define _PyGC_PREV_SHIFT           2
+ #define _PyGC_PREV_MASK            (((uintptr_t) -1) << _PyGC_PREV_SHIFT)
+@@ -159,13 +161,21 @@ typedef enum {
+ // Lowest bit of _gc_next is used for flags only in GC.
+ // But it is always 0 for normal code.
+ static inline PyGC_Head* _PyGCHead_NEXT(PyGC_Head *gc) {
++#ifndef Py_GC_INCREMENTAL
++    uintptr_t next = gc->_gc_next;
++#else
+     uintptr_t next = gc->_gc_next & _PyGC_PREV_MASK;
++#endif
+     return (PyGC_Head*)next;
+ }
+ static inline void _PyGCHead_SET_NEXT(PyGC_Head *gc, PyGC_Head *next) {
++#ifndef Py_GC_INCREMENTAL
++    gc->_gc_next = (uintptr_t)next;
++#else
+     uintptr_t unext = (uintptr_t)next;
+     assert((unext & ~_PyGC_PREV_MASK) == 0);
+     gc->_gc_next = (gc->_gc_next & ~_PyGC_PREV_MASK) | unext;
++#endif
+ }
+ 
+ // Lowest two bits of _gc_prev is used for _PyGC_PREV_MASK_* flags.
+@@ -207,7 +217,7 @@ static inline void _PyGC_CLEAR_FINALIZED(PyObject *op) {
  
  extern void _Py_ScheduleGC(PyThreadState *tstate);
  
 -#ifndef Py_GIL_DISABLED
-+#if !defined(Py_GIL_DISABLED)
++#if !defined(Py_GIL_DISABLED) && defined(Py_GC_INCREMENTAL)
  extern void _Py_TriggerGC(struct _gc_runtime_state *gcstate);
  #endif
  
-@@ -245,17 +245,27 @@ static inline void _PyObject_GC_TRACK(
+@@ -237,6 +247,19 @@ static inline void _PyObject_GC_TRACK(
                            filename, lineno, __func__);
+ #ifdef Py_GIL_DISABLED
+     _PyObject_SET_GC_BITS(op, _PyGC_BITS_TRACKED);
++#elif !defined(Py_GC_INCREMENTAL)
++    PyGC_Head *gc = _Py_AS_GC(op);
++    _PyObject_ASSERT_FROM(op,
++                          (gc->_gc_prev & _PyGC_PREV_MASK_COLLECTING) == 0,
++                          "object is in generation which is garbage collected",
++                          filename, lineno, __func__);
++
++    PyGC_Head *generation0 = _PyInterpreterState_GET()->gc.generation0;
++    PyGC_Head *last = (PyGC_Head*)(generation0->_gc_prev);
++    _PyGCHead_SET_NEXT(last, gc);
++    _PyGCHead_SET_PREV(gc, last);
++    _PyGCHead_SET_NEXT(gc, generation0);
++    generation0->_gc_prev = (uintptr_t)gc;
+ #else
+     PyGC_Head *gc = _Py_AS_GC(op);
+     _PyObject_ASSERT_FROM(op,
+@@ -283,6 +306,14 @@ static inline void _PyObject_GC_UNTRACK(
  
-     struct _gc_runtime_state *gcstate = &_PyInterpreterState_GET()->gc;
--    PyGC_Head *generation0 = &gcstate->young.head;
--    PyGC_Head *last = (PyGC_Head*)(generation0->_gc_prev);
--    _PyGCHead_SET_NEXT(last, gc);
--    _PyGCHead_SET_PREV(gc, last);
--    uintptr_t not_visited = 1 ^ gcstate->visited_space;
--    gc->_gc_next = ((uintptr_t)generation0) | not_visited;
--    generation0->_gc_prev = (uintptr_t)gc;
--    gcstate->young.count++; /* number of tracked GC objects */
--    gcstate->heap_size++;
--    if (gcstate->young.count > gcstate->young.threshold) {
--        _Py_TriggerGC(gcstate);
-+    if (gcstate->use_incremental) {
-+        PyGC_Head *generation0 = &gcstate->young.head;
-+        PyGC_Head *last = (PyGC_Head*)(generation0->_gc_prev);
-+        _PyGCHead_SET_NEXT(last, gc);
-+        _PyGCHead_SET_PREV(gc, last);
-+        uintptr_t not_visited = 1 ^ gcstate->visited_space;
-+        gc->_gc_next = ((uintptr_t)generation0) | not_visited;
-+        generation0->_gc_prev = (uintptr_t)gc;
-+        gcstate->young.count++; /* number of tracked GC objects */
-+        gcstate->heap_size++;
-+        if (gcstate->young.count > gcstate->young.threshold) {
-+            _Py_TriggerGC(gcstate);
-+        }
-+    }
-+    else {
-+        PyGC_Head *generation0 = gcstate->generation0;
-+        PyGC_Head *last = (PyGC_Head*)(generation0->_gc_prev);
-+        _PyGCHead_SET_NEXT(last, gc);
-+        _PyGCHead_SET_PREV(gc, last);
-+        _PyGCHead_SET_NEXT(gc, generation0);
-+        generation0->_gc_prev = (uintptr_t)gc;
-     }
- #endif
- }
-@@ -291,11 +301,13 @@ static inline void _PyObject_GC_UNTRACK(
-     _PyGCHead_SET_PREV(next, prev);
-     gc->_gc_next = 0;
-     gc->_gc_prev &= _PyGC_PREV_MASK_FINALIZED;
--    struct _gc_runtime_state *gcstate = &_PyInterpreterState_GET()->gc;
--    if (gcstate->young.count > 0) {
--        gcstate->young.count--;
-+    if (_PyInterpreterState_GET()->gc.use_incremental) {
-+        struct _gc_runtime_state *gcstate = &_PyInterpreterState_GET()->gc;
-+        if (gcstate->young.count > 0) {
-+            gcstate->young.count--;
-+        }
-+        gcstate->heap_size--;
-     }
--    gcstate->heap_size--;
- #endif
- }
- 
+ #ifdef Py_GIL_DISABLED
+     _PyObject_CLEAR_GC_BITS(op, _PyGC_BITS_TRACKED);
++#elif !defined(Py_GC_INCREMENTAL)
++    PyGC_Head *gc = _Py_AS_GC(op);
++    PyGC_Head *prev = _PyGCHead_PREV(gc);
++    PyGC_Head *next = _PyGCHead_NEXT(gc);
++    _PyGCHead_SET_NEXT(prev, next);
++    _PyGCHead_SET_PREV(next, prev);
++    gc->_gc_next = 0;
++    gc->_gc_prev &= _PyGC_PREV_MASK_FINALIZED;
+ #else
+     PyGC_Head *gc = _Py_AS_GC(op);
+     PyGC_Head *prev = _PyGCHead_PREV(gc);
 diff --git a/Include/internal/pycore_interp_structs.h b/Include/internal/pycore_interp_structs.h
-index c3d9533e90f..0158299d4c7 100644
+index c3d9533e90f..ee2040683f8 100644
 --- a/Include/internal/pycore_interp_structs.h
 +++ b/Include/internal/pycore_interp_structs.h
-@@ -214,9 +214,18 @@ struct _gc_runtime_state {
-     /* Is automatic collection enabled? */
+@@ -215,8 +215,13 @@ struct _gc_runtime_state {
      int enabled;
      int debug;
-+    /* If true, use incremental GC; otherwise use generational GC.
-+     * Set once during initialization from -X inc_gc flag. */
-+    int use_incremental;
-+
      /* linked lists of container objects */
-+    /* Generational GC members */
++#ifndef Py_GC_INCREMENTAL
 +    struct gc_generation generations[NUM_GENERATIONS];
 +    PyGC_Head *generation0;
-+    /* Incremental GC members */
++#else
      struct gc_generation young;
      struct gc_generation old[2];
-+
++#endif
      /* a permanent generation which won't be collected */
      struct gc_generation permanent_generation;
      struct gc_generation_stats generation_stats[NUM_GENERATIONS];
-@@ -227,6 +236,10 @@ struct _gc_runtime_state {
+@@ -227,11 +232,16 @@ struct _gc_runtime_state {
      /* a list of callbacks to be invoked when collection is performed */
      PyObject *callbacks;
  
-+    /* Generational GC */
++#ifndef Py_GC_INCREMENTAL
 +    Py_ssize_t long_lived_total;
 +    Py_ssize_t long_lived_pending;
-+    /* Incremental GC */
++#else
      Py_ssize_t heap_size;
      Py_ssize_t work_to_do;
      /* Which of the old spaces is the visited space */
-@@ -261,6 +274,20 @@ struct _gc_runtime_state {
+     int visited_space;
+     int phase;
++#endif
+ 
+ #ifdef Py_GIL_DISABLED
+     /* This is the number of objects that survived the last full
+@@ -261,6 +271,24 @@ struct _gc_runtime_state {
  #endif
  };
  
++#ifndef Py_GC_INCREMENTAL
 +#define GC_GENERATION_INIT \
 +    .generations = { \
-+        { .threshold = 2000, }, \
++        { .threshold = 700, }, \
 +        { .threshold = 10, }, \
 +        { .threshold = 10, }, \
-+    }, \
++    },
++#else
++#define GC_GENERATION_INIT \
 +    .young = { .threshold = 2000, }, \
 +    .old = { \
 +        { .threshold = 10, }, \
@@ -131,6 +133,7 @@ index c3d9533e90f..0158299d4c7 100644
 +    }, \
 +    .work_to_do = -5000, \
 +    .phase = GC_PHASE_MARK,
++#endif
 +
  #include "pycore_gil.h"           // struct _gil_runtime_state
  
@@ -155,228 +158,150 @@ index 4200d91a2fc..e250d84d265 100644
          .qsbr = { \
              .wr_seq = QSBR_INITIAL, \
 diff --git a/Makefile.pre.in b/Makefile.pre.in
-index 80a1b590c2f..38ff0c2087d 100644
+index 80a1b590c2f..6db5ee4d502 100644
 --- a/Makefile.pre.in
 +++ b/Makefile.pre.in
-@@ -444,6 +444,8 @@ PYTHON_OBJS=	\
- 		Python/frozenmain.o \
- 		Python/future.o \
- 		Python/gc.o \
-+		Python/gc_gen.o \
-+		Python/gc_inc.o \
- 		Python/gc_free_threading.o \
- 		Python/gc_gil.o \
- 		Python/getargs.o \
-@@ -2236,7 +2238,9 @@ Include/pydtrace_probes.h: $(srcdir)/Include/pydtrace.d
+@@ -2236,7 +2236,7 @@ Include/pydtrace_probes.h: $(srcdir)/Include/pydtrace.d
  	mv $@.tmp $@
  
  Python/ceval.o: $(srcdir)/Include/pydtrace.h
 -Python/gc.o: $(srcdir)/Include/pydtrace.h
-+Python/gc.o: $(srcdir)/Include/pydtrace.h $(srcdir)/Python/gc_common.h
-+Python/gc_gen.o: $(srcdir)/Python/gc_common.h
-+Python/gc_inc.o: $(srcdir)/Python/gc_common.h
++Python/gc.o: $(srcdir)/Include/pydtrace.h $(srcdir)/Python/gc_gen.h $(srcdir)/Python/gc_inc.h
  Python/import.o: $(srcdir)/Include/pydtrace.h
  
  Python/pydtrace.o: $(srcdir)/Include/pydtrace.d $(DTRACE_DEPS)
 diff --git a/Modules/_testinternalcapi.c b/Modules/_testinternalcapi.c
-index b2b4e4ce1d2..0ad52e00035 100644
+index b2b4e4ce1d2..7862850a337 100644
 --- a/Modules/_testinternalcapi.c
 +++ b/Modules/_testinternalcapi.c
 @@ -2346,7 +2346,12 @@ has_deferred_refcount(PyObject *self, PyObject *op)
  static PyObject *
  get_tracked_heap_size(PyObject *self, PyObject *Py_UNUSED(ignored))
  {
--    return PyLong_FromInt64(PyInterpreterState_Get()->gc.heap_size);
-+    PyInterpreterState *interp = PyInterpreterState_Get();
-+    if (!interp->gc.use_incremental) {
-+        // Generational GC doesn't track heap_size, return -1.
-+        return PyLong_FromInt64(-1);
-+    }
-+    return PyLong_FromInt64(interp->gc.heap_size);
++#ifndef Py_GC_INCREMENTAL
++    // Generational GC doesn't track heap_size, return -1.
++    return PyLong_FromInt64(-1);
++#else
+     return PyLong_FromInt64(PyInterpreterState_Get()->gc.heap_size);
++#endif
  }
  
  static PyObject *
 diff --git a/Modules/gcmodule.c b/Modules/gcmodule.c
-index a09c4856f11..7594e729222 100644
+index a09c4856f11..5e1a1af8c81 100644
 --- a/Modules/gcmodule.c
 +++ b/Modules/gcmodule.c
-@@ -159,12 +159,23 @@ gc_set_threshold_impl(PyObject *module, int threshold0, int group_right_1,
+@@ -159,6 +159,15 @@ gc_set_threshold_impl(PyObject *module, int threshold0, int group_right_1,
  {
      GCState *gcstate = get_gc_state();
  
--    gcstate->young.threshold = threshold0;
--    if (group_right_1) {
--        gcstate->old[0].threshold = threshold1;
-+    if (gcstate->use_incremental) {
-+        gcstate->young.threshold = threshold0;
-+        if (group_right_1) {
-+            gcstate->old[0].threshold = threshold1;
-+        }
-+        if (group_right_2) {
-+            gcstate->old[1].threshold = threshold2;
-+        }
++#ifndef Py_GC_INCREMENTAL
++    gcstate->generations[0].threshold = threshold0;
++    if (group_right_1) {
++        gcstate->generations[1].threshold = threshold1;
++    }
++    if (group_right_2) {
++        gcstate->generations[2].threshold = threshold2;
++    }
++#else
+     gcstate->young.threshold = threshold0;
+     if (group_right_1) {
+         gcstate->old[0].threshold = threshold1;
+@@ -166,6 +175,7 @@ gc_set_threshold_impl(PyObject *module, int threshold0, int group_right_1,
+     if (group_right_2) {
+         gcstate->old[1].threshold = threshold2;
      }
--    if (group_right_2) {
--        gcstate->old[1].threshold = threshold2;
-+    else {
-+        gcstate->generations[0].threshold = threshold0;
-+        if (group_right_1) {
-+            gcstate->generations[1].threshold = threshold1;
-+        }
-+        if (group_right_2) {
-+            gcstate->generations[2].threshold = threshold2;
-+        }
-     }
++#endif
      Py_RETURN_NONE;
  }
-@@ -180,10 +191,16 @@ gc_get_threshold_impl(PyObject *module)
+ 
+@@ -180,10 +190,17 @@ gc_get_threshold_impl(PyObject *module)
  /*[clinic end generated code: output=7902bc9f41ecbbd8 input=286d79918034d6e6]*/
  {
      GCState *gcstate = get_gc_state();
-+    if (gcstate->use_incremental) {
-+        return Py_BuildValue("(iii)",
-+                             gcstate->young.threshold,
-+                             gcstate->old[0].threshold,
-+                             0);
-+    }
-     return Py_BuildValue("(iii)",
--                         gcstate->young.threshold,
--                         gcstate->old[0].threshold,
--                         0);
++#ifndef Py_GC_INCREMENTAL
++    return Py_BuildValue("(iii)",
 +                         gcstate->generations[0].threshold,
 +                         gcstate->generations[1].threshold,
 +                         gcstate->generations[2].threshold);
++#else
+     return Py_BuildValue("(iii)",
+                          gcstate->young.threshold,
+                          gcstate->old[0].threshold,
+                          0);
++#endif
  }
  
  /*[clinic input]
-@@ -207,10 +224,16 @@ gc_get_count_impl(PyObject *module)
+@@ -207,10 +224,17 @@ gc_get_count_impl(PyObject *module)
      gc->alloc_count = 0;
  #endif
  
-+    if (gcstate->use_incremental) {
-+        return Py_BuildValue("(iii)",
-+                             gcstate->young.count,
-+                             gcstate->old[gcstate->visited_space].count,
-+                             gcstate->old[gcstate->visited_space^1].count);
-+    }
-     return Py_BuildValue("(iii)",
--                         gcstate->young.count,
--                         gcstate->old[gcstate->visited_space].count,
--                         gcstate->old[gcstate->visited_space^1].count);
++#ifndef Py_GC_INCREMENTAL
++    return Py_BuildValue("(iii)",
 +                         gcstate->generations[0].count,
 +                         gcstate->generations[1].count,
 +                         gcstate->generations[2].count);
++#else
+     return Py_BuildValue("(iii)",
+                          gcstate->young.count,
+                          gcstate->old[gcstate->visited_space].count,
+                          gcstate->old[gcstate->visited_space^1].count);
++#endif
  }
  
  /*[clinic input]
 diff --git a/Python/gc.c b/Python/gc.c
-index c134dc57e28..325c1037354 100644
+index c134dc57e28..9696f856842 100644
 --- a/Python/gc.c
 +++ b/Python/gc.c
-@@ -2,1979 +2,63 @@
- //  The Python module interface to the collector is in gcmodule.c.
- //  See https://devguide.python.org/internals/garbage-collector/
- 
--#include "Python.h"
--#include "pycore_ceval.h"         // _Py_set_eval_breaker_bit()
--#include "pycore_dict.h"          // _PyInlineValuesSize()
--#include "pycore_initconfig.h"    // _PyStatus_OK()
--#include "pycore_interp.h"        // PyInterpreterState.gc
--#include "pycore_interpframe.h"   // _PyFrame_GetLocalsArray()
--#include "pycore_object_alloc.h"  // _PyObject_MallocWithType()
--#include "pycore_pystate.h"       // _PyThreadState_GET()
--#include "pycore_tuple.h"         // _PyTuple_MaybeUntrack()
--#include "pycore_weakref.h"       // _PyWeakref_ClearRef()
-+#if !defined(Py_GIL_DISABLED)
- 
--#include "pydtrace.h"
-+#include "gc_common.h"
+@@ -6,9 +6,12 @@
+ #include "pycore_ceval.h"         // _Py_set_eval_breaker_bit()
+ #include "pycore_dict.h"          // _PyInlineValuesSize()
+ #include "pycore_initconfig.h"    // _PyStatus_OK()
++#include "pycore_context.h"
+ #include "pycore_interp.h"        // PyInterpreterState.gc
+ #include "pycore_interpframe.h"   // _PyFrame_GetLocalsArray()
++#include "pycore_object.h"
+ #include "pycore_object_alloc.h"  // _PyObject_MallocWithType()
++#include "pycore_pyerrors.h"
+ #include "pycore_pystate.h"       // _PyThreadState_GET()
+ #include "pycore_tuple.h"         // _PyTuple_MaybeUntrack()
+ #include "pycore_weakref.h"       // _PyWeakref_ClearRef()
+@@ -16,7 +19,7 @@
+ #include "pydtrace.h"
  
  
 -#ifndef Py_GIL_DISABLED
--
--typedef struct _gc_runtime_state GCState;
--
--#ifdef Py_DEBUG
--#  define GC_DEBUG
--#endif
--
++#if !defined(Py_GIL_DISABLED)
+ 
+ typedef struct _gc_runtime_state GCState;
+ 
+@@ -24,8 +27,6 @@ typedef struct _gc_runtime_state GCState;
+ #  define GC_DEBUG
+ #endif
+ 
 -// Define this when debugging the GC
 -// #define GC_EXTRA_DEBUG
--
--
--#define GC_NEXT _PyGCHead_NEXT
--#define GC_PREV _PyGCHead_PREV
--
--// update_refs() set this bit for all objects in current generation.
--// subtract_refs() and move_unreachable() uses this to distinguish
--// visited object is in GCing or not.
--//
--// move_unreachable() removes this flag from reachable objects.
--// Only unreachable objects have this flag.
--//
--// No objects in interpreter have this flag after GC ends.
--#define PREV_MASK_COLLECTING   _PyGC_PREV_MASK_COLLECTING
--
--// Lowest bit of _gc_next is used for UNREACHABLE flag.
--//
--// This flag represents the object is in unreachable list in move_unreachable()
--//
--// Although this flag is used only in move_unreachable(), move_unreachable()
--// doesn't clear this flag to skip unnecessary iteration.
--// move_legacy_finalizers() removes this flag instead.
--// Between them, unreachable list is not normal list and we can not use
--// most gc_list_* functions for it.
--#define NEXT_MASK_UNREACHABLE  2
--
--#define AS_GC(op) _Py_AS_GC(op)
--#define FROM_GC(gc) _Py_FROM_GC(gc)
--
--// Automatically choose the generation that needs collecting.
--#define GENERATION_AUTO (-1)
--
--static inline int
--gc_is_collecting(PyGC_Head *g)
--{
--    return (g->_gc_prev & PREV_MASK_COLLECTING) != 0;
--}
--
--static inline void
--gc_clear_collecting(PyGC_Head *g)
--{
--    g->_gc_prev &= ~PREV_MASK_COLLECTING;
--}
--
--static inline Py_ssize_t
--gc_get_refs(PyGC_Head *g)
--{
--    return (Py_ssize_t)(g->_gc_prev >> _PyGC_PREV_SHIFT);
--}
--
--static inline void
--gc_set_refs(PyGC_Head *g, Py_ssize_t refs)
--{
--    g->_gc_prev = (g->_gc_prev & ~_PyGC_PREV_MASK)
--        | ((uintptr_t)(refs) << _PyGC_PREV_SHIFT);
--}
--
--static inline void
--gc_reset_refs(PyGC_Head *g, Py_ssize_t refs)
--{
--    g->_gc_prev = (g->_gc_prev & _PyGC_PREV_MASK_FINALIZED)
--        | PREV_MASK_COLLECTING
--        | ((uintptr_t)(refs) << _PyGC_PREV_SHIFT);
--}
--
--static inline void
--gc_decref(PyGC_Head *g)
--{
--    _PyObject_ASSERT_WITH_MSG(FROM_GC(g),
--                              gc_get_refs(g) > 0,
--                              "refcount is too small");
--    g->_gc_prev -= 1 << _PyGC_PREV_SHIFT;
--}
--
+ 
+ 
+ #define GC_NEXT _PyGCHead_NEXT
+@@ -50,7 +51,11 @@ typedef struct _gc_runtime_state GCState;
+ // move_legacy_finalizers() removes this flag instead.
+ // Between them, unreachable list is not normal list and we can not use
+ // most gc_list_* functions for it.
++#ifndef Py_GC_INCREMENTAL
++#define NEXT_MASK_UNREACHABLE  (1)
++#else
+ #define NEXT_MASK_UNREACHABLE  2
++#endif
+ 
+ #define AS_GC(op) _Py_AS_GC(op)
+ #define FROM_GC(gc) _Py_FROM_GC(gc)
+@@ -100,48 +105,6 @@ gc_decref(PyGC_Head *g)
+     g->_gc_prev -= 1 << _PyGC_PREV_SHIFT;
+ }
+ 
 -static inline int
 -gc_old_space(PyGC_Head *g)
 -{
@@ -419,15 +344,13 @@ index c134dc57e28..325c1037354 100644
 -            Py_UNREACHABLE();
 -    }
 -}
--
--static GCState *
--get_gc_state(void)
--{
--    PyInterpreterState *interp = _PyInterpreterState_GET();
--    return &interp->gc;
--}
--
--
+ 
+ static GCState *
+ get_gc_state(void)
+@@ -151,46 +114,6 @@ get_gc_state(void)
+ }
+ 
+ 
 -void
 -_PyGC_InitState(GCState *gcstate)
 -{
@@ -468,194 +391,22 @@ index c134dc57e28..325c1037354 100644
 -    return _PyStatus_OK();
 -}
 -
--
--/*
--_gc_prev values
-----------------
--
--Between collections, _gc_prev is used for doubly linked list.
--
--Lowest two bits of _gc_prev are used for flags.
--PREV_MASK_COLLECTING is used only while collecting and cleared before GC ends
--or _PyObject_GC_UNTRACK() is called.
--
--During a collection, _gc_prev is temporary used for gc_refs, and the gc list
--is singly linked until _gc_prev is restored.
--
--gc_refs
--    At the start of a collection, update_refs() copies the true refcount
--    to gc_refs, for each object in the generation being collected.
--    subtract_refs() then adjusts gc_refs so that it equals the number of
--    times an object is referenced directly from outside the generation
--    being collected.
--
--PREV_MASK_COLLECTING
--    Objects in generation being collected are marked PREV_MASK_COLLECTING in
--    update_refs().
--
--
--_gc_next values
-----------------
--
--_gc_next takes these values:
--
--0
--    The object is not tracked
--
--!= 0
--    Pointer to the next object in the GC list.
--    Additionally, lowest bit is used temporary for
--    NEXT_MASK_UNREACHABLE flag described below.
--
--NEXT_MASK_UNREACHABLE
--    move_unreachable() then moves objects not reachable (whether directly or
--    indirectly) from outside the generation into an "unreachable" set and
--    set this flag.
--
--    Objects that are found to be reachable have gc_refs set to 1.
--    When this flag is set for the reachable object, the object must be in
--    "unreachable" set.
--    The flag is unset and the object is moved back to "reachable" set.
--
--    move_legacy_finalizers() will remove this flag from "unreachable" set.
--*/
--
--/*** list functions ***/
--
--static inline void
--gc_list_init(PyGC_Head *list)
--{
--    // List header must not have flags.
--    // We can assign pointer by simple cast.
--    list->_gc_prev = (uintptr_t)list;
--    list->_gc_next = (uintptr_t)list;
--}
--
--static inline int
--gc_list_is_empty(PyGC_Head *list)
--{
--    return (list->_gc_next == (uintptr_t)list);
--}
--
--/* Append `node` to `list`. */
--static inline void
--gc_list_append(PyGC_Head *node, PyGC_Head *list)
--{
--    assert((list->_gc_prev & ~_PyGC_PREV_MASK) == 0);
--    PyGC_Head *last = (PyGC_Head *)list->_gc_prev;
--
--    // last <-> node
--    _PyGCHead_SET_PREV(node, last);
--    _PyGCHead_SET_NEXT(last, node);
--
--    // node <-> list
--    _PyGCHead_SET_NEXT(node, list);
--    list->_gc_prev = (uintptr_t)node;
--}
--
--/* Remove `node` from the gc list it's currently in. */
--static inline void
--gc_list_remove(PyGC_Head *node)
--{
--    PyGC_Head *prev = GC_PREV(node);
--    PyGC_Head *next = GC_NEXT(node);
--
--    _PyGCHead_SET_NEXT(prev, next);
--    _PyGCHead_SET_PREV(next, prev);
--
--    node->_gc_next = 0; /* object is not currently tracked */
--}
--
--/* Move `node` from the gc list it's currently in (which is not explicitly
-- * named here) to the end of `list`.  This is semantically the same as
-- * gc_list_remove(node) followed by gc_list_append(node, list).
-- */
--static void
--gc_list_move(PyGC_Head *node, PyGC_Head *list)
--{
--    /* Unlink from current list. */
--    PyGC_Head *from_prev = GC_PREV(node);
--    PyGC_Head *from_next = GC_NEXT(node);
--    _PyGCHead_SET_NEXT(from_prev, from_next);
--    _PyGCHead_SET_PREV(from_next, from_prev);
--
--    /* Relink at end of new list. */
--    // list must not have flags.  So we can skip macros.
--    PyGC_Head *to_prev = (PyGC_Head*)list->_gc_prev;
--    _PyGCHead_SET_PREV(node, to_prev);
--    _PyGCHead_SET_NEXT(to_prev, node);
--    list->_gc_prev = (uintptr_t)node;
--    _PyGCHead_SET_NEXT(node, list);
--}
--
--/* append list `from` onto list `to`; `from` becomes an empty list */
--static void
--gc_list_merge(PyGC_Head *from, PyGC_Head *to)
--{
--    assert(from != to);
--    if (!gc_list_is_empty(from)) {
--        PyGC_Head *to_tail = GC_PREV(to);
--        PyGC_Head *from_head = GC_NEXT(from);
--        PyGC_Head *from_tail = GC_PREV(from);
--        assert(from_head != from);
--        assert(from_tail != from);
+ 
+ /*
+ _gc_prev values
+@@ -322,8 +245,6 @@ gc_list_merge(PyGC_Head *from, PyGC_Head *to)
+         PyGC_Head *from_tail = GC_PREV(from);
+         assert(from_head != from);
+         assert(from_tail != from);
 -        assert(gc_list_is_empty(to) ||
 -            gc_old_space(to_tail) == gc_old_space(from_tail));
--
--        _PyGCHead_SET_NEXT(to_tail, from_head);
--        _PyGCHead_SET_PREV(from_head, to_tail);
--
--        _PyGCHead_SET_NEXT(from_tail, to);
--        _PyGCHead_SET_PREV(to, from_tail);
--    }
--    gc_list_init(from);
--}
--
--static Py_ssize_t
--gc_list_size(PyGC_Head *list)
--{
--    PyGC_Head *gc;
--    Py_ssize_t n = 0;
--    for (gc = GC_NEXT(list); gc != list; gc = GC_NEXT(gc)) {
--        n++;
--    }
--    return n;
--}
--
--/* Walk the list and mark all objects as non-collecting */
--static inline void
--gc_list_clear_collecting(PyGC_Head *collectable)
--{
--    PyGC_Head *gc;
--    for (gc = GC_NEXT(collectable); gc != collectable; gc = GC_NEXT(gc)) {
--        gc_clear_collecting(gc);
--    }
--}
--
--/* Append objects in a GC list to a Python list.
-- * Return 0 if all OK, < 0 if error (out of memory for list)
-- */
--static int
--append_objects(PyObject *py_list, PyGC_Head *gc_list)
--{
--    PyGC_Head *gc;
--    for (gc = GC_NEXT(gc_list); gc != gc_list; gc = GC_NEXT(gc)) {
--        PyObject *op = FROM_GC(gc);
--        if (op != py_list) {
--            if (PyList_Append(py_list, op)) {
--                return -1; /* exception */
--            }
--        }
--    }
--    return 0;
--}
--
--// Constants for validate_list's flags argument.
--enum flagstates {collecting_clear_unreachable_clear,
--                 collecting_clear_unreachable_set,
--                 collecting_set_unreachable_clear,
--                 collecting_set_unreachable_set};
--
+ 
+         _PyGCHead_SET_NEXT(to_tail, from_head);
+         _PyGCHead_SET_PREV(from_head, to_tail);
+@@ -379,149 +300,10 @@ enum flagstates {collecting_clear_unreachable_clear,
+                  collecting_set_unreachable_clear,
+                  collecting_set_unreachable_set};
+ 
 -#ifdef GC_DEBUG
 -// validate_list checks list consistency.  And it works as document
 -// describing when flags are expected to be set / unset.
@@ -753,10 +504,10 @@ index c134dc57e28..325c1037354 100644
 -#define validate_consistent_old_space(l) do{}while(0)
 -#define gc_list_validate_space(l, s) do{}while(0)
 -#endif
--
--/*** end of list stuff ***/
--
--
+ 
+ /*** end of list stuff ***/
+ 
+ 
 -/* Set all gc_refs = ob_refcnt.  After this, gc_refs is > 0 and
 - * PREV_MASK_COLLECTING bit is set for all objects in containers.
 - */
@@ -799,72 +550,13 @@ index c134dc57e28..325c1037354 100644
 -    }
 -}
 -
--/* A traversal callback for subtract_refs. */
--static int
--visit_decref(PyObject *op, void *parent)
--{
--    OBJECT_STAT_INC(object_visits);
--    _PyObject_ASSERT(_PyObject_CAST(parent), !_PyObject_IsFreed(op));
--
--    if (_PyObject_IS_GC(op)) {
--        PyGC_Head *gc = AS_GC(op);
--        /* We're only interested in gc_refs for objects in the
--         * generation being collected, which can be recognized
--         * because only they have positive gc_refs.
--         */
--        if (gc_is_collecting(gc)) {
--            gc_decref(gc);
--        }
--    }
--    return 0;
--}
--
--int
--_PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)
--{
--    // This is a bit tricky! We want to ignore stackrefs with embedded
--    // refcounts when computing the incoming references, but otherwise treat
--    // them like normal.
--    assert(!PyStackRef_IsTaggedInt(*ref));
--    if (!PyStackRef_RefcountOnObject(*ref) && (visit == visit_decref)) {
--        return 0;
--    }
--    Py_VISIT(PyStackRef_AsPyObjectBorrow(*ref));
--    return 0;
--}
--
--int
--_PyGC_VisitFrameStack(_PyInterpreterFrame *frame, visitproc visit, void *arg)
--{
--    _PyStackRef *ref = _PyFrame_GetLocalsArray(frame);
--    /* locals and stack */
--    for (; ref < frame->stackpointer; ref++) {
--        if (!PyStackRef_IsTaggedInt(*ref)) {
--            _Py_VISIT_STACKREF(*ref);
--        }
--    }
--    return 0;
--}
--
--/* Subtract internal references from gc_refs.  After this, gc_refs is >= 0
-- * for all objects in containers, and is GC_REACHABLE for all tracked gc
-- * objects not in containers.  The ones with gc_refs > 0 are directly
-- * reachable from outside containers, and so can't be collected.
-- */
--static void
--subtract_refs(PyGC_Head *containers)
--{
--    traverseproc traverse;
--    PyGC_Head *gc = GC_NEXT(containers);
--    for (; gc != containers; gc = GC_NEXT(gc)) {
--        PyObject *op = FROM_GC(gc);
--        traverse = Py_TYPE(op)->tp_traverse;
--        (void) traverse(op,
--                        visit_decref,
--                        op);
--    }
--}
--
+ /* A traversal callback for subtract_refs. */
+ static int
+ visit_decref(PyObject *op, void *parent)
+@@ -588,159 +370,7 @@ subtract_refs(PyGC_Head *containers)
+     }
+ }
+ 
 -/* A traversal callback for move_unreachable. */
 -static int
 -visit_reachable(PyObject *op, void *arg)
@@ -928,7 +620,7 @@ index c134dc57e28..325c1037354 100644
 -    }
 -    return 0;
 -}
--
+ 
 -/* Move the unreachable objects from young to unreachable.  After this,
 - * all objects in young don't have PREV_MASK_COLLECTING flag and
 - * unreachable have the flag.
@@ -1018,40 +710,13 @@ index c134dc57e28..325c1037354 100644
 -    // don't let the pollution of the list head's next pointer leak
 -    unreachable->_gc_next &= _PyGC_PREV_MASK;
 -}
--
--/* In theory, all tuples should be younger than the
--* objects they refer to, as tuples are immortal.
--* Therefore, untracking tuples in oldest-first order in the
--* young generation before promoting them should have tracked
--* all the tuples that can be untracked.
--*
--* Unfortunately, the C API allows tuples to be created
--* and then filled in. So this won't untrack all tuples
--* that can be untracked. It should untrack most of them
--* and is much faster than a more complex approach that
--* would untrack all relevant tuples.
--*/
--static void
--untrack_tuples(PyGC_Head *head)
--{
--    PyGC_Head *gc = GC_NEXT(head);
--    while (gc != head) {
--        PyObject *op = FROM_GC(gc);
--        PyGC_Head *next = GC_NEXT(gc);
--        if (PyTuple_CheckExact(op)) {
--            _PyTuple_MaybeUntrack(op);
--        }
--        gc = next;
--    }
--}
--
--/* Return true if object has a pre-PEP 442 finalization method. */
--static int
--has_legacy_finalizer(PyObject *op)
--{
--    return Py_TYPE(op)->tp_del != NULL;
--}
--
+ 
+ /* In theory, all tuples should be younger than the
+ * objects they refer to, as tuples are immortal.
+@@ -775,55 +405,6 @@ has_legacy_finalizer(PyObject *op)
+     return Py_TYPE(op)->tp_del != NULL;
+ }
+ 
 -/* Move the objects in unreachable with tp_del slots into `finalizers`.
 - *
 - * This function also removes NEXT_MASK_UNREACHABLE flag
@@ -1101,40 +766,13 @@ index c134dc57e28..325c1037354 100644
 -    }
 -    validate_list(unreachable, collecting_set_unreachable_clear);
 -}
--
--/* A traversal callback for move_legacy_finalizer_reachable. */
--static int
--visit_move(PyObject *op, void *arg)
--{
--    PyGC_Head *tolist = arg;
--    OBJECT_STAT_INC(object_visits);
--    if (_PyObject_IS_GC(op)) {
--        PyGC_Head *gc = AS_GC(op);
--        if (gc_is_collecting(gc)) {
--            gc_list_move(gc, tolist);
--            gc_clear_collecting(gc);
--        }
--    }
--    return 0;
--}
--
--/* Move objects that are reachable from finalizers, from the unreachable set
-- * into finalizers set.
-- */
--static void
--move_legacy_finalizer_reachable(PyGC_Head *finalizers)
--{
--    traverseproc traverse;
--    PyGC_Head *gc = GC_NEXT(finalizers);
--    for (; gc != finalizers; gc = GC_NEXT(gc)) {
--        /* Note that the finalizers list may grow during this. */
--        traverse = Py_TYPE(FROM_GC(gc))->tp_traverse;
--        (void) traverse(FROM_GC(gc),
--                        visit_move,
--                        (void *)finalizers);
--    }
--}
--
+ 
+ /* A traversal callback for move_legacy_finalizer_reachable. */
+ static int
+@@ -858,196 +439,6 @@ move_legacy_finalizer_reachable(PyGC_Head *finalizers)
+     }
+ }
+ 
 -/* Clear all weakrefs to unreachable objects, and if such a weakref has a
 - * callback, invoke it if necessary.  Note that it's possible for such
 - * weakrefs to be outside the unreachable set -- indeed, those are precisely
@@ -1325,124 +963,13 @@ index c134dc57e28..325c1037354 100644
 -    return num_freed;
 -}
 -
--static void
--debug_cycle(const char *msg, PyObject *op)
--{
--    PySys_FormatStderr("gc: %s <%s %p>\n",
--                       msg, Py_TYPE(op)->tp_name, op);
--}
--
--/* Handle uncollectable garbage (cycles with tp_del slots, and stuff reachable
-- * only from such cycles).
-- * If _PyGC_DEBUG_SAVEALL, all objects in finalizers are appended to the module
-- * garbage list (a Python list), else only the objects in finalizers with
-- * __del__ methods are appended to garbage.  All objects in finalizers are
-- * merged into the old list regardless.
-- */
--static void
--handle_legacy_finalizers(PyThreadState *tstate,
--                         GCState *gcstate,
--                         PyGC_Head *finalizers, PyGC_Head *old)
--{
--    assert(!_PyErr_Occurred(tstate));
--    assert(gcstate->garbage != NULL);
--
--    PyGC_Head *gc = GC_NEXT(finalizers);
--    for (; gc != finalizers; gc = GC_NEXT(gc)) {
--        PyObject *op = FROM_GC(gc);
--
--        if ((gcstate->debug & _PyGC_DEBUG_SAVEALL) || has_legacy_finalizer(op)) {
--            if (PyList_Append(gcstate->garbage, op) < 0) {
--                _PyErr_Clear(tstate);
--                break;
--            }
--        }
--    }
--
--    gc_list_merge(finalizers, old);
--}
--
--/* Run first-time finalizers (if any) on all the objects in collectable.
-- * Note that this may remove some (or even all) of the objects from the
-- * list, due to refcounts falling to 0.
-- */
--static void
--finalize_garbage(PyThreadState *tstate, PyGC_Head *collectable)
--{
--    destructor finalize;
--    PyGC_Head seen;
--
--    /* While we're going through the loop, `finalize(op)` may cause op, or
--     * other objects, to be reclaimed via refcounts falling to zero.  So
--     * there's little we can rely on about the structure of the input
--     * `collectable` list across iterations.  For safety, we always take the
--     * first object in that list and move it to a temporary `seen` list.
--     * If objects vanish from the `collectable` and `seen` lists we don't
--     * care.
--     */
--    gc_list_init(&seen);
--
--    while (!gc_list_is_empty(collectable)) {
--        PyGC_Head *gc = GC_NEXT(collectable);
--        PyObject *op = FROM_GC(gc);
--        gc_list_move(gc, &seen);
--        if (!_PyGC_FINALIZED(op) &&
--            (finalize = Py_TYPE(op)->tp_finalize) != NULL)
--        {
--            _PyGC_SET_FINALIZED(op);
--            Py_INCREF(op);
--            finalize(op);
--            assert(!_PyErr_Occurred(tstate));
--            Py_DECREF(op);
--        }
--    }
--    gc_list_merge(&seen, collectable);
--}
--
--/* Break reference cycles by clearing the containers involved.  This is
-- * tricky business as the lists can be changing and we don't know which
-- * objects may be freed.  It is possible I screwed something up here.
-- */
--static void
--delete_garbage(PyThreadState *tstate, GCState *gcstate,
--               PyGC_Head *collectable, PyGC_Head *old)
--{
--    assert(!_PyErr_Occurred(tstate));
--
--    while (!gc_list_is_empty(collectable)) {
--        PyGC_Head *gc = GC_NEXT(collectable);
--        PyObject *op = FROM_GC(gc);
--
--        _PyObject_ASSERT_WITH_MSG(op, Py_REFCNT(op) > 0,
--                                  "refcount is too small");
--
--        if (gcstate->debug & _PyGC_DEBUG_SAVEALL) {
--            assert(gcstate->garbage != NULL);
--            if (PyList_Append(gcstate->garbage, op) < 0) {
--                _PyErr_Clear(tstate);
--            }
--        }
--        else {
--            inquiry clear;
--            if ((clear = Py_TYPE(op)->tp_clear) != NULL) {
--                Py_INCREF(op);
--                (void) clear(op);
--                if (_PyErr_Occurred(tstate)) {
--                    PyErr_FormatUnraisable("Exception ignored in tp_clear of %s",
--                                           Py_TYPE(op)->tp_name);
--                }
--                Py_DECREF(op);
--            }
--        }
--        if (GC_NEXT(collectable) == gc) {
--            /* object is still alive, move it, it may die later */
--            gc_clear_collecting(gc);
--            gc_list_move(gc, old);
--        }
--    }
--}
--
--
+ static void
+ debug_cycle(const char *msg, PyObject *op)
+ {
+@@ -1166,695 +557,6 @@ delete_garbage(PyThreadState *tstate, GCState *gcstate,
+ }
+ 
+ 
 -/* Deduce which objects among "base" are unreachable from outside the list
 -   and move them to 'unreachable'. The process consist in the following steps:
 -
@@ -2132,86 +1659,37 @@ index c134dc57e28..325c1037354 100644
 -    }
 -    do_gc_callback(gcstate, phase, generation, stats);
 -}
--
--static int
--referrersvisit(PyObject* obj, void *arg)
--{
--    PyObject *objs = arg;
--    Py_ssize_t i;
--    for (i = 0; i < PyTuple_GET_SIZE(objs); i++) {
--        if (PyTuple_GET_ITEM(objs, i) == obj) {
--            return 1;
--        }
--    }
--    return 0;
--}
--
--static int
--gc_referrers_for(PyObject *objs, PyGC_Head *list, PyObject *resultlist)
--{
--    PyGC_Head *gc;
--    PyObject *obj;
--    traverseproc traverse;
--    for (gc = GC_NEXT(list); gc != list; gc = GC_NEXT(gc)) {
--        obj = FROM_GC(gc);
--        traverse = Py_TYPE(obj)->tp_traverse;
--        if (obj == objs || obj == resultlist) {
--            continue;
--        }
--        if (traverse(obj, referrersvisit, objs)) {
--            if (PyList_Append(resultlist, obj) < 0) {
--                return 0; /* error */
--            }
--        }
--    }
--    return 1; /* no error */
--}
--
+ 
+ static int
+ referrersvisit(PyObject* obj, void *arg)
+@@ -1890,91 +592,8 @@ gc_referrers_for(PyObject *objs, PyGC_Head *list, PyObject *resultlist)
+     return 1; /* no error */
+ }
+ 
 -PyObject *
 -_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
-+/* A traversal callback for subtract_refs.
-+ *
-+ * This function has external linkage because _PyGC_VisitStackRef
-+ * compares function pointers against it.  It must be a single symbol
-+ * so every compilation unit sees the same address.
-+ */
-+int
-+visit_decref(PyObject *op, void *parent)
- {
+-{
 -    PyObject *result = PyList_New(0);
 -    if (!result) {
 -        return NULL;
 -    }
-+    OBJECT_STAT_INC(object_visits);
-+    _PyObject_ASSERT(_PyObject_CAST(parent), !_PyObject_IsFreed(op));
- 
+-
 -    GCState *gcstate = &interp->gc;
 -    for (int i = 0; i < NUM_GENERATIONS; i++) {
 -        if (!(gc_referrers_for(objs, GEN_HEAD(gcstate, i), result))) {
 -            Py_DECREF(result);
 -            return NULL;
-+    if (_PyObject_IS_GC(op)) {
-+        PyGC_Head *gc = AS_GC(op);
-+        /* We're only interested in gc_refs for objects in the
-+         * generation being collected, which can be recognized
-+         * because only they have positive gc_refs.
-+         */
-+        if (gc_is_collecting(gc)) {
-+            gc_decref(gc);
-         }
-     }
+-        }
+-    }
 -    return result;
-+    return 0;
- }
- 
+-}
+-
 -PyObject *
 -_PyGC_GetObjects(PyInterpreterState *interp, int generation)
-+int
-+_PyGC_VisitStackRef(_PyStackRef *ref, visitproc visit, void *arg)
- {
+-{
 -    assert(generation >= -1 && generation < NUM_GENERATIONS);
 -    GCState *gcstate = &interp->gc;
--
+ 
 -    PyObject *result = PyList_New(0);
 -    /* Generation:
 -     * -1: Return all objects
@@ -2234,27 +1712,17 @@ index c134dc57e28..325c1037354 100644
 -        if (append_objects(result, &gcstate->old[1].head)) {
 -            goto error;
 -        }
-+    // This is a bit tricky! We want to ignore stackrefs with embedded
-+    // refcounts when computing the incoming references, but otherwise treat
-+    // them like normal.
-+    assert(!PyStackRef_IsTaggedInt(*ref));
-+    if (!PyStackRef_RefcountOnObject(*ref) && (visit == visit_decref)) {
-+        return 0;
-     }
--
+-    }
+ 
 -    return result;
 -error:
 -    Py_DECREF(result);
 -    return NULL;
-+    Py_VISIT(PyStackRef_AsPyObjectBorrow(*ref));
-+    return 0;
- }
- 
+-}
+-
 -void
 -_PyGC_Freeze(PyInterpreterState *interp)
-+int
-+_PyGC_VisitFrameStack(_PyInterpreterFrame *frame, visitproc visit, void *arg)
- {
+-{
 -    GCState *gcstate = &interp->gc;
 -    /* The permanent_generation must be visited */
 -    gc_list_set_space(&gcstate->young.head, gcstate->visited_space);
@@ -2267,21 +1735,14 @@ index c134dc57e28..325c1037354 100644
 -    }
 -    else {
 -        gc_list_set_space(old1, 0);
-+    _PyStackRef *ref = _PyFrame_GetLocalsArray(frame);
-+    /* locals and stack */
-+    for (; ref < frame->stackpointer; ref++) {
-+        if (!PyStackRef_IsTaggedInt(*ref)) {
-+            _Py_VISIT_STACKREF(*ref);
-+        }
-     }
+-    }
 -    gc_list_merge(old0, &gcstate->permanent_generation.head);
 -    gcstate->old[0].count = 0;
 -    gc_list_merge(old1, &gcstate->permanent_generation.head);
 -    gcstate->old[1].count = 0;
 -    validate_spaces(gcstate);
-+    return 0;
- }
- 
+-}
+-
 -void
 -_PyGC_Unfreeze(PyInterpreterState *interp)
 -{
@@ -2293,7 +1754,7 @@ index c134dc57e28..325c1037354 100644
  
  Py_ssize_t
  _PyGC_GetFreezeCount(PyInterpreterState *interp)
-@@ -2009,190 +93,7 @@ PyGC_IsEnabled(void)
+@@ -2009,154 +628,7 @@ PyGC_IsEnabled(void)
      return gcstate->enabled;
  }
  
@@ -2403,7 +1864,7 @@ index c134dc57e28..325c1037354 100644
 -       */
 -    _PyGC_Collect(_PyThreadState_GET(), 2, _Py_GC_REASON_SHUTDOWN);
 -}
--
+ 
 -void
 -_PyGC_DumpShutdownStats(PyInterpreterState *interp)
 -{
@@ -2445,22 +1906,20 @@ index c134dc57e28..325c1037354 100644
 -        }
 -    }
 -}
--
--static void
--finalize_unlink_gc_head(PyGC_Head *gc) {
--    PyGC_Head *prev = GC_PREV(gc);
--    PyGC_Head *next = GC_NEXT(gc);
--    _PyGCHead_SET_NEXT(prev, next);
--    _PyGCHead_SET_PREV(next, prev);
--}
--
+ 
+ static void
+ finalize_unlink_gc_head(PyGC_Head *gc) {
+@@ -2166,33 +638,6 @@ finalize_unlink_gc_head(PyGC_Head *gc) {
+     _PyGCHead_SET_PREV(next, prev);
+ }
+ 
 -void
 -_PyGC_Fini(PyInterpreterState *interp)
 -{
 -    GCState *gcstate = &interp->gc;
 -    Py_CLEAR(gcstate->garbage);
 -    Py_CLEAR(gcstate->callbacks);
- 
+-
 -    /* Prevent a subtle bug that affects sub-interpreters that use basic
 -     * single-phase init extensions (m_size == -1).  Those extensions cause objects
 -     * to be shared between interpreters, via the PyDict_Update(mdict, m_copy) call
@@ -2484,7 +1943,7 @@ index c134dc57e28..325c1037354 100644
  
  /* for debugging */
  void
-@@ -2264,37 +165,6 @@ _Py_ScheduleGC(PyThreadState *tstate)
+@@ -2264,37 +709,6 @@ _Py_ScheduleGC(PyThreadState *tstate)
      }
  }
  
@@ -2522,7 +1981,7 @@ index c134dc57e28..325c1037354 100644
  
  static PyObject *
  gc_alloc(PyTypeObject *tp, size_t basicsize, size_t presize)
-@@ -2387,33 +257,6 @@ _PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)
+@@ -2387,33 +801,6 @@ _PyObject_GC_Resize(PyVarObject *op, Py_ssize_t nitems)
      return op;
  }
  
@@ -2556,841 +2015,56 @@ index c134dc57e28..325c1037354 100644
  
  int
  PyObject_GC_IsTracked(PyObject* obj)
-@@ -2433,41 +276,206 @@ PyObject_GC_IsFinalized(PyObject *obj)
+@@ -2450,24 +837,13 @@ visit_generation(gcvisitobjects_t callback, void *arg, struct gc_generation *gen
      return 0;
  }
  
--static int
--visit_generation(gcvisitobjects_t callback, void *arg, struct gc_generation *gen)
-+
-+/*
-+ * Forward declarations for GC variant entry points.
-+ * Defined in gc_gen.c and gc_inc.c respectively.
-+ */
-+
-+/* gc_gen.c */
-+void _PyGenGC_InitState(GCState *gcstate);
-+PyStatus _PyGenGC_Init(PyInterpreterState *interp);
-+Py_ssize_t _PyGenGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
-+void _Py_GenGC_Run(PyThreadState *tstate);
-+void _PyObject_GenGC_Link(PyObject *op);
-+Py_ssize_t PyGenGC_Collect(void);
-+void _PyGenGC_CollectNoFail(PyThreadState *tstate);
-+void _PyGenGC_DumpShutdownStats(PyInterpreterState *interp);
-+void _PyGenGC_Fini(PyInterpreterState *interp);
-+void _PyGenGC_Freeze(PyInterpreterState *interp);
-+void _PyGenGC_Unfreeze(PyInterpreterState *interp);
-+PyObject *_PyGenGC_GetReferrers(PyInterpreterState *interp, PyObject *objs);
-+PyObject *_PyGenGC_GetObjects(PyInterpreterState *interp, int generation);
-+void _PyObject_GenGC_Del(void *op);
-+void _PyUnstable_GenGC_VisitObjects(gcvisitobjects_t callback, void *arg);
-+
-+/* gc_inc.c */
-+void _PyIncGC_InitState(GCState *gcstate);
-+PyStatus _PyIncGC_Init(PyInterpreterState *interp);
-+Py_ssize_t _PyIncGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason);
-+void _Py_IncGC_Run(PyThreadState *tstate);
-+void _PyObject_IncGC_Link(PyObject *op);
-+Py_ssize_t PyIncGC_Collect(void);
-+void _PyIncGC_CollectNoFail(PyThreadState *tstate);
-+void _PyIncGC_DumpShutdownStats(PyInterpreterState *interp);
-+void _PyIncGC_Fini(PyInterpreterState *interp);
-+void _PyIncGC_Freeze(PyInterpreterState *interp);
-+void _PyIncGC_Unfreeze(PyInterpreterState *interp);
-+PyObject *_PyIncGC_GetReferrers(PyInterpreterState *interp, PyObject *objs);
-+PyObject *_PyIncGC_GetObjects(PyInterpreterState *interp, int generation);
-+void _PyObject_IncGC_Del(void *op);
-+void _PyUnstable_IncGC_VisitObjects(gcvisitobjects_t callback, void *arg);
-+
-+
-+/* ---- Dispatch wrappers (inc or gen) ---- */
-+
-+void
-+_PyGC_InitState(GCState *gcstate)
- {
--    PyGC_Head *gc_list, *gc;
--    gc_list = &gen->head;
--    for (gc = GC_NEXT(gc_list); gc != gc_list; gc = GC_NEXT(gc)) {
--        PyObject *op = FROM_GC(gc);
--        Py_INCREF(op);
--        int res = callback(op, arg);
--        Py_DECREF(op);
--        if (!res) {
--            return -1;
--        }
-+    /* Always initialize both sets of state; the flag is set later. */
-+    _PyGenGC_InitState(gcstate);
-+    _PyIncGC_InitState(gcstate);
-+}
-+
-+PyStatus
-+_PyGC_Init(PyInterpreterState *interp)
-+{
-+    GCState *gcstate = &interp->gc;
-+    const PyConfig *config = _PyInterpreterState_GetConfig(interp);
-+    gcstate->use_incremental = config->gc_incremental;
-+    if (gcstate->use_incremental) {
-+        return _PyIncGC_Init(interp);
-     }
--    return 0;
-+    return _PyGenGC_Init(interp);
-+}
-+
-+Py_ssize_t
-+_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)
-+{
-+    if (tstate->interp->gc.use_incremental) {
-+        return _PyIncGC_Collect(tstate, generation, reason);
-+    }
-+    return _PyGenGC_Collect(tstate, generation, reason);
- }
- 
- void
+-void
 -PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)
-+_Py_RunGC(PyThreadState *tstate)
- {
+-{
 -    GCState *gcstate = get_gc_state();
 -    int original_state = gcstate->enabled;
 -    gcstate->enabled = 0;
 -    if (visit_generation(callback, arg, &gcstate->young) < 0) {
 -        goto done;
-+    if (tstate->interp->gc.use_incremental) {
-+        _Py_IncGC_Run(tstate);
-+    }
-+    else {
-+        _Py_GenGC_Run(tstate);
-+    }
-+}
-+
-+void
-+_PyObject_GC_Link(PyObject *op)
-+{
-+    PyInterpreterState *interp = _PyInterpreterState_GET();
-+    if (interp->gc.use_incremental) {
-+        _PyObject_IncGC_Link(op);
-+    }
-+    else {
-+        _PyObject_GenGC_Link(op);
-+    }
-+}
-+
-+Py_ssize_t
-+PyGC_Collect(void)
-+{
-+    PyInterpreterState *interp = _PyInterpreterState_GET();
-+    if (interp->gc.use_incremental) {
-+        return PyIncGC_Collect();
-+    }
-+    return PyGenGC_Collect();
-+}
-+
-+void
-+_PyGC_CollectNoFail(PyThreadState *tstate)
-+{
-+    if (tstate->interp->gc.use_incremental) {
-+        _PyIncGC_CollectNoFail(tstate);
-+    }
-+    else {
-+        _PyGenGC_CollectNoFail(tstate);
-+    }
-+}
-+
-+void
-+_PyGC_DumpShutdownStats(PyInterpreterState *interp)
-+{
-+    if (interp->gc.use_incremental) {
-+        _PyIncGC_DumpShutdownStats(interp);
-+    }
-+    else {
-+        _PyGenGC_DumpShutdownStats(interp);
-+    }
-+}
-+
-+void
-+_PyGC_Fini(PyInterpreterState *interp)
-+{
-+    if (interp->gc.use_incremental) {
-+        _PyIncGC_Fini(interp);
-+    }
-+    else {
-+        _PyGenGC_Fini(interp);
-+    }
-+}
-+
-+void
-+_PyGC_Freeze(PyInterpreterState *interp)
-+{
-+    if (interp->gc.use_incremental) {
-+        _PyIncGC_Freeze(interp);
-+    }
-+    else {
-+        _PyGenGC_Freeze(interp);
-+    }
-+}
-+
-+void
-+_PyGC_Unfreeze(PyInterpreterState *interp)
-+{
-+    if (interp->gc.use_incremental) {
-+        _PyIncGC_Unfreeze(interp);
-+    }
-+    else {
-+        _PyGenGC_Unfreeze(interp);
-+    }
-+}
-+
-+PyObject *
-+_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
-+{
-+    if (interp->gc.use_incremental) {
-+        return _PyIncGC_GetReferrers(interp, objs);
-+    }
-+    return _PyGenGC_GetReferrers(interp, objs);
-+}
-+
-+PyObject *
-+_PyGC_GetObjects(PyInterpreterState *interp, int generation)
-+{
-+    if (interp->gc.use_incremental) {
-+        return _PyIncGC_GetObjects(interp, generation);
-     }
+-    }
 -    if (visit_generation(callback, arg, &gcstate->old[0]) < 0) {
 -        goto done;
-+    return _PyGenGC_GetObjects(interp, generation);
-+}
-+
-+void
-+PyObject_GC_Del(void *op)
-+{
-+    PyInterpreterState *interp = _PyInterpreterState_GET();
-+    if (interp->gc.use_incremental) {
-+        _PyObject_IncGC_Del(op);
-+    }
-+    else {
-+        _PyObject_GenGC_Del(op);
-     }
+-    }
 -    if (visit_generation(callback, arg, &gcstate->old[1]) < 0) {
 -        goto done;
-+}
-+
-+void
-+PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)
-+{
-+    PyInterpreterState *interp = _PyInterpreterState_GET();
-+    if (interp->gc.use_incremental) {
-+        _PyUnstable_IncGC_VisitObjects(callback, arg);
-+    }
-+    else {
-+        _PyUnstable_GenGC_VisitObjects(callback, arg);
-     }
+-    }
 -    visit_generation(callback, arg, &gcstate->permanent_generation);
 -done:
 -    gcstate->enabled = original_state;
- }
+-}
  
 -#endif  // Py_GIL_DISABLED
-+#endif  // !Py_GIL_DISABLED
-diff --git a/Python/gc_common.h b/Python/gc_common.h
-new file mode 100644
-index 00000000000..40f86c0fe94
---- /dev/null
-+++ b/Python/gc_common.h
-@@ -0,0 +1,576 @@
-+// Common definitions shared by gc.c, gc_gen.c and gc_inc.c.
-+// Do not compile independently.
 +
-+#include "Python.h"
-+#include "pycore_ceval.h"         // _Py_set_eval_breaker_bit()
-+#include "pycore_dict.h"          // _PyInlineValuesSize()
-+#include "pycore_initconfig.h"    // _PyStatus_OK()
-+#include "pycore_context.h"
-+#include "pycore_interp.h"        // PyInterpreterState.gc
-+#include "pycore_interpframe.h"   // _PyFrame_GetLocalsArray()
-+#include "pycore_object.h"
-+#include "pycore_object_alloc.h"  // _PyObject_MallocWithType()
-+#include "pycore_pyerrors.h"
-+#include "pycore_pystate.h"       // _PyThreadState_GET()
-+#include "pycore_tuple.h"         // _PyTuple_MaybeUntrack()
-+#include "pycore_weakref.h"       // _PyWeakref_ClearRef()
-+
-+#include "pydtrace.h"
-+
-+
-+typedef struct _gc_runtime_state GCState;
-+
-+#ifdef Py_DEBUG
-+#  define GC_DEBUG
++/* Include GC variant-specific code */
++#ifndef Py_GC_INCREMENTAL
++#include "gc_gen.h"
++#else
++#include "gc_inc.h"
 +#endif
 +
-+
-+
-+#define GC_NEXT _PyGCHead_NEXT
-+#define GC_PREV _PyGCHead_PREV
-+
-+// update_refs() set this bit for all objects in current generation.
-+// subtract_refs() and move_unreachable() uses this to distinguish
-+// visited object is in GCing or not.
-+//
-+// move_unreachable() removes this flag from reachable objects.
-+// Only unreachable objects have this flag.
-+//
-+// No objects in interpreter have this flag after GC ends.
-+#define PREV_MASK_COLLECTING   _PyGC_PREV_MASK_COLLECTING
-+
-+// Lowest bit of _gc_next is used for UNREACHABLE flag.
-+//
-+// This flag represents the object is in unreachable list in move_unreachable()
-+//
-+// Although this flag is used only in move_unreachable(), move_unreachable()
-+// doesn't clear this flag to skip unnecessary iteration.
-+// move_legacy_finalizers() removes this flag instead.
-+// Between them, unreachable list is not normal list and we can not use
-+// most gc_list_* functions for it.
-+/* NEXT_MASK_UNREACHABLE is defined locally in each GC variant */
-+
-+#define AS_GC(op) _Py_AS_GC(op)
-+#define FROM_GC(gc) _Py_FROM_GC(gc)
-+
-+// Automatically choose the generation that needs collecting.
-+#define GENERATION_AUTO (-1)
-+
-+static inline int
-+gc_is_collecting(PyGC_Head *g)
-+{
-+    return (g->_gc_prev & PREV_MASK_COLLECTING) != 0;
-+}
-+
-+static inline void
-+gc_clear_collecting(PyGC_Head *g)
-+{
-+    g->_gc_prev &= ~PREV_MASK_COLLECTING;
-+}
-+
-+static inline Py_ssize_t
-+gc_get_refs(PyGC_Head *g)
-+{
-+    return (Py_ssize_t)(g->_gc_prev >> _PyGC_PREV_SHIFT);
-+}
-+
-+static inline void
-+gc_set_refs(PyGC_Head *g, Py_ssize_t refs)
-+{
-+    g->_gc_prev = (g->_gc_prev & ~_PyGC_PREV_MASK)
-+        | ((uintptr_t)(refs) << _PyGC_PREV_SHIFT);
-+}
-+
-+static inline void
-+gc_reset_refs(PyGC_Head *g, Py_ssize_t refs)
-+{
-+    g->_gc_prev = (g->_gc_prev & _PyGC_PREV_MASK_FINALIZED)
-+        | PREV_MASK_COLLECTING
-+        | ((uintptr_t)(refs) << _PyGC_PREV_SHIFT);
-+}
-+
-+static inline void
-+gc_decref(PyGC_Head *g)
-+{
-+    _PyObject_ASSERT_WITH_MSG(FROM_GC(g),
-+                              gc_get_refs(g) > 0,
-+                              "refcount is too small");
-+    g->_gc_prev -= 1 << _PyGC_PREV_SHIFT;
-+}
-+
-+
-+static inline GCState *
-+get_gc_state(void)
-+{
-+    PyInterpreterState *interp = _PyInterpreterState_GET();
-+    return &interp->gc;
-+}
-+
-+
-+
-+/*
-+_gc_prev values
-+---------------
-+
-+Between collections, _gc_prev is used for doubly linked list.
-+
-+Lowest two bits of _gc_prev are used for flags.
-+PREV_MASK_COLLECTING is used only while collecting and cleared before GC ends
-+or _PyObject_GC_UNTRACK() is called.
-+
-+During a collection, _gc_prev is temporary used for gc_refs, and the gc list
-+is singly linked until _gc_prev is restored.
-+
-+gc_refs
-+    At the start of a collection, update_refs() copies the true refcount
-+    to gc_refs, for each object in the generation being collected.
-+    subtract_refs() then adjusts gc_refs so that it equals the number of
-+    times an object is referenced directly from outside the generation
-+    being collected.
-+
-+PREV_MASK_COLLECTING
-+    Objects in generation being collected are marked PREV_MASK_COLLECTING in
-+    update_refs().
-+
-+
-+_gc_next values
-+---------------
-+
-+_gc_next takes these values:
-+
-+0
-+    The object is not tracked
-+
-+!= 0
-+    Pointer to the next object in the GC list.
-+    Additionally, lowest bit is used temporary for
-+    NEXT_MASK_UNREACHABLE flag described below.
-+
-+NEXT_MASK_UNREACHABLE
-+    move_unreachable() then moves objects not reachable (whether directly or
-+    indirectly) from outside the generation into an "unreachable" set and
-+    set this flag.
-+
-+    Objects that are found to be reachable have gc_refs set to 1.
-+    When this flag is set for the reachable object, the object must be in
-+    "unreachable" set.
-+    The flag is unset and the object is moved back to "reachable" set.
-+
-+    move_legacy_finalizers() will remove this flag from "unreachable" set.
-+*/
-+
-+/*** list functions ***/
-+
-+static inline void
-+gc_list_init(PyGC_Head *list)
-+{
-+    // List header must not have flags.
-+    // We can assign pointer by simple cast.
-+    list->_gc_prev = (uintptr_t)list;
-+    list->_gc_next = (uintptr_t)list;
-+}
-+
-+static inline int
-+gc_list_is_empty(PyGC_Head *list)
-+{
-+    return (list->_gc_next == (uintptr_t)list);
-+}
-+
-+/* Append `node` to `list`. */
-+static inline void
-+gc_list_append(PyGC_Head *node, PyGC_Head *list)
-+{
-+    assert((list->_gc_prev & ~_PyGC_PREV_MASK) == 0);
-+    PyGC_Head *last = (PyGC_Head *)list->_gc_prev;
-+
-+    // last <-> node
-+    _PyGCHead_SET_PREV(node, last);
-+    _PyGCHead_SET_NEXT(last, node);
-+
-+    // node <-> list
-+    _PyGCHead_SET_NEXT(node, list);
-+    list->_gc_prev = (uintptr_t)node;
-+}
-+
-+/* Remove `node` from the gc list it's currently in. */
-+static inline void
-+gc_list_remove(PyGC_Head *node)
-+{
-+    PyGC_Head *prev = GC_PREV(node);
-+    PyGC_Head *next = GC_NEXT(node);
-+
-+    _PyGCHead_SET_NEXT(prev, next);
-+    _PyGCHead_SET_PREV(next, prev);
-+
-+    node->_gc_next = 0; /* object is not currently tracked */
-+}
-+
-+/* Move `node` from the gc list it's currently in (which is not explicitly
-+ * named here) to the end of `list`.  This is semantically the same as
-+ * gc_list_remove(node) followed by gc_list_append(node, list).
-+ */
-+static inline void
-+gc_list_move(PyGC_Head *node, PyGC_Head *list)
-+{
-+    /* Unlink from current list. */
-+    PyGC_Head *from_prev = GC_PREV(node);
-+    PyGC_Head *from_next = GC_NEXT(node);
-+    _PyGCHead_SET_NEXT(from_prev, from_next);
-+    _PyGCHead_SET_PREV(from_next, from_prev);
-+
-+    /* Relink at end of new list. */
-+    // list must not have flags.  So we can skip macros.
-+    PyGC_Head *to_prev = (PyGC_Head*)list->_gc_prev;
-+    _PyGCHead_SET_PREV(node, to_prev);
-+    _PyGCHead_SET_NEXT(to_prev, node);
-+    list->_gc_prev = (uintptr_t)node;
-+    _PyGCHead_SET_NEXT(node, list);
-+}
-+
-+/* append list `from` onto list `to`; `from` becomes an empty list */
-+static inline void
-+gc_list_merge(PyGC_Head *from, PyGC_Head *to)
-+{
-+    assert(from != to);
-+    if (!gc_list_is_empty(from)) {
-+        PyGC_Head *to_tail = GC_PREV(to);
-+        PyGC_Head *from_head = GC_NEXT(from);
-+        PyGC_Head *from_tail = GC_PREV(from);
-+        assert(from_head != from);
-+        assert(from_tail != from);
-+
-+        _PyGCHead_SET_NEXT(to_tail, from_head);
-+        _PyGCHead_SET_PREV(from_head, to_tail);
-+
-+        _PyGCHead_SET_NEXT(from_tail, to);
-+        _PyGCHead_SET_PREV(to, from_tail);
-+    }
-+    gc_list_init(from);
-+}
-+
-+static inline Py_ssize_t
-+gc_list_size(PyGC_Head *list)
-+{
-+    PyGC_Head *gc;
-+    Py_ssize_t n = 0;
-+    for (gc = GC_NEXT(list); gc != list; gc = GC_NEXT(gc)) {
-+        n++;
-+    }
-+    return n;
-+}
-+
-+/* Walk the list and mark all objects as non-collecting */
-+static inline void
-+gc_list_clear_collecting(PyGC_Head *collectable)
-+{
-+    PyGC_Head *gc;
-+    for (gc = GC_NEXT(collectable); gc != collectable; gc = GC_NEXT(gc)) {
-+        gc_clear_collecting(gc);
-+    }
-+}
-+
-+/* Append objects in a GC list to a Python list.
-+ * Return 0 if all OK, < 0 if error (out of memory for list)
-+ */
-+static inline int
-+append_objects(PyObject *py_list, PyGC_Head *gc_list)
-+{
-+    PyGC_Head *gc;
-+    for (gc = GC_NEXT(gc_list); gc != gc_list; gc = GC_NEXT(gc)) {
-+        PyObject *op = FROM_GC(gc);
-+        if (op != py_list) {
-+            if (PyList_Append(py_list, op)) {
-+                return -1; /* exception */
-+            }
-+        }
-+    }
-+    return 0;
-+}
-+
-+// Constants for validate_list's flags argument.
-+enum flagstates {collecting_clear_unreachable_clear,
-+                 collecting_clear_unreachable_set,
-+                 collecting_set_unreachable_clear,
-+                 collecting_set_unreachable_set};
-+
-+
-+/*** end of list stuff ***/
-+
-+
-+/* A traversal callback for subtract_refs.
-+ *
-+ * This function must have external linkage (not static) because
-+ * _PyGC_VisitStackRef compares function pointers against it.
-+ * If it were static in a shared header, each compilation unit would
-+ * get a different copy with a different address, breaking the comparison.
-+ */
-+int
-+visit_decref(PyObject *op, void *parent);
-+
-+/* Subtract internal references from gc_refs.  After this, gc_refs is >= 0
-+ * for all objects in containers, and is GC_REACHABLE for all tracked gc
-+ * objects not in containers.  The ones with gc_refs > 0 are directly
-+ * reachable from outside containers, and so can't be collected.
-+ */
-+static inline void
-+subtract_refs(PyGC_Head *containers)
-+{
-+    traverseproc traverse;
-+    PyGC_Head *gc = GC_NEXT(containers);
-+    for (; gc != containers; gc = GC_NEXT(gc)) {
-+        PyObject *op = FROM_GC(gc);
-+        traverse = Py_TYPE(op)->tp_traverse;
-+        (void) traverse(op,
-+                        visit_decref,
-+                        op);
-+    }
-+}
-+
-+
-+
-+/* In theory, all tuples should be younger than the
-+* objects they refer to, as tuples are immortal.
-+* Therefore, untracking tuples in oldest-first order in the
-+* young generation before promoting them should have tracked
-+* all the tuples that can be untracked.
-+*
-+* Unfortunately, the C API allows tuples to be created
-+* and then filled in. So this won't untrack all tuples
-+* that can be untracked. It should untrack most of them
-+* and is much faster than a more complex approach that
-+* would untrack all relevant tuples.
-+*/
-+static inline void
-+untrack_tuples(PyGC_Head *head)
-+{
-+    PyGC_Head *gc = GC_NEXT(head);
-+    while (gc != head) {
-+        PyObject *op = FROM_GC(gc);
-+        PyGC_Head *next = GC_NEXT(gc);
-+        if (PyTuple_CheckExact(op)) {
-+            _PyTuple_MaybeUntrack(op);
-+        }
-+        gc = next;
-+    }
-+}
-+
-+/* Return true if object has a pre-PEP 442 finalization method. */
-+static inline int
-+has_legacy_finalizer(PyObject *op)
-+{
-+    return Py_TYPE(op)->tp_del != NULL;
-+}
-+
-+
-+/* A traversal callback for move_legacy_finalizer_reachable. */
-+static inline int
-+visit_move(PyObject *op, void *arg)
-+{
-+    PyGC_Head *tolist = arg;
-+    OBJECT_STAT_INC(object_visits);
-+    if (_PyObject_IS_GC(op)) {
-+        PyGC_Head *gc = AS_GC(op);
-+        if (gc_is_collecting(gc)) {
-+            gc_list_move(gc, tolist);
-+            gc_clear_collecting(gc);
-+        }
-+    }
-+    return 0;
-+}
-+
-+/* Move objects that are reachable from finalizers, from the unreachable set
-+ * into finalizers set.
-+ */
-+static inline void
-+move_legacy_finalizer_reachable(PyGC_Head *finalizers)
-+{
-+    traverseproc traverse;
-+    PyGC_Head *gc = GC_NEXT(finalizers);
-+    for (; gc != finalizers; gc = GC_NEXT(gc)) {
-+        /* Note that the finalizers list may grow during this. */
-+        traverse = Py_TYPE(FROM_GC(gc))->tp_traverse;
-+        (void) traverse(FROM_GC(gc),
-+                        visit_move,
-+                        (void *)finalizers);
-+    }
-+}
-+
-+static inline void
-+debug_cycle(const char *msg, PyObject *op)
-+{
-+    PySys_FormatStderr("gc: %s <%s %p>\n",
-+                       msg, Py_TYPE(op)->tp_name, op);
-+}
-+
-+/* Handle uncollectable garbage (cycles with tp_del slots, and stuff reachable
-+ * only from such cycles).
-+ * If _PyGC_DEBUG_SAVEALL, all objects in finalizers are appended to the module
-+ * garbage list (a Python list), else only the objects in finalizers with
-+ * __del__ methods are appended to garbage.  All objects in finalizers are
-+ * merged into the old list regardless.
-+ */
-+static inline void
-+handle_legacy_finalizers(PyThreadState *tstate,
-+                         GCState *gcstate,
-+                         PyGC_Head *finalizers, PyGC_Head *old)
-+{
-+    assert(!_PyErr_Occurred(tstate));
-+    assert(gcstate->garbage != NULL);
-+
-+    PyGC_Head *gc = GC_NEXT(finalizers);
-+    for (; gc != finalizers; gc = GC_NEXT(gc)) {
-+        PyObject *op = FROM_GC(gc);
-+
-+        if ((gcstate->debug & _PyGC_DEBUG_SAVEALL) || has_legacy_finalizer(op)) {
-+            if (PyList_Append(gcstate->garbage, op) < 0) {
-+                _PyErr_Clear(tstate);
-+                break;
-+            }
-+        }
-+    }
-+
-+    gc_list_merge(finalizers, old);
-+}
-+
-+/* Run first-time finalizers (if any) on all the objects in collectable.
-+ * Note that this may remove some (or even all) of the objects from the
-+ * list, due to refcounts falling to 0.
-+ */
-+static inline void
-+finalize_garbage(PyThreadState *tstate, PyGC_Head *collectable)
-+{
-+    destructor finalize;
-+    PyGC_Head seen;
-+
-+    /* While we're going through the loop, `finalize(op)` may cause op, or
-+     * other objects, to be reclaimed via refcounts falling to zero.  So
-+     * there's little we can rely on about the structure of the input
-+     * `collectable` list across iterations.  For safety, we always take the
-+     * first object in that list and move it to a temporary `seen` list.
-+     * If objects vanish from the `collectable` and `seen` lists we don't
-+     * care.
-+     */
-+    gc_list_init(&seen);
-+
-+    while (!gc_list_is_empty(collectable)) {
-+        PyGC_Head *gc = GC_NEXT(collectable);
-+        PyObject *op = FROM_GC(gc);
-+        gc_list_move(gc, &seen);
-+        if (!_PyGC_FINALIZED(op) &&
-+            (finalize = Py_TYPE(op)->tp_finalize) != NULL)
-+        {
-+            _PyGC_SET_FINALIZED(op);
-+            Py_INCREF(op);
-+            finalize(op);
-+            assert(!_PyErr_Occurred(tstate));
-+            Py_DECREF(op);
-+        }
-+    }
-+    gc_list_merge(&seen, collectable);
-+}
-+
-+/* Break reference cycles by clearing the containers involved.  This is
-+ * tricky business as the lists can be changing and we don't know which
-+ * objects may be freed.  It is possible I screwed something up here.
-+ */
-+static inline void
-+delete_garbage(PyThreadState *tstate, GCState *gcstate,
-+               PyGC_Head *collectable, PyGC_Head *old)
-+{
-+    assert(!_PyErr_Occurred(tstate));
-+
-+    while (!gc_list_is_empty(collectable)) {
-+        PyGC_Head *gc = GC_NEXT(collectable);
-+        PyObject *op = FROM_GC(gc);
-+
-+        _PyObject_ASSERT_WITH_MSG(op, Py_REFCNT(op) > 0,
-+                                  "refcount is too small");
-+
-+        if (gcstate->debug & _PyGC_DEBUG_SAVEALL) {
-+            assert(gcstate->garbage != NULL);
-+            if (PyList_Append(gcstate->garbage, op) < 0) {
-+                _PyErr_Clear(tstate);
-+            }
-+        }
-+        else {
-+            inquiry clear;
-+            if ((clear = Py_TYPE(op)->tp_clear) != NULL) {
-+                Py_INCREF(op);
-+                (void) clear(op);
-+                if (_PyErr_Occurred(tstate)) {
-+                    PyErr_FormatUnraisable("Exception ignored in tp_clear of %s",
-+                                           Py_TYPE(op)->tp_name);
-+                }
-+                Py_DECREF(op);
-+            }
-+        }
-+        if (GC_NEXT(collectable) == gc) {
-+            /* object is still alive, move it, it may die later */
-+            gc_clear_collecting(gc);
-+            gc_list_move(gc, old);
-+        }
-+    }
-+}
-+
-+
-+
-+static inline int
-+referrersvisit(PyObject* obj, void *arg)
-+{
-+    PyObject *objs = arg;
-+    Py_ssize_t i;
-+    for (i = 0; i < PyTuple_GET_SIZE(objs); i++) {
-+        if (PyTuple_GET_ITEM(objs, i) == obj) {
-+            return 1;
-+        }
-+    }
-+    return 0;
-+}
-+
-+static inline int
-+gc_referrers_for(PyObject *objs, PyGC_Head *list, PyObject *resultlist)
-+{
-+    PyGC_Head *gc;
-+    PyObject *obj;
-+    traverseproc traverse;
-+    for (gc = GC_NEXT(list); gc != list; gc = GC_NEXT(gc)) {
-+        obj = FROM_GC(gc);
-+        traverse = Py_TYPE(obj)->tp_traverse;
-+        if (obj == objs || obj == resultlist) {
-+            continue;
-+        }
-+        if (traverse(obj, referrersvisit, objs)) {
-+            if (PyList_Append(resultlist, obj) < 0) {
-+                return 0; /* error */
-+            }
-+        }
-+    }
-+    return 1; /* no error */
-+}
-+
-+
-+static inline void
-+finalize_unlink_gc_head(PyGC_Head *gc) {
-+    PyGC_Head *prev = GC_PREV(gc);
-+    PyGC_Head *next = GC_NEXT(gc);
-+    _PyGCHead_SET_NEXT(prev, next);
-+    _PyGCHead_SET_PREV(next, prev);
-+}
-+
-+
-+static inline int
-+visit_generation(gcvisitobjects_t callback, void *arg, struct gc_generation *gen)
-+{
-+    PyGC_Head *gc_list, *gc;
-+    gc_list = &gen->head;
-+    for (gc = GC_NEXT(gc_list); gc != gc_list; gc = GC_NEXT(gc)) {
-+        PyObject *op = FROM_GC(gc);
-+        Py_INCREF(op);
-+        int res = callback(op, arg);
-+        Py_DECREF(op);
-+        if (!res) {
-+            return -1;
-+        }
-+    }
-+    return 0;
-+}
-diff --git a/Python/gc_gen.c b/Python/gc_gen.c
++#endif  // !Py_GIL_DISABLED
+diff --git a/Python/gc_gen.h b/Python/gc_gen.h
 new file mode 100644
-index 00000000000..4d89e70b072
+index 00000000000..5318a4973a3
 --- /dev/null
-+++ b/Python/gc_gen.c
-@@ -0,0 +1,873 @@
++++ b/Python/gc_gen.h
+@@ -0,0 +1,865 @@
 +// Generational GC specific code, forward-ported from CPython 3.13.
++// This file is included by gc.c when Py_GC_INCREMENTAL is not defined.
++// Do not compile or include independently.
 +
-+#if !defined(Py_GIL_DISABLED)
-+
-+#include "gc_common.h"
-+
-+#define NEXT_MASK_UNREACHABLE  (1)
 +
 +#define GEN_HEAD(gcstate, n) (&(gcstate)->generations[n].head)
 +
 +
 +void
-+_PyGenGC_InitState(GCState *gcstate)
++_PyGC_InitState(GCState *gcstate)
 +{
 +#define INIT_HEAD(GEN) \
 +    do { \
@@ -3410,7 +2084,7 @@ index 00000000000..4d89e70b072
 +
 +
 +PyStatus
-+_PyGenGC_Init(PyInterpreterState *interp)
++_PyGC_Init(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +
@@ -3826,8 +2500,8 @@ index 00000000000..4d89e70b072
 +    PyTime_t t1 = 0;   /* initialize to prevent a compiler warning */
 +    GCState *gcstate = &tstate->interp->gc;
 +
-+    // gc_collect_main() must not be called before _PyGenGC_Init
-+    // or after _PyGenGC_Fini()
++    // gc_collect_main() must not be called before _PyGC_Init
++    // or after _PyGC_Fini()
 +    assert(gcstate->garbage != NULL);
 +    assert(!_PyErr_Occurred(tstate));
 +
@@ -4008,7 +2682,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +PyObject *
-+_PyGenGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
++_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
 +{
 +    PyObject *result = PyList_New(0);
 +    if (!result) {
@@ -4026,7 +2700,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +PyObject *
-+_PyGenGC_GetObjects(PyInterpreterState *interp, int generation)
++_PyGC_GetObjects(PyInterpreterState *interp, int generation)
 +{
 +    assert(generation >= -1 && generation < NUM_GENERATIONS);
 +    GCState *gcstate = &interp->gc;
@@ -4056,7 +2730,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_PyGenGC_Freeze(PyInterpreterState *interp)
++_PyGC_Freeze(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    for (int i = 0; i < NUM_GENERATIONS; ++i) {
@@ -4066,7 +2740,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_PyGenGC_Unfreeze(PyInterpreterState *interp)
++_PyGC_Unfreeze(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    gc_list_merge(&gcstate->permanent_generation.head,
@@ -4074,7 +2748,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +Py_ssize_t
-+PyGenGC_Collect(void)
++PyGC_Collect(void)
 +{
 +    PyThreadState *tstate = _PyThreadState_GET();
 +    GCState *gcstate = &tstate->interp->gc;
@@ -4092,19 +2766,19 @@ index 00000000000..4d89e70b072
 +}
 +
 +Py_ssize_t
-+_PyGenGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)
++_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)
 +{
 +    return gc_collect_main(tstate, generation, reason);
 +}
 +
 +void
-+_PyGenGC_CollectNoFail(PyThreadState *tstate)
++_PyGC_CollectNoFail(PyThreadState *tstate)
 +{
 +    gc_collect_main(tstate, NUM_GENERATIONS - 1, _Py_GC_REASON_SHUTDOWN);
 +}
 +
 +void
-+_PyGenGC_DumpShutdownStats(PyInterpreterState *interp)
++_PyGC_DumpShutdownStats(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    if (!(gcstate->debug & _PyGC_DEBUG_SAVEALL)
@@ -4143,7 +2817,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_PyGenGC_Fini(PyInterpreterState *interp)
++_PyGC_Fini(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    Py_CLEAR(gcstate->garbage);
@@ -4172,7 +2846,7 @@ index 00000000000..4d89e70b072
 +
 +/* for debugging */
 +void
-+_PyObject_GenGC_Link(PyObject *op)
++_PyObject_GC_Link(PyObject *op)
 +{
 +    PyGC_Head *gc = AS_GC(op);
 +    // gc must be correctly aligned
@@ -4194,7 +2868,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_Py_GenGC_Run(PyThreadState *tstate)
++_Py_RunGC(PyThreadState *tstate)
 +{
 +    GCState *gcstate = get_gc_state();
 +    if (!gcstate->enabled) {
@@ -4204,7 +2878,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_PyObject_GenGC_Del(void *op)
++PyObject_GC_Del(void *op)
 +{
 +    size_t presize = _PyType_PreHeaderSize(Py_TYPE(op));
 +    PyGC_Head *g = AS_GC(op);
@@ -4231,7 +2905,7 @@ index 00000000000..4d89e70b072
 +}
 +
 +void
-+_PyUnstable_GenGC_VisitObjects(gcvisitobjects_t callback, void *arg)
++PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)
 +{
 +    GCState *gcstate = get_gc_state();
 +    int original_state = gcstate->enabled;
@@ -4246,27 +2920,18 @@ index 00000000000..4d89e70b072
 +    gcstate->enabled = original_state;
 +}
 +
-+#undef NEXT_MASK_UNREACHABLE
-+#undef GEN_HEAD
-+
-+#endif  // !Py_GIL_DISABLED
-+
-diff --git a/Python/gc_inc.c b/Python/gc_inc.c
+diff --git a/Python/gc_inc.h b/Python/gc_inc.h
 new file mode 100644
-index 00000000000..f4990714607
+index 00000000000..99224f7d8e4
 --- /dev/null
-+++ b/Python/gc_inc.c
-@@ -0,0 +1,1654 @@
++++ b/Python/gc_inc.h
+@@ -0,0 +1,1643 @@
 +// Incremental GC specific code.
-+
-+#if !defined(Py_GIL_DISABLED)
-+
-+#include "gc_common.h"
++// This file is included by gc.c.
++// Do not compile or include independently.
 +
 +// Define this when debugging the GC
 +// #define GC_EXTRA_DEBUG
-+
-+#define NEXT_MASK_UNREACHABLE  2
 +
 +static inline int
 +gc_old_space(PyGC_Head *g)
@@ -4296,7 +2961,7 @@ index 00000000000..f4990714607
 +}
 +
 +static PyGC_Head *
-+INC_GEN_HEAD(GCState *gcstate, int n)
++GEN_HEAD(GCState *gcstate, int n)
 +{
 +    assert((gcstate->visited_space & (~1)) == 0);
 +    switch(n) {
@@ -4313,7 +2978,7 @@ index 00000000000..f4990714607
 +
 +
 +void
-+_PyIncGC_InitState(GCState *gcstate)
++_PyGC_InitState(GCState *gcstate)
 +{
 +#define INIT_HEAD(GEN) \
 +    do { \
@@ -4334,7 +2999,7 @@ index 00000000000..f4990714607
 +
 +
 +PyStatus
-+_PyIncGC_Init(PyInterpreterState *interp)
++_PyGC_Init(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +
@@ -4970,9 +3635,8 @@ index 00000000000..f4990714607
 +PREV_MARK_COLLECTING set, but the objects in this set are going to be removed so
 +we can skip the expense of clearing the flag to avoid extra iteration. */
 +static inline void
-+handle_resurrected_objects(PyGC_Head *unreachable,
-+                                  PyGC_Head *still_unreachable,
-+                                  PyGC_Head *old_generation)
++handle_resurrected_objects(PyGC_Head *unreachable, PyGC_Head* still_unreachable,
++                           PyGC_Head *old_generation)
 +{
 +    // Remove the PREV_MASK_COLLECTING from unreachable
 +    // to prepare it for a new call to 'deduce_unreachable'
@@ -5552,10 +4216,8 @@ index 00000000000..f4990714607
 +}
 +
 +static void
-+invoke_gc_callback(GCState *gcstate,
-+                          const char *phase,
-+                          int generation,
-+                          struct gc_collection_stats *stats)
++invoke_gc_callback(GCState *gcstate, const char *phase,
++                   int generation, struct gc_collection_stats *stats)
 +{
 +    if (gcstate->callbacks == NULL) {
 +        return;
@@ -5564,7 +4226,7 @@ index 00000000000..f4990714607
 +}
 +
 +PyObject *
-+_PyIncGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
++_PyGC_GetReferrers(PyInterpreterState *interp, PyObject *objs)
 +{
 +    PyObject *result = PyList_New(0);
 +    if (!result) {
@@ -5573,7 +4235,7 @@ index 00000000000..f4990714607
 +
 +    GCState *gcstate = &interp->gc;
 +    for (int i = 0; i < NUM_GENERATIONS; i++) {
-+        if (!(gc_referrers_for(objs, INC_GEN_HEAD(gcstate, i), result))) {
++        if (!(gc_referrers_for(objs, GEN_HEAD(gcstate, i), result))) {
 +            Py_DECREF(result);
 +            return NULL;
 +        }
@@ -5582,7 +4244,7 @@ index 00000000000..f4990714607
 +}
 +
 +PyObject *
-+_PyIncGC_GetObjects(PyInterpreterState *interp, int generation)
++_PyGC_GetObjects(PyInterpreterState *interp, int generation)
 +{
 +    assert(generation >= -1 && generation < NUM_GENERATIONS);
 +    GCState *gcstate = &interp->gc;
@@ -5618,7 +4280,7 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_PyIncGC_Freeze(PyInterpreterState *interp)
++_PyGC_Freeze(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    /* The permanent_generation must be visited */
@@ -5641,7 +4303,7 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_PyIncGC_Unfreeze(PyInterpreterState *interp)
++_PyGC_Unfreeze(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    gc_list_merge(&gcstate->permanent_generation.head,
@@ -5660,7 +4322,7 @@ index 00000000000..f4990714607
 +    for (int i = 0; i < NUM_GENERATIONS && pos < sizeof(buf); i++) {
 +        pos += PyOS_snprintf(buf+pos, sizeof(buf)-pos,
 +                             " %zd",
-+                             gc_list_size(INC_GEN_HEAD(gcstate, i)));
++                             gc_list_size(GEN_HEAD(gcstate, i)));
 +    }
 +    PySys_FormatStderr(
 +        "gc: objects in each generation:%s\n"
@@ -5669,7 +4331,7 @@ index 00000000000..f4990714607
 +}
 +
 +Py_ssize_t
-+_PyIncGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)
++_PyGC_Collect(PyThreadState *tstate, int generation, _PyGC_Reason reason)
 +{
 +    GCState *gcstate = &tstate->interp->gc;
 +    assert(tstate->current_frame == NULL || tstate->current_frame->stackpointer != NULL);
@@ -5740,13 +4402,13 @@ index 00000000000..f4990714607
 +
 +/* Public API to invoke gc.collect() from C */
 +Py_ssize_t
-+PyIncGC_Collect(void)
++PyGC_Collect(void)
 +{
-+    return _PyIncGC_Collect(_PyThreadState_GET(), 2, _Py_GC_REASON_MANUAL);
++    return _PyGC_Collect(_PyThreadState_GET(), 2, _Py_GC_REASON_MANUAL);
 +}
 +
 +void
-+_PyIncGC_CollectNoFail(PyThreadState *tstate)
++_PyGC_CollectNoFail(PyThreadState *tstate)
 +{
 +    /* Ideally, this function is only called on interpreter shutdown,
 +       and therefore not recursively.  Unfortunately, when there are daemon
@@ -5754,11 +4416,11 @@ index 00000000000..f4990714607
 +       during interpreter shutdown (and then never finish it).
 +       See http://bugs.python.org/issue8713#msg195178 for an example.
 +       */
-+    _PyIncGC_Collect(_PyThreadState_GET(), 2, _Py_GC_REASON_SHUTDOWN);
++    _PyGC_Collect(_PyThreadState_GET(), 2, _Py_GC_REASON_SHUTDOWN);
 +}
 +
 +void
-+_PyIncGC_DumpShutdownStats(PyInterpreterState *interp)
++_PyGC_DumpShutdownStats(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    if (!(gcstate->debug & _PyGC_DEBUG_SAVEALL)
@@ -5800,7 +4462,7 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_PyIncGC_Fini(PyInterpreterState *interp)
++_PyGC_Fini(PyInterpreterState *interp)
 +{
 +    GCState *gcstate = &interp->gc;
 +    Py_CLEAR(gcstate->garbage);
@@ -5841,7 +4503,7 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_PyObject_IncGC_Link(PyObject *op)
++_PyObject_GC_Link(PyObject *op)
 +{
 +    PyGC_Head *gc = AS_GC(op);
 +    // gc must be correctly aligned
@@ -5852,15 +4514,15 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_Py_IncGC_Run(PyThreadState *tstate)
++_Py_RunGC(PyThreadState *tstate)
 +{
 +    if (tstate->interp->gc.enabled) {
-+        _PyIncGC_Collect(tstate, 1, _Py_GC_REASON_HEAP);
++        _PyGC_Collect(tstate, 1, _Py_GC_REASON_HEAP);
 +    }
 +}
 +
 +void
-+_PyObject_IncGC_Del(void *op)
++PyObject_GC_Del(void *op)
 +{
 +    size_t presize = _PyType_PreHeaderSize(Py_TYPE(op));
 +    PyGC_Head *g = AS_GC(op);
@@ -5888,7 +4550,7 @@ index 00000000000..f4990714607
 +}
 +
 +void
-+_PyUnstable_IncGC_VisitObjects(gcvisitobjects_t callback, void *arg)
++PyUnstable_GC_VisitObjects(gcvisitobjects_t callback, void *arg)
 +{
 +    GCState *gcstate = get_gc_state();
 +    int original_state = gcstate->enabled;
@@ -5907,58 +4569,95 @@ index 00000000000..f4990714607
 +    gcstate->enabled = original_state;
 +}
 +
-+#undef NEXT_MASK_UNREACHABLE
-+
-+#endif  // !Py_GIL_DISABLED
-+
-diff --git a/Python/initconfig.c b/Python/initconfig.c
-index 4b0d665b9b1..50ff782a3d1 100644
---- a/Python/initconfig.c
-+++ b/Python/initconfig.c
-@@ -147,6 +147,7 @@ static const PyConfigSpec PYCONFIG_SPEC[] = {
-     SPEC(tlbc_enabled, INT, READ_ONLY, NO_SYS),
- #endif
-     SPEC(faulthandler, BOOL, READ_ONLY, NO_SYS),
-+    SPEC(gc_incremental, BOOL, READ_ONLY, NO_SYS),
-     SPEC(filesystem_encoding, WSTR, READ_ONLY, NO_SYS),
-     SPEC(filesystem_errors, WSTR, READ_ONLY, NO_SYS),
-     SPEC(hash_seed, ULONG, READ_ONLY, NO_SYS),
-@@ -315,6 +316,8 @@ The following implementation-specific options are available:\n\
- -X frozen_modules=[on|off]: whether to use frozen modules; the default is \"on\"\n\
-          for installed Python and \"off\" for a local build;\n\
-          also PYTHON_FROZEN_MODULES\n\
-+-X inc_gc: use incremental garbage collector instead of generational;\n\
-+         also PYTHON_INC_GC\n\
- "
- #ifdef Py_GIL_DISABLED
- "-X gil=[0|1]: enable (1) or disable (0) the GIL; also PYTHON_GIL\n"
-@@ -419,6 +422,7 @@ static const char usage_envvars[] =
- #ifdef Py_GIL_DISABLED
- "PYTHON_GIL      : when set to 0, disables the GIL (-X gil)\n"
- #endif
-+"PYTHON_INC_GC   : use incremental garbage collector (-X inc_gc)\n"
- "PYTHONINSPECT   : inspect interactively after running script (-i)\n"
- "PYTHONINTMAXSTRDIGITS: limit the size of int<->str conversions;\n"
- "                  0 disables the limit (-X int_max_str_digits=N)\n"
-@@ -1915,6 +1919,10 @@ config_read_env_vars(PyConfig *config)
-         config->safe_path = 1;
-     }
+diff --git a/configure b/configure
+index 8cfdda5a29b..b832a4e08ac 100755
+--- a/configure
++++ b/configure
+@@ -1096,6 +1096,7 @@ enable_gil
+ with_pydebug
+ with_trace_refs
+ enable_pystats
++enable_incremental_gc
+ with_assertions
+ enable_optimizations
+ with_lto
+@@ -1830,6 +1831,7 @@ Optional Features:
+   --disable-gil           enable support for running without the GIL (default
+                           is no)
+   --enable-pystats        enable internal statistics gathering (default is no)
++  --enable-incremental-gc enable incremental cyclic GC (default is no)
+   --enable-optimizations  enable expensive, stable optimizations (PGO, etc.)
+                           (default is no)
+   --enable-bolt           enable usage of the llvm-bolt post-link optimizer
+@@ -8362,6 +8364,31 @@ then :
+ printf "%s\n" "#define Py_STATS 1" >>confdefs.h
  
-+    if (config_get_env(config, "PYTHON_INC_GC")) {
-+        config->gc_incremental = 1;
-+    }
-+
-     const char *gil = config_get_env(config, "PYTHON_GIL");
-     if (gil != NULL) {
-         size_t len = strlen(gil);
-@@ -2344,6 +2352,10 @@ config_read_complex_options(PyConfig *config)
-         }
-     }
  
-+    if (config_get_xoption(config, L"inc_gc")) {
-+        config->gc_incremental = 1;
-+    }
++fi
 +
-     if (config->pycache_prefix == NULL) {
-         status = config_init_pycache_prefix(config);
-         if (_PyStatus_EXCEPTION(status)) {
++# Check for --enable-incremental-gc
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for --enable-incremental-gc" >&5
++printf %s "checking for --enable-incremental-gc... " >&6; }
++# Check whether --enable-incremental-gc was given.
++if test ${enable_incremental_gc+y}
++then :
++  enableval=$enable_incremental_gc;
++else case e in #(
++  e) enable_incremental_gc=no
++ ;;
++esac
++fi
++
++{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $enable_incremental_gc" >&5
++printf "%s\n" "$enable_incremental_gc" >&6; }
++
++if test "x$enable_incremental_gc" = xyes
++then :
++
++
++printf "%s\n" "#define Py_GC_INCREMENTAL 1" >>confdefs.h
++
++
+ fi
+ 
+ # Check for --with-assertions.
+diff --git a/configure.ac b/configure.ac
+index 1acb91fd27b..b25bfd54556 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1790,6 +1790,21 @@ AS_VAR_IF([enable_pystats], [yes], [
+   AC_DEFINE([Py_STATS], [1], [Define if you want to enable internal statistics gathering.])
+ ])
+ 
++# Check for --enable-incremental-gc
++AC_MSG_CHECKING([for --enable-incremental-gc])
++AC_ARG_ENABLE([incremental-gc],
++  [AS_HELP_STRING(
++    [--enable-incremental-gc],
++    [enable incremental cyclic GC (default is no)]
++  )],
++  [], [enable_incremental_gc=no]
++)
++AC_MSG_RESULT([$enable_incremental_gc])
++
++AS_VAR_IF([enable_incremental_gc], [yes], [
++  AC_DEFINE([Py_GC_INCREMENTAL], [1], [Define if you want to enable incremental cyclic GC.])
++])
++
+ # Check for --with-assertions.
+ # This allows enabling assertions without Py_DEBUG.
+ assertions='false'
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 9502fcebf5d..a044969577b 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -1730,6 +1730,9 @@
+ /* Defined if Python is built as a shared library. */
+ #undef Py_ENABLE_SHARED
+ 
++/* Define if you want to enable incremental cyclic GC. */
++#undef Py_GC_INCREMENTAL
++
+ /* Define if you want to disable the GIL */
+ #undef Py_GIL_DISABLED
+ 

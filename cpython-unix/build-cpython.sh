@@ -339,9 +339,13 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
 
-# Apply two commits from nascheme/cpython gc-gen-3.14 branch.
+# Apply the incremental GC commit series from ~/workspace/cpython gc-gen-3.14.
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
-    patch -p1 -i "${ROOT}/patch-gc-collect-increment-3.14.patch"
+    patch -p1 -i "${ROOT}/patch-gc-3.14-01-forward-port-generational-gc.patch"
+    patch -p1 -i "${ROOT}/patch-gc-3.14-02-add-inc-gc-option.patch"
+    patch -p1 -i "${ROOT}/patch-gc-3.14-03-fix-free-threaded-build.patch"
+    patch -p1 -i "${ROOT}/patch-gc-3.14-04-ignore-threshold2.patch"
+    patch -p1 -i "${ROOT}/patch-gc-3.14-05-enable-fast-cycle-gc-test.patch"
 fi
 
 # Ensure the new build-details.json file reports relocatable paths.

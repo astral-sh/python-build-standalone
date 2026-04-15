@@ -1,0 +1,37 @@
+diff --git a/Include/internal/pycore_interp_structs.h b/Include/internal/pycore_interp_structs.h
+index 0158299d4c7..d2b67b603bf 100644
+--- a/Include/internal/pycore_interp_structs.h
++++ b/Include/internal/pycore_interp_structs.h
+@@ -236,17 +236,6 @@ struct _gc_runtime_state {
+     /* a list of callbacks to be invoked when collection is performed */
+     PyObject *callbacks;
+ 
+-    /* Generational GC */
+-    Py_ssize_t long_lived_total;
+-    Py_ssize_t long_lived_pending;
+-    /* Incremental GC */
+-    Py_ssize_t heap_size;
+-    Py_ssize_t work_to_do;
+-    /* Which of the old spaces is the visited space */
+-    int visited_space;
+-    int phase;
+-
+-#ifdef Py_GIL_DISABLED
+     /* This is the number of objects that survived the last full
+        collection. It approximates the number of long lived objects
+        tracked by the GC.
+@@ -258,7 +247,14 @@ struct _gc_runtime_state {
+        collections, and are awaiting to undergo a full collection for
+        the first time. */
+     Py_ssize_t long_lived_pending;
++    /* Incremental GC */
++    Py_ssize_t heap_size;
++    Py_ssize_t work_to_do;
++    /* Which of the old spaces is the visited space */
++    int visited_space;
++    int phase;
+ 
++#ifdef Py_GIL_DISABLED
+     /* True if gc.freeze() has been used. */
+     int freeze_active;
+ 

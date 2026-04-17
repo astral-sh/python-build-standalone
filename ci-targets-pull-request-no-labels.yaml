@@ -1,0 +1,53 @@
+# Describes the targets that the CI system will build on a pull request if no labels are specified
+# This is a subset of the targets from ci-targets.yaml
+
+darwin:
+  aarch64-apple-darwin:
+    arch: aarch64
+    python_versions:
+      - "3.14"
+    build_options:
+      - pgo+lto
+
+linux:
+  armv7-unknown-linux-gnueabihf:
+    arch: armv7
+    libc: gnu
+    python_versions:
+      - "3.14"
+    build_options:
+      - lto
+
+  x86_64-unknown-linux-gnu:
+    arch: x86_64
+    libc: gnu
+    python_versions:
+      - "3.14"
+    build_options:
+      - pgo+lto
+      - freethreaded+pgo+lto
+    run: true
+
+  x86_64-unknown-linux-musl:
+    arch: x86_64
+    libc: musl
+    python_versions:
+      - "3.14"
+    build_options:
+      - lto+static
+      - lto
+      - freethreaded+lto
+    run: true
+
+windows:
+  x86_64-pc-windows-msvc:
+    arch: x86_64
+    vcvars: vcvars64.bat
+    python_versions:
+      - "3.14"
+    vs_version: "2022"
+    vs_version_override_conditional:
+      vs_version: "2026"
+      minimum-python-version: "3.15"
+    build_options:
+      - pgo

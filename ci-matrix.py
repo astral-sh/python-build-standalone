@@ -15,6 +15,7 @@ import yaml
 from packaging.version import Version
 
 CI_TARGETS_YAML = "ci-targets.yaml"
+CI_TARGETS_PULL_REQUEST_NO_LABELS = "ci-targets-pull-request-no-labels.yaml"
 CI_RUNNERS_YAML = "ci-runners.yaml"
 CI_EXTRA_SKIP_LABELS = ["documentation"]
 CI_MATRIX_SIZE_LIMIT = 256  # The maximum size of a matrix in GitHub Actions
@@ -344,6 +345,11 @@ def parse_args() -> argparse.Namespace:
         help="Comma-separated list of labels to filter by (e.g., 'platform:darwin,python:3.13,build:debug'), all must match.",
     )
     parser.add_argument(
+        "--event",
+        choices=["pull_request", "push"],
+        help="The GitHub event type. When 'pull_request', uses ci-defaults.yaml for the default subset.",
+    )
+    parser.add_argument(
         "--free-runners",
         action="store_true",
         help="If only free runners should be used.",
@@ -366,7 +372,11 @@ def main() -> None:
     args = parse_args()
     labels = parse_labels(args.labels)
 
-    with open(CI_TARGETS_YAML) as f:
+    if args.event == "pull_request" and not any(labels.values()):
+        config_yaml = CI_TARGETS_PULL_REQUEST_NO_LABELS
+    else:
+        config_yaml = CI_TARGETS_YAML
+    with open(config_yaml) as f:
         config = yaml.safe_load(f)
 
     with open(CI_RUNNERS_YAML) as f:

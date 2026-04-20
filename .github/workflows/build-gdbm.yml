@@ -104,4 +104,4 @@ jobs:
         run: cargo build --release
 
       - name: Validate Distribution
-        run: target/release/pythonbuild validate-distribution --run dist/*.tar.zst
+        run: target/release/pythonbuild validate-distribution dist/*.tar.zst

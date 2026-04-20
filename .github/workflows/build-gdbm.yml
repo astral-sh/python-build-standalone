@@ -1,0 +1,223 @@
+name: build-gdbm
+
+on:
+  push:
+    branches: [ add-back-gdbm ]
+  pull_request:
+    paths:
+      - 'cpython-unix/build-gdbm.sh'
+      - 'cpython-unix/targets.yml'
+      - 'cpython-unix/extension-modules.yml'
+      - 'pythonbuild/downloads.py'
+      - 'LICENSE.gdbm.txt'
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: 'CPython version to build (e.g. 3.13)'
+        required: true
+        default: '3.13'
+        type: choice
+        options:
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - '3.13'
+          - '3.14'
+          - '3.15'
+      target_triple:
+        description: 'Target triple'
+        required: true
+        default: 'x86_64-unknown-linux-gnu'
+        type: choice
+        options:
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+      build_options:
+        description: 'Build options'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - pgo+lto
+          - noopt
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  FORCE_COLOR: 1
+
+permissions: {}
+
+jobs:
+  crate-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Emit rustc version
+        run: rustc --version > .rustc-version
+
+      - uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-pythonbuild-${{ hashFiles('Cargo.lock', '.rustc-version') }}
+
+      - name: Build
+        run: cargo build --release
+
+      - name: Upload pythonbuild
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: crate-linux-x86_64
+          path: target/release/pythonbuild
+
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@b45d80f862d83dbcd57f89517bcf500b2ab88fb2 # v4.0.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Dockerfiles
+        run: |
+          ./build.py --make-target empty
+          repo_name=$(echo "${GITHUB_REPOSITORY,,}" | sed 's|\.|_|g')
+          git_ref_name=$(echo "${GITHUB_REF_NAME,,}" | sed 's|[^a-z0-9_-]|_|g')
+          echo "REPO_NAME=${repo_name}" >> "${GITHUB_ENV}"
+          echo "GIT_REF_NAME=${git_ref_name}" >> "${GITHUB_ENV}"
+
+      - name: Build Image
+        id: build-image
+        uses: docker/build-push-action@d08e5c354a6adb9ed34480a06d141179aa583294 # v7.0.0
+        env:
+          SOURCE_DATE_EPOCH: 0
+          DOCKER_BUILD_SUMMARY: false
+          DOCKER_BUILD_RECORD_UPLOAD: false
+        with:
+          context: .
+          file: build/build.Dockerfile
+          labels: org.opencontainers.image.source=https://github.com/${{ env.REPO_NAME }}
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:build-linux_x86_64-${{ env.GIT_REF_NAME }}
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:build-linux_x86_64-main
+            type=registry,ref=ghcr.io/astral-sh/python-build-standalone:build-linux_x86_64-main
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ env.REPO_NAME }}:build-linux_x86_64-${{ env.GIT_REF_NAME }},ignore-error=true
+          outputs: |
+            type=docker,dest=build/image-build.linux_x86_64.tar
+
+      - name: Compress Image
+        run: |
+          echo ${STEPS_BUILD_IMAGE_OUTPUTS_IMAGEID} > build/image-build.linux_x86_64
+          zstd -v -T0 -6 --rm build/image-build.linux_x86_64.tar
+          touch -t 197001010000 build/image-build.linux_x86_64*
+        env:
+          STEPS_BUILD_IMAGE_OUTPUTS_IMAGEID: ${{ steps.build-image.outputs.imageid }}
+
+      - name: Upload Docker Image
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: image-build-linux_x86_64
+          path: build/image-*
+          compression-level: '0'
+
+  build:
+    needs:
+      - crate-build
+      - image
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ubuntu-latest
+    env:
+      TARGET_TRIPLE: ${{ inputs.target_triple || 'x86_64-unknown-linux-gnu' }}
+      PYTHON_VERSION: ${{ inputs.python_version || '3.13' }}
+      BUILD_OPTIONS: ${{ inputs.build_options || 'debug' }}
+    name: ${{ inputs.target_triple || 'x86_64-unknown-linux-gnu' }} / ${{ inputs.python_version || '3.13' }} / ${{ inputs.build_options || 'debug' }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Download pythonbuild
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: crate-linux-x86_64
+          path: build
+
+      - name: Download image
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          name: image-build-linux_x86_64
+          path: build
+
+      - name: Cache downloads
+        uses: actions/cache@0400d5f644dc74513175e3cd8d07132dd4860809 # v4.2.4
+        with:
+          path: build/downloads
+          key: ${{ env.TARGET_TRIPLE }}-${{ hashFiles('pythonbuild/downloads.py') }}
+          restore-keys: |
+            ${{ env.TARGET_TRIPLE }}-
+
+      - name: Load Docker Image
+        run: |
+          zstd -d --rm build/image-build.linux_x86_64.tar.zst
+          docker load --input build/image-build.linux_x86_64.tar
+
+      - name: Build
+        run: |
+          ./build.py --make-target empty
+          touch build/image-*
+          ./build.py \
+            --target-triple "${TARGET_TRIPLE}" \
+            --python "cpython-${PYTHON_VERSION}" \
+            --options "${BUILD_OPTIONS}"
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
+        if: ${{ github.ref == 'refs/heads/add-back-gdbm' }}
+        with:
+          subject-path: dist/*
+
+      - name: Upload Distribution
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ env.PYTHON_VERSION }}-${{ env.TARGET_TRIPLE }}-${{ env.BUILD_OPTIONS }}
+          path: dist/*
+
+      - name: Validate Distribution
+        run: |
+          chmod +x build/pythonbuild
+          build/pythonbuild validate-distribution --run dist/*.tar.zst

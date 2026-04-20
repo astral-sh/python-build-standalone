@@ -1687,6 +1687,7 @@ fn validate_extension_modules(
 
     if is_linux {
         wanted.extend(GLOBAL_EXTENSIONS_POSIX);
+        wanted.insert("_gdbm");
 
         if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_POSIX_PRE_3_13);

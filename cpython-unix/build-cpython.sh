@@ -213,7 +213,7 @@ fi
 
 # iOS doesn't have system(). Teach posixmodule.c about that.
 # Python 3.11 makes this a configure time check, so we don't need the patch there.
-if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-remove-system.patch"
 fi
 

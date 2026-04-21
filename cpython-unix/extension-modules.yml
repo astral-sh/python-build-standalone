@@ -1012,6 +1012,11 @@ ossaudiodev:
   sources:
     - ossaudiodev.c
 
+parser:
+  maximum-python-version: "3.8"
+  sources:
+    - parsermodule.c
+
 posix:
   setup-enabled: true
   required-targets:

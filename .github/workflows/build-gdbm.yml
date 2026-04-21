@@ -3,13 +3,6 @@ name: build-gdbm
 on:
   push:
     branches: [ add-back-gdbm ]
-  pull_request:
-    paths:
-      - 'cpython-unix/build-gdbm.sh'
-      - 'cpython-unix/targets.yml'
-      - 'cpython-unix/extension-modules.yml'
-      - 'pythonbuild/downloads.py'
-      - 'LICENSE.gdbm.txt'
   workflow_dispatch:
     inputs:
       python_version:

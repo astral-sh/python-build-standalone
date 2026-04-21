@@ -1,4 +1,4 @@
-name: build-gdbm
+name: build-python-with-gdbm
 
 on:
   push:

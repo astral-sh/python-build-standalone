@@ -1222,6 +1222,7 @@ fn parse_version_nibbles(v: u32) -> semver::Version {
 #[allow(clippy::too_many_arguments)]
 fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     context: &mut ValidationContext,
+    python_major_minor: &str,
     target_triple: &str,
     advertised_target_version: &str,
     advertised_sdk_version: &str,
@@ -1577,6 +1578,7 @@ fn validate_possible_object_file(
 
                 validate_macho(
                     &mut context,
+                    python_major_minor,
                     triple,
                     json.apple_sdk_deployment_target
                         .as_ref()
@@ -1594,6 +1596,7 @@ fn validate_possible_object_file(
 
                 validate_macho(
                     &mut context,
+                    python_major_minor,
                     triple,
                     json.apple_sdk_deployment_target
                         .as_ref()

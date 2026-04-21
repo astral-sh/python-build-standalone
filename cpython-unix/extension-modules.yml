@@ -809,6 +809,7 @@ _thread:
     - .*
 
 _tkinter:
+  minimum-python-version: "3.10"
   sources:
     - _tkinter.c
     - tkappinit.c

@@ -1643,6 +1643,11 @@ fn validate_extension_modules(
 
     let mut wanted = BTreeSet::from_iter(GLOBAL_EXTENSIONS.iter().copied());
 
+    // _tkinter requires Tcl 9 API compatibility patches that only exist for 3.10+.
+    if python_major_minor == "3.8" {
+        wanted.remove("_tkinter");
+    }
+
     match python_major_minor {
         "3.8" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_8);

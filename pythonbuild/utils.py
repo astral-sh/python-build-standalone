@@ -95,7 +95,7 @@ def supported_targets(yaml_path: pathlib.Path):
     return targets
 
 
-def target_needs(yaml_path: pathlib.Path, target: str):
+def target_needs(yaml_path: pathlib.Path, target: str, python_version: str):
     """Obtain the dependencies needed to build the specified target."""
     settings = get_targets(yaml_path)[target]
 

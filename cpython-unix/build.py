@@ -758,7 +758,7 @@ def build_cpython(
                 static="static" in build_options,
             )
 
-        packages = target_needs(TARGETS_CONFIG, target_triple)
+        packages = target_needs(TARGETS_CONFIG, target_triple, python_version)
         # Toolchain packages are handled specially.
         packages.discard("binutils")
         packages.discard("musl")

@@ -736,7 +736,7 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
 // _xxinterpchannels added in 3.12.
 // audioop removed in 3.13.
 
-const GLOBAL_EXTENSIONS_PYTHON_3_8: &[&str] = &["audioop", "_sha256", "_sha512", "parser", "_xxsubinterpreters"];
+const GLOBAL_EXTENSIONS_PYTHON_3_8: &[&str] = &["audioop", "_sha256", "_sha512", "parser"];
 
 const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] =
     &["audioop", "_sha256", "_sha512", "_xxsubinterpreters"];
@@ -1132,12 +1132,16 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
 
                 // Ensure specific symbols in dynamic binaries have proper visibility.
                 if matches!(elf.e_type(endian), ET_EXEC | ET_DYN) {
+                    // Python 3.8 exports ffi symbols for legacy reasons.
+                    let is_exception = name == "ffi_type_void" && python_major_minor == "3.8";
+
                     // Non-local symbols belonging to dependencies should have hidden visibility
                     // to prevent them from being exported.
                     if DEPENDENCY_PACKAGE_SYMBOLS.contains(&name.as_ref())
                         && matches!(symbol.st_bind(), STB_GLOBAL | STB_WEAK)
                         && symbol.st_shndx(endian) != SHN_UNDEF
                         && symbol.st_visibility() != STV_HIDDEN
+                        && !is_exception
                     {
                         context.errors.push(format!(
                             "{} contains non-hidden dependency symbol {}",
@@ -1358,8 +1362,12 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                             name.as_str()
                         };
 
+                        // Python 3.8 exports ffi symbols for legacy reasons.
+                        let is_exception = name == "_ffi_type_void" && python_major_minor == "3.8";
+
                         if DEPENDENCY_PACKAGE_SYMBOLS.contains(&search_name)
                             && scope == SymbolScope::Dynamic
+                            && !is_exception
                         {
                             context.errors.push(format!(
                                 "{} contains dynamic symbol from dependency {}",
@@ -2135,7 +2143,7 @@ fn validate_distribution(
             } else if name == "_warnings" {
                 // But not on Python 3.13 on Windows
                 if triple.contains("-windows-") {
-                    matches!(python_major_minor, "3.10" | "3.11" | "3.12")
+                    matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12")
                 } else {
                     true
                 }

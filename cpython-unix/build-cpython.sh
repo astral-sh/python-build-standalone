@@ -434,7 +434,7 @@ CONFIGURE_FLAGS="
 # this patch mildly conflicts with the macos-only patch-python-link-modules
 # applied above, so you will need to resolve that conflict if you re-enable
 # this for macos.
-if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+if [[ "${PYBUILD_PLATFORM}" != macos* ]] && [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
     else

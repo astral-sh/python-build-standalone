@@ -338,10 +338,17 @@ if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
     sed -i 's/(uchar)/(unsigned char)/g' Modules/_decimal/_decimal.c
 fi
 
-# Python 3.8's _sqlite/cache.c uses MODULE_NAME which isn't resolved by LLVM 22+.
+# Python 3.8's _sqlite/*.c files use MODULE_NAME which isn't resolved by LLVM 22+.
 # MODULE_NAME expands to "_sqlite" in this context.
 if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
-    sed -i 's/MODULE_NAME "/"_sqlite./g' Modules/_sqlite/cache.c
+    sed -i 's/MODULE_NAME "/"_sqlite./g' \
+        Modules/_sqlite/cache.c \
+        Modules/_sqlite/connection.c \
+        Modules/_sqlite/cursor.c \
+        Modules/_sqlite/module.c \
+        Modules/_sqlite/prepare_protocol.c \
+        Modules/_sqlite/row.c \
+        Modules/_sqlite/statement.c
 fi
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as

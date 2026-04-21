@@ -736,6 +736,8 @@ const GLOBAL_EXTENSIONS: &[&str] = &[
 // _xxinterpchannels added in 3.12.
 // audioop removed in 3.13.
 
+const GLOBAL_EXTENSIONS_PYTHON_3_8: &[&str] = &["audioop", "_sha256", "_sha512", "parser", "_xxsubinterpreters"];
+
 const GLOBAL_EXTENSIONS_PYTHON_3_10: &[&str] =
     &["audioop", "_sha256", "_sha512", "_xxsubinterpreters"];
 
@@ -1634,6 +1636,9 @@ fn validate_extension_modules(
     let mut wanted = BTreeSet::from_iter(GLOBAL_EXTENSIONS.iter().copied());
 
     match python_major_minor {
+        "3.8" => {
+            wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_8);
+        }
         "3.10" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_10);
         }
@@ -1660,7 +1665,7 @@ fn validate_extension_modules(
     if is_macos {
         wanted.extend(GLOBAL_EXTENSIONS_POSIX);
 
-        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_POSIX_PRE_3_13);
         }
 
@@ -1670,7 +1675,7 @@ fn validate_extension_modules(
     if is_windows {
         wanted.extend(GLOBAL_EXTENSIONS_WINDOWS);
 
-        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13);
         }
 
@@ -1689,15 +1694,15 @@ fn validate_extension_modules(
         wanted.extend(GLOBAL_EXTENSIONS_POSIX);
         wanted.insert("_gdbm");
 
-        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_POSIX_PRE_3_13);
         }
 
-        if matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+        if matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
             wanted.extend(GLOBAL_EXTENSIONS_LINUX_PRE_3_13);
         }
 
-        if !is_linux_musl && matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+        if !is_linux_musl && matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
             wanted.insert("ossaudiodev");
         }
     }
@@ -1713,7 +1718,7 @@ fn validate_extension_modules(
         if !static_crt {
             wanted.insert("_testcapi");
 
-            if !matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
+            if !matches!(python_major_minor, "3.8" | "3.10" | "3.11" | "3.12") {
                 wanted.insert("_testlimitedcapi");
             }
         }
@@ -1837,7 +1842,9 @@ fn validate_distribution(
             )
         })?;
 
-    let python_major_minor = if dist_filename.starts_with("cpython-3.10.") {
+    let python_major_minor = if dist_filename.starts_with("cpython-3.8.") {
+        "3.8"
+    } else if dist_filename.starts_with("cpython-3.10.") {
         "3.10"
     } else if dist_filename.starts_with("cpython-3.11.") {
         "3.11"

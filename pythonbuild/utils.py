@@ -101,8 +101,9 @@ def target_needs(yaml_path: pathlib.Path, target: str):
 
     needs = set(settings["needs"])
 
-    # Ship libedit linked readline extension to avoid a GPL dependency.
-    needs.discard("readline")
+    # We only ship libedit linked readline extension on 3.10+ to avoid a GPL dependency.
+    if not python_version.startswith("3.8"):
+        needs.discard("readline")
 
     return needs
 

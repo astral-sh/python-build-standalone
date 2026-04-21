@@ -18,6 +18,7 @@ on:
         default: '3.13'
         type: choice
         options:
+          - '3.8'
           - '3.10'
           - '3.11'
           - '3.12'

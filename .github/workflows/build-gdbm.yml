@@ -1,8 +1,6 @@
 name: build-python-with-gdbm
 
 on:
-  push:
-    branches: [ add-back-gdbm ]
   workflow_dispatch:
     inputs:
       python_version:

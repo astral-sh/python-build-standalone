@@ -302,6 +302,13 @@ DOWNLOADS = {
         "sha256": "bdb1b08f4274833d62c1aa29e20907365a2ceb950410df15fc9521bad440122b",
         "version": "26.0.1",
     },
+    # pip 25.0+ requires Python 3.9+. Use 24.3.1 for Python 3.8 builds.
+    "pip-3.8": {
+        "url": "https://files.pythonhosted.org/packages/ef/7d/500c9ad20238fcfcb4cb9243eede163594d7020ce87bd9610c9e02771876/pip-24.3.1-py3-none-any.whl",
+        "size": 1822182,
+        "sha256": "3790624780082365f47549d032f3770eeb2b1e8bd1f7b2e02dace1afa361b4ed",
+        "version": "24.3.1",
+    },
     "readline": {
         # Mirrored from https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
         "url": "https://astral-sh.github.io/mirror/files/readline-8.2.tar.gz",

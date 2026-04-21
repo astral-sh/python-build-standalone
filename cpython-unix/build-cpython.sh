@@ -332,6 +332,12 @@ fi
 # /etc/pki/tls/cert.pem instead, if that file exists and /etc/ssl/cert.pem does not.
 patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
 
+# Python 3.8's _decimal.c casts to 'uchar' which was available via system headers
+# in older toolchains but is not defined in LLVM 22+. Replace with 'unsigned char'.
+if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
+    sed -i 's/(uchar)/(unsigned char)/g' Modules/_decimal/_decimal.c
+fi
+
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as
 # static (which we do anyway in our own fashion) and more importantly to
 # take this into account when finding the AsyncioDebug section.

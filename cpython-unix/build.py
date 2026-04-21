@@ -729,7 +729,9 @@ def build_cpython(
                 fh, python_source, path_prefix="Python-%s" % python_version
             )
 
-    setuptools_archive = download_entry("setuptools", DOWNLOADS_PATH)
+    # setuptools 75+ requires Python 3.9+; use the 3.8-compatible version for 3.8 builds.
+    setuptools_key = "setuptools-3.8" if version == "3.8" else "setuptools"
+    setuptools_archive = download_entry(setuptools_key, DOWNLOADS_PATH)
     # pip 25.0+ requires Python 3.9+; use the 3.8-compatible version for 3.8 builds.
     pip_key = "pip-3.8" if version == "3.8" else "pip"
     pip_archive = download_entry(pip_key, DOWNLOADS_PATH)
@@ -810,7 +812,7 @@ def build_cpython(
             "PIP_VERSION": DOWNLOADS[pip_key]["version"],
             "PYTHON_VERSION": python_version,
             "PYTHON_MAJMIN_VERSION": ".".join(python_version.split(".")[0:2]),
-            "SETUPTOOLS_VERSION": DOWNLOADS["setuptools"]["version"],
+            "SETUPTOOLS_VERSION": DOWNLOADS[setuptools_key]["version"],
             "TOOLCHAIN": "clang-%s" % host_platform,
         }
 

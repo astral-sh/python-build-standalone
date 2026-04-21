@@ -325,6 +325,13 @@ DOWNLOADS = {
         "sha256": "a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb",
         "version": "82.0.1",
     },
+    # setuptools 75.0+ requires Python 3.9+. Use 74.1.3 for Python 3.8 builds.
+    "setuptools-3.8": {
+        "url": "https://files.pythonhosted.org/packages/14/37/166aba5a70924e574eb0aec9f7ec227ac0d7ae72dd2f823675365172120d/setuptools-74.1.3-py3-none-any.whl",
+        "size": 1262070,
+        "sha256": "1cfd66bfcf197bce344da024c8f5b35acc4dcb7ca5202246a75296b4883f6851",
+        "version": "74.1.3",
+    },
     # Remember to update pythonbuild/disttests/ when version changed.
     "sqlite": {
         "url": "https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz",

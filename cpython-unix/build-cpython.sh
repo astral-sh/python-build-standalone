@@ -338,10 +338,11 @@ if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
     sed -i 's/(uchar)/(unsigned char)/g' Modules/_decimal/_decimal.c
 fi
 
-# Python 3.8's _sqlite/*.c files use MODULE_NAME which isn't resolved by LLVM 22+.
-# MODULE_NAME expands to "_sqlite" in this context.
+# Python 3.8's _sqlite/*.c use MODULE_NAME which isn't passed as a -D flag when
+# built as a static module. MODULE_NAME is "sqlite3" (from setup.py). Replace
+# the identifier with the string literal; adjacent C string literals concatenate.
 if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
-    sed -i 's/MODULE_NAME "/"_sqlite./g' \
+    sed -i 's/MODULE_NAME/"sqlite3"/g' \
         Modules/_sqlite/cache.c \
         Modules/_sqlite/connection.c \
         Modules/_sqlite/cursor.c \
@@ -349,6 +350,16 @@ if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
         Modules/_sqlite/prepare_protocol.c \
         Modules/_sqlite/row.c \
         Modules/_sqlite/statement.c
+fi
+
+# Python 3.8's readline.c uses VFunction and CPFunction from old readline/libedit
+# headers. Modern libedit (2024) removed these types (no longer defines
+# _RL_FUNCTION_TYPEDEF). Replace with the modern equivalents.
+if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
+    sed -i \
+        -e 's/(VFunction \*)/(rl_compdisp_func_t *)/g' \
+        -e 's/char \*, CPFunction \*/char *, rl_compentry_func_t */g' \
+        Modules/readline.c
 fi
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as

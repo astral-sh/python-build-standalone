@@ -8,7 +8,7 @@ on:
       python_version:
         description: 'CPython version to build'
         required: true
-        default: '3.13'
+        default: '3.8'
         type: choice
         options:
           - '3.8'

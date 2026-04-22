@@ -73,4 +73,5 @@ RUN apt-get install \
 
 RUN ln -s /usr/bin/clang-22 /usr/bin/riscv64-linux-gnu-clang && \
     ln -s /usr/bin/clang++-22 /usr/bin/riscv64-linux-gnu-clang++ && \
-    ln -s /usr/lib/llvm-22/bin/ld.lld /usr/bin/riscv64-linux-gnu-ld
+    ln -s /usr/lib/llvm-22/bin/ld.lld /usr/bin/riscv64-linux-gnu-ld && \
+    ln -s /usr/lib/llvm-22/bin/llvm-ar /usr/bin/riscv64-unknown-linux-gnu-llvm-ar

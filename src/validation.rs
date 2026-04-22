@@ -262,7 +262,11 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
             (
                 "riscv64-unknown-linux-gnu",
-                vec!["ld-linux-riscv64-lp64d.so.1", "libatomic.so.1"],
+                vec![
+                    "ld-linux-riscv64-lp64d.so.1",
+                    "libatomic.so.1",
+                    "libgcc_s.so.1",
+                ],
             ),
             ("s390x-unknown-linux-gnu", vec!["ld64.so.1"]),
             ("x86_64-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),

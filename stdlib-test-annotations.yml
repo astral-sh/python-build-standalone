@@ -1,0 +1,3031 @@
+---
+# This file defines metadata about Python standard library tests.
+#
+# The file consists of keys defining different groups of annotations.
+# See each key for documentation.
+#
+# All entries share a common set of fields to support describing the
+# annotation and filtering which annotations apply to which builds.
+#
+# * reason - human readable context describing the failure
+# * targets - list of regular expressions matching target triples to
+#.  determine if rule is active. Missing or empty matches all targets.
+# * ignore-targets - list of regular expressions matching target tripels
+#.  to determine if rule is ignored. Takes precedence over "targets."
+# * minimum-python-version - X.Y Python version we must be equal or newer
+#.  to for the rule to apply.
+# * maximum-python-version - X.Y Python version we must be equal or less
+#.  than for the rule to apply.
+# * build-option - A build option (e.g. `pgo`) that must be present for this
+#.  rule to be enabled.
+# * no-build-option - A build option (e.g. `freethreaded`) that must not be
+#.  present for this rule to be enabled.
+
+# harness-skips declares builds to skip running the Python stdlib test harness.
+#
+# Ideally this feature doesn't need to exist. But sometimes the test harness is
+# so broken we need to do this.
+harness-skips:
+  - name: "musl-debug-skip-3.14+"
+    reason: "`cannot get C stack on this system` error leads to widespread failure"
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+
+# module-excludes annotates modules to exclude from loading.
+#
+# The stdlib test runner applies this filter based on the name of the
+# module file/directory within a directory. So values here need to be
+# child most module paths. e.g. to exclude module `foo.bar.baz`, you
+# need to use module name `baz` and not `foo.bar.baz`.
+module-excludes:
+  - module: test_call
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "import failure due to missing _testcapi"
+    maximum-python-version: "3.12"
+
+  - module: test_capi
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "import failure due to missing _testcapi"
+
+  - module: test_code
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "import failure due to missing _testcapi"
+
+  - module: test_ctypes
+    targets:
+      - ".+-unknown-linux-musl"
+    reason: "Module import failures"
+
+  - module: test_datetime
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "import failure due to missing _testcapi"
+
+  - module: test_sqlite3
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "import failure due to missing _testcapi"
+
+  - module: test_stable_abi_ctypes
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "import failure due to missing _testcapi"
+
+  - module: test_regrtest_noop1
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "import failure due to missing _testcapi"
+
+  # Tons of failures. Just exclude entirely instead of running.
+  - module: test_traceback
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: tons of failures, mostly due to missing _testcapi
+
+  - module: test__xxsubinterpreters
+    maximum-python-version: "3.12"
+    build-option: "static"
+    reason: "skipped due to missing _testcapi"
+
+# expected-failures is a list of tests that are expected to fail.
+#
+# * name - pattern identifying the test or group of tests
+# * intermittent - indicates the failure is intermittent.
+# * dont-verify - boolean indicating to not verify the failing test actually
+#.  fails. Useful for intermittent / flaky tests.
+expected-failures:
+  - name: distutils.tests.test_archive_util.ArchiveUtilTestCase.test_tarfile_vs_tar
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.11"
+    reason: "differing element"
+    intermittent: true
+
+  - name: distutils.tests.test_install_lib.InstallLibTestCase.test_byte_compile
+    maximum-python-version: "3.11"
+    reason: "TypeError: byte_compile() got an unexpected keyword argument 'dry_run'"
+
+  - name: distutils.tests.test_build_py.BuildPyTestCase.test_byte_compile_optimized
+    maximum-python-version: "3.11"
+    reason: "TypeError: byte_compile() got an unexpected keyword argument 'dry_run'"
+
+  - name: distutils.tests.test_build_ext.BuildExtTestCase.test_deployment_target_higher_ok
+    reason: wrong deployment target
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+
+  - name: distutils.tests.test_build_ext.ParallelBuildExtTestCase.test_deployment_target_higher_ok
+    reason: wrong deployment target
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+
+  # Looks like it is dependent on the system temp dir, which can vary in CI.
+  - name: distutils.tests.test_sysconfig.SysconfigTestCase.test_srcdir
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: '/var/folders/1r/b8l6nzhj4zdbz5jmjdhqbprw00[64 chars]rwin' != '/private/var/folders/1r/b8l6nzhj4zdbz5jmjd[72 chars]rwin'"
+    intermittent: true
+
+  - name: test.test_array.ByteTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.DoubleTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.FloatTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.IntTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.LongLongTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.LongTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.ShortTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnicodeTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnsignedByteTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnsignedIntTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnsignedLongLongTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnsignedLongTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_array.UnsignedShortTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  # This test moved to a sub-module in 3.12.
+  - name: test.test_ast.ModuleStateTests.test_subinterpreter
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "missing _testcapi"
+
+  - name: test.test_ast.test_ast.ModuleStateTests.test_subinterpreter
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "missing _testcapi"
+
+  - name: test.test_atexit.SubinterpreterTest.test_atexit_with_low_memory
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "missing _testcapi"
+
+  - name: test.test_atexit.SubinterpreterTest.test_callback_on_subinterpreter_teardown
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_atexit.SubinterpreterTest.test_callbacks_leak
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_atexit.SubinterpreterTest.test_callbacks_leak_refcycle
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_audit.AuditTest.test_unraisablehook
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "AssertionError"
+
+  - name: test.test_audit.AuditTest.test_builtin__import__
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "ModuleNotFoundError: No module named '_testcapi'. Did you mean: 'test_capi'?"
+
+  - name: test.test_audit.AuditTest.test_import_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "ModuleNotFoundError: No module named '_testcapi'. Did you mean: 'test_capi'?"
+
+  - name: test.test_audit.AuditTest.test_import_statement
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "ModuleNotFoundError: No module named '_testcapi'. Did you mean: 'test_capi'?"
+
+  # Looks like a race condition in freethreaded builds.
+  - name: test.test_buffer.TestBufferProtocol.test_array_alignment
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "AssertionError: Lists differ: [0, 4, 0, 0, 0, 0, 0, 0, 0, 0] != [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]"
+    intermittent: true
+
+  - name: test.test_buffer.TestBufferProtocol.test_pybuffer_size_from_format
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "missing _testcapi"
+
+  - name: test.test_build_details.CPythonBuildDetailsTests.test_platform
+    minimum-python-version: "3.14"
+    reason: platform key doesn't match when cross compiling - possible PBS quirk/bug.
+    targets:
+      - ".+-apple-darwin"
+      - ".+-unknown-linux-.+"
+    dont-verify: true
+
+  - name: test.test_bytes.ByteArrayTest.test_obsolete_write_lock
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "_testcapi missing"
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_not_set
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_not_set
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_not_zero
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_not_zero
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_set_to_zero
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_set_to_zero
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_set_to_warn
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: AssertionError
+
+  - name: test.test_c_locale_coercion.LocaleCoercionTests.test_PYTHONCOERCECLOCALE_set_to_warn
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: AssertionError
+
+  - name: test.test_call.TestRecursion.test_margin_is_sufficient
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: missing _testcapi
+    minimum-python-version: "3.14"
+
+  - name: test.test_capi.test_misc.Test_testinternalcapi.test_threadstate_set_stack_protection
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "freethreaded"
+    reason: "Assertion failed: ts->c_stack_soft_limit < ts->c_stack_top"
+    intermittent: true
+
+  - name: test.test_capi.test_run.CAPITest.test_run_fileexflags
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    # test_capi is module excluded above in static builds. It fails to
+    # import / load tests on static builds, leading to a false positive of
+    # this test not being found. Exclude static builds here to prevent
+    # our test harness from getting confused.
+    no-build-option: "static"
+    reason: "crash"
+
+  - name: test.test_cmath.CMathTests.test_polar_errno
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "_testcapi missing"
+
+  - name: test.test_cmd_line.CmdLineTest.test_pythonmalloc
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_codecs.BasicUnicodeTest.test_basics_capi
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "_testcapi missing"
+
+  - name: test.test_concurrent_futures.test_interpreter_pool.InterpreterPoolExecutorTest.test_blocking
+    build-option: "freethreaded"
+    minimum-python-version: "3.15"
+    reason: "sometimes times out - possible test deadlock"
+    intermittent: true
+
+  - name: test.test_concurrent_futures.test_shutdown.ProcessPoolForkProcessPoolShutdownTest.test_interpreter_shutdown
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_concurrent_futures.test_shutdown.ProcessPoolForkserverProcessPoolShutdownTest.test_interpreter_shutdown
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_coroutines.CAPITest.test_tp_await_1
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_coroutines.CAPITest.test_tp_await_2
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_coroutines.CAPITest.test_tp_await_3
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_ctypes.test_callbacks.Callbacks.test_i38748_stackCorruption
+    targets:
+      - "i686-pc-windows-msvc"
+    minimum-python-version: "3.12"
+    reason: "OSError: exception: access violation writing 0x00000005"
+
+  - name: test.test_ctypes.test_callbacks.StdcallCallbacks.test_i38748_stackCorruption
+    targets:
+      - "i686-pc-windows-msvc"
+    minimum-python-version: "3.12"
+    reason: "OSError: exception: access violation writing 0x00000005"
+
+  # Looks racy on freethreaded builds.
+  #- name: test.datetimetester.ExtensionModuleTests_Fast.test_concurrent_initialization_subinterpreter
+  #  minimum-python-version: "3.15"
+  #  build-option: "freethreaded"
+  #  reason: "AssertionError: b'aaaaaaa' != b'aaaaaaaa'"
+  #  intermittent: true
+
+  - name: test.datetimetester.ZoneInfoTest_Fast.test_system_transitions
+    targets:
+      - "x86_64-apple-darwin"
+    maximum-python-version: "3.10"
+    reason: "AttributeError: module 'time' has no attribute 'tzset'"
+    intermittent: true
+
+  - name: test.datetimetester.IranTest_Pure.test_system_transitions
+    targets:
+      - "x86_64-apple-darwin"
+    maximum-python-version: "3.10"
+    reason: "AttributeError: module 'time' has no attribute 'tzset'"
+    intermittent: true
+
+  - name: test.datetimetester.ZoneInfoTest_Pure.test_system_transitions
+    targets:
+      - "x86_64-apple-darwin"
+    maximum-python-version: "3.10"
+    reason: "AttributeError: module 'time' has no attribute 'tzset'"
+    intermittent: true
+
+  - name: test.datetimetester.IranTest_Fast.test_system_transitions
+    targets:
+      - "x86_64-apple-darwin"
+    maximum-python-version: "3.10"
+    reason: "AttributeError: module 'time' has no attribute 'tzset'"
+    intermittent: true
+
+  - name: test.test_dict.CAPITest.test_getitem_knownhash
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: missing _testcapi
+
+  #- name: test.test_dict.CAPITest.test_splittable_setattr_after_pop
+  #  targets:
+  #    - ".+-unknown-linux-musl"
+  #  build-option: "static"
+  #  maximum-python-version: "3.10"
+  #  reason: missing _testcapi
+
+  - name: test.test_dict.DictTest.test_splittable_setattr_after_pop
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: missing _testcapi
+
+  - name: test.test_docxmlrpc.DocXMLRPCHTTPGETServer.*
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_exceptions.ExceptionTests.testSettingException
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_memory_error_in_subinterp
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_MemoryError
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_exception_with_doc
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_memory_error_cleanup
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_memory_error_in_PyErr_PrintEx
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_recursion_normalizing_infinite_exception
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_recursion_normalizing_with_no_memory
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_exceptions.ExceptionTests.test_recursion_normalizing_exception
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.13"
+    maximum-python-version: "3.13"
+    reason: "_testcapi missing"
+
+  - name: test.test_faulthandler.FaultHandlerTests.test_fatal_error
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_faulthandler.FaultHandlerTests.test_fatal_error_without_gil
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_fcntl.TestFcntl.test_fcntl_bad_file_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_fcntl.TestFcntl.test_flock_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_fileio.COtherFileTests.testInvalidFd_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_finalization.LegacyFinalizationTest.test_legacy
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_finalization.LegacyFinalizationTest.test_legacy_resurrect
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_finalization.LegacyFinalizationTest.test_legacy_self_cycle
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_finalization.SimpleFinalizationTest.test_non_gc
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_finalization.SimpleFinalizationTest.test_non_gc_resurrect
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_float.IEEEFormatTestCase.test_serialized_float_rounding
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "_testcapi missing"
+
+  - name: test.test_format.FormatTest.test_precision_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_frame.TestFrameCApi.test_basic
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.13"
+    reason: _testcapi missing
+
+  # This test has a weird pass/fail matrix. Test might be self-skipping or something.
+
+  # aarch64 passes w/o pgo and on freethreaded+pgo
+  - name: test.test_frame_pointer_unwind.FramePointerUnwindTests.test_manual_unwind_respects_frame_pointers
+    minimum-python-version: "3.15"
+    targets:
+      - aarch64-unknown-linux-gnu
+    build-option: "pgo"
+    no-build-option: "freethreaded"
+    reason: "AssertionError: 0 not greater than 0 : expected to find Python frames on aarch64 with env {'PYTHON_JIT': '1'}"
+
+  - name: test.test_frame_pointer_unwind.FramePointerUnwindTests.test_manual_unwind_respects_frame_pointers
+    minimum-python-version: "3.15"
+    targets:
+      - x86_64.*-unknown-linux-musl
+    build-option: "static"
+    reason: "AssertionError: 0 not greater than 0 : expected to find Python frames on aarch64 with env {'PYTHON_JIT': '1'}"
+
+  - name: test.test_functools.TestPartialC.test_recursive_pickle
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    build-option: "pgo"
+    reason: crash
+    intermittent: true
+
+  - name: test.test_functools.TestPartialCSubclass.test_recursive_pickle
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    build-option: "pgo"
+    reason: crash
+    intermittent: true
+
+  - name: test.test_functools.TestPartialPy.test_recursive_pickle
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    build-option: "pgo"
+    reason: crash
+    intermittent: true
+
+  - name: test.test_functools.TestPartialPySubclass.test_recursive_pickle
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    build-option: "pgo"
+    reason: crash
+    intermittent: true
+
+  - name: test.test_gc.GCCallbackTests.test_collect_garbage
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_gc.GCCallbackTests.test_refcount_errors
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "AssertionError: Regex didn't match: b'gcmodule\\.c:[0-9]+:"
+    intermittent: true
+
+  - name: test.test_gc.GCTests.test_legacy_finalizer
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_gc.GCTests.test_legacy_finalizer_newclass
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_gc.GCTests.test_garbage_at_shutdown
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "AssertionError: 1 != 0"
+
+  - name: test.test_genericclass.CAPITest.test_c_class
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  # Test appears to be racy on freethreaded builds.
+  #- name: test.test_hashlib.HashlibTestCase.test_threaded_hashing_fast
+  #  minimum-python-version: "3.15"
+  #  build-option: "freethreaded"
+  #  reason: "appears to be racy on freethreaded builds"
+  #  intermittent: true
+
+  - name: test.test_httpservers.BaseHTTPServerTestCase.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_httpservers.CGIHTTPServerTestCase.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_httpservers.CGIHTTPServerTestCase.test_large_content_length_truncated
+    maximum-python-version: "3.14"
+    reason: "intermittent failure: http.client.RemoteDisconnected: Remote end closed connection without response"
+    intermittent: true
+
+  - name: test.test_httpservers.RequestHandlerLoggingTestCase.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_httpservers.HTTP09ServerTestCase.*
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test__interpchannels.ChannelTests.test_send_recv_different_interpreters_and_threads
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test__interpreters.CreateTests.test_in_thread
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test__interpreters.CreateTests.test_in_threaded_subinterpreter
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test__interpreters.RunFuncTests.test_in_thread
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test__interpreters.RunStringTests.test_in_thread
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_imp.ImportTests.test_create_builtin_subinterp
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "_testcapi missing"
+
+  - name: test.test_imp.ImportTests.test_issue16421_multiple_modules_in_one_dll
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "_testcapi missing"
+
+  - name: test.test_imp.ImportTests.test_issue24748_load_module_skips_sys_modules_check
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.CircularImportTests.test_singlephase_circular
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.13"
+    reason: _testsinglephase shared library expectation
+
+  - name: test.test_import.ImportTests.test_from_import_missing_attr_has_name_and_so_path
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.ModexportTests.test_from_modexport
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_create_nonmodule
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_create_nonmodule_gil_used
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_empty_slots
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_exception
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_gil_used
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_null
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.ModexportTests.test_from_modexport_smoke
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.SinglephaseInitTests.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_builtin_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.SubinterpImportTests.test_disallowed_reimport
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testsinglephase shared library expectation"
+
+  - name: test.test_import.SubinterpImportTests.test_frozen_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.SubinterpImportTests.test_isolated_config
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.SubinterpImportTests.test_multi_init_extension_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_multi_init_extension_non_isolated_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: _testmultiphase shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_multi_init_extension_per_interpreter_gil_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: _testmultiphase shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_pyinit_function_raises_exception
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testsinglephase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_import.SubinterpImportTests.test_python_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_import.SubinterpImportTests.test_singlephase_check_with_setting_and_override
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: _testsinglephase shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_single_init_extension_compat
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: _testsinglephase shared library expectations
+
+  - name: test.test_import.SubinterpImportTests.test_testmultiphase_exec_multiple
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.15"
+    reason: "AttributeError: module '_testmultiphase' has no attribute '__file__'. Did you mean '.__name__' instead of '.__file__'?"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_LoaderTests.test_is_package
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_LoaderTests.test_load_module_API
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_LoaderTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_LoaderTests.test_module_reuse
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_bad_modules
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_load_short_name
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_load_submodule
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_LoaderTests.test_is_package
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Source_LoaderTests.test_load_module_API
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Source_LoaderTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Source_LoaderTests.test_module_reuse
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AttributeError: 'NoneType' object has no attribute 'rfind'"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_bad_modules
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_finder.Frozen_FinderTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_unloadable_nonascii
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_functionality
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_load_twice
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_nonascii
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_nonmodule
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_nonmodule_with_methods
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_null_slots
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_reload
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Frozen_MultiPhaseExtensionModuleTests.test_try_registration
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_functionality
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_load_short_name
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_load_submodule
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_load_twice
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_nonascii
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_nonmodule
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_nonmodule_with_methods
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_null_slots
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_reload
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_try_registration
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "ImportError: Dynamic loading not supported"
+
+  - name: test.test_importlib.extension.test_loader.Source_MultiPhaseExtensionModuleTests.test_unloadable_nonascii
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "AssertionError: 'fo_6ja' != 'foó'"
+
+  - name: test.test_importlib.extension.test_finder.Source_FinderTests.test_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.11"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_importlib.test_threaded_import.*
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_multiprocessing_pool_circular_import
+    targets:
+      - ".+-unknown-linux-musl"
+    reason: "segfault at least on debug builds"
+    # Test sniffs memory and self-skips. This check is not reliable.
+    intermittent: true
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_concurrent_futures_circular_import
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    minimum-python-version: "3.11"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_parallel_meta_path
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_parallel_module_init
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_parallel_path_hooks
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_importlib.test_threaded_import.ThreadedImportTests.test_side_effect_import
+    minimum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_importlib.test_util.IncompatibleExtensionModuleRestrictionsTests.test_incomplete_multi_phase_init_module
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_inspect.test_inspect.TestClassesAndFunctions.test_getfullargspec_builtin_func
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_inspect.test_inspect.TestClassesAndFunctions.test_getfullargspec_builtin_func_no_signature
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_inspect.test_inspect.TestSignatureObject.test_signature_on_builtins
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_inspect.test_inspect.TestSignatureObject.test_signature_on_builtins_no_signature
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_inspect.test_inspect.TestSignatureObject.test_signature_on_decorated_builtins
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_inspect.TestClassesAndFunctions.test_getfullargspec_builtin_func
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_inspect.TestClassesAndFunctions.test_getfullargspec_builtin_func_no_signature
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_inspect.TestSignatureObject.test_signature_on_builtins
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_inspect.TestSignatureObject.test_signature_on_builtins_no_signature
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_inspect.TestSignatureObject.test_signature_on_decorated_builtins
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_int.IntStrDigitLimitsTests.test_int_max_str_digits_is_per_interpreter
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_int.IntStrDigitLimitsTests.test_denial_of_service_prevented_str_to_int
+    targets:
+      - ".+-pc-windows-.+"
+    # Seems to be fixed in 3.14.
+    maximum-python-version: "3.13"
+    reason: "AssertionError: 0.015625 not less than or equal to 0.0078125"
+    intermittent: true
+
+  - name: test.test_int.IntSubclassStrDigitLimitsTests.test_int_max_str_digits_is_per_interpreter
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_interpreters.CreateTests.test_in_thread
+    # Moved to test__interpreters in 3.13.
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.TestInterpreterRun.test_in_thread
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.CreateTests.test_in_thread
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.LowLevelTests.test_is_running
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterCall.test_call_in_thread
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    minimum-python-version: "3.13"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterClose.test_created_with_capi
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    minimum-python-version: "3.13"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterCall.test_stateless_func_returns_arg
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.14"
+    reason: missing _testinternalcapi
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterCall.test_stateless_funcs
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.14"
+    reason: missing _testinternalcapi
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterExec.test_in_thread
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_interpreters.test_api.TestInterpreterIsRunning.test_created_with_capi
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_itertools.TestBasicOps.test_count_threading
+    minimum-python-version: "3.13"
+    build-option: "freethreaded"
+    reason: "test appears racy on freethreaded builds"
+    intermittent: true
+
+  - name: test.test_io.CTextIOWrapperTest.test_device_encoding
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_io.PyTextIOWrapperTest.test_device_encoding
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test__locale._LocaleTests.test_alt_digits_nl_langinfo
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: 1 not greater than or equal to 10 : ['0123456789']"
+
+  # This one still fails on static builds on 3.14+.
+  - name: test.test__locale._LocaleTests.test_alt_digits_nl_langinfo
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: 1 not greater than or equal to 10 : ['0123456789']"
+
+  - name: test.test__locale._LocaleTests.test_lc_numeric_localeconv
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: '.' != ','"
+
+  - name: test.test__locale._LocaleTests.test_lc_numeric_localeconv
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.14"
+    reason: "AssertionError: '.' != ','"
+
+  - name: test.test__locale._LocaleTests.test_lc_numeric_nl_langinfo
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: '.' != ','"
+
+  # This one still fails on static builds on 3.14+.
+  - name: test.test__locale._LocaleTests.test_lc_numeric_nl_langinfo
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: '.' != ','"
+
+  - name: test.test_locale.TestEnUSCollation.test_strcoll_with_diacritic
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: 1 not less than 0"
+
+  - name: test.test_locale.TestEnUSCollation.test_strcoll_with_diacritic
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: 1 not less than 0"
+
+  - name: test.test_locale.TestEnUSCollation.test_strxfrm_with_diacritic
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: 1 not less than 0"
+
+  - name: test.test_locale.TestEnUSCollation.test_strxfrm_with_diacritic
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: 1 not less than 0"
+
+  # Passes on x86_64_v3 and x86_64_v4 for some reason.
+  - name: test.test_math.FMATests.test_fma_zero_result
+    targets:
+      - "x86_64(_v2)?-unknown-linux-musl"
+    minimum-python-version: "3.13"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: False is not true : Expected a negative zero, got 0.0"
+
+  - name: test.test_math.FMATests.test_fma_zero_result
+    targets:
+      - ".+-unknown-linux-musl"
+    ignore-targets:
+      - "x86_64_v[34]-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: False is not true : Expected a negative zero, got 0.0"
+
+  - name: test.test_multibytecodec.Test_IncrementalEncoder.test_subinterp
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_os.ForkTests.test_fork_warns_when_non_python_thread_exists
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_os.TestInvalidFD.test_fpathconf_bad_fd
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    maximum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: <built-in function pathconf> didn't raise an OSError with a bad file descriptor"
+
+  - name: test.test_os.test_os.TestInvalidFD.test_fpathconf_bad_fd
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.15"
+    build-option: "static"
+    reason: "AssertionError: <built-in function pathconf> didn't raise an OSError with a bad file descriptor"
+
+  - name: test.test_os.test_os.TestInvalidFD.test_pathconf_negative_fd_uses_fd_semantics
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.15"
+    build-option: "static"
+    reason: "AssertionError: OSError not raised"
+
+  - name: test.test_os.TestInvalidFD.test_fpathconf
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: <built-in function pathconf> didn't raise an OSError with a bad file descriptor"
+
+  - name: test.test_os.test_posix.PosixTester.test_pipe2_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.15"
+    build-option: "static"
+    reason: "ModuleNotFoundError: No module named '_testcapi'"
+
+  - name: test.test_os.test_posix.PosixTester.test_nodev
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.15"
+    build-option: "static"
+    reason: "AssertionError: module 'posix' has no attribute 'NODEV'"
+
+  - name: test.test_poll.PollTests.test_poll_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_posix.PosixTester.test_pipe2_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: missing _testcapi
+
+  - name: test.test_posix.PosixTester.test_makedev
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    reason: "OverflowError: can't convert negative int to unsigned"
+
+  - name: test.test_posix.PosixTester.test_makedev
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "OverflowError: can't convert negative int to unsigned"
+
+  - name: test.test_pty.PtyTest.test_spawn_doesnt_hang
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.13"
+    reason: AssertionError
+    intermittent: true
+
+  - name: test.test_pydoc.PydocServerTest.test_server
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_re.ReTests.test_locale_caching
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_re.ReTests.test_locale_caching
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_re.ReTests.test_locale_compiled
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_re.ReTests.test_locale_compiled
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: None is not true"
+
+  - name: test.test_readline.TestHistoryManipulation.test_write_read_append
+    targets:
+      - ".+-unknown-linux-musl"
+    reason: "AssertionError: 4 != 3"
+
+  - name: test.test_readline.TestHistoryManipulation.test_write_read_limited_history
+    targets:
+      - ".+-unknown-linux-.+"
+    minimum-python-version: "3.12"
+    reason: TESTFN undefined
+
+  - name: test.test_readline.TestReadline.test_write_read_limited_history
+    targets:
+      - ".+-unknown-linux-.+"
+    minimum-python-version: "3.12"
+    reason: TESTFN undefined
+
+  - name: test.test_repl.TestInteractiveInterpreter.test_no_memory
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "AssertionError: 0 not found in (1, 120)"
+
+  - name: test.test_signal.StressTest.test_stress_delivery_simultaneous
+    reason: "timeout due to potential deadlock or similar test bug"
+    intermittent: true
+
+  - name: test.test_smtplib.DebuggingServerTests.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    minimum-python-version: "3.13"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_smtplib.SMTPSimTests.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "freethreaded"
+    # Should be thread safe in 3.15.
+    maximum-python-version: "3.14"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_smtplib.SMTPUTF8SimTests.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "freethreaded"
+    # Should be thread safe in 3.15.
+    maximum-python-version: "3.14"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_socket.GeneralModuleTests.testNtoHErrors
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_socket.GeneralModuleTests.test_getaddrinfo_int_port_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_socket.GeneralModuleTests.test_listen_backlog_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_socket.NonBlockingTCPTests.testSetBlocking_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_socket.BasicTCPTest.testShutdown_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_socket.BasicTCPTest2.testShutdown_overflow
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_socket.GeneralModuleTests.test3542SocketOptions
+    reason: "AssertionError: False is not true : Missing RFC3542 socket option 'IPV6_RECVDSTOPTS'"
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-apple-darwin"
+
+  - name: test.test_socket.NonBlockingTCPTests.testLargeTimeout
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_ssl.BasicSocketTests.test_read_write_zero
+    targets:
+      - ".+-pc-windows-.+"
+    minimum-python-version: "3.12"
+    reason: ConnectionAbortedError
+    intermittent: true
+
+    # These uplink/applink failures should go away once we're patching
+    # OpenSSL correctly following https://github.com/python/cpython/pull/131839.
+    # These pass on aarch64 for reasons unknown.
+
+  - name: test.test_ssl.ContextTests.test_load_dh_params
+    targets:
+      - "i686-pc-windows-.+"
+      - "x86_64-pc-windows-.+"
+    minimum-python-version: "3.12"
+    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  - name: test.test_ssl.SSLErrorTests.test_lib_reason
+    targets:
+      - "i686-pc-windows-.+"
+      - "x86_64-pc-windows-.+"
+    minimum-python-version: "3.12"
+    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  #- name: test.test_ssl.SSLErrorTests.test_dh_params
+  #  targets:
+  #    - ".+-pc-windows-.+"
+  #  maximum-python-version: "3.11"
+  #  reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  #- name: test.test_ssl.ThreadedTests.test_dh_params
+  #  targets:
+  #    - ".+-pc-windows-.+"
+  #  minimum-python-version: "3.12"
+  #  reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  - name: test.test_ssl.TestSSLDebug.test_keylog_defaults
+    targets:
+      - "i686-pc-windows-.+"
+      - "x86_64-pc-windows-.+"
+    minimum-python-version: "3.12"
+    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  - name: test.test_ssl.TestSSLDebug.test_keylog_filename
+    targets:
+      - "i686-pc-windows-.+"
+      - "x86_64-pc-windows-.+"
+    minimum-python-version: "3.12"
+    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
+
+  # Looks like a race condition in the test.
+  - name: test.test_str.StrTest.test_raiseMemError
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "freethreaded"
+    minimum-python-version: "3.14"
+    reason: "AssertionError: 79 != 75"
+    intermittent: true
+
+  - name: test.test_strptime.StrptimeTests.test_date_locale2
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    reason: "AssertionError: Tuples differ: (2000, 1, 1) != (1900, 1, 1)"
+
+  - name: test.test_strptime.StrptimeTests.test_date_locale2
+    targets:
+      - ".+-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    build-option: "static"
+    reason: "AssertionError: Tuples differ: (2000, 1, 1) != (1900, 1, 1)"
+
+  - name: test.test_struct.StructTest.test_endian_table_init_subinterpreters
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "BlockingIOError: [Errno 11] Resource temporarily unavailable: '/tmp/tmpqkxa77l0/python/install/lib/python3.15t/concurrent'"
+    intermittent: true
+
+  - name: test.test_subprocess.POSIXProcessTestCase.test_vfork_used_when_expected
+    targets:
+      - "aarch64-unknown-linux-musl"
+    minimum-python-version: "3.14"
+    no-build-option: "debug"
+    reason: "AssertionError: Regex didn't match: b'(?i)vfork'..."
+
+  - name: test.test_subprocess.ProcessTestCase.test_executable_without_cwd
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 47 != 1"
+
+  - name: test.test_subprocess.ProcessTestCaseNoPoll.test_executable_without_cwd
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 47 != 1"
+
+  - name: test.test_support.TestSupport.test_recursion
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.11"
+    reason: "RecursionError: maximum recursion depth exceeded"
+
+  - name: test.test_sysconfig.TestSysConfig.test_config_vars_depend_on_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_sysconfig.TestSysConfig.test_config_vars_recalculation_after_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_sysconfig.TestSysConfig.test_paths_depend_on_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_sysconfig.TestSysConfig.test_makefile_overwrites_config_vars
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: PBS behavior differences
+
+  - name: test.test_sysconfig.TestSysConfig.test_sysconfigdata_json
+    minimum-python-version: "3.14"
+    ignore-targets:
+      - ".+-pc-windows-.+"
+    reason: PBS behavior differences
+
+  - name: test.test_sysconfig.TestSysConfig.test_triplet_in_ext_suffix
+    targets:
+      - "x86_64.*-unknown-linux-musl"
+    maximum-python-version: "3.10"
+    reason: "AssertionError: False is not true : .cpython-310-x86_64-linux-musl.so"
+
+  - name: test.test_syslog.Test.test_subinterpreter_closelog
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_syslog.Test.test_subinterpreter_openlog
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_syslog.Test.test_subinterpreter_syslog
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  # Looks like a race condition in tests.
+  - name: test.test_sys.SizeofTest.test_objecttypes
+    targets:
+      - ".+-pc-windows-.+"
+    minimum-python-version: "3.14"
+    build-option: "freethreaded"
+    reason: "AssertionError: 137 != 133 : wrong size for <class 'str'>: got 137, expected 133"
+    intermittent: true
+
+  - name: test.test_sys.SysModuleTest.test_getallocatedblocks
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "_testcapi missing"
+
+  - name: test.test_sys.TestSysJIT.test_jit_is_active
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.14"
+    reason: missing _testcapi
+
+  - name: test.test_sys.UnraisableHookTest.test_custom_unraisablehook
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_sys.UnraisableHookTest.test_custom_unraisablehook_fail
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_sys.UnraisableHookTest.test_original_unraisablehook
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_sys.UnraisableHookTest.test_original_unraisablehook_exception_qualname
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: missing _testcapi
+
+  - name: test.test_threading.SubinterpThreadingTests.test_threads_join
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.SubinterpThreadingTests.test_threads_join_2
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.SubinterpThreadingTests.test_threads_not_allowed
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.SubinterpThreadingTests.test_daemon_threads_not_allowed
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.SubinterpThreadingTests.test_daemon_threads_fatal_error
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.ThreadingExceptionTests.test_print_exception
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "AssertionError"
+
+  - name: test.test_threading.ThreadingExceptionTests.test_print_exception_stderr_is_none_1
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "AssertionError"
+
+  - name: test.test_threading.ThreadingExceptionTests.test_recursion_limit
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.10"
+    reason: "AssertionError: -11 != 0"
+
+  - name: test.test_threading.ThreadJoinOnShutdown.test_4_daemon_threads
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "ConnectionRefusedError: [Errno 111] Connection refused and segfault"
+    intermittent: true
+
+  - name: test.test_threading.ThreadTests.test_frame_tstate_tracing
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_threading.ThreadTests.test_import_from_another_thread
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_threading.ThreadTests.test_main_thread_after_fork
+    minimum-python-version: "3.12"
+    targets:
+      - "x86_64-apple-darwin"
+    reason: "AssertionError: b'<string>:6: DeprecationWarning: This proc[82 chars]d.\n' != b''"
+
+  - name: test.test_threading.ThreadTests.test_native_id_after_fork
+    minimum-python-version: "3.13"
+    targets:
+      - "x86_64-apple-darwin"
+    reason: "AssertionError: b'<string>:6: DeprecationWarning: This proc[82 chars]d.\n' != b''"
+
+  - name: test.test_threading.ThreadTests.test_PyThreadState_SetAsyncExc
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    reason: missing _testcapi
+
+  - name: test.test_threading.ThreadTests.test_finalize_daemon_thread_hang
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.13"
+    reason: missing _testcapi
+
+  - name: test.test_threading.ThreadTests.test_finalize_running_thread
+    targets:
+      - ".+-unknown-linux-mus"
+    build-option: "static"
+    reason: "AssertionError: 1 != 42"
+
+  - name: test.test_multiprocessing_forkserver.test_manager.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "unknown; possible segfault"
+
+  - name: test.test_multiprocessing_forkserver.test_misc.TestStartMethod.test_preload_resources
+    minimum-python-version: "3.12"
+    targets:
+      - "x86_64-apple-darwin"
+    build-option: "debug"
+    reason: "AssertionError: failed spawning forkserver or grandchild"
+
+  - name: test.test_multiprocessing_fork.*
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfaults"
+
+  - name: test.test_multiprocessing_fork.test_manager.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "ConnectionRefusedError: [Errno 111] Connection refused"
+
+  - name: test.test_multiprocessing_fork.test_processes.WithProcessesTestManagerRestart.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "ConnectionRefusedError: [Errno 111] Connection refused"
+
+  - name: test.test_multiprocessing_fork.test_threads.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_forkserver.test_processes.WithProcessesTestManagerRestart.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "ConnectionRefusedError: [Errno 111] Connection refused"
+
+  - name: test.test_multiprocessing_forkserver.*
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_spawn.*
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_spawn.test_manager.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_spawn.test_processes.WithProcessesTestManagerRestart.test_rapid_restart
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "ConnectionRefusedError: [Errno 111] Connection refused"
+
+  - name: test.test_multiprocessing_spawn.test_processes.WithProcessesTestSharedMemory.test_shared_memory_tracking
+    build-option: "freethreaded"
+    reason: "timeout possibly due to deadlock"
+    intermittent: true
+
+  - name: test.test_multiprocessing_spawn.test_threads.*
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    minimum-python-version: "3.11"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_basic_script
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_basic_script_no_suffix
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_directory
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_directory_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_ipython_workaround
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_module_in_package
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_module_in_package_in_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_module_in_subpackage_in_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_package
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_package_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_script_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    no-build-option: "pgo"
+    minimum-python-version: "3.12"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkCmdLineTest.test_zipfile_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_basic_script
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_basic_script_no_suffix
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_directory
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_directory_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_ipython_workaround
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_module_in_package
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_module_in_package_in_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_module_in_subpackage_in_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_package
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_package_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_script_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_zipfile
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_main_handling.ForkServerCmdLineTest.test_zipfile_compiled
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.12"
+    build-option: "debug"
+    reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_multiprocessing_forkserver.test_processes.WithProcessesTestSpawnedSysPath.test_std_streams_flushed_after_preload
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.13"
+    build-option: "debug"
+    reason: "multiprocessing/forkserver.py:278: DeprecationWarning: This process (pid=82723) is multi-threaded, use of fork() may lead to deadlocks in the child."
+
+  - name: test.test_multiprocessing_forkserver.test_threads.*
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_multiprocessing_forkserver.test_misc.MiscTestCase.test_preload_main
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.13"
+    build-option: "debug"
+    reason: "AssertionError: b'/private/var/folders/1r/b8l6nzhj4zdbz5jmj[222 chars]()\n' != b'"
+
+  - name: test.test_multiprocessing_forkserver.test_misc.MiscTestCase.test_preload_main_sys_argv
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.13"
+    build-option: "debug"
+    reason: "AssertionError: b'/private/var/folders/1r/b8l6nzhj4zdbz5jmj[222 chars]()\n' != b''"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works_after_fork_with_many_code_objects
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.15"
+    reason: "AssertionError: '/private/var/folders/1r/b8l6nzhj4zdbz5jmj[194 chars]()\n' != ''"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works_with_forks
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.15"
+    reason: "AssertionError: '/private/var/folders/1r/b8l6nzhj4zdbz5jmj[194 chars]()\n' != ''"
+
+  - name: test.test_regrtest.ArgsTestCase.test_add_python_opts
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.14"
+    reason: "Something related to _testcapi or similar extension"
+
+  - name: test.test_regrtest.ArgsTestCase.test_findleaks
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "AssertionError: Command ['/tmp/.tmpGZuURa/python/install/bin/python3.10', '-X', 'faulthandler', '-I', '-m', 'test', '--testdir=/tmp/tmp6mrz59ds', '--fail-env-changed', 'test_regrtest_noop1'] failed with exit code 2"
+
+  - name: test.test_regrtest.ArgsTestCase.test_uncollectable
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test_tcl.TclTest.test_evalfile_surrogates_in_result
+    maximum-python-version: "3.11"
+    ignore-targets:
+      - ".+-pc-windows-.+"
+    reason: "_tkinter.TclError: couldn't read file \"@test_169558_tmp\": invalid or incomplete multibyte or wide character"
+
+  - name: test.test_tcl.TclTest.test_getint
+    maximum-python-version: "3.10"
+    reason: "AssertionError: 17777777777 != 2147483647"
+    ignore-targets:
+      - ".+-pc-windows-.+"
+
+  - name: test.test_unicode.UnicodeTest.test_formatting_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_unicode.UnicodeTest.test_formatting_huge_precision_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_call_args_thread_safe
+    minimum-python-version: "3.13"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_call_count_thread_safe
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_method_calls_thread_safe
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_mock_calls_thread_safe
+    minimum-python-version: "3.13"
+    build-option: "debug"
+    reason: "segfault"
+    intermittent: true
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_wait_until_any_call_with_success
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_unittest.testmock.testthreadingmock.TestThreadingMock.test_wait_until_called_success
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test_userstring.UserStringTest.test_formatting_c_limits
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.10"
+    reason: "missing _testcapi"
+
+  - name: test.test_venv.BasicTest.test_executable
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_macos_env
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_multiprocessing
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_multiprocessing_recursion
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_prefixes
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_special_chars_bash
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_special_chars_csh
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_sysconfig_symlinks
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.13"
+    reason: BytesWarning
+
+  - name: test.test_venv.BasicTest.test_sysconfig
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.BasicTest.test_sysconfig
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "freethreaded"
+    reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
+
+  - name: test.test_venv.BasicTest.test_venvwlauncher
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "freethreaded"
+    reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
+
+  - name: test.test_venv.BasicTest.test_zippath_from_non_installed_posix
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-apple-darwin"
+    reason: crashes
+
+  - name: test.test_venv.EnsurePipTest.test_explicit_no_pip
+    targets:
+      - ".+-apple-darwin"
+    reason: PBS installs pip
+
+  - name: test.test_venv.EnsurePipTest.test_no_pip_by_default
+    targets:
+      - ".+-apple-darwin"
+    reason: PBS installs pip
+
+  - name: test.test_venv.EnsurePipTest.test_with_pip
+    targets:
+      - ".+-apple-darwin"
+    maximum-python-version: "3.10"
+    reason: logic bug?
+
+  - name: test.test_venv.EnsurePipTest.test_with_pip
+    targets:
+      - ".+-unknown-linux-musl"
+    maximum-python-version: "3.10"
+    build-option: "static"
+    reason: "TBD"
+
+  - name: test.test_weakref.ReferencesTestCase.test_cfunction
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "static"
+    maximum-python-version: "3.12"
+    reason: "missing _testcapi"
+
+  - name: test.test__xxinterpchannels.ChannelTests.test_send_recv_different_interpreters_and_threads
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.12"
+    targets:
+      - "aarch64-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+
+  - name: test.test__xxsubinterpreters.ChannelTests.test_send_recv_different_interpreters_and_threads
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    no-build-option: "static"
+    reason: "segfault"
+
+  - name: test.test__xxsubinterpreters.CreateTests.test_in_thread
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    no-build-option: "static"
+    intermittent: true
+
+  - name: test.test__xxsubinterpreters.CreateTests.test_in_threaded_subinterpreter
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    no-build-option: "static"
+    intermittent: true
+
+  - name: test.test__xxsubinterpreters.RunStringTests.test_in_thread
+    maximum-python-version: "3.12"
+    targets:
+      - ".+-unknown-linux-musl"
+    build-option: "debug"
+    reason: "segfault"
+    no-build-option: "static"
+    intermittent: true
+
+profiling-excludes:
+  - name: test_capi
+    reason: "a lot of random segfaults"
+
+  - name: test_ctypes
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "tons of random segfaults"
+
+  - name: test_frame
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "segfault during BOLT instrumentation"
+
+profiling-skips:
+  - name: test.test_ast.test_ast.AST_Tests.test_ast_recursion_limit
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised : Compiling ('a' + '()' * 500000)"
+
+  - name: test.test_asyncio.test_base_events.BaseEventLoopWithSelectorTests.test_create_connection_service_name
+    reason: "socket.gaierror: [Errno -8] Servname not supported for ai_socktype"
+
+  - name: test.test_asyncio.test_subprocess.SubprocessThreadedWatcherTests.test_create_subprocess_env_shell
+    reason: "AssertionError: b'' != b'bar'"
+
+  - name: test.test_audit.AuditTest.test_ctypes_call_function
+    minimum-python-version: "3.14"
+    reason: "AssertionError (possibly intermittent)"
+
+  - name: test.test_bytes.BytesTest.test_from_format
+    minimum-python-version: "3.12"
+    targets:
+      - "x86_64.+"
+    reason: "PGO optimized / BOLT instrumented binaries segfault"
+
+  - name: test.test_call.TestRecursion.test_super_deep
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised"
+
+  - name: test.test_capi.test_unicode.CAPITest.test_from_format
+    reason: "segfault in PyUnicode_FromFormat"
+
+  - name: test.test_code.CoExtra.*
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "SystemError: Objects/codeobject.c:1613: bad argument to internal function"
+
+  - name: test.test_compile.TestSpecifics.test_compiler_recursion_limit
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised : Compiling ('a' + '.b' * 500000)"
+
+  - name: test.test_ctypes.test_find.FindLibraryLinux.test_find_library_with_gcc
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: None == None"
+
+  - name: test.test_ctypes.test_find.FindLibraryLinux.test_find_library_with_ld
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: None == None"
+
+  # This error sometimes goes away during PGO optimized builds.
+  - name: test.test_dict.DictTest.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_embed.InitConfigTests.test_global_pathconfig
+    reason: "ValueError: character U+67e58ee0 is not in range [U+0000; U+10ffff] during BOLT"
+
+  - name: test.test_exception_group.DeepRecursionInSplitAndSubgroup.test_deep_split
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_exception_group.DeepRecursionInSplitAndSubgroup.test_deep_subgroup
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_exceptions.ExceptionTests.test_recursion_normalizing_exception
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_frame.FrameLocalsProxyMappingTests.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_linecache.LineCacheInvalidationTests.*
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_list.ListTest.test_repr_deep
+    minimum-python-version: "3.14"
+    reason: "AssertionError: RecursionError not raised by repr"
+
+  - name: test.test_os.*
+    reason: "env changed (unclear which test)"
+
+  - name: test.test_free_threading.test_capi.TestImportCAPI.test_pyimport_addmoduleref_thread_safe
+    minimum-python-version: "3.14"
+    build-option: "freethreaded"
+    reason: "segfault"
+
+  - name: test.test_free_threading.test_code.*
+    build-option: "freethreaded"
+    reason: "ystemError: Objects/codeobject.c:1676: bad argument to internal function"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_nonmanaged_dict
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_inline_values_invalid
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_no_shared_keys
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_dict.TestDict.test_racing_creation_shared_keys
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_functools.TestLRUCache.*
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_heapq.TestHeapq.test_racing_heappush_max
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_heapq.TestHeapq.test_racing_heapreplace
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_free_threading.test_type.TestType.test_attr_cache_consistency_subclass
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_itertools.TestBasicOps.test_count_threading
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_itertools.TestBasicOps.test_count_with_step_threading
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_lazy_import.ThreadSafetyTests.test_concurrent_lazy_modules_set_updates
+    minimum-python-version: "3.15"
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_peg_generator.test_c_parser.TestCParser.*
+    reason: "doesn't seem to sniff PGO correctly and compiler invocations in tests can cause failures"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_sys_api
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 'py::spam:/tmp/test_python_p8t76wgm/tmp6irl7ctw/perftest.py' not found in '7f380e676000 40 py::baz:/tmp/test_python_p8t76wgm/tmp6irl7ctw/perftest.py\n'"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: unexpectedly None : Could not find py::foo:/tmp/test_python_p8t76wgm/tmp66dkos4l/perftest.py in perf file"
+
+  - name: test.test_perf_profiler.TestPerfTrampoline.test_trampoline_works_with_forks
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: -11 != 0 (-11 might be segfault)"
+
+  - name: test.test_popen.PopenTest.test_popen
+    targets:
+      - ".*-apple-darwin"
+    reason: "SyntaxError: invalid syntax"
+
+  - name: test.test_profiling.test_sampling_profiler.test_advanced.TestNativeFrameTracking.test_native_frames_enabled
+    minimum-python-version: "3.15"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: True is not false in BOLT instrumented training"
+
+  - name: test.test_pyrepl.test_unix_console.TestUnixConsoleEIOHandling.test_repl_eio
+    minimum-python-version: "3.13"
+    reason: "intermittent timeout"
+
+  - name: test.test_queue.*
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed in multiple tests"
+
+  - name: test.test_socket.GeneralModuleTests.testGetServBy
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: OSError
+
+  - name: test.test_socket.GeneralModuleTests.testGetaddrinfo
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "socket.gaierror: [Errno -8] Servname not supported for ai_socktype"
+
+  - name: test.test_subprocess.POSIXProcessTestCase.test_args_string
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: -6 != 47"
+
+  - name: test.test_subprocess.POSIXProcessTestCase.test_call_string
+    targets:
+      - ".+-apple-darwin"
+    reason: "AssertionError: -6 != 47"
+
+  - name: test.test_syslog.Test.test_syslog_threaded
+    build-option: "freethreaded"
+    reason: "Fatal Python error: _PySemaphore_Wakeup: parking_lot: sem_post failed"
+
+  - name: test.test_threading.ThreadTests.test_PyThreadState_SetAsyncExc
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "AssertionError: 0 != 1"
+
+  - name: test.test_tools.test_compute_changes.TestProcessChangedFiles.test_ci_fuzz_stdlib
+    minimum-python-version: "3.15"
+    reason: "AssertionError: LIBRARY_FUZZER_PATHS contains an invalid entry: PosixPath('.github/workflows/reusable-cifuzz.yml')"
+
+  - name: test.test_venv.*
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-unknown-linux-.+"
+    reason: "env changed (unclear which test)"
+
+  - name: test.test_zipfile.test_core.TestExecutablePrependedZip.test_execute_zip2
+    targets:
+      - ".+-apple-darwin"
+    reason: "sometimes crashes"
+
+  - name: test.test_zipfile.test_core.TestExecutablePrependedZip.test_execute_zip64
+    targets:
+      - ".+-apple-darwin"
+    reason: "sometimes crashes"

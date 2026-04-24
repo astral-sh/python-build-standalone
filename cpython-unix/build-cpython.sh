@@ -147,20 +147,6 @@ else
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules.patch"
 fi
 
-# Also on macOS, the `python` executable is linked against libraries defined by statically
-# linked modules. But those libraries should only get linked into libpython, not the
-# executable. This behavior is kinda suspect on all platforms, as it could be adding
-# library dependencies that shouldn't need to be there.
-if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
-        patch -p1 -i "${ROOT}/patch-python-link-modules-3.15.patch"
-    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-        patch -p1 -i "${ROOT}/patch-python-link-modules-3.11.patch"
-    elif [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
-        patch -p1 -i "${ROOT}/patch-python-link-modules-3.10.patch"
-    fi
-fi
-
 # The macOS code for sniffing for _dyld_shared_cache_contains_path falls back on a
 # possibly inappropriate code path if a configure time check fails. This is not
 # appropriate for certain cross-compiling scenarios. See discussion at
@@ -429,19 +415,12 @@ CONFIGURE_FLAGS="
 
 # Build a libpython3.x.so, but statically link the interpreter against
 # libpython.
-#
-# For now skip this on macos, because it causes some linker failures. Note that
-# this patch mildly conflicts with the macos-only patch-python-link-modules
-# applied above, so you will need to resolve that conflict if you re-enable
-# this for macos.
-if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
-    else
-        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
-    fi
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
+else
+    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
 fi
+CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
 
 if [ "${CC}" = "musl-clang" ]; then
     # In order to build the _blake2 extension module with SSE3+ instructions, we need

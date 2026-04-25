@@ -786,6 +786,12 @@ else
     BUILD_PYTHON=${ROOT}/out/python/install/bin/python3
 fi
 
+PATCHELF=patchelf
+if [ "${TARGET_TRIPLE}" = "loongarch64-unknown-linux-gnu" ]; then
+    # Fix loongarch64 64k page size.
+    PATCHELF="${PATCHELF} --page-size 65536"
+fi
+
 # If we're building a shared library hack some binaries so rpath is set.
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
@@ -896,11 +902,11 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # empty dummy libpython.so, which allows the link to succeed but
         # ensures they do not use any unwanted symbols. That might be
         # worth doing at some point.)
-        patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
+        ${PATCHELF} --force-rpath --set-rpath "\$ORIGIN/../lib" \
             "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
 
         if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
-            patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
+            ${PATCHELF} --force-rpath --set-rpath "\$ORIGIN/../lib" \
                 "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
         fi
 
@@ -922,13 +928,13 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         if [ "${CC}" == "musl-clang" ]; then
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then
-                patchelf --set-rpath "\$ORIGIN/../lib" \
+                ${PATCHELF} --set-rpath "\$ORIGIN/../lib" \
                     "${ROOT}/out/python/install/lib/libpython3.so"
             fi
         else
             # libpython3.so isn't present in debug builds.
             if [ -z "${CPYTHON_DEBUG}" ]; then
-                patchelf --replace-needed "${LIBPYTHON_SHARED_LIBRARY_BASENAME}" "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
+                ${PATCHELF} --replace-needed "${LIBPYTHON_SHARED_LIBRARY_BASENAME}" "\$ORIGIN/../lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
                     "${ROOT}/out/python/install/lib/libpython3.so"
             fi
         fi

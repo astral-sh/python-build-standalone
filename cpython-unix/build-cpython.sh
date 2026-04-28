@@ -325,6 +325,15 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
 
+# Use generational GC on the 3.14 and 3.15 release lines without
+# keeping the incremental-GC opt-in path.
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
+    patch -p1 -i "${ROOT}/patch-gc-generational-3.14.patch"
+fi
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.15 ]; then
+    patch -p1 -i "${ROOT}/patch-gc-generational-3.15.patch"
+fi
+
 # Ensure the new build-details.json file reports relocatable paths.
 # There is not yet a flag in ./configure for this, sadly.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then

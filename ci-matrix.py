@@ -110,9 +110,17 @@ def expand_default_triples(
     """
     default_triples = set(pull_request_defaults["targets"])
 
-    expand_platform = "all" in labels.get("platform", set())
-    expand_arch = "all" in labels.get("arch", set())
-    expand_libc = "all" in labels.get("libc", set())
+    platform_labels = labels.get("platform", set())
+    arch_labels = labels.get("arch", set())
+    libc_labels = labels.get("libc", set())
+
+    platform_filters = platform_labels - {"all"}
+    arch_filters = arch_labels - {"all"}
+    libc_filters = libc_labels - {"all"}
+
+    expand_platform = "all" in platform_labels or bool(platform_filters)
+    expand_arch = "all" in arch_labels or bool(arch_filters)
+    expand_libc = "all" in libc_labels or bool(libc_filters)
 
     if not (expand_platform or expand_arch or expand_libc):
         return default_triples
@@ -136,14 +144,27 @@ def expand_default_triples(
     for platform, platform_config in ci_config.items():
         for triple, config in platform_config.items():
             for d_platform, d_arch, d_arch_variant, d_libc in default_attrs:
-                if not expand_platform and platform != d_platform:
+                if platform_filters:
+                    if platform not in platform_filters:
+                        continue
+                elif "all" not in platform_labels and platform != d_platform:
                     continue
-                if not expand_arch and (
+
+                if arch_filters:
+                    if config["arch"] not in arch_filters:
+                        continue
+                    if config.get("arch_variant") != d_arch_variant:
+                        continue
+                elif "all" not in arch_labels and (
                     config["arch"] != d_arch
                     or config.get("arch_variant") != d_arch_variant
                 ):
                     continue
-                if not expand_libc and config.get("libc") != d_libc:
+
+                if libc_filters:
+                    if config.get("libc") not in libc_filters:
+                        continue
+                elif "all" not in libc_labels and config.get("libc") != d_libc:
                     continue
                 allowed.add(triple)
                 break

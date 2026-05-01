@@ -443,11 +443,12 @@ riscv64-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross-riscv64
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/riscv64-linux-gnu-gcc
-  target_cxx: /usr/bin/riscv64-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/riscv64-linux-gnu-clang
+  target_cxx: /usr/bin/riscv64-linux-gnu-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'

@@ -22,6 +22,7 @@ from pythonbuild.cpython import (
     meets_python_maximum_version,
     meets_python_minimum_version,
     parse_config_c,
+    stdlib_test_annotations,
 )
 from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.utils import (
@@ -39,6 +40,7 @@ ROOT = pathlib.Path(os.path.abspath(__file__)).parent.parent
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 SUPPORT = ROOT / "cpython-windows"
+STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
 
 LOG_PREFIX = [None]
 LOG_FH = [None]
@@ -127,7 +129,6 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "zlib": ["zlib"],
     "_zstd": ["zstd"],
 }
-
 
 # Tests to run during PGO profiling.
 #
@@ -1407,6 +1408,13 @@ def build_cpython(
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
+    test_annotations = stdlib_test_annotations(
+        STDLIB_TEST_ANNOTATIONS,
+        python_version,
+        target_triple,
+        parsed_build_options,
+    )
+
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
     )
@@ -1762,6 +1770,12 @@ def build_cpython(
                 cpython_source_path / "Tools" / "scripts" / "run_tests.py",
                 out_dir / "python" / "build" / "run_tests.py",
             )
+
+        # Install a JSON file annotating tests.
+        with (out_dir / "python" / "build" / "stdlib-test-annotations.json").open(
+            "w", encoding="utf-8"
+        ) as fh:
+            test_annotations.json_dump(fh)
 
         licenses_dir = out_dir / "python" / "licenses"
         licenses_dir.mkdir()

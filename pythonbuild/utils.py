@@ -174,7 +174,10 @@ def write_if_different(p: pathlib.Path, data: bytes):
 
 
 def write_triples_makefiles(
-    targets, dest_dir: pathlib.Path, support_search_dir: pathlib.Path
+    targets,
+    root_dir: pathlib.Path,
+    dest_dir: pathlib.Path,
+    support_search_dir: pathlib.Path,
 ):
     """Write out makefiles containing make variable settings derived from config."""
     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -211,10 +214,13 @@ def write_triples_makefiles(
                 % (entry, DOWNLOADS[entry]["version"], host_platform)
             )
 
-            lines.append(
-                "PYTHON_SUPPORT_FILES := $(PYTHON_SUPPORT_FILES) %s\n"
-                % (support_search_dir / "extension-modules.yml")
-            )
+            extra_support_files = [
+                support_search_dir / "extension-modules.yml",
+                root_dir / "stdlib-test-annotations.yml",
+            ]
+
+            for p in extra_support_files:
+                lines.append(f"PYTHON_SUPPORT_FILES := $(PYTHON_SUPPORT_FILES) {p}\n")
 
             write_if_different(makefile_path, "".join(lines).encode("ascii"))
 

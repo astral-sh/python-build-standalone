@@ -1,0 +1,23 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Zanie Blue <contact@zanie.dev>
+Date: Sat, 2 May 2026 00:00:00 +0000
+Subject: [PATCH] gh-149285: Increase ElementTree deepcopy recursion test depth
+ (#149286)
+
+Backport of https://github.com/python/cpython/pull/149286.
+---
+ Lib/test/test_xml_etree.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Lib/test/test_xml_etree.py b/Lib/test/test_xml_etree.py
+--- a/Lib/test/test_xml_etree.py
++++ b/Lib/test/test_xml_etree.py
+@@ -3105,7 +3105,7 @@ class BadElementTest(unittest.TestCase):
+         # This should raise a RecursionError and not crash.
+         # See https://github.com/python/cpython/issues/148801.
+         root = cur = ET.Element('s')
+-        for _ in range(150_000):
++        for _ in range(500_000):
+             cur = ET.SubElement(cur, 'u')
+         with support.infinite_recursion():
+             with self.assertRaises(RecursionError):

@@ -595,18 +595,6 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${CROSS_COMPILING}" && "$
     PROFILE_TASK="${PROFILE_TASK} --ignore test_strftime_y2k"
 fi
 
-# On 3.14+ `test_json.test_recursion.TestCRecursion.test_highly_nested_objects_decoding` fails during
-# PGO due to RecursionError not being raised as expected. See https://github.com/python/cpython/issues/140125
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_json"
-fi
-
-# On 3.14.5rc1+ `test_xml_etree_c.BadElementTest.test_deeply_nested_deepcopy` can fail during
-# PGO due to RecursionError not being raised as expected, similar to the `test_json` failure above.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-    PROFILE_TASK="${PROFILE_TASK} --ignore test_xml_etree_c"
-fi
-
 # PGO optimized / BOLT instrumented binaries segfault in a test_bytes test. Skip it.
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && "${TARGET_TRIPLE}" == x86_64* ]]; then
     PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
@@ -617,6 +605,11 @@ fi
 # in the comments, so just don't even try. (We should check if we can make this conditional)
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     patch -p1 -i "${ROOT}/patch-python-configure-hacl-no-simd.patch"
+fi
+
+# See https://github.com/python/cpython/issues/149285
+if [[ "${PYTHON_MAJMIN_VERSION}" = "3.14" ]]; then
+    patch -p1 -i "${ROOT}/patch-test-xml-etree-deepcopy-recursion-depth-3.14.patch"
 fi
 
 # We use ndbm on macOS and BerkeleyDB elsewhere.

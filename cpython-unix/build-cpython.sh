@@ -607,11 +607,6 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     patch -p1 -i "${ROOT}/patch-python-configure-hacl-no-simd.patch"
 fi
 
-# See https://github.com/python/cpython/issues/149285
-if [[ "${PYTHON_MAJMIN_VERSION}" = "3.14" ]]; then
-    patch -p1 -i "${ROOT}/patch-test-xml-etree-deepcopy-recursion-depth-3.14.patch"
-fi
-
 # We use ndbm on macOS and BerkeleyDB elsewhere.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"

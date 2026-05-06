@@ -51,10 +51,14 @@ tar -xf "Python-${PYTHON_VERSION}.tar.xz"
 PIP_WHEEL="${ROOT}/pip-${PIP_VERSION}-py3-none-any.whl"
 SETUPTOOLS_WHEEL="${ROOT}/setuptools-${SETUPTOOLS_VERSION}-py3-none-any.whl"
 
-cat Setup.local
-mv Setup.local "Python-${PYTHON_VERSION}/Modules/Setup.local"
+# Put critical config files in logs to aid debugging.
+for f in Setup.local Makefile.extra stdlib-test-annotations.json; do
+  echo "BEGIN $f"
+  cat $f
+  echo "END $f"
+done
 
-cat Makefile.extra
+mv Setup.local "Python-${PYTHON_VERSION}/Modules/Setup.local"
 
 pushd "Python-${PYTHON_VERSION}"
 
@@ -1372,13 +1376,17 @@ cp -av Modules/config.c.in "${ROOT}/out/python/build/Modules/"
 cp -av Python/frozen.c "${ROOT}/out/python/build/Python/"
 cp -av Modules/Setup* "${ROOT}/out/python/build/Modules/"
 
-# Copy the test hardness runner for convenience.
+# Copy the test harness runner for convenience.
 # As of Python 3.13, the test harness runner has been removed so we provide a compatibility script
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
     cp -av "${ROOT}/run_tests-13.py" "${ROOT}/out/python/build/run_tests.py"
 else
     cp -av Tools/scripts/run_tests.py "${ROOT}/out/python/build/"
 fi
+
+# Copy standard library test annotations so it is in the artifact and the
+# distribution self-describes expected test wonkiness.
+cp -av "${ROOT}/stdlib-test-annotations.json" "${ROOT}/out/python/build/stdlib-test-annotations.json"
 
 # Don't hard-code the build-time prefix into the pkg-config files. See
 # the description of `pcfiledir` in `man pkg-config`.

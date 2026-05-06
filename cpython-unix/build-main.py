@@ -142,7 +142,14 @@ def main():
     effective_host_platform = host_platform
     if building_linux_from_macos:
         if host_platform == "macos_arm64":
-            effective_host_platform = "linux_aarch64"
+            if target_triple.startswith("aarch64"):
+                effective_host_platform = "linux_aarch64"
+            elif target_triple.startswith("x86_64"):
+                effective_host_platform = "linux_x86_64"
+            else:
+                raise Exception(
+                    f"unsupported macOS cross-compile: {host_platform} -> {target_triple}"
+                )
         else:
             raise Exception(f"Unhandled macOS platform: {host_platform}")
         print(

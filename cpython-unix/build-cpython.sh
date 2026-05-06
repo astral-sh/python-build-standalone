@@ -85,6 +85,19 @@ if [ -n "${CROSS_COMPILING}" ]; then
     fi
 fi
 
+# Inject -Bsymbolic* on shared library to force direct symbol resolution
+# and potentially unlock more compiler+linker optimizations.
+#
+# Patch is safe on all arches but runs into context conflict on macOS.
+# It isn't needed for macOS. So workaround by not applying there.
+if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
+      patch -p1 -i "${ROOT}/patch-configure-linker-symbolic.patch"
+    else
+      patch -p1 -i "${ROOT}/patch-configure-linker-symbolic-3.10.patch"
+    fi
+fi
+
 # LIBTOOL_CRUFT is unused and breaks cross-compiling on macOS. Nuke it.
 # Submitted upstream at https://github.com/python/cpython/pull/101048.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then

@@ -1361,6 +1361,11 @@ if [ -d "${TOOLS_PATH}/deps/usr/share/terminfo" ]; then
   cp -av "${TOOLS_PATH}/deps/usr/share/terminfo" "${ROOT}/out/python/install/share/"
 fi
 
+# Copy a fallback CA bundle. Python will prefer the host trust store when one
+# exists and use this only for minimal environments without root certificates.
+mkdir -p "${ROOT}/out/python/install/etc/ssl"
+cp -av "${TOOLS_PATH}/deps/share/certifi/cacert.pem" "${ROOT}/out/python/install/etc/ssl/cert.pem"
+
 # config.c defines _PyImport_Inittab and extern references to modules, which
 # downstream consumers may want to strip. We bundle config.c and config.c.in so
 # a custom one can be produced downstream.
@@ -1386,4 +1391,5 @@ find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
     sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
 
 mkdir "${ROOT}/out/python/licenses"
+cp "${ROOT}/LICENSE" "${ROOT}/out/python/licenses/"
 cp "${ROOT}"/LICENSE.*.txt "${ROOT}/out/python/licenses/"

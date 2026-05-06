@@ -69,6 +69,24 @@ at build time! So actually using this bundled terminfo database will
 require custom code setting ``TERMINFO_DIRS`` before
 ncurses/libedit/readline are loaded.
 
+.. _quirk_fallback_ca_bundle:
+
+Fallback CA Certificate Bundle
+==============================
+
+On Unix platforms, Python prefers the trust store provided by the host
+operating system. When none of the usual host certificate locations exist,
+these distributions fall back to a bundled CA certificate file at
+``etc/ssl/cert.pem`` inside the Python installation.
+
+The bundled file is a safety net for minimal environments such as scratch-like
+container images. If your image has an operating-system trust store, that store
+continues to take precedence so distribution-specific roots and locally added
+enterprise roots still behave as expected.
+
+To opt out of the bundled fallback entirely, set
+``PYTHON_BUILD_STANDALONE_DISABLE_CA_FALLBACK=1`` in the runtime environment.
+
 .. _quirk_macos_no_tix:
 
 No tix on UNIX

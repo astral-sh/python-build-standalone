@@ -775,6 +775,7 @@ def build_cpython(
             python_archive,
             setuptools_archive,
             pip_archive,
+            ROOT / "LICENSE",
             SUPPORT / "build-cpython.sh",
             SUPPORT / "run_tests-13.py",
         ):
@@ -1135,6 +1136,7 @@ def main():
         elif action in (
             "bdb",
             "bzip2",
+            "certifi",
             "expat",
             "libffi-3.3",
             "libffi",

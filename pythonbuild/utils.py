@@ -100,6 +100,8 @@ def target_needs(yaml_path: pathlib.Path, target: str):
     settings = get_targets(yaml_path)[target]
 
     needs = set(settings["needs"])
+    # Every Unix distribution ships a fallback CA bundle.
+    needs.add("certifi")
 
     # Ship libedit linked readline extension to avoid a GPL dependency.
     needs.discard("readline")

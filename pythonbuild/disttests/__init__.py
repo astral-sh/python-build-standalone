@@ -217,6 +217,14 @@ class TestPythonInterpreter(unittest.TestCase):
 
         ssl.create_default_context()
 
+        if os.name != "nt":
+            bundled_ca_file = os.path.join(INSTALL_ROOT, "etc", "ssl", "cert.pem")
+            self.assertTrue(os.path.isfile(bundled_ca_file))
+
+            bundled_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            bundled_context.load_verify_locations(cafile=bundled_ca_file)
+            self.assertGreater(bundled_context.cert_store_stats()["x509_ca"], 0)
+
     @unittest.skipIf(
         sys.version_info[:2] < (3, 13),
         "Free-threaded builds are only available in 3.13+",

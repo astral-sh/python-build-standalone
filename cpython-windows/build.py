@@ -1388,7 +1388,7 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
-    if freethreaded:
+    if freethreaded and not meets_python_minimum_version(python_version, "3.15"):
         (major, minor, _) = python_version.split(".")
         python_exe = f"python{major}.{minor}t.exe"
         pythonw_exe = f"pythonw{major}.{minor}t.exe"
@@ -1535,7 +1535,7 @@ def build_cpython(
             # test execution. We work around this by invoking the test harness
             # separately for each test.
             instrumented_python = (
-                pcbuild_path / pcbuild_directory / "instrumented" / "python.exe"
+                pcbuild_path / pcbuild_directory / "instrumented" / python_exe
             )
 
             tests = subprocess.run(

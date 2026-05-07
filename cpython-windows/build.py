@@ -1388,8 +1388,13 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
-    python_exe = "python.exe"
-    pythonw_exe = "pythonw.exe"
+    if freethreaded:
+        (major, minor, _) = python_version.split(".")
+        python_exe = f"python{major}.{minor}t.exe"
+        pythonw_exe = f"pythonw{major}.{minor}t.exe"
+    else:
+        python_exe = "python.exe"
+        pythonw_exe = "pythonw.exe"
 
     if arch == "amd64":
         build_platform = "x64"
@@ -1530,7 +1535,7 @@ def build_cpython(
             # test execution. We work around this by invoking the test harness
             # separately for each test.
             instrumented_python = (
-                pcbuild_path / pcbuild_directory / "instrumented" / python_exe
+                pcbuild_path / pcbuild_directory / "instrumented" / "python.exe"
             )
 
             tests = subprocess.run(

@@ -13,7 +13,7 @@ index 42ebb8ed384..c15c0ec940f 100644
  
      sslsocket_class = None  # SSLSocket is assigned later.
      sslobject_class = None  # SSLObject is assigned later.
-@@ -531,6 +534,38 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
+@@ -531,6 +535,41 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
          if sys.platform == "win32":
              for storename in self._windows_cert_stores:
                  self._load_windows_store_certs(storename, purpose)

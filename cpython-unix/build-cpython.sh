@@ -415,10 +415,13 @@ CONFIGURE_FLAGS="
 
 # Build a libpython3.x.so, but statically link the interpreter against
 # libpython.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
-else
-    patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
+# Merged upstream in Python 3.15, https://github.com/python/cpython/pull/133313
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-python-configure-add-enable-static-libpython-for-interpreter-${PYTHON_MAJMIN_VERSION}.patch"
+    fi
 fi
 CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-static-libpython-for-interpreter"
 

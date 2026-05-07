@@ -1388,13 +1388,8 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
-    if freethreaded:
-        (major, minor, _) = python_version.split(".")
-        python_exe = f"python{major}.{minor}t.exe"
-        pythonw_exe = f"pythonw{major}.{minor}t.exe"
-    else:
-        python_exe = "python.exe"
-        pythonw_exe = "pythonw.exe"
+    python_exe = "python.exe"
+    pythonw_exe = "pythonw.exe"
 
     if arch == "amd64":
         build_platform = "x64"
@@ -1407,6 +1402,10 @@ def build_cpython(
         build_directory = "arm64"
     else:
         raise Exception("unhandled architecture: %s" % arch)
+
+    # starting with 3.15 free-threaded builds are done in a different directory
+    if freethreaded and meets_python_minimum_version(python_version, "3.15"):
+        build_directory = f"{build_directory}t"
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}

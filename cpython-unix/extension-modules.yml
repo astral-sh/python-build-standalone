@@ -442,6 +442,8 @@ _remote_debugging:
       - _remote_debugging/code_objects.c
       - _remote_debugging/frame_cache.c
       - _remote_debugging/frames.c
+      - _remote_debugging/gc_stats.c
+      - _remote_debugging/interpreters.c
       - _remote_debugging/module.c
       - _remote_debugging/object_reading.c
       - _remote_debugging/subprocess.c

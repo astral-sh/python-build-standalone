@@ -99,10 +99,7 @@ def target_needs(yaml_path: pathlib.Path, target: str):
     """Obtain the dependencies needed to build the specified target."""
     settings = get_targets(yaml_path)[target]
 
-    needs = set(settings["needs"])
-    # Linux distributions ship a fallback CA bundle for minimal images.
-    if "-linux-" in target:
-        needs.add("certifi")
+    needs = set(target_makefile_needs(target, settings))
 
     # Ship libedit linked readline extension to avoid a GPL dependency.
     needs.discard("readline")
@@ -114,6 +111,7 @@ def target_makefile_needs(target: str, settings: dict) -> list[str]:
     """Obtain dependency names that should be emitted into target Makefiles."""
     needs = list(settings.get("needs", []))
 
+    # Linux distributions ship a fallback CA bundle for minimal images.
     if "-linux-" in target and "certifi" not in needs:
         needs.append("certifi")
 

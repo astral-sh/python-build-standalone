@@ -74,9 +74,9 @@ ncurses/libedit/readline are loaded.
 Fallback CA Certificate Bundle
 ==============================
 
-On Unix platforms, Python prefers the trust store provided by the host
-operating system. When none of the usual host certificate locations exist,
-these distributions fall back to a bundled CA certificate file at
+On Linux, Python prefers the trust store provided by the host operating
+system. When none of the usual host certificate locations exist, these
+distributions fall back to a bundled CA certificate file at
 ``etc/ssl/cert.pem`` inside the Python installation.
 
 The bundled file is a safety net for minimal environments such as scratch-like

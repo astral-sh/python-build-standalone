@@ -13,16 +13,24 @@ index 42ebb8ed384..c15c0ec940f 100644
  
      sslsocket_class = None  # SSLSocket is assigned later.
      sslobject_class = None  # SSLObject is assigned later.
-@@ -531,6 +534,34 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
+@@ -531,6 +534,38 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
          if sys.platform == "win32":
              for storename in self._windows_cert_stores:
                  self._load_windows_store_certs(storename, purpose)
-+        else:
-+            def _cert_dir_has_entries(path):
++        elif sys.platform == "linux":
++            def _has_hashed_certs(path):
 +                if not os.path.isdir(path):
 +                    return False
 +                try:
-+                    return next(os.scandir(path), None) is not None
++                    for entry in os.scandir(path):
++                        name, dot, suffix = entry.name.partition(".")
++                        if dot and len(name) == 8 and suffix.isdigit():
++                            try:
++                                int(name, 16)
++                            except ValueError:
++                                continue
++                            return True
++                    return False
 +                except OSError:
 +                    return False
 +
@@ -31,15 +39,14 @@ index 42ebb8ed384..c15c0ec940f 100644
 +                _def_paths[0] in os.environ or os.path.isfile(_def_paths[1])
 +            )
 +            _has_cert_dir = (
-+                _def_paths[2] in os.environ or _cert_dir_has_entries(_def_paths[3])
++                _def_paths[2] in os.environ or _has_hashed_certs(_def_paths[3])
 +            )
-+            if sys.platform == "linux":
-+                if not _has_cert_file and os.path.isfile(self._FALLBACK_CERT_FILE):
-+                    self.load_verify_locations(cafile=self._FALLBACK_CERT_FILE)
-+                    _has_cert_file = True
-+                if not _has_cert_dir and _cert_dir_has_entries(self._FALLBACK_CERT_DIR):
-+                    self.load_verify_locations(capath=self._FALLBACK_CERT_DIR)
-+                    _has_cert_dir = True
++            if not _has_cert_file and os.path.isfile(self._FALLBACK_CERT_FILE):
++                self.load_verify_locations(cafile=self._FALLBACK_CERT_FILE)
++                _has_cert_file = True
++            if not _has_cert_dir and _has_hashed_certs(self._FALLBACK_CERT_DIR):
++                self.load_verify_locations(capath=self._FALLBACK_CERT_DIR)
++                _has_cert_dir = True
 +            if (self._STANDALONE_CERT_FALLBACK_ENV not in os.environ and
 +                not _has_cert_file and
 +                not _has_cert_dir and

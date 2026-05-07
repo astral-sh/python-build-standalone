@@ -1403,9 +1403,11 @@ def build_cpython(
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
-    # starting with 3.15 free-threaded builds are done in a different directory
+    pcbuild_directory = build_directory
+    # Starting with 3.15, free-threaded CPython outputs use a `t` suffix.
+    # The third-party dependency archives still use the base architecture name.
     if freethreaded and meets_python_minimum_version(python_version, "3.15"):
-        build_directory = f"{build_directory}t"
+        pcbuild_directory = f"{build_directory}t"
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
@@ -1528,7 +1530,7 @@ def build_cpython(
             # test execution. We work around this by invoking the test harness
             # separately for each test.
             instrumented_python = (
-                pcbuild_path / build_directory / "instrumented" / python_exe
+                pcbuild_path / pcbuild_directory / "instrumented" / python_exe
             )
 
             tests = subprocess.run(
@@ -1608,7 +1610,7 @@ def build_cpython(
             "--source",
             str(cpython_source_path),
             "--build",
-            str(pcbuild_path / build_directory),
+            str(pcbuild_path / pcbuild_directory),
             "--copy",
             str(install_dir),
             "--temp",
@@ -1695,7 +1697,7 @@ def build_cpython(
             pcbuild_path,
             out_dir / "python",
             "".join(entry["version"].split(".")[0:2]),
-            build_directory,
+            pcbuild_directory,
             artifact_config,
             openssl_entry=openssl_entry,
             zlib_entry=zlib_entry,

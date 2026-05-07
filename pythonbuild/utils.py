@@ -110,12 +110,12 @@ def target_needs(yaml_path: pathlib.Path, target: str):
     return needs
 
 
-def target_makefile_needs(target: str, settings: dict) -> set[str]:
+def target_makefile_needs(target: str, settings: dict) -> list[str]:
     """Obtain dependency names that should be emitted into target Makefiles."""
-    needs = set(settings.get("needs", []))
+    needs = list(settings.get("needs", []))
 
-    if "-linux-" in target:
-        needs.add("certifi")
+    if "-linux-" in target and "certifi" not in needs:
+        needs.append("certifi")
 
     return needs
 
@@ -203,7 +203,7 @@ def write_triples_makefiles(
             makefile_path = dest_dir / ("Makefile.%s.%s" % (host_platform, triple))
 
             lines = []
-            for need in sorted(target_makefile_needs(triple, settings)):
+            for need in target_makefile_needs(triple, settings):
                 lines.append(
                     "NEED_%s := 1\n" % need.upper().replace("-", "_").replace(".", "_")
                 )

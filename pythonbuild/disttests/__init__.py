@@ -217,13 +217,16 @@ class TestPythonInterpreter(unittest.TestCase):
 
         ssl.create_default_context()
 
-        if sys.platform == "linux":
-            bundled_ca_file = os.path.join(INSTALL_ROOT, "etc", "ssl", "cert.pem")
-            self.assertTrue(os.path.isfile(bundled_ca_file))
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific CA fallback")
+    def test_ssl_ca_fallback_bundle_is_packaged(self):
+        import ssl
 
-            bundled_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            bundled_context.load_verify_locations(cafile=bundled_ca_file)
-            self.assertGreater(bundled_context.cert_store_stats()["x509_ca"], 0)
+        bundled_ca_file = os.path.join(INSTALL_ROOT, "etc", "ssl", "cert.pem")
+        self.assertTrue(os.path.isfile(bundled_ca_file))
+
+        bundled_context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        bundled_context.load_verify_locations(cafile=bundled_ca_file)
+        self.assertGreater(bundled_context.cert_store_stats()["x509_ca"], 0)
 
     @unittest.skipIf(
         sys.version_info[:2] < (3, 13),

@@ -318,6 +318,9 @@ fi
 # /etc/pki/tls/cert.pem instead, if that file exists and /etc/ssl/cert.pem does not.
 if [[ "${TARGET_TRIPLE}" =~ linux ]]; then
     patch -p1 -i "${ROOT}/patch-cpython-redhat-cert-file.patch"
+
+    # Fall back to a bundled CA file when the host image has no trust store.
+    patch -p1 -i "${ROOT}/patch-cpython-standalone-ca-fallback.patch"
 fi
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as

@@ -1094,6 +1094,7 @@ def collect_python_build_artifacts(
 
     other_projects = {"pythoncore"}
     other_projects.add("python3dll")
+    other_projects.add("python3tdll")
 
     # Projects providing dependencies.
     depends_projects = set()

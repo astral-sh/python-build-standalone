@@ -8,3 +8,6 @@ set -ex
 mkdir -p out/tools/deps/share/certifi
 unzip -p "certifi-${CERTIFI_VERSION}-py3-none-any.whl" certifi/cacert.pem \
   > out/tools/deps/share/certifi/cacert.pem
+unzip -p "certifi-${CERTIFI_VERSION}-py3-none-any.whl" \
+  "certifi-${CERTIFI_VERSION}.dist-info/licenses/LICENSE" \
+  > out/tools/deps/share/certifi/LICENSE

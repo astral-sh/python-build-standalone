@@ -1396,6 +1396,6 @@ find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
 
 mkdir "${ROOT}/out/python/licenses"
 if [[ "${TARGET_TRIPLE}" =~ linux ]]; then
-    cp "${ROOT}/LICENSE" "${ROOT}/out/python/licenses/"
+    cp "${TOOLS_PATH}/deps/share/certifi/LICENSE" "${ROOT}/out/python/licenses/LICENSE.certifi.txt"
 fi
 cp "${ROOT}"/LICENSE.*.txt "${ROOT}/out/python/licenses/"

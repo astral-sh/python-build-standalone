@@ -53,7 +53,7 @@ DOWNLOADS = {
         "sha256": "3cb2210c8f88ba2318d29b0388d1023c8492ff72ecdde4ebdaddbb13a31b1c4a",
         "version": "2026.4.22",
         "licenses": ["MPL-2.0"],
-        "license_file": "LICENSE",
+        "license_file": "LICENSE.certifi.txt",
     },
     "cpython-3.10": {
         "url": "https://www.python.org/ftp/python/3.10.20/Python-3.10.20.tar.xz",

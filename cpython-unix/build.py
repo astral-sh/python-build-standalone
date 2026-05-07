@@ -775,11 +775,13 @@ def build_cpython(
             python_archive,
             setuptools_archive,
             pip_archive,
-            ROOT / "LICENSE",
             SUPPORT / "build-cpython.sh",
             SUPPORT / "run_tests-13.py",
         ):
             build_env.copy_file(p)
+
+        if "-linux-" in target_triple:
+            build_env.copy_file(ROOT / "LICENSE")
 
         for f in sorted(os.listdir(ROOT)):
             if f.startswith("LICENSE.") and f.endswith(".txt"):

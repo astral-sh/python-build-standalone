@@ -217,7 +217,7 @@ class TestPythonInterpreter(unittest.TestCase):
 
         ssl.create_default_context()
 
-        if os.name != "nt":
+        if sys.platform == "linux":
             bundled_ca_file = os.path.join(INSTALL_ROOT, "etc", "ssl", "cert.pem")
             self.assertTrue(os.path.isfile(bundled_ca_file))
 

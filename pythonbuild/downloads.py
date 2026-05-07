@@ -47,6 +47,14 @@ DOWNLOADS = {
         "licenses": ["bzip2-1.0.6"],
         "license_file": "LICENSE.bzip2.txt",
     },
+    "certifi": {
+        "url": "https://files.pythonhosted.org/packages/22/30/7cd8fdcdfbc5b869528b079bfb76dcdf6056b1a2097a662e5e8c04f42965/certifi-2026.4.22-py3-none-any.whl",
+        "size": 135707,
+        "sha256": "3cb2210c8f88ba2318d29b0388d1023c8492ff72ecdde4ebdaddbb13a31b1c4a",
+        "version": "2026.4.22",
+        "licenses": ["MPL-2.0"],
+        "license_file": "LICENSE",
+    },
     "cpython-3.10": {
         "url": "https://www.python.org/ftp/python/3.10.20/Python-3.10.20.tar.xz",
         "size": 19868028,

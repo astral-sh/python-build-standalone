@@ -2,29 +2,56 @@ diff --git a/Lib/ssl.py b/Lib/ssl.py
 index 42ebb8ed384..c15c0ec940f 100644
 --- a/Lib/ssl.py
 +++ b/Lib/ssl.py
-@@ -423,6 +423,8 @@ class SSLContext(_SSLContext):
+@@ -423,6 +423,10 @@ class SSLContext(_SSLContext):
      """An SSLContext holds various SSL-related configuration options and
      data, such as certificates and possibly a private key."""
      _windows_cert_stores = ("CA", "ROOT")
 +    _FALLBACK_CERT_FILE = "/etc/pki/tls/cert.pem"  # RHEL 8 and below, Fedora 33 and below
 +    _FALLBACK_CERT_DIR = "/etc/pki/tls/certs"  # RHEL 8 and below, Fedora 33 and below
++    _STANDALONE_CERT_FALLBACK_ENV = "PYTHON_BUILD_STANDALONE_DISABLE_CA_FALLBACK"
++    _STANDALONE_CERT_FILE = os.path.join(sys.base_prefix, "etc", "ssl", "cert.pem")
  
      sslsocket_class = None  # SSLSocket is assigned later.
      sslobject_class = None  # SSLObject is assigned later.
-@@ -531,6 +533,16 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
+@@ -531,6 +535,41 @@ def load_default_certs(self, purpose=Purpose.SERVER_AUTH):
          if sys.platform == "win32":
              for storename in self._windows_cert_stores:
                  self._load_windows_store_certs(storename, purpose)
 +        elif sys.platform == "linux":
++            def _has_hashed_certs(path):
++                if not os.path.isdir(path):
++                    return False
++                try:
++                    for entry in os.scandir(path):
++                        name, dot, suffix = entry.name.partition(".")
++                        if dot and len(name) == 8 and suffix.isdigit():
++                            try:
++                                int(name, 16)
++                            except ValueError:
++                                continue
++                            return True
++                    return False
++                except OSError:
++                    return False
++
 +            _def_paths = _ssl.get_default_verify_paths()
-+            if (_def_paths[0] not in os.environ and
-+                not os.path.isfile(_def_paths[1]) and
-+                os.path.isfile(self._FALLBACK_CERT_FILE)):
++            _has_cert_file = (
++                _def_paths[0] in os.environ or os.path.isfile(_def_paths[1])
++            )
++            _has_cert_dir = (
++                _def_paths[2] in os.environ or _has_hashed_certs(_def_paths[3])
++            )
++            if not _has_cert_file and os.path.isfile(self._FALLBACK_CERT_FILE):
 +                self.load_verify_locations(cafile=self._FALLBACK_CERT_FILE)
-+            if (_def_paths[2] not in os.environ and
-+                not os.path.isdir(_def_paths[3]) and
-+                os.path.isdir(self._FALLBACK_CERT_DIR)):
++                _has_cert_file = True
++            if not _has_cert_dir and _has_hashed_certs(self._FALLBACK_CERT_DIR):
 +                self.load_verify_locations(capath=self._FALLBACK_CERT_DIR)
++                _has_cert_dir = True
++            if (self._STANDALONE_CERT_FALLBACK_ENV not in os.environ and
++                not _has_cert_file and
++                not _has_cert_dir and
++                os.path.isfile(self._STANDALONE_CERT_FILE)):
++                self.load_verify_locations(cafile=self._STANDALONE_CERT_FILE)
          self.set_default_verify_paths()
  
      if hasattr(_SSLContext, 'minimum_version'):

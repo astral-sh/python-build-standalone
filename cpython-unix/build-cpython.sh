@@ -316,7 +316,9 @@ fi
 # RHEL 8 (supported until 2029) and below, including Fedora 33 and below, do not
 # ship an /etc/ssl/cert.pem or a hashed /etc/ssl/cert/ directory. Patch to look at
 # /etc/pki/tls/cert.pem instead, if that file exists and /etc/ssl/cert.pem does not.
-patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
+if [[ "${TARGET_TRIPLE}" =~ linux ]]; then
+    patch -p1 -i "${ROOT}/patch-cpython-redhat-cert-file.patch"
+fi
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as
 # static (which we do anyway in our own fashion) and more importantly to
@@ -1361,6 +1363,13 @@ if [ -d "${TOOLS_PATH}/deps/usr/share/terminfo" ]; then
   cp -av "${TOOLS_PATH}/deps/usr/share/terminfo" "${ROOT}/out/python/install/share/"
 fi
 
+# Copy a Linux fallback CA bundle. Python will prefer the host trust store when
+# one exists and use this only for minimal environments without root certificates.
+if [[ "${TARGET_TRIPLE}" =~ linux ]]; then
+    mkdir -p "${ROOT}/out/python/install/etc/ssl"
+    cp -av "${TOOLS_PATH}/deps/share/certifi/cacert.pem" "${ROOT}/out/python/install/etc/ssl/cert.pem"
+fi
+
 # config.c defines _PyImport_Inittab and extern references to modules, which
 # downstream consumers may want to strip. We bundle config.c and config.c.in so
 # a custom one can be produced downstream.
@@ -1386,4 +1395,7 @@ find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
     sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
 
 mkdir "${ROOT}/out/python/licenses"
+if [[ "${TARGET_TRIPLE}" =~ linux ]]; then
+    cp "${ROOT}/LICENSE" "${ROOT}/out/python/licenses/"
+fi
 cp "${ROOT}"/LICENSE.*.txt "${ROOT}/out/python/licenses/"

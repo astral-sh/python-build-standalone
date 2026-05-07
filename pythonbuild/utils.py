@@ -100,9 +100,22 @@ def target_needs(yaml_path: pathlib.Path, target: str):
     settings = get_targets(yaml_path)[target]
 
     needs = set(settings["needs"])
+    # Linux distributions ship a fallback CA bundle for minimal images.
+    if "-linux-" in target:
+        needs.add("certifi")
 
     # Ship libedit linked readline extension to avoid a GPL dependency.
     needs.discard("readline")
+
+    return needs
+
+
+def target_makefile_needs(target: str, settings: dict) -> set[str]:
+    """Obtain dependency names that should be emitted into target Makefiles."""
+    needs = set(settings.get("needs", []))
+
+    if "-linux-" in target:
+        needs.add("certifi")
 
     return needs
 
@@ -190,7 +203,7 @@ def write_triples_makefiles(
             makefile_path = dest_dir / ("Makefile.%s.%s" % (host_platform, triple))
 
             lines = []
-            for need in settings.get("needs", []):
+            for need in sorted(target_makefile_needs(triple, settings)):
                 lines.append(
                     "NEED_%s := 1\n" % need.upper().replace("-", "_").replace(".", "_")
                 )

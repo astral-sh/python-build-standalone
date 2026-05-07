@@ -780,6 +780,9 @@ def build_cpython(
         ):
             build_env.copy_file(p)
 
+        if "-linux-" in target_triple:
+            build_env.copy_file(ROOT / "LICENSE")
+
         for f in sorted(os.listdir(ROOT)):
             if f.startswith("LICENSE.") and f.endswith(".txt"):
                 build_env.copy_file(ROOT / f)
@@ -1135,6 +1138,7 @@ def main():
         elif action in (
             "bdb",
             "bzip2",
+            "certifi",
             "expat",
             "libffi-3.3",
             "libffi",

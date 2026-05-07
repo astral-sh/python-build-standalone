@@ -116,6 +116,9 @@ $(OUTDIR)/bdb-$(BDB_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE
 $(OUTDIR)/bzip2-$(BZIP2_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-bzip2.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) bzip2
 
+$(OUTDIR)/certifi-$(CERTIFI_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-certifi.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) certifi
+
 $(OUTDIR)/expat-$(EXPAT_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-expat.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) expat
 
@@ -251,6 +254,7 @@ PYTHON_DEPENDS_$(1) := \
     $$(if$$(NEED_AUTOCONF),$$(OUTDIR)/autoconf-$$(AUTOCONF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BDB),$$(OUTDIR)/bdb-$$(BDB_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BZIP2),$$(OUTDIR)/bzip2-$$(BZIP2_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_CERTIFI),$$(OUTDIR)/certifi-$$(CERTIFI_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_EXPAT),$$(OUTDIR)/expat-$$(EXPAT_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBEDIT),$$(OUTDIR)/libedit-$$(LIBEDIT_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBFFI_3_3),$$(OUTDIR)/libffi-3.3-$$(LIBFFI_3.3_VERSION)-$$(PACKAGE_SUFFIX).tar) \

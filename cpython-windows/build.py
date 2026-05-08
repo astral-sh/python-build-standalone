@@ -312,16 +312,27 @@ def static_replace_in_file(p: pathlib.Path, search, replace):
 
 
 def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Path):
-    subprocess.run(
-        [
-            "git.exe",
-            "-C",
-            str(cpython_source_path),
-            "apply",
-            str(patch_path),
-        ],
-        check=True,
-    )
+    with patch_path.open("rb") as fh:
+        patch = fh.read().replace(b"\r\n", b"\n")
+
+    with tempfile.NamedTemporaryFile("wb", delete=False) as fh:
+        fh.write(patch)
+        normalized_patch = pathlib.Path(fh.name)
+
+    try:
+        subprocess.run(
+            [
+                "git.exe",
+                "-C",
+                str(cpython_source_path),
+                "apply",
+                "--whitespace=nowarn",
+                str(normalized_patch),
+            ],
+            check=True,
+        )
+    finally:
+        normalized_patch.unlink()
 
 
 OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""

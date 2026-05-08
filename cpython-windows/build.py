@@ -1045,18 +1045,21 @@ def collect_python_build_artifacts(
     pcbuild_path: pathlib.Path,
     out_dir: pathlib.Path,
     python_majmin: str,
-    arch: str,
+    pcbuild_directory: str,
     config: str,
     openssl_entry: str,
     zlib_entry: str,
     freethreaded: bool,
 ):
     """Collect build artifacts from Python.
-
     Copies them into an output directory and returns a data structure describing
     the files.
     """
-    outputs_path = pcbuild_path / arch
+    arch = pcbuild_directory
+    # Python 3.15 suffixes the directory with 't' for free-threading
+    if arch.endswith("t"):
+        arch = arch.removesuffix("t")
+    outputs_path = pcbuild_path / pcbuild_directory
     intermediates_path = (
         pcbuild_path / "obj" / ("%s%s_%s" % (python_majmin, arch, config))
     )

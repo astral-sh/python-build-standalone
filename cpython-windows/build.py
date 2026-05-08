@@ -1540,7 +1540,10 @@ def build_cpython(
             # test execution. We work around this by invoking the test harness
             # separately for each test.
             instrumented_python = (
-                pcbuild_path / pcbuild_directory / "instrumented" / instrumented_python_exe
+                pcbuild_path
+                / pcbuild_directory
+                / "instrumented"
+                / instrumented_python_exe
             )
 
             tests = subprocess.run(

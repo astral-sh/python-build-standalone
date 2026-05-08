@@ -1061,7 +1061,7 @@ def collect_python_build_artifacts(
         arch = arch.removesuffix("t")
     outputs_path = pcbuild_path / pcbuild_directory
     intermediates_path = (
-        pcbuild_path / "obj" / ("%s%s_%s" % (python_majmin, arch, config))
+        pcbuild_path / "obj" / ("%s%s_%s" % (python_majmin, pcbuild_directory, config))
     )
 
     if not outputs_path.exists():

@@ -1388,13 +1388,18 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
-    if freethreaded and not meets_python_minimum_version(python_version, "3.15"):
+    if freethreaded:
         (major, minor, _) = python_version.split(".")
         python_exe = f"python{major}.{minor}t.exe"
         pythonw_exe = f"pythonw{major}.{minor}t.exe"
     else:
         python_exe = "python.exe"
         pythonw_exe = "pythonw.exe"
+
+    # Python 3.15 uses the default name for the executable in a suffixed directory
+    instrumented_python_exe = python_exe
+    if meets_python_minimum_version(python_version, "3.15") and freethreaded:
+        instrumented_python_exe = "python.exe"
 
     if arch == "amd64":
         build_platform = "x64"
@@ -1535,7 +1540,7 @@ def build_cpython(
             # test execution. We work around this by invoking the test harness
             # separately for each test.
             instrumented_python = (
-                pcbuild_path / pcbuild_directory / "instrumented" / python_exe
+                pcbuild_path / pcbuild_directory / "instrumented" / instrumented_python_exe
             )
 
             tests = subprocess.run(

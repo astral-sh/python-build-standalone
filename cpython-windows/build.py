@@ -311,6 +311,19 @@ def static_replace_in_file(p: pathlib.Path, search, replace):
         fh.write(data)
 
 
+def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Path):
+    subprocess.run(
+        [
+            "git.exe",
+            "-C",
+            str(cpython_source_path),
+            "apply",
+            str(patch_path),
+        ],
+        check=True,
+    )
+
+
 OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
   <ItemGroup>
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
@@ -1491,6 +1504,12 @@ def build_cpython(
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
+
+        if python_version.startswith("3.15."):
+            apply_source_patch(
+                cpython_source_path,
+                SUPPORT / "patch-site-reentrant-startup-files-3.15.patch",
+            )
 
         out_dir = td / "out"
 

@@ -1063,6 +1063,20 @@ replace_in_all("-L%s/deps/lib" % tools_path, "")
 # See https://github.com/python/cpython/issues/145810#issuecomment-4068139183
 replace_in_all("-LModules/_hacl", "")
 
+# Strip toolchain bin directory prefix from sysconfig artifacts to avoid exposing
+# build-time paths. This primarily fixes AR (e.g., /tools/llvm/bin/llvm-ar -> llvm-ar),
+# which is not normalized by CPython, and also catches RANLIB and similar tools.
+# See https://github.com/astral-sh/python-build-standalone/issues/1073
+toolchain = os.environ["TOOLCHAIN"]
+toolchain_bin = os.path.normpath(os.path.join(tools_path, toolchain, "bin"))
+toolchain_bin_norm = toolchain_bin + "/"
+replace_in_all(toolchain_bin_norm, "")
+
+# Also catch resolved symlinks (e.g., macOS /var vs /private/var).
+toolchain_bin_real = os.path.realpath(toolchain_bin) + "/"
+if toolchain_bin_real != toolchain_bin_norm:
+    replace_in_all(toolchain_bin_real, "")
+
 EOF
 
 ${BUILD_PYTHON} "${ROOT}/hack_sysconfig.py" "${ROOT}/out/python"

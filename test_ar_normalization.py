@@ -17,6 +17,8 @@ def test_ar_normalization():
         # Path normalization: our search pattern is normalized, so double-slash
         # in sysconfig data won't match (but that's OK - sysconfig should be normalized)
         ("AR = /tools//llvm/bin/llvm-ar", "AR = /tools//llvm/bin/llvm-ar", "Double slash in data won't match (expected)"),
+        # Empty value after replacement (edge case)
+        ("AR = /tools/llvm/bin/", "AR = ", "Trailing slash creates empty value (acceptable)"),
     ]
 
     tools_path = "/tools"

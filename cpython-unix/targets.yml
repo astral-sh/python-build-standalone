@@ -180,11 +180,12 @@ armv7-unknown-linux-gnueabi:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/arm-linux-gnueabi-gcc
-  target_cxx: /usr/bin/arm-linux-gnueabi-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/arm-linux-gnueabi-clang
+  target_cxx: /usr/bin/arm-linux-gnueabi-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -224,11 +225,12 @@ armv7-unknown-linux-gnueabihf:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/arm-linux-gnueabihf-gcc
-  target_cxx: /usr/bin/arm-linux-gnueabihf-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/arm-linux-gnueabihf-clang
+  target_cxx: /usr/bin/arm-linux-gnueabihf-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -268,11 +270,12 @@ loongarch64-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross-loongarch64
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/loongarch64-linux-gnu-gcc
-  target_cxx: /usr/bin/loongarch64-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/loongarch64-linux-gnu-clang
+  target_cxx: /usr/bin/loongarch64-linux-gnu-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -313,11 +316,12 @@ mips-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/mips-linux-gnu-gcc
-  target_cxx: /usr/bin/mips-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/mips-linux-gnu-clang
+  target_cxx: /usr/bin/mips-linux-gnu-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -357,11 +361,12 @@ mipsel-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/mipsel-linux-gnu-gcc
-  target_cxx: /usr/bin/mipsel-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/mipsel-linux-gnu-clang
+  target_cxx: /usr/bin/mipsel-linux-gnu-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -401,11 +406,12 @@ ppc64le-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/powerpc64le-linux-gnu-gcc
-  target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/powerpc64le-linux-gnu-clang
+  target_cxx: /usr/bin/powerpc64le-linux-gnu-clang++
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -490,11 +496,12 @@ s390x-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
+  needs_toolchain: true
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/s390x-linux-gnu-gcc
-  target_cxx: /usr/bin/s390x-linux-gnu-g++
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: /usr/bin/s390x-linux-gnu-clang
+  target_cxx: /usr/bin/s390x-linux-gnu-clang++
   target_cflags:
     # set the minimum compatibility level to z10 (released 2008)
     - '-march=z10'

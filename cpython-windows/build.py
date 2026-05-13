@@ -1516,12 +1516,6 @@ def build_cpython(
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
 
-        if python_version.startswith("3.15."):
-            apply_source_patch(
-                cpython_source_path,
-                SUPPORT / "patch-site-reentrant-startup-files-3.15.patch",
-            )
-
         out_dir = td / "out"
 
         build_dir = out_dir / "python" / "build"

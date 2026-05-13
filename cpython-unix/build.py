@@ -1135,6 +1135,7 @@ def main():
         elif action in (
             "bdb",
             "bzip2",
+            "certifi",
             "expat",
             "libffi-3.3",
             "libffi",

@@ -113,9 +113,9 @@ docker==7.1.0 \
     --hash=sha256:ad8c70e6e3f8926cb8a92619b832b4ea5299e2831c14284663184e200546fa6c \
     --hash=sha256:c96b93b7f0a746f9e77d325bcfb87422a3d8bd4f03136ae8a85b37f1898d5fc0
     # via -r requirements.txt
-idna==3.10 \
-    --hash=sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9 \
-    --hash=sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3
+idna==3.15 \
+    --hash=sha256:048adeaf8c2d788c40fee287673ccaa74c24ffd8dcf09ffa555a2fbb59f10ac8 \
+    --hash=sha256:ca962446ea538f7092a95e057da437618e886f4d349216d2b1e294abfdb65fdc
     # via
     #   -r requirements.txt
     #   requests
@@ -481,7 +481,9 @@ tomli==2.2.1 \
     --hash=sha256:e85e99945e688e32d5a35c1ff38ed0b3f41f43fad8df0bdf79f72b2ba7bc5272 \
     --hash=sha256:ece47d672db52ac607a3d9599a9d48dcb2f2f735c6c2d1f34130085bb12b112a \
     --hash=sha256:f4039b9cbc3048b2416cc57ab3bda989a6fcf9b36cf8937f01a6e731b64f80d7
-    # via -r requirements.txt
+    # via
+    #   -r requirements.txt
+    #   mypy
 types-jinja2==2.11.9 \
     --hash=sha256:60a1e21e8296979db32f9374d8a239af4cb541ff66447bb915d8ad398f9c63b2 \
     --hash=sha256:dbdc74a40aba7aed520b7e4d89e8f0fe4286518494208b35123bcf084d4b8c81

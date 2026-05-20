@@ -217,6 +217,26 @@ class TestPythonInterpreter(unittest.TestCase):
 
         ssl.create_default_context()
 
+    @unittest.skipIf(os.name != "nt", "Windows-specific OpenSSL uplink regression")
+    def test_ssl_with_keylogfile(self):
+        # Validate that a SSLContext can be created when SSLKEYLOGFILE is set
+        # https://github.com/astral-sh/python-build-standalone/issues/640
+        import ssl
+
+        with tempfile.TemporaryDirectory() as td:
+            keylog_path = str(Path(td) / "sslkeylog.log")
+            original_keylog_path = os.environ.get("SSLKEYLOGFILE")
+            os.environ["SSLKEYLOGFILE"] = keylog_path
+            try:
+                context = ssl.create_default_context()
+                self.assertEqual(context.keylog_filename, keylog_path)
+                self.assertGreater(len(context.get_ciphers()), 0)
+            finally:
+                if original_keylog_path is None:
+                    os.environ.pop("SSLKEYLOGFILE", None)
+                else:
+                    os.environ["SSLKEYLOGFILE"] = original_keylog_path
+
     @unittest.skipIf(
         sys.version_info[:2] < (3, 13),
         "Free-threaded builds are only available in 3.13+",

@@ -674,17 +674,17 @@ def hack_project_files(
         pass
 
     # Our custom OpenSSL build has applink.c in a different location from the
-    # binary OpenSSL distribution. This is no longer relevant for 3.12+ per
-    # https://github.com/python/cpython/pull/131839, so we allow it to fail.swe
-    try:
+    # binary OpenSSL distribution.
+    # Starting with 3.12 CPython on Windows is built without uplink support
+    # so this modification is not needed.
+    # https://github.com/python/cpython/pull/131839
+    if meets_python_maximum_version(python_version, "3.11"):
         ssl_proj = pcbuild_path / "_ssl.vcxproj"
         static_replace_in_file(
             ssl_proj,
             rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
             rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
         )
-    except NoSearchStringError:
-        pass
 
     # Python 3.12+ uses the the pre-built tk-windows-bin 8.6.12 which doesn't
     # have a standalone zlib DLL, so we remove references to it. For Python
@@ -791,6 +791,7 @@ def build_openssl_for_arch(
     build_root: pathlib.Path,
     *,
     jom_archive,
+    with_uplink: bool = False,
 ):
     nasm_version = DOWNLOADS["nasm-windows-bin"]["version"]
 
@@ -810,14 +811,15 @@ def build_openssl_for_arch(
 
     source_root = build_root / ("openssl-%s" % openssl_version)
 
-    # uplink.c tries to find the OPENSSL_Applink function exported from the current
-    # executable. However, it is exported from _ssl[_d].pyd in shared builds. So
-    # update its sounce to look for it from there.
-    static_replace_in_file(
-        source_root / "ms" / "uplink.c",
-        b"((h = GetModuleHandle(NULL)) == NULL)",
-        b'((h = GetModuleHandleA("_ssl.pyd")) == NULL) if ((h = GetModuleHandleA("_ssl_d.pyd")) == NULL) if ((h = GetModuleHandle(NULL)) == NULL)',
-    )
+    if with_uplink:
+        # uplink.c tries to find the OPENSSL_Applink function exported from the
+        # current executable. However, it is exported from _ssl[_d].pyd in shared
+        # builds. So update its source to look for it from there.
+        static_replace_in_file(
+            source_root / "ms" / "uplink.c",
+            b"((h = GetModuleHandle(NULL)) == NULL)",
+            b'((h = GetModuleHandleA("_ssl.pyd")) == NULL) if ((h = GetModuleHandleA("_ssl_d.pyd")) == NULL) if ((h = GetModuleHandle(NULL)) == NULL)',
+        )
 
     if arch == "x86":
         configure = "VC-WIN32"
@@ -841,16 +843,22 @@ def build_openssl_for_arch(
     env["DESTDIR"] = str(dest_dir)
     install_root = dest_dir / prefix
 
+    configure_args = [
+        str(perl_path),
+        "Configure",
+        configure,
+        "no-idea",
+        "no-mdc2",
+        "no-tests",
+        "--prefix=/%s" % prefix,
+    ]
+    if with_uplink:
+        log("building OpenSSL with uplink support for Python <3.12")
+    else:
+        configure_args.append("no-uplink")
+
     exec_and_log(
-        [
-            str(perl_path),
-            "Configure",
-            configure,
-            "no-idea",
-            "no-mdc2",
-            "no-tests",
-            "--prefix=/%s" % prefix,
-        ],
+        configure_args,
         source_root,
         {
             **env,
@@ -889,6 +897,7 @@ def build_openssl(
     perl_path: pathlib.Path,
     arch: str,
     dest_archive: pathlib.Path,
+    with_uplink: bool = False,
 ):
     """Build OpenSSL from sources using the Perl executable specified."""
 
@@ -916,6 +925,7 @@ def build_openssl(
                 nasm_archive,
                 root_32,
                 jom_archive=jom_archive,
+                with_uplink=with_uplink,
             )
         elif arch == "amd64":
             root_64.mkdir()
@@ -927,6 +937,7 @@ def build_openssl(
                 nasm_archive,
                 root_64,
                 jom_archive=jom_archive,
+                with_uplink=with_uplink,
             )
         elif arch == "arm64":
             root_arm64.mkdir()
@@ -938,6 +949,7 @@ def build_openssl(
                 nasm_archive,
                 root_arm64,
                 jom_archive=jom_archive,
+                with_uplink=with_uplink,
             )
         else:
             raise Exception("unhandled architecture: %s" % arch)
@@ -1987,8 +1999,14 @@ def main() -> None:
         else:
             openssl_entry = "openssl-3.5"
 
+        openssl_with_uplink = args.python in ["cpython-3.10", "cpython-3.11"]
+        if openssl_with_uplink:
+            openssl_build_options = f"{build_options}-uplink"
+        else:
+            openssl_build_options = f"{build_options}-no-uplink"
+
         openssl_archive = BUILD / (
-            "%s-%s-%s.tar" % (openssl_entry, target_triple, build_options)
+            "%s-%s-%s.tar" % (openssl_entry, target_triple, openssl_build_options)
         )
         if not openssl_archive.exists():
             perl_path = fetch_strawberry_perl() / "perl" / "bin" / "perl.exe"
@@ -1998,6 +2016,7 @@ def main() -> None:
                 perl_path,
                 arch,
                 dest_archive=openssl_archive,
+                with_uplink=openssl_with_uplink,
             )
 
         libffi_archive = BUILD / ("libffi-%s-%s.tar" % (target_triple, build_options))

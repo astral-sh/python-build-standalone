@@ -833,11 +833,6 @@ def build_openssl_for_arch(
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
-    # The official CPython OpenSSL builds hack ms/uplink.c to change the
-    # ``GetModuleHandle(NULL)`` invocation to load things from _ssl.pyd
-    # instead. But since we statically link the _ssl extension, this hackery
-    # is not required.
-
     # Set DESTDIR to affect install location.
     dest_dir = build_root / "install"
     env["DESTDIR"] = str(dest_dir)

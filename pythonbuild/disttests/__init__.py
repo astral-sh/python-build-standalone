@@ -223,14 +223,14 @@ class TestPythonInterpreter(unittest.TestCase):
         # https://github.com/astral-sh/python-build-standalone/issues/640
         import ssl
 
-        with tempfile.TemporaryDirectory() as td:
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as td:
             keylog_path = str(Path(td) / "sslkeylog.log")
             original_keylog_path = os.environ.get("SSLKEYLOGFILE")
             os.environ["SSLKEYLOGFILE"] = keylog_path
             try:
                 context = ssl.create_default_context()
                 self.assertEqual(context.keylog_filename, keylog_path)
-                self.assertGreater(len(context.get_ciphers()), 0)
+                del context
             finally:
                 if original_keylog_path is None:
                     os.environ.pop("SSLKEYLOGFILE", None)

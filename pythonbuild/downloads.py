@@ -302,11 +302,11 @@ DOWNLOADS = {
     },
     # Remember to update pythonbuild/disttests/ when version changed.
     "sqlite": {
-        "url": "https://www.sqlite.org/2025/sqlite-autoconf-3500400.tar.gz",
-        "size": 3173050,
-        "sha256": "a3db587a1b92ee5ddac2f66b3edb41b26f9c867275782d46c3a088977d6a5b18",
-        "version": "3500400",
-        "actual_version": "3.50.4.0",
+        "url": "https://www.sqlite.org/2026/sqlite-autoconf-3530100.tar.gz",
+        "size": 3275272,
+        "sha256": "83e6b2020a034e9a7ad4a72feea59e1ad52f162e09cbd26735a3ffb98359fc4f",
+        "version": "3530100",
+        "actual_version": "3.53.1.0",
         "library_names": ["sqlite3"],
         "licenses": [],
         "license_file": "LICENSE.sqlite.txt",

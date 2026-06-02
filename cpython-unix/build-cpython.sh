@@ -338,12 +338,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-testinternalcapi-interpreter-extern.patch"
 fi
 
-# Apply https://github.com/python/cpython/pull/149516 for a 3.15.0b1
-# site startup regression.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.15" ]; then
-    patch -p1 -i "${ROOT}/patch-site-reentrant-startup-files-3.15.patch"
-fi
-
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

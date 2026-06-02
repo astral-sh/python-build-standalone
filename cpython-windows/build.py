@@ -372,8 +372,10 @@ def hack_props(
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
-        tcltk_commit = DOWNLOADS["tk-windows-bin"]["git_commit"]
+    if meets_python_minimum_version(python_version, "3.15"):
+        tcltk_commit = DOWNLOADS["tk-windows-bin-903"]["git_commit"]
+    elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
+        tcltk_commit = DOWNLOADS["tk-windows-bin-8614"]["git_commit"]
     else:
         tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
 
@@ -1371,15 +1373,16 @@ def build_cpython(
     setuptools_wheel = download_entry("setuptools", BUILD)
     pip_wheel = download_entry("pip", BUILD)
 
-    # On CPython 3.14+, we use the latest tcl/tk version which has additional
-    # runtime dependencies, so we are conservative and use the old version
-    # elsewhere. The old version isn't built for arm64, so we use the new
-    # version there too
-    tk_bin_entry = (
-        "tk-windows-bin"
-        if meets_python_minimum_version(python_version, "3.14") or arch == "arm64"
-        else "tk-windows-bin-8612"
-    )
+    # We match the upstream tcl/tk version when possible
+    # 3.15 : 9.0.3
+    # 3.14 and arm64 : 8.6.14
+    # Others : 8.6.12
+    if meets_python_minimum_version(python_version, "3.15"):
+        tk_bin_entry = "tk-windows-bin-903"
+    elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
+        tk_bin_entry = "tk-windows-bin-8614"
+    else:
+        tk_bin_entry = "tk-windows-bin-8612"
     tk_bin_archive = download_entry(
         tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
     )
@@ -1485,7 +1488,7 @@ def build_cpython(
             shutil.copyfile(source, dest)
 
         # Delete the tk nmake helper, it's not needed and links msvc
-        if tk_bin_entry == "tk-windows-bin":
+        if tk_bin_entry in ("tk-windows-bin-8614", "tk-windows-bin-903"):
             tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
             tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
             (

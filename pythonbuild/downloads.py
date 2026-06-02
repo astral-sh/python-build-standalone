@@ -327,14 +327,6 @@ DOWNLOADS = {
         "licenses": ["TCL"],
         "license_file": "LICENSE.tcl.txt",
     },
-    "tix": {
-        "url": "https://github.com/python/cpython-source-deps/archive/tix-8.4.3.6.tar.gz",
-        "size": 1836451,
-        "sha256": "f7b21d115867a41ae5fd7c635a4c234d3ca25126c3661eb36028c6e25601f85e",
-        "version": "8.4.3.6",
-        "licenses": ["TCL"],
-        "license_file": "LICENSE.tix.txt",
-    },
     "tk": {
         "url": "https://prdownloads.sourceforge.net/tcl/tk9.0.3-src.tar.gz",
         "size": 4644835,

@@ -17,7 +17,7 @@ ENV HOME=/build \
 CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
-RUN for s in debian_buster debian_buster-updates debian-security_buster/updates; do \
+RUN for s in debian_buster debian_buster-updates debian-security_buster/updates debian_bullseye; do \
       echo "deb http://snapshot.debian.org/archive/${s%_*}/20250109T084424Z/ ${s#*_} main"; \
     done > /etc/apt/sources.list && \
     ( echo 'quiet "true";'; \
@@ -26,6 +26,8 @@ RUN for s in debian_buster debian_buster-updates debian-security_buster/updates;
       echo 'Acquire::Check-Valid-Until "false";'; \
       echo 'Acquire::Retries "5";'; \
     ) > /etc/apt/apt.conf.d/99cpython-portable
+
+RUN ( echo 'Package: *'; echo 'Pin: release n=bullseye'; echo 'Pin-Priority: -1' ) > /etc/apt/preferences.d/99cpython-portable
 
 RUN apt-get update
 
@@ -49,7 +51,7 @@ RUN apt-get install \
 
 # riscv64 sysroot and host binutils for the riscv64-linux-gnu target
 RUN apt-get install \
-    binutils-riscv64-linux-gnu \
+    binutils-riscv64-linux-gnu/bullseye \
     libc6-riscv64-cross \
     libc6-dev-riscv64-cross \
     linux-libc-dev-riscv64-cross \

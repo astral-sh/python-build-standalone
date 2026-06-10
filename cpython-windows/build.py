@@ -311,6 +311,30 @@ def static_replace_in_file(p: pathlib.Path, search, replace):
         fh.write(data)
 
 
+def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Path):
+    with patch_path.open("rb") as fh:
+        patch = fh.read().replace(b"\r\n", b"\n")
+
+    with tempfile.NamedTemporaryFile("wb", delete=False) as fh:
+        fh.write(patch)
+        normalized_patch = pathlib.Path(fh.name)
+
+    try:
+        subprocess.run(
+            [
+                "git.exe",
+                "-C",
+                str(cpython_source_path),
+                "apply",
+                "--whitespace=nowarn",
+                str(normalized_patch),
+            ],
+            check=True,
+        )
+    finally:
+        normalized_patch.unlink()
+
+
 OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
   <ItemGroup>
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
@@ -1502,6 +1526,18 @@ def build_cpython(
 
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
+
+        # Cherry-pick python/cpython#100373 from 3.12 onto 3.10/3.11 to fix DER
+        # parsing with OpenSSL 3.5.7.  The old implementation does heuristics
+        # on the error codes returned from the ASN.1 parser, which have changed
+        # slightly in openssl/openssl#30986 (commit 738688d762 in 3.5.7). The
+        # new implementation does a better job of parsing and avoids the
+        # heuristics in the first place.
+        if meets_python_maximum_version(python_version, "3.11"):
+            apply_source_patch(
+                cpython_source_path,
+                SUPPORT / "patch-python-der-eof-parsing.patch",
+            )
 
         out_dir = td / "out"
 

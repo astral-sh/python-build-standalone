@@ -29,12 +29,11 @@ RUN for s in debian_buster debian_buster-updates debian-security_buster/updates;
 
 RUN apt-get update
 
-# Build tools, same as in build.Dockerfile
+# Host building.
 RUN apt-get install \
     bzip2 \
-    ca-certificates \
-    curl \
-    file \
+    gcc \
+    g++ \
     libc6-dev \
     libffi-dev \
     make \
@@ -47,15 +46,32 @@ RUN apt-get install \
     zip \
     zlib1g-dev
 
-# riscv64 sysroot and host binutils for the riscv64-linux-gnu target
+# Cross-building.
 RUN apt-get install \
-    binutils-riscv64-linux-gnu \
-    libc6-riscv64-cross \
+    g++-aarch64-linux-gnu \
+    g++-arm-linux-gnueabi \
+    g++-arm-linux-gnueabihf \
+    g++-mips-linux-gnu \
+    g++-mips64el-linux-gnuabi64 \
+    g++-mipsel-linux-gnu \
+    g++-powerpc64le-linux-gnu \
+    g++-riscv64-linux-gnu \
+    g++-s390x-linux-gnu \
+    gcc-aarch64-linux-gnu \
+    gcc-arm-linux-gnueabi \
+    gcc-arm-linux-gnueabihf \
+    gcc-mips-linux-gnu \
+    gcc-mips64el-linux-gnuabi64 \
+    gcc-mipsel-linux-gnu \
+    gcc-powerpc64le-linux-gnu \
+    gcc-riscv64-linux-gnu \
+    gcc-s390x-linux-gnu \
+    libc6-dev-arm64-cross \
+    libc6-dev-armel-cross \
+    libc6-dev-armhf-cross \
+    libc6-dev-mips-cross \
+    libc6-dev-mips64el-cross \
+    libc6-dev-mipsel-cross \
+    libc6-dev-ppc64el-cross \
     libc6-dev-riscv64-cross \
-    linux-libc-dev-riscv64-cross \
-    libgcc1-riscv64-cross \
-    libgcc-8-dev-riscv64-cross
-
-# target specific symlinks to cross-compile using external LLVM toolchain
-RUN ln -s /tools/llvm/bin/clang /usr/bin/riscv64-linux-gnu-clang && \
-    ln -s /tools/llvm/bin/clang++ /usr/bin/riscv64-linux-gnu-clang++
+    libc6-dev-s390x-cross

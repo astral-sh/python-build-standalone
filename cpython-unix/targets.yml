@@ -451,6 +451,9 @@ riscv64-unknown-linux-gnu:
   host_cxx: clang++
   target_cc: /usr/bin/riscv64-linux-gnu-clang
   target_cxx: /usr/bin/riscv64-linux-gnu-clang++
+  target_cflags:
+    # Keep debug relocations old enough for Buster's riscv64 GNU ld.
+    - '-fdebug-default-version=4'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'

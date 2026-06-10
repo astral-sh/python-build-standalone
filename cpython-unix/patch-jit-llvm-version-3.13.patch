@@ -1,4 +1,5 @@
 diff --git a/Tools/jit/_llvm.py b/Tools/jit/_llvm.py
+index b68da1b6be1..cf04f83539e 100644
 --- a/Tools/jit/_llvm.py
 +++ b/Tools/jit/_llvm.py
 @@ -8,7 +8,7 @@
@@ -7,6 +8,6 @@ diff --git a/Tools/jit/_llvm.py b/Tools/jit/_llvm.py
  
 -_LLVM_VERSION = 18
 +_LLVM_VERSION = 22
- _LLVM_VERSION_PATTERN = re.compile(rf"version\s+{_LLVM_VERSION}\.\d+\.\d+\S*\s+")
- 
- _P = typing.ParamSpec("_P")
+ _LLVM_VERSION_PATTERN = re.compile(
+     rf"(?<!Apple )(LLVM|clang) version\s+{_LLVM_VERSION}\.\d+\.\d+\S*\s+"
+ )

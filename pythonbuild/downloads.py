@@ -75,7 +75,7 @@ DOWNLOADS = {
         "python_tag": "cp312",
     },
     "cpython-3.13": {
-        "url": "https://www.python.org/ftp/python/3.13.13/Python-3.13.14.tar.xz",
+        "url": "https://www.python.org/ftp/python/3.13.14/Python-3.13.14.tar.xz",
         "size": 23021880,
         "sha256": "639e43243c620a308f968213df9e00f2f8f62332f7adbaa7a7eeb9783057c690",
         "version": "3.13.14",

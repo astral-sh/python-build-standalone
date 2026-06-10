@@ -796,6 +796,8 @@ _testlimitedcapi:
       minimum-python-version: "3.15"
     - source: _testlimitedcapi/version.c
       minimum-python-version: "3.14"
+    - source: _testlimitedcapi/weakref.c
+      minimum-python-version: "3.13"
 
 _testmultiphase:
   minimum-python-version: '3.10'

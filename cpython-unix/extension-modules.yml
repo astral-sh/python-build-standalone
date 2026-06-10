@@ -722,6 +722,8 @@ _testcapi:
       maximum-python-version: "3.12"
     - source: _testcapi/watchers.c
       minimum-python-version: "3.12"
+    - source: _testcapi/weakref.c
+      minimum-python-version: "3.13"
 
 _testexternalinspection:
   minimum-python-version: '3.13'

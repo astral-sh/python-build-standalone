@@ -714,6 +714,14 @@ elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
 fi
 
+# Cherry-pick python/cpython#100373 from 3.12 onto 3.10/3.11 to fix DER parsing with OpenSSL 3.5.7.
+# The old implementation does heuristics on the error codes returned from the ASN.1 parser, which
+# have changed slightly in openssl/openssl#30986 (commit 738688d762 in 3.5.7). The new
+# implementation does a better job of parsing and avoids the heuristics in the first place.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+    patch -p1 -i "${ROOT}/patch-python-der-eof-parsing.patch"
+fi
+
 # We patched configure.ac above. Reflect those changes.
 autoconf
 

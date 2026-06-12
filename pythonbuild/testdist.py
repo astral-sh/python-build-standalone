@@ -28,7 +28,7 @@ def run_dist_python(
     env = dict(os.environ)
 
     # Wipe PYTHON environment variables.
-    for k in env:
+    for k in list(env):
         if k.startswith("PYTHON"):
             del env[k]
 

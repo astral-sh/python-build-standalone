@@ -409,10 +409,10 @@ DOWNLOADS = {
     # IMPORTANT: xz 5.6.0 was released with a backdoor (CVE-2024-3094). This has been resolved.
     # Be cautious before taking any xz upgrades given this past behavior.
     "xz": {
-        "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz",
-        "size": 2587189,
-        "sha256": "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543",
-        "version": "5.8.1",
+        "url": "https://github.com/tukaani-project/xz/releases/download/v5.8.3/xz-5.8.3.tar.gz",
+        "size": 2771455,
+        "sha256": "3d3a1b973af218114f4f889bbaa2f4c037deaae0c8e815eec381c3d546b974a0",
+        "version": "5.8.3",
         "library_names": ["lzma"],
         # liblzma is licensed as 0BSD. Other parts of code have different licenses.
         # But we only use liblzma.

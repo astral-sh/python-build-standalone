@@ -284,16 +284,6 @@ DOWNLOADS = {
         "sha256": "382ff9f685ee3bc25864f820aa50505825f10f5458ffff07e30a6d96e5715cab",
         "version": "26.1.2",
     },
-    "readline": {
-        # Mirrored from https://ftp.gnu.org/gnu/readline/readline-8.2.tar.gz
-        "url": "https://astral-sh.github.io/mirror/files/readline-8.2.tar.gz",
-        "size": 3043952,
-        "sha256": "3feb7171f16a84ee82ca18a36d7b9be109a52c04f492a053331d7d1095007c35",
-        "version": "8.2",
-        "library_names": ["readline"],
-        "licenses": ["GPL-3.0-only"],
-        "license_file": "LICENSE.readline.txt",
-    },
     "setuptools": {
         "url": "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl",
         "size": 1006223,

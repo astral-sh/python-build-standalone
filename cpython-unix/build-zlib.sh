@@ -13,8 +13,12 @@ tar -xf "zlib-${ZLIB_VERSION}.tar.gz"
 
 pushd "zlib-${ZLIB_VERSION}"
 
+# --disable-crcvx is needed to build for s390x with -march=z10
+# SIMD instructions require z13+
+# See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1132458
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
   --prefix=/tools/deps \
+  --disable-crcvx \
   --static
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"

@@ -2,12 +2,13 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-import contextlib
 import io
 import operator
 import os
 import pathlib
+import sys
 import tarfile
+import typing
 
 import docker  # type: ignore
 import jinja2
@@ -29,16 +30,44 @@ def write_dockerfiles(source_dir: pathlib.Path, dest_dir: pathlib.Path):
         write_if_different(dest_dir / f, data.encode("utf-8"))
 
 
+def docker_platform_from_host_platform(host_platform: str) -> typing.Optional[str]:
+    """Convert a PBS host platform to a Docker platform.
+
+    This function assumes we're using a Docker daemon on the local machine.
+    """
+    # On macOS, we only use Docker to build Linux distros. We also support
+    # using Rosetta for x86-64 emulation when building from aarch64. So it
+    # is allowed to specify a non-native platform here.
+    if sys.platform == "darwin":
+        if host_platform == "linux_x86_64":
+            return "linux/amd64"
+        elif host_platform == "linux_aarch64":
+            return "linux/arm64"
+        else:
+            return None
+    else:
+        # On Linux, we currently only support running native architecture
+        # containers. Cross-compiling is achieved by running a native arch
+        # container and cross-compiling within it. We don't specify a platform
+        # here and let the Docker runtime use the defaults.
+        return None
+
+
 def build_docker_image(
     client, image_data: bytes, image_dir: pathlib.Path, name, host_platform
 ):
     image_path = image_dir / f"image-{name}.{host_platform}"
 
-    return ensure_docker_image(client, io.BytesIO(image_data), image_path=image_path)
+    return ensure_docker_image(
+        client,
+        io.BytesIO(image_data),
+        image_path=image_path,
+        platform=docker_platform_from_host_platform(host_platform),
+    )
 
 
-def ensure_docker_image(client, fh, image_path=None):
-    res = client.api.build(fileobj=fh, decode=True)
+def ensure_docker_image(client, fh, image_path=None, platform=None):
+    res = client.api.build(fileobj=fh, decode=True, platform=platform)
 
     image = None
 
@@ -109,18 +138,6 @@ def copy_file_to_container(path, container, container_path, archive_path=None):
 
     log("copying %s to container:%s/%s" % (path, container_path, dest_path))
     container.put_archive(container_path, buf.getvalue())
-
-
-@contextlib.contextmanager
-def run_container(client, image):
-    container = client.containers.run(
-        image, command=["/bin/sleep", "86400"], detach=True
-    )
-    try:
-        yield container
-    finally:
-        container.stop(timeout=0)
-        container.remove()
 
 
 def container_exec(container, command, user="build", environment=None):

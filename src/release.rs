@@ -636,9 +636,12 @@ pub fn convert_to_stripped<W: Write>(
                 | FileKind::Pe32
                 | FileKind::Pe64)
         ) {
-            // Skip stripping MSVC runtime DLLs
+            // Skip stripping MSVC runtime DLLs and Tcl/Tk DLLs containing ZIPFS data.
             let filename = path.file_name().and_then(|n| n.to_str());
-            if !matches!(filename, Some("vcruntime140.dll" | "vcruntime140_1.dll")) {
+            if !matches!(
+                filename,
+                Some("tcl90.dll" | "tcl9tk90.dll" | "vcruntime140.dll" | "vcruntime140_1.dll")
+            ) {
                 data = llvm_strip(&data, llvm_dir)
                     .with_context(|| format!("failed to strip {}", path.display()))?;
             }

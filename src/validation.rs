@@ -151,6 +151,11 @@ const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
     "zlib1.dll",
     "api-ms-win-crt-private-l1-1-0.dll",
     "msvcrt.dll",
+    // Tcl/Tk 9 is used in CPython 3.15+
+    "libtommath.dll",
+    "tcl90.dll",
+    "tcl9tk90.dll",
+    "WINSPOOL.DRV",
     // `_remote_debugging` loads `ntdll`
     // See https://github.com/python/cpython/pull/138710
     "ntdll.dll",

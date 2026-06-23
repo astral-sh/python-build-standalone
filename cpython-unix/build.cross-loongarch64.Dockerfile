@@ -33,13 +33,12 @@ RUN for s in debian_trixie debian_trixie-updates; do \
 
 RUN apt-get update
 
-# Host building.
+# Build tools, same as in build.Dockerfile
 RUN apt-get install \
     bzip2 \
     ca-certificates \
     curl \
-    gcc \
-    g++ \
+    file \
     libc6-dev \
     libffi-dev \
     make \
@@ -53,9 +52,16 @@ RUN apt-get install \
     zlib1g-dev
 
 RUN apt-get install \
-    g++-loongarch64-linux-gnu \
-    gcc-loongarch64-linux-gnu \
-    libc6-dev-loong64-cross
+    binutils-loongarch64-linux-gnu \
+    libc6-loong64-cross \
+    libc6-dev-loong64-cross \
+    linux-libc-dev-loong64-cross \
+    libgcc-s1-loong64-cross \
+    libgcc-14-dev-loong64-cross
+
+# Target-specific symlinks to cross-compile using the external LLVM toolchain.
+RUN ln -s /tools/llvm/bin/clang /usr/bin/loongarch64-linux-gnu-clang && \
+    ln -s /tools/llvm/bin/clang++ /usr/bin/loongarch64-linux-gnu-clang++
 
 RUN cd /tmp && \
     curl -LO https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/pool-loong64/main/libx/libxcrypt/libcrypt-dev_4.4.36-4_loong64.deb && \

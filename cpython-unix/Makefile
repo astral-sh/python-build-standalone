@@ -220,6 +220,9 @@ $(OUTDIR)/xcb-proto-$(XCB_PROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEP
 $(OUTDIR)/xorgproto-$(XORGPROTO_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xorgproto.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xorgproto
 
+$(OUTDIR)/linux-uapi-$(LINUX_UAPI_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-linux-uapi.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) linux-uapi
+
 $(OUTDIR)/xtrans-$(XTRANS_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-xtrans.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) xtrans
 
@@ -255,6 +258,7 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_LIBEDIT),$$(OUTDIR)/libedit-$$(LIBEDIT_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBFFI_3_3),$$(OUTDIR)/libffi-3.3-$$(LIBFFI_3.3_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBFFI),$$(OUTDIR)/libffi-$$(LIBFFI_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_LINUX_UAPI),$$(OUTDIR)/linux-uapi-$$(LINUX_UAPI_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_m4),$$(OUTDIR)/m4-$$(M4_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_MPDECIMAL),$$(OUTDIR)/mpdecimal-$$(MPDECIMAL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_NCURSES),$$(OUTDIR)/ncurses-$$(NCURSES_VERSION)-$$(PACKAGE_SUFFIX).tar) \

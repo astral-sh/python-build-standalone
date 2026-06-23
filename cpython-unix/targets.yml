@@ -14,6 +14,11 @@
 # needs
 #    Packages required to build Python.
 #
+# linux_uapi_include_arch
+#    Architecture-specific include directory in the linux-uapi package. When
+#    defined, the package's modern Linux UAPI headers are used to build Python.
+#    The linux-uapi package must also be listed in the target's needs.
+#
 # host_cc
 #    Path to C compiler to use when producing binaries targeting the
 #    current build environment.
@@ -112,6 +117,7 @@ aarch64-apple-darwin:
   openssl_target: darwin64-arm64-cc
 
 aarch64-unknown-linux-gnu:
+  linux_uapi_include_arch: aarch64-linux-gnu
   host_platforms:
     - linux_x86_64
     - linux_aarch64
@@ -150,6 +156,7 @@ aarch64-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -171,6 +178,7 @@ aarch64-unknown-linux-gnu:
   # bolt_capable: true
 
 armv7-unknown-linux-gnueabi:
+  linux_uapi_include_arch: arm-linux-gnueabi
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -199,6 +207,7 @@ armv7-unknown-linux-gnueabi:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -215,6 +224,7 @@ armv7-unknown-linux-gnueabi:
   openssl_target: linux-armv4
 
 armv7-unknown-linux-gnueabihf:
+  linux_uapi_include_arch: arm-linux-gnueabihf
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -243,6 +253,7 @@ armv7-unknown-linux-gnueabihf:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -259,6 +270,7 @@ armv7-unknown-linux-gnueabihf:
   openssl_target: linux-armv4
 
 loongarch64-unknown-linux-gnu:
+  linux_uapi_include_arch: loongarch64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -288,6 +300,7 @@ loongarch64-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -304,6 +317,7 @@ loongarch64-unknown-linux-gnu:
   openssl_target: linux64-loongarch64
 
 mips-unknown-linux-gnu:
+  linux_uapi_include_arch: mips-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -332,6 +346,7 @@ mips-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -348,6 +363,7 @@ mips-unknown-linux-gnu:
   openssl_target: linux-mips32
 
 mipsel-unknown-linux-gnu:
+  linux_uapi_include_arch: mipsel-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -376,6 +392,7 @@ mipsel-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -392,6 +409,7 @@ mipsel-unknown-linux-gnu:
   openssl_target: linux-mips32
 
 ppc64le-unknown-linux-gnu:
+  linux_uapi_include_arch: powerpc64le-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -420,6 +438,7 @@ ppc64le-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -436,6 +455,7 @@ ppc64le-unknown-linux-gnu:
   openssl_target: linux-ppc64le
 
 riscv64-unknown-linux-gnu:
+  linux_uapi_include_arch: riscv64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -464,6 +484,7 @@ riscv64-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -480,6 +501,7 @@ riscv64-unknown-linux-gnu:
   openssl_target: linux64-riscv64
 
 s390x-unknown-linux-gnu:
+  linux_uapi_include_arch: s390x-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -511,6 +533,7 @@ s390x-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -583,6 +606,7 @@ x86_64-apple-darwin:
   openssl_target: darwin64-x86_64-cc
 
 x86_64-unknown-linux-gnu:
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -618,6 +642,7 @@ x86_64-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -635,6 +660,7 @@ x86_64-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v2-unknown-linux-gnu:
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -671,6 +697,7 @@ x86_64_v2-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -688,6 +715,7 @@ x86_64_v2-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v3-unknown-linux-gnu:
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -724,6 +752,7 @@ x86_64_v3-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses
@@ -741,6 +770,7 @@ x86_64_v3-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v4-unknown-linux-gnu:
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
   pythons_supported:
@@ -777,6 +807,7 @@ x86_64_v4-unknown-linux-gnu:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - ncurses

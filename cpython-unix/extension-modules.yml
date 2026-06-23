@@ -724,7 +724,6 @@ _testcapi:
       minimum-python-version: "3.12"
     - source: _testcapi/weakref.c
       minimum-python-version: "3.13"
-      maximum-python-version: "3.14"
 
 _testexternalinspection:
   minimum-python-version: '3.13'
@@ -799,7 +798,6 @@ _testlimitedcapi:
       minimum-python-version: "3.14"
     - source: _testlimitedcapi/weakref.c
       minimum-python-version: "3.13"
-      maximum-python-version: "3.14"
 
 _testmultiphase:
   minimum-python-version: '3.10'

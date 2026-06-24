@@ -352,6 +352,13 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(hasattr(socket, "AF_VSOCK"))
         self.assertEqual(socket.AF_VSOCK, 40)
 
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "modern kernel UAPI headers are currently enabled for Linux GNU targets",
+    )
+    def test_os_pidfd_open(self):
+        self.assertTrue(hasattr(os, "pidfd_open"))
+
     def test_linux_uapi_not_in_sysconfig(self):
         import sysconfig
 

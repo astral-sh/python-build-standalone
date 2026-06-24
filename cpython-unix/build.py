@@ -25,7 +25,12 @@ from pythonbuild.cpython import (
     meets_python_minimum_version,
     parse_setup_line,
 )
-from pythonbuild.docker import build_docker_image, get_image, write_dockerfiles
+from pythonbuild.docker import (
+    build_docker_image,
+    docker_platform_from_host_platform,
+    get_image,
+    write_dockerfiles,
+)
 from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.logging import log, set_logger
 from pythonbuild.utils import (
@@ -33,6 +38,7 @@ from pythonbuild.utils import (
     add_licenses_to_extension_entry,
     clang_toolchain,
     create_tar_from_directory,
+    current_host_platform,
     download_entry,
     get_target_settings,
     get_targets,
@@ -98,21 +104,33 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
         extra_target_ldflags.append("--rtlib=compiler-rt")
 
     if build_platform.startswith("linux_"):
-        machine = platform.machine()
+        # autoconf is not aware of microarch triples. Normalize those out:
+        # we force targeting via -march CFLAG.
+        env["TARGET_TRIPLE"] = (
+            target_triple.replace("x86_64_v2-", "x86_64-")
+            .replace("x86_64_v3-", "x86_64-")
+            .replace("x86_64_v4-", "x86_64-")
+        )
 
-        # arm64 allows building for Linux on a macOS host using Docker
-        if machine == "aarch64" or machine == "arm64":
-            env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
-            env["TARGET_TRIPLE"] = target_triple
-        elif machine == "x86_64":
-            env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
-            env["TARGET_TRIPLE"] = (
-                target_triple.replace("x86_64_v2-", "x86_64-")
-                .replace("x86_64_v3-", "x86_64-")
-                .replace("x86_64_v4-", "x86_64-")
-            )
+        # On macOS, we support building Linux in a virtualized container that
+        # always matches the target platform. Set build/host triple to whatever
+        # we're building.
+        #
+        # Note: we always use the *-gnu triple otherwise autoconf can have
+        # trouble reasoning about cross-compiling since its detected triple from
+        # our build environment is always GNU based.
+        if current_host_platform().startswith("macos_"):
+            env["BUILD_TRIPLE"] = env["TARGET_TRIPLE"].replace("-musl", "-gnu")
         else:
-            raise Exception("unhandled Linux machine value: %s" % machine)
+            # Otherwise assume the container environment matches the machine
+            # type of the current process.
+            host_machine = platform.machine()
+            if host_machine == "aarch64" or host_machine == "arm64":
+                env["BUILD_TRIPLE"] = "aarch64-unknown-linux-gnu"
+            elif host_machine == "x86_64":
+                env["BUILD_TRIPLE"] = "x86_64-unknown-linux-gnu"
+            else:
+                raise Exception("unhandled Linux machine value: %s" % host_machine)
 
         # This will make x86_64_v2, etc count as cross-compiling. This is
         # semantically correct, since the current machine may not support
@@ -960,16 +978,6 @@ def main():
     DOWNLOADS_PATH.mkdir(exist_ok=True)
     (BUILD / "logs").mkdir(exist_ok=True)
 
-    if os.environ.get("PYBUILD_NO_DOCKER"):
-        client = None
-    else:
-        try:
-            client = docker.from_env(timeout=600)
-            client.ping()
-        except Exception as e:
-            print("unable to connect to Docker: %s" % e, file=sys.stderr)
-            return 1
-
     # Note these arguments must be synced with `build-main.py`
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1030,6 +1038,17 @@ def main():
     python_host_version = args.python_host_version
 
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
+
+    if os.environ.get("PYBUILD_NO_DOCKER"):
+        client = None
+    else:
+        try:
+            client = docker.from_env(timeout=600)
+            client.ping()
+            client._pbs_platform = docker_platform_from_host_platform(host_platform)
+        except Exception as e:
+            print("unable to connect to Docker: %s" % e, file=sys.stderr)
+            return 1
 
     if args.action == "dockerfiles":
         log_name = "dockerfiles"

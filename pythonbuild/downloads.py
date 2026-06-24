@@ -176,6 +176,14 @@ DOWNLOADS = {
         "licenses": ["MIT"],
         "license_file": "LICENSE.libxcb.txt",
     },
+    # Pre-sanitized Linux UAPI headers from Debian 13 backports. This does not
+    # change the glibc headers or libraries used by selected targets.
+    "linux-uapi": {
+        "url": "https://snapshot.debian.org/archive/debian/20260624T024300Z/pool/main/l/linux/linux-libc-dev_7.0.12-2~bpo13+1_all.deb",
+        "size": 2637888,
+        "sha256": "162ba55a6e6eca68b32a80e6774f8dda4e145bd68049fb2e85760ec1546bee3c",
+        "version": "7.0.12-2~bpo13+1",
+    },
     # Remember to update LLVM_URL in src/release.rs whenever upgrading.
     "llvm-aarch64-linux": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-aarch64-unknown-linux-gnu.tar.zst",

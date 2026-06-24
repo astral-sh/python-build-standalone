@@ -1,0 +1,6 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -296 +296 @@
+-#ifdef HAVE_GETRANDOM_SYSCALL
++#ifdef HAVE_SYS_SYSCALL_H

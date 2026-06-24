@@ -343,6 +343,21 @@ fi
 # from that header. Include it whenever configure finds the header.
 patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
 
+# The modern UAPI overlay provides the memfd constants, but some glibc sysroots
+# predate the memfd_create() wrapper. Force the configure check on and weak-link
+# the wrapper so the function is exposed only when runtime glibc provides it.
+# This workaround is specific to glibc builds; the UAPI overlay itself can also
+# be used with other Linux libcs.
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-legacy.patch"
+    fi
+
+    export ac_cv_func_memfd_create=yes
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

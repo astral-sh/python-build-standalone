@@ -352,6 +352,14 @@ class TestPythonInterpreter(unittest.TestCase):
         self.assertTrue(hasattr(socket, "AF_VSOCK"))
         self.assertEqual(socket.AF_VSOCK, 40)
 
+    def test_linux_uapi_not_in_sysconfig(self):
+        import sysconfig
+
+        for key, value in sysconfig.get_config_vars().items():
+            if isinstance(value, str):
+                with self.subTest(key=key):
+                    self.assertNotIn("linux-uapi", value)
+
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific prctl")
     @unittest.skipIf(
         "static" in os.environ["BUILD_OPTIONS"],

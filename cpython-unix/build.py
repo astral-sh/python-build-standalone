@@ -812,6 +812,10 @@ def build_cpython(
             "TOOLCHAIN": "clang-%s" % host_platform,
         }
 
+        # Use modern kernel UAPI headers without changing the target's libc.
+        if linux_uapi_include_arch := settings.get("linux_uapi_include_arch"):
+            env["LINUX_UAPI_INCLUDE_ARCH"] = linux_uapi_include_arch
+
         # Set environment variables allowing convenient testing for Python
         # version ranges.
         for v in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
@@ -1139,6 +1143,7 @@ def main():
             "libffi-3.3",
             "libffi",
             "libpthread-stubs",
+            "linux-uapi",
             "m4",
             "mpdecimal",
             "ncurses",

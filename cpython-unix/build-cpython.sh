@@ -338,10 +338,38 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-testinternalcapi-interpreter-extern.patch"
 fi
 
+# CPython uses HAVE_GETRANDOM_SYSCALL to decide whether to include
+# <sys/syscall.h>, but other APIs independently depend on __NR_* definitions
+# from that header. Include it whenever configure finds the header.
+patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
+
+# The modern UAPI overlay provides the memfd constants, but some glibc sysroots
+# predate the memfd_create() wrapper. Force the configure check on and weak-link
+# the wrapper so the function is exposed only when runtime glibc provides it.
+# This workaround is specific to glibc builds; the UAPI overlay itself can also
+# be used with other Linux libcs.
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-legacy.patch"
+    fi
+
+    export ac_cv_func_memfd_create=yes
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
 LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib"
+
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" ]]; then
+    if [[ ! -d "${TOOLS_PATH}/deps/linux-uapi/usr/include/${LINUX_UAPI_INCLUDE_ARCH}" ]]; then
+        echo "missing linux-uapi package for ${LINUX_UAPI_INCLUDE_ARCH}"
+        exit 1
+    fi
+    CFLAGS="-isystem ${TOOLS_PATH}/deps/linux-uapi/usr/include/${LINUX_UAPI_INCLUDE_ARCH} -isystem ${TOOLS_PATH}/deps/linux-uapi/usr/include ${CFLAGS}"
+fi
 
 # Some target configurations use `-fvisibility=hidden`. Python's configure handles
 # symbol visibility properly itself. So let it do its thing.
@@ -1062,6 +1090,14 @@ replace_in_all("-I%s/deps/include/ncursesw" % tools_path, "")
 replace_in_all("-I%s/deps/include/uuid" % tools_path, "")
 replace_in_all("-I%s/deps/include" % tools_path, "")
 replace_in_all("-L%s/deps/lib" % tools_path, "")
+linux_uapi_include_arch = os.environ.get("LINUX_UAPI_INCLUDE_ARCH")
+if linux_uapi_include_arch:
+    replace_in_all(
+        "-isystem %s/deps/linux-uapi/usr/include/%s"
+        % (tools_path, linux_uapi_include_arch),
+        "",
+    )
+replace_in_all("-isystem %s/deps/linux-uapi/usr/include" % tools_path, "")
 # See https://github.com/python/cpython/issues/145810#issuecomment-4068139183
 replace_in_all("-LModules/_hacl", "")
 

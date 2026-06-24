@@ -338,6 +338,11 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-testinternalcapi-interpreter-extern.patch"
 fi
 
+# CPython uses HAVE_GETRANDOM_SYSCALL to decide whether to include
+# <sys/syscall.h>, but other APIs independently depend on __NR_* definitions
+# from that header. Include it whenever configure finds the header.
+patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

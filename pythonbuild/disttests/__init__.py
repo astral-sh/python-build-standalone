@@ -359,6 +359,35 @@ class TestPythonInterpreter(unittest.TestCase):
     def test_os_pidfd_open(self):
         self.assertTrue(hasattr(os, "pidfd_open"))
 
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "memfd_create weak linking is enabled for Linux GNU targets",
+    )
+    def test_os_memfd_create(self):
+        import ctypes
+        import errno
+
+        libc = ctypes.CDLL(None)
+        libc_has_memfd_create = hasattr(libc, "memfd_create")
+        self.assertEqual(hasattr(os, "memfd_create"), libc_has_memfd_create)
+
+        if not libc_has_memfd_create:
+            return
+
+        try:
+            fd = os.memfd_create("python-build-standalone-test")
+        except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                self.skipTest("the runtime kernel does not support memfd_create")
+            raise
+
+        try:
+            os.write(fd, b"memfd_create")
+            os.lseek(fd, 0, os.SEEK_SET)
+            self.assertEqual(os.read(fd, 12), b"memfd_create")
+        finally:
+            os.close(fd)
+
     def test_linux_uapi_not_in_sysconfig(self):
         import sysconfig
 

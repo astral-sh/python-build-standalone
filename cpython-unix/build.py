@@ -92,6 +92,14 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
     extra_host_cflags = []
     extra_host_ldflags = []
 
+    if "debug" in build_options and "-linux-" in target_triple:
+        # Fortification requires optimization and is ineffective with debug's -O0.
+        extra_target_cflags = [
+            flag
+            for flag in extra_target_cflags
+            if flag not in {"-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=3"}
+        ]
+
     # Add compiler-rt for aarch64-musl to resolve missing builtins
     if target_triple == "aarch64-unknown-linux-musl":
         extra_target_cflags.append("--rtlib=compiler-rt")

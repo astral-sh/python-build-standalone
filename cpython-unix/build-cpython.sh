@@ -729,6 +729,10 @@ autoconf
 # 3.12 and earlier)
 CFLAGS_JIT="${CFLAGS}"
 
+# JIT stencils should not inherit target-wide stack hardening flags.
+CFLAGS_JIT="${CFLAGS_JIT//-fstack-protector-strong/}"
+CFLAGS_JIT="${CFLAGS_JIT//-fstack-clash-protection/}"
+
 # In 3.14+, the JIT compiler on x86-64 Linux uses a model that conflicts with `-fPIC`, so strip it
 # from the flags. See:
 # - https://github.com/python/cpython/issues/135690

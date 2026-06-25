@@ -132,6 +132,7 @@ aarch64-unknown-linux-gnu:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     - '-fvisibility=hidden'
@@ -661,6 +662,7 @@ x86_64-unknown-linux-gnu:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     - '-fvisibility=hidden'
@@ -719,6 +721,7 @@ x86_64_v2-unknown-linux-gnu:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v2'
@@ -778,6 +781,7 @@ x86_64_v3-unknown-linux-gnu:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v3'
@@ -837,6 +841,7 @@ x86_64_v4-unknown-linux-gnu:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v4'
@@ -896,6 +901,7 @@ x86_64-unknown-linux-musl:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -950,6 +956,7 @@ x86_64_v2-unknown-linux-musl:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -1005,6 +1012,7 @@ x86_64_v3-unknown-linux-musl:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -1060,6 +1068,7 @@ x86_64_v4-unknown-linux-musl:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -1119,6 +1128,7 @@ aarch64-unknown-linux-musl:
   target_cflags:
     # Hardening
     - '-fstack-protector-strong'
+    - '-fstack-clash-protection'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'

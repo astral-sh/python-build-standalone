@@ -10,8 +10,9 @@ use {
     object::{
         Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
-            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, PF_X, PT_GNU_STACK, SHN_UNDEF, STB_GLOBAL,
-            STB_WEAK, STV_DEFAULT, STV_HIDDEN,
+            DF_1_NOW, DF_BIND_NOW, DF_TEXTREL, DT_BIND_NOW, DT_FLAGS, DT_FLAGS_1, DT_TEXTREL,
+            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, PF_W, PF_X, PT_GNU_RELRO, PT_GNU_STACK,
+            PT_LOAD, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT, STV_HIDDEN,
         },
         macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
@@ -1027,9 +1028,14 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
 
     let versions = sections.versions(endian, data)?;
 
+    let mut has_dynamic_section = false;
+    let mut has_bind_now = false;
+    let mut has_text_relocations = false;
+
     for (section_index, section) in sections.iter().enumerate() {
         // Dynamic sections defined needed libraries, which we validate.
         if let Some((entries, index)) = section.dynamic(endian, data)? {
+            has_dynamic_section = true;
             let strings = sections.strings(endian, data, index).unwrap_or_default();
 
             for entry in entries {
@@ -1086,6 +1092,20 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                             ));
                         }
                     }
+                }
+
+                match entry.tag32(endian) {
+                    Some(DT_BIND_NOW) => has_bind_now = true,
+                    Some(DT_FLAGS) => {
+                        let flags = entry.val32(endian).unwrap_or_default();
+                        has_bind_now |= flags & DF_BIND_NOW != 0;
+                        has_text_relocations |= flags & DF_TEXTREL != 0;
+                    }
+                    Some(DT_FLAGS_1) => {
+                        has_bind_now |= entry.val32(endian).unwrap_or_default() & DF_1_NOW != 0;
+                    }
+                    Some(DT_TEXTREL) => has_text_relocations = true,
+                    _ => {}
                 }
             }
         }
@@ -1180,8 +1200,9 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         }
     }
 
-    // Verify that objects are not requesting an executable stack. For backwards compatibility,
-    // Linux (the kernel when loading an executable, and glibc when loading a shared library)
+    // Verify that objects are not requesting an executable stack and that other hardening
+    // properties exist in the linked outputs. For backwards compatibility, Linux (the kernel
+    // when loading an executable, and glibc when loading a shared library)
     // assumes you need an executable stack unless you request otherwise. In linked outputs
     // (executables and shared libraries) this is in the program header: the flags of a
     // PT_GNU_STACK entry specify stack permissions, and the default if unspecified is RWX. In
@@ -1193,16 +1214,35 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     // .note.GNU-stack section, which we are overriding with -Wl,-z,noexecstack.
 
     if matches!(elf.e_type(endian), ET_EXEC | ET_DYN) {
+        if elf.e_type(endian) == ET_EXEC {
+            context.errors.push(format!(
+                "{} is not position-independent (ELF type is ET_EXEC)",
+                path.display(),
+            ));
+        }
+
         let mut found_pt_gnu_stack = false;
+        let mut found_pt_gnu_relro = false;
         for phdr in elf.program_headers(endian, data)? {
-            if phdr.p_type(endian) != PT_GNU_STACK {
-                continue;
-            }
-            found_pt_gnu_stack = true;
-            if (phdr.p_flags(endian) & PF_X) != 0 {
-                context
-                    .errors
-                    .push(format!("{} requests executable stack", path.display()));
+            let flags = phdr.p_flags(endian);
+
+            match phdr.p_type(endian) {
+                PT_GNU_STACK => {
+                    found_pt_gnu_stack = true;
+                    if flags & PF_X != 0 {
+                        context
+                            .errors
+                            .push(format!("{} requests executable stack", path.display()));
+                    }
+                }
+                PT_GNU_RELRO => found_pt_gnu_relro = true,
+                PT_LOAD if flags & (PF_W | PF_X) == (PF_W | PF_X) => {
+                    context.errors.push(format!(
+                        "{} has a writable and executable PT_LOAD segment",
+                        path.display(),
+                    ));
+                }
+                _ => {}
             }
         }
         if !found_pt_gnu_stack {
@@ -1210,6 +1250,23 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                 "{} missing PT_GNU_STACK header (defaults to executable stack)",
                 path.display(),
             ));
+        }
+        if !found_pt_gnu_relro {
+            context.errors.push(format!(
+                "{} is missing a PT_GNU_RELRO segment",
+                path.display(),
+            ));
+        }
+        if has_dynamic_section && !has_bind_now {
+            context.errors.push(format!(
+                "{} does not request immediate symbol binding",
+                path.display(),
+            ));
+        }
+        if has_text_relocations {
+            context
+                .errors
+                .push(format!("{} contains text relocations", path.display()));
         }
     }
 

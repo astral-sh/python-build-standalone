@@ -130,6 +130,10 @@ aarch64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -139,6 +143,8 @@ aarch64-unknown-linux-gnu:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -185,9 +191,16 @@ armv7-unknown-linux-gnueabi:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/arm-linux-gnueabi-gcc
   target_cxx: /usr/bin/arm-linux-gnueabi-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -229,9 +242,16 @@ armv7-unknown-linux-gnueabihf:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/arm-linux-gnueabihf-gcc
   target_cxx: /usr/bin/arm-linux-gnueabihf-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -273,9 +293,16 @@ loongarch64-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/loongarch64-linux-gnu-gcc
   target_cxx: /usr/bin/loongarch64-linux-gnu-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
     - '-Wl,-z,max-page-size=0x10000'
   needs:
     - autoconf
@@ -318,9 +345,16 @@ mips-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/mips-linux-gnu-gcc
   target_cxx: /usr/bin/mips-linux-gnu-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -362,9 +396,16 @@ mipsel-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/mipsel-linux-gnu-gcc
   target_cxx: /usr/bin/mipsel-linux-gnu-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -406,9 +447,16 @@ ppc64le-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/powerpc64le-linux-gnu-gcc
   target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -450,9 +498,16 @@ riscv64-unknown-linux-gnu:
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
   target_cc: /usr/bin/riscv64-linux-gnu-gcc
   target_cxx: /usr/bin/riscv64-linux-gnu-g++
+  target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -495,11 +550,17 @@ s390x-unknown-linux-gnu:
   target_cc: /usr/bin/s390x-linux-gnu-gcc
   target_cxx: /usr/bin/s390x-linux-gnu-g++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     # set the minimum compatibility level to z10 (released 2008)
     - '-march=z10'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -598,6 +659,10 @@ x86_64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -607,6 +672,8 @@ x86_64-unknown-linux-gnu:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -650,6 +717,10 @@ x86_64_v2-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -660,6 +731,8 @@ x86_64_v2-unknown-linux-gnu:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -703,6 +776,10 @@ x86_64_v3-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -713,6 +790,8 @@ x86_64_v3-unknown-linux-gnu:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -756,6 +835,10 @@ x86_64_v4-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=3'
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -766,6 +849,8 @@ x86_64_v4-unknown-linux-gnu:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -809,6 +894,8 @@ x86_64-unknown-linux-musl:
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -816,6 +903,8 @@ x86_64-unknown-linux-musl:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -859,6 +948,8 @@ x86_64_v2-unknown-linux-musl:
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -867,6 +958,8 @@ x86_64_v2-unknown-linux-musl:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -910,6 +1003,8 @@ x86_64_v3-unknown-linux-musl:
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -918,6 +1013,8 @@ x86_64_v3-unknown-linux-musl:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -961,6 +1058,8 @@ x86_64_v4-unknown-linux-musl:
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -969,6 +1068,8 @@ x86_64_v4-unknown-linux-musl:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb
@@ -1016,6 +1117,8 @@ aarch64-unknown-linux-musl:
   target_cc: musl-clang
   target_cxx: clang++
   target_cflags:
+    # Hardening
+    - '-fstack-protector-strong'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -1023,6 +1126,8 @@ aarch64-unknown-linux-musl:
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
   needs:
     - autoconf
     - bdb

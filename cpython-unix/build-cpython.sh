@@ -729,6 +729,10 @@ autoconf
 # 3.12 and earlier)
 CFLAGS_JIT="${CFLAGS}"
 
+# JIT stencils cannot call the stack-protector symbols, so let CPython's
+# -fno-stack-protector take precedence for their compilation.
+CFLAGS_JIT="${CFLAGS_JIT//-fstack-protector-strong/}"
+
 # In 3.14+, the JIT compiler on x86-64 Linux uses a model that conflicts with `-fPIC`, so strip it
 # from the flags. See:
 # - https://github.com/python/cpython/issues/135690

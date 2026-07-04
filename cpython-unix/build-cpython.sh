@@ -1202,6 +1202,9 @@ mips-unknown-linux-gnu)
 mipsel-unknown-linux-gnu)
     PYTHON_ARCH="mipsel-linux-gnu"
     ;;
+mipsel-unknown-linux-musl)
+    PYTHON_ARCH="mipsel-linux-musl"
+    ;;
 mips64el-unknown-linux-gnuabi64)
     PYTHON_ARCH="mips64el-linux-gnuabi64"
     ;;

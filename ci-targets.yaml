@@ -163,6 +163,14 @@ linux:
           - freethreaded+lto
         minimum-python-version: "3.13"
 
+  mipsel-unknown-linux-musl:
+    arch: mipsel
+    libc: musl
+    python_versions:
+      - "3.11"
+    build_options:
+      - noopt
+
   x86_64-unknown-linux-gnu:
     arch: x86_64
     libc: gnu

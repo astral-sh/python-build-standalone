@@ -257,6 +257,19 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     );
 
     h.insert(
+        "mipsel-unknown-linux-musl",
+        TripleRelease {
+            suffixes: vec!["noopt"],
+            install_only_suffix: "noopt",
+            freethreaded_install_only_suffix: "freethreaded+noopt",
+            python_version_requirement: Some(
+                VersionSpecifier::from_str(">=3.11,<3.12").unwrap(),
+            ),
+            conditional_suffixes: vec![],
+        },
+    );
+
+    h.insert(
         "x86_64-unknown-linux-gnu",
         TripleRelease {
             suffixes: linux_suffixes_pgo.clone(),

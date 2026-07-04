@@ -1,0 +1,53 @@
+name: glinet-mipsel-musl
+
+on:
+  workflow_dispatch:
+    inputs:
+      python:
+        description: "CPython minor version"
+        required: false
+        default: "3.11"
+      options:
+        description: "Build options"
+        required: false
+        default: "noopt"
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # v4.0.0
+
+      - name: Build MIPS little-endian musl Python
+        run: |
+          ./build.py \
+            --target-triple mipsel-unknown-linux-musl \
+            --python cpython-${PYTHON_VERSION} \
+            --options "${BUILD_OPTIONS}"
+        env:
+          PYTHON_VERSION: ${{ inputs.python }}
+          BUILD_OPTIONS: ${{ inputs.options }}
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ inputs.python }}-mipsel-unknown-linux-musl-${{ inputs.options }}
+          path: dist/*
+          compression-level: "0"

@@ -8,7 +8,11 @@ set -ex
 cd /build
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
-export CC=clang
+if [ -n "${TARGET_TRIPLE:-}" ]; then
+    export CC="clang --target=${TARGET_TRIPLE}"
+else
+    export CC=clang
+fi
 
 tar -xf "musl-${MUSL_VERSION}.tar.gz"
 
@@ -98,8 +102,14 @@ else
 fi
 
 
+CONFIGURE_ARGS=()
+if [ -n "${TARGET_TRIPLE:-}" ]; then
+    CONFIGURE_ARGS+=(--target="${TARGET_TRIPLE}")
+fi
+
 CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
     --prefix=/tools/host \
+    "${CONFIGURE_ARGS[@]}" \
     "${SHARED}"
 
 make -j "$(nproc)"

@@ -347,6 +347,7 @@ def build_musl(client, image, host_platform: str, target_triple: str, build_opti
         env = {
             "MUSL_VERSION": DOWNLOADS[musl]["version"],
             "TOOLCHAIN": "llvm",
+            "TARGET_TRIPLE": target_triple,
         }
 
         if static:

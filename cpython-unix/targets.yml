@@ -391,6 +391,44 @@ mipsel-unknown-linux-gnu:
     - zstd
   openssl_target: linux-mips32
 
+mipsel-unknown-linux-musl:
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.11'
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: musl-clang --target=mipsel-linux-musl
+  target_cxx: clang++ --target=mipsel-linux-musl
+  target_cflags:
+    - '-march=mips32r2'
+    - '-msoft-float'
+    - '-fvisibility=hidden'
+  target_ldflags:
+    # Hardening
+    - '-Wl,-z,noexecstack'
+  needs:
+    - autoconf
+    - bdb
+    - binutils
+    - bzip2
+    - expat
+    - libedit
+    - libffi-3.3
+    - m4
+    - mpdecimal
+    - musl
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - uuid
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux-mips32
+
 ppc64le-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64

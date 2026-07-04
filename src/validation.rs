@@ -43,6 +43,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     // See https://github.com/astral-sh/python-build-standalone/issues/412
     "mips-unknown-linux-gnu",
     "mipsel-unknown-linux-gnu",
+    "mipsel-unknown-linux-musl",
     "mips64el-unknown-linux-gnuabi64",
     "ppc64le-unknown-linux-gnu",
     "riscv64-unknown-linux-gnu",
@@ -546,6 +547,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("i686-unknown-linux-gnu", "linux-i686"),
         ("mips-unknown-linux-gnu", "linux-mips"),
         ("mipsel-unknown-linux-gnu", "linux-mipsel"),
+        ("mipsel-unknown-linux-musl", "linux-mipsel"),
         ("mips64el-unknown-linux-gnuabi64", "todo"),
         ("ppc64le-unknown-linux-gnu", "linux-powerpc64le"),
         ("riscv64-unknown-linux-gnu", "linux-riscv64"),
@@ -946,6 +948,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "i686-unknown-linux-gnu" => object::elf::EM_386,
         "mips-unknown-linux-gnu" => object::elf::EM_MIPS,
         "mipsel-unknown-linux-gnu" => object::elf::EM_MIPS,
+        "mipsel-unknown-linux-musl" => object::elf::EM_MIPS,
         "mips64el-unknown-linux-gnuabi64" => 0,
         "ppc64le-unknown-linux-gnu" => object::elf::EM_PPC64,
         "riscv64-unknown-linux-gnu" => object::elf::EM_RISCV,

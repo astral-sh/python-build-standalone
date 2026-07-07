@@ -227,6 +227,10 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
 fi
 
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    # CPython disables PIE for BOLT builds as a performance optimization, but
+    # modern BOLT supports position-independent executables.
+    patch -p1 -i "${ROOT}/patch-configure-bolt-enable-pie.patch"
+
     # Additional BOLT optimizations, being upstreamed in
     # https://github.com/python/cpython/issues/128514
     patch -p1 -i "${ROOT}/patch-configure-bolt-apply-flags-128514.patch"

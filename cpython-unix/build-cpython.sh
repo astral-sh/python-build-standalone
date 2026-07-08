@@ -730,7 +730,7 @@ autoconf
 CFLAGS_JIT="${CFLAGS}"
 
 # JIT stencils should not inherit target-wide stack hardening flags.
-CFLAGS_JIT="${CFLAGS_JIT//-fstack-protector-strong/}"
+CFLAGS_JIT="${CFLAGS_JIT//-fstack-protector/}"
 CFLAGS_JIT="${CFLAGS_JIT//-fstack-clash-protection/}"
 
 # In 3.14+, the JIT compiler on x86-64 Linux uses a model that conflicts with `-fPIC`, so strip it

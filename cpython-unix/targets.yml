@@ -131,7 +131,7 @@ aarch64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
@@ -194,7 +194,7 @@ armv7-unknown-linux-gnueabi:
   target_cxx: /usr/bin/arm-linux-gnueabi-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -245,7 +245,7 @@ armv7-unknown-linux-gnueabihf:
   target_cxx: /usr/bin/arm-linux-gnueabihf-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -296,7 +296,7 @@ loongarch64-unknown-linux-gnu:
   target_cxx: /usr/bin/loongarch64-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -348,7 +348,7 @@ mips-unknown-linux-gnu:
   target_cxx: /usr/bin/mips-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -399,7 +399,7 @@ mipsel-unknown-linux-gnu:
   target_cxx: /usr/bin/mipsel-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -450,7 +450,7 @@ ppc64le-unknown-linux-gnu:
   target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -501,7 +501,7 @@ riscv64-unknown-linux-gnu:
   target_cxx: /usr/bin/riscv64-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
   target_ldflags:
@@ -552,7 +552,7 @@ s390x-unknown-linux-gnu:
   target_cxx: /usr/bin/s390x-linux-gnu-g++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
     # set the minimum compatibility level to z10 (released 2008)
@@ -661,7 +661,7 @@ x86_64-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
@@ -720,7 +720,7 @@ x86_64_v2-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
@@ -780,7 +780,7 @@ x86_64_v3-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
@@ -840,7 +840,7 @@ x86_64_v4-unknown-linux-gnu:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=3'
@@ -900,7 +900,7 @@ x86_64-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -955,7 +955,7 @@ x86_64_v2-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
@@ -1011,7 +1011,7 @@ x86_64_v3-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
@@ -1067,7 +1067,7 @@ x86_64_v4-unknown-linux-musl:
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
@@ -1127,7 +1127,7 @@ aarch64-unknown-linux-musl:
   target_cxx: clang++
   target_cflags:
     # Hardening
-    - '-fstack-protector-strong'
+    - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-fvisibility=hidden'
     # Enable frame pointers

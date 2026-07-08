@@ -259,7 +259,10 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
                 "armv7-unknown-linux-gnueabihf",
                 vec!["ld-linux-armhf.so.3", "libgcc_s.so.1"],
             ),
-            ("aarch64-unknown-linux-gnu", vec!["libgcc_s.so.1"]),
+            (
+                "aarch64-unknown-linux-gnu",
+                vec!["ld-linux-aarch64.so.1", "libgcc_s.so.1"],
+            ),
             ("i686-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
             ("mips-unknown-linux-gnu", vec!["ld.so.1", "libatomic.so.1"]),
             (

@@ -1214,13 +1214,6 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     // .note.GNU-stack section, which we are overriding with -Wl,-z,noexecstack.
 
     if matches!(elf.e_type(endian), ET_EXEC | ET_DYN) {
-        if elf.e_type(endian) == ET_EXEC {
-            context.errors.push(format!(
-                "{} is not position-independent (ELF type is ET_EXEC)",
-                path.display(),
-            ));
-        }
-
         let mut found_pt_gnu_stack = false;
         let mut found_pt_gnu_relro = false;
         for phdr in elf.program_headers(endian, data)? {

@@ -134,7 +134,7 @@ aarch64-unknown-linux-gnu:
     - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -196,7 +196,7 @@ armv7-unknown-linux-gnueabi:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -247,7 +247,7 @@ armv7-unknown-linux-gnueabihf:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -298,7 +298,7 @@ loongarch64-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -350,7 +350,7 @@ mips-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -401,7 +401,7 @@ mipsel-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -452,7 +452,7 @@ ppc64le-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -503,7 +503,7 @@ riscv64-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     # Hardening
     - '-Wl,-z,noexecstack'
@@ -554,7 +554,7 @@ s390x-unknown-linux-gnu:
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     # set the minimum compatibility level to z10 (released 2008)
     - '-march=z10'
   target_ldflags:
@@ -664,7 +664,7 @@ x86_64-unknown-linux-gnu:
     - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     - '-fvisibility=hidden'
     # Enable frame pointers
     - '-fno-omit-frame-pointer'
@@ -723,7 +723,7 @@ x86_64_v2-unknown-linux-gnu:
     - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     - '-march=x86-64-v2'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -783,7 +783,7 @@ x86_64_v3-unknown-linux-gnu:
     - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     - '-march=x86-64-v3'
     - '-fvisibility=hidden'
     # Enable frame pointers
@@ -843,7 +843,7 @@ x86_64_v4-unknown-linux-gnu:
     - '-fstack-protector'
     - '-fstack-clash-protection'
     - '-U_FORTIFY_SOURCE'
-    - '-D_FORTIFY_SOURCE=3'
+    - '-D_FORTIFY_SOURCE=2'
     - '-march=x86-64-v4'
     - '-fvisibility=hidden'
     # Enable frame pointers

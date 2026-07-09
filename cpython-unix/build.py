@@ -97,7 +97,7 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
         extra_target_cflags = [
             flag
             for flag in extra_target_cflags
-            if flag not in {"-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=3"}
+            if flag not in {"-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=2"}
         ]
 
     # Add compiler-rt for aarch64-musl to resolve missing builtins

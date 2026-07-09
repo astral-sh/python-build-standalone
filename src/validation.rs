@@ -926,6 +926,18 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     elf: &Elf,
     data: &[u8],
 ) -> Result<()> {
+    // The target hardening flags are intended to protect the interpreter
+    // itself. Restrict these symbol heuristics to that binary: extension
+    // modules and bundled libraries may not contain functions eligible for
+    // stack protection or fortification.
+    let validate_python_hardening = path.parent() == Some(Path::new("python/install/bin"))
+        && path
+            .file_name()
+            .map(|name| name.to_string_lossy().starts_with("python"))
+            .unwrap_or(false);
+    let mut has_stack_protector_symbol = false;
+    let mut has_fortify_symbol = false;
+
     let mut system_links = BTreeSet::new();
     for link in &json.build_info.core.links {
         if link.system.unwrap_or_default() {
@@ -1120,6 +1132,17 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
 
             for (symbol_index, symbol) in symbols.enumerate() {
                 let name = String::from_utf8_lossy(symbol.name(endian, strings)?);
+                let is_undefined = symbol.is_undefined(endian);
+
+                // Stack protector and fortify are compiler features rather than
+                // ELF properties. Their symbols provide a useful heuristic that
+                // at least one protected function made it into the interpreter.
+                if matches!(name.as_ref(), "__stack_chk_fail" | "__stack_chk_fail_local") {
+                    has_stack_protector_symbol = true;
+                }
+                if is_undefined && name.starts_with("__") && name.ends_with("_chk") {
+                    has_fortify_symbol = true;
+                }
 
                 // If symbol versions are defined and we're in the .dynsym section, there should
                 // be version info for every symbol.
@@ -1141,7 +1164,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     None
                 };
 
-                if symbol.is_undefined(endian) {
+                if is_undefined {
                     if ELF_BANNED_SYMBOLS.contains(&name.as_ref()) {
                         context.errors.push(format!(
                             "{} defines banned ELF symbol {}",
@@ -1263,6 +1286,28 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
             context
                 .errors
                 .push(format!("{} contains text relocations", path.display()));
+        }
+
+        if validate_python_hardening {
+            if !has_stack_protector_symbol {
+                context.errors.push(format!(
+                    "{} does not reference __stack_chk_fail",
+                    path.display(),
+                ));
+            }
+
+            // Debug builds deliberately undefine _FORTIFY_SOURCE because
+            // fortification is ineffective at -O0. musl targets do not enable
+            // _FORTIFY_SOURCE.
+            if !json.build_options.contains("debug")
+                && !target_triple.contains("-musl")
+                && !has_fortify_symbol
+            {
+                context.errors.push(format!(
+                    "{} does not reference any __*_chk fortify symbol",
+                    path.display(),
+                ));
+            }
         }
     }
 

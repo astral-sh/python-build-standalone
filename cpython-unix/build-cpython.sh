@@ -352,7 +352,7 @@ if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
         patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak.patch"
     else
-        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-legacy.patch"
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-3.13.patch"
     fi
 
     export ac_cv_func_memfd_create=yes

@@ -226,31 +226,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-pwd-remove-conditional.patch"
 fi
 
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    # Additional BOLT optimizations, being upstreamed in
-    # https://github.com/python/cpython/issues/128514
-    patch -p1 -i "${ROOT}/patch-configure-bolt-apply-flags-128514.patch"
-
-    # Disable unsafe identical code folding. Objects/typeobject.c
-    # update_one_slot requires that wrap_binaryfunc != wrap_binaryfunc_l,
-    # despite the functions being identical.
-    # https://github.com/python/cpython/pull/134642
-    patch -p1 -i "${ROOT}/patch-configure-bolt-icf-safe.patch"
-
-    # Tweak --skip-funcs to work with our toolchain.
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
-        patch -p1 -i "${ROOT}/patch-configure-bolt-skip-funcs-3.15.patch"
-    else
-        patch -p1 -i "${ROOT}/patch-configure-bolt-skip-funcs.patch"
-    fi
-
-    # Remove -use-gnu-stack from the BOLT optimization flags as it incorrectly
-    # removes the PT_GNU_STACK segment. This patch can be removed when this bug
-    # is fixed in LLVM.
-    # https://github.com/llvm/llvm-project/issues/174191
-    patch -p1 -i "${ROOT}/patch-configure-bolt-remove-use-gnu-stack.patch"
-fi
-
 # The optimization make targets are both phony and non-phony. This leads
 # to PGO targets getting reevaluated after a build when you use multiple
 # make invocations. e.g. `make install` like we do below. Fix that.
@@ -498,6 +473,31 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-optimizations"
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
+
+        # CPython allows overriding the default BOLT flags via configure
+        # environment variables. Use our toolchain-specific skip list, add
+        # additional optimizations, use safe identical code folding, and omit
+        # -use-gnu-stack because it incorrectly removes the PT_GNU_STACK
+        # segment.
+        # https://github.com/python/cpython/issues/128514
+        # https://github.com/python/cpython/pull/134642
+        # https://github.com/llvm/llvm-project/issues/174191
+        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=RC4_options/1"
+        BOLT_APPLY_FLAGS="${BOLT_COMMON_FLAGS} \
+-reorder-blocks=ext-tsp \
+-reorder-functions=cdsort \
+-split-functions \
+-split-strategy=cdsplit \
+-icf=safe \
+-inline-all \
+-split-eh \
+-reorder-functions-use-hot-size \
+-peepholes=none \
+-jump-tables=aggressive \
+-inline-ap \
+-indirect-call-promotion=all \
+-dyno-stats \
+-frame-opt=hot"
     fi
 
     # Allow users to enable the experimental JIT on 3.13+
@@ -774,7 +774,8 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${TARGET_TRIPLE}" == x86_64*
     CFLAGS_JIT="${CFLAGS_JIT//-fPIC/}"
 fi
 
-CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
+BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:-}" \
+    CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
 
 # Supplement produced Makefile with our modifications.

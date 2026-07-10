@@ -1,0 +1,22 @@
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -3822,6 +3822,10 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <mach-o/dyld.h>]], [[void *x=_dyl
+ ])
+ 
+ AC_MSG_CHECKING(for memfd_create)
++if test "$ac_cv_func_memfd_create" = yes; then
++  AC_DEFINE(HAVE_MEMFD_CREATE, 1, Define if you have the 'memfd_create' function.)
++  AC_MSG_RESULT(yes)
++else
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+ #ifdef HAVE_SYS_MMAN_H
+ #include <sys/mman.h>
+@@ -3834,6 +3838,7 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    AC_MSG_RESULT(yes)],
+   [AC_MSG_RESULT(no)
+ ])
++fi
+ 
+ AC_MSG_CHECKING(for eventfd)
+ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[

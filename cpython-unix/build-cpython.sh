@@ -355,6 +355,12 @@ if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]
         patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-3.13.patch"
     fi
 
+    # Python 3.10 checks for memfd_create with a custom compile test instead
+    # of the cached ac_cv_func_memfd_create check used by newer versions.
+    if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
+        patch -p1 -i "${ROOT}/patch-configure-memfd-create-3.10.patch"
+    fi
+
     export ac_cv_func_memfd_create=yes
 fi
 

@@ -32,6 +32,7 @@ import json
 import os
 import pathlib
 import re
+import shlex
 import sys
 import urllib.parse
 import urllib.request
@@ -43,6 +44,7 @@ from packaging.version import InvalidVersion, Version
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DOWNLOADS_PATH = ROOT / "pythonbuild" / "downloads.py"
 DISTTESTS_PATH = ROOT / "pythonbuild" / "disttests" / "__init__.py"
+DEFAULT_STAGING_DIR = ROOT / "build" / "download-updates"
 MIRROR_BASE_URL = "https://astral-sh.github.io/mirror/files/"
 USER_AGENT = "python-build-standalone update-downloads"
 
@@ -481,11 +483,74 @@ def artifact_metadata(client: HttpClient, url: str) -> tuple[int, str]:
     return size, digest.hexdigest()
 
 
+def artifact_filename(url: str) -> str:
+    filename = pathlib.PurePosixPath(urllib.parse.urlparse(url).path).name
+    if not filename:
+        raise ValueError(f"could not determine artifact filename from {url}")
+    return filename
+
+
+def stage_artifact(
+    client: HttpClient, url: str, staging_dir: pathlib.Path
+) -> tuple[pathlib.Path, int, str]:
+    staging_dir.mkdir(parents=True, exist_ok=True)
+    path = staging_dir / artifact_filename(url)
+    temporary_path = path.with_name(f".{path.name}.part")
+    digest = hashlib.sha256()
+    size = 0
+    try:
+        with client.open(url) as response, temporary_path.open("wb") as destination:
+            while chunk := response.read(1024 * 1024):
+                destination.write(chunk)
+                size += len(chunk)
+                digest.update(chunk)
+        os.replace(temporary_path, path)
+    except Exception:
+        temporary_path.unlink(missing_ok=True)
+        raise
+    return path, size, digest.hexdigest()
+
+
 def stored_url(release: Release, policy: Policy, upstream_urls: bool) -> str:
     if not policy.mirrored or upstream_urls:
         return release.url
-    filename = pathlib.PurePosixPath(urllib.parse.urlparse(release.url).path).name
-    return urllib.parse.urljoin(MIRROR_BASE_URL, filename)
+    return urllib.parse.urljoin(MIRROR_BASE_URL, artifact_filename(release.url))
+
+
+def print_mirror_instructions(
+    staged: dict[str, tuple[pathlib.Path, Release, str]],
+) -> None:
+    if not staged:
+        return
+
+    print("\nMirrored artifacts staged:", file=sys.stderr)
+    for package, (path, release, sha256) in sorted(staged.items()):
+        print(f"  {package}: {path}", file=sys.stderr)
+        print(f"    upstream: {release.url}", file=sys.stderr)
+        print(f"    sha256:   {sha256}", file=sys.stderr)
+
+    print("\nBefore committing this update:", file=sys.stderr)
+    print("1. Confirm each version and upstream URL are legitimate.", file=sys.stderr)
+    print("2. Verify upstream signatures or checksums when available.", file=sys.stderr)
+    print(
+        "3. Copy each artifact into files/ in a checkout of "
+        "https://github.com/astral-sh/mirror:",
+        file=sys.stderr,
+    )
+    for path, release, _sha256 in sorted(staged.values()):
+        filename = artifact_filename(release.url)
+        print(
+            f"   cp {shlex.quote(str(path))} "
+            f"/path/to/mirror/files/{shlex.quote(filename)}",
+            file=sys.stderr,
+        )
+    print("4. Commit and push the mirror change.", file=sys.stderr)
+    print("5. Wait for GitHub Pages deployment, then verify:", file=sys.stderr)
+    for _path, release, sha256 in sorted(staged.values()):
+        mirror_url = urllib.parse.urljoin(
+            MIRROR_BASE_URL, artifact_filename(release.url)
+        )
+        print(f"   {mirror_url}  sha256={sha256}", file=sys.stderr)
 
 
 def _line_offsets(source: str) -> list[int]:
@@ -668,6 +733,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="write upstream URLs instead of mirror URLs for mirrored packages",
     )
     parser.add_argument(
+        "--staging-dir",
+        type=pathlib.Path,
+        default=DEFAULT_STAGING_DIR,
+        help=(
+            "directory for newly downloaded mirrored artifacts "
+            f"(default: {DEFAULT_STAGING_DIR})"
+        ),
+    )
+    parser.add_argument(
         "--show-unsupported",
         action="store_true",
         help="list packages that are pinned or do not yet have an update policy",
@@ -735,6 +809,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 print(f"{name}: not checked ({reason})")
 
     changes: dict[str, dict[str, Any]] = {}
+    staged: dict[str, tuple[pathlib.Path, Release, str]] = {}
     if args.write:
         for result in results:
             if not result.release or result.error:
@@ -743,7 +818,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 f"downloading {result.package} {result.release.version}",
                 file=sys.stderr,
             )
-            size, sha256 = artifact_metadata(client, result.release.url)
+            if POLICIES[result.package].mirrored:
+                path, size, sha256 = stage_artifact(
+                    client, result.release.url, args.staging_dir
+                )
+                staged[result.package] = (path, result.release, sha256)
+            else:
+                size, sha256 = artifact_metadata(client, result.release.url)
             changes[result.package] = {
                 "url": stored_url(
                     result.release,
@@ -774,6 +855,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
             if "openssl-3.5" in changes:
                 print(f"updated {DISTTESTS_PATH}", file=sys.stderr)
+            print_mirror_instructions(staged)
 
     return 1 if any(result.error for result in results) else 0
 

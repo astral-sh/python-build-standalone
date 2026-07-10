@@ -42,6 +42,7 @@ from packaging.version import InvalidVersion, Version
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DOWNLOADS_PATH = ROOT / "pythonbuild" / "downloads.py"
+DISTTESTS_PATH = ROOT / "pythonbuild" / "disttests" / "__init__.py"
 MIRROR_BASE_URL = "https://astral-sh.github.io/mirror/files/"
 USER_AGENT = "python-build-standalone update-downloads"
 
@@ -588,6 +589,48 @@ def update_download_literals(
     path.write_text(source)
 
 
+def update_openssl_disttest_version(
+    version: str, path: pathlib.Path = DISTTESTS_PATH
+) -> None:
+    release = Version(version).release
+    if len(release) != 3 or release[0] < 3:
+        raise ValueError(f"cannot derive OpenSSL 3.x version info from {version!r}")
+    wanted_version = (release[0], release[1], 0, release[2], 0)
+
+    source = path.read_text()
+    tree = ast.parse(source, filename=str(path))
+    offsets = _line_offsets(source)
+    matches: list[ast.expr] = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign) or not any(
+            isinstance(target, ast.Name) and target.id == "wanted_version"
+            for target in node.targets
+        ):
+            continue
+        try:
+            current_value = ast.literal_eval(node.value)
+        except (SyntaxError, ValueError):
+            continue
+        if (
+            isinstance(current_value, tuple)
+            and len(current_value) == 5
+            and current_value[0] == 3
+        ):
+            matches.append(node.value)
+
+    if len(matches) != 1:
+        raise ValueError(
+            f"expected one OpenSSL 3.x wanted_version assignment in {path}; "
+            f"found {len(matches)}"
+        )
+    node = matches[0]
+    if node.end_lineno is None or node.end_col_offset is None:
+        raise ValueError(f"could not locate OpenSSL version tuple in {path}")
+    start = offsets[node.lineno - 1] + node.col_offset
+    end = offsets[node.end_lineno - 1] + node.end_col_offset
+    path.write_text(source[:start] + _literal(wanted_version) + source[end:])
+
+
 def validate_package_names(
     parser: argparse.ArgumentParser,
     requested: Sequence[str],
@@ -723,10 +766,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                     and POLICIES[result.package].mirrored
                 },
             )
+            if "openssl-3.5" in changes:
+                update_openssl_disttest_version(changes["openssl-3.5"]["version"])
             print(
                 f"updated {args.downloads_file}: {', '.join(sorted(changes))}",
                 file=sys.stderr,
             )
+            if "openssl-3.5" in changes:
+                print(f"updated {DISTTESTS_PATH}", file=sys.stderr)
 
     return 1 if any(result.error for result in results) else 0
 

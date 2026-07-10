@@ -343,27 +343,6 @@ fi
 # from that header. Include it whenever configure finds the header.
 patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
 
-# The modern UAPI overlay provides the memfd constants, but some glibc sysroots
-# predate the memfd_create() wrapper. Force the configure check on and weak-link
-# the wrapper so the function is exposed only when runtime glibc provides it.
-# This workaround is specific to glibc builds; the UAPI overlay itself can also
-# be used with other Linux libcs.
-if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
-    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
-        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak.patch"
-    else
-        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-3.13.patch"
-    fi
-
-    # Python 3.10 checks for memfd_create with a custom compile test instead
-    # of the cached ac_cv_func_memfd_create check used by newer versions.
-    if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
-        patch -p1 -i "${ROOT}/patch-configure-memfd-create-3.10.patch"
-    fi
-
-    export ac_cv_func_memfd_create=yes
-fi
-
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
@@ -608,6 +587,27 @@ fi
 # it's only needed for the HACL Blake2 implementation in Python 3.14+
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}"  ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_explicit_bzero=no"
+fi
+
+# The modern UAPI overlay provides the memfd constants, but some glibc sysroots
+# predate the memfd_create() wrapper. Force the configure check on and weak-link
+# the wrapper so the function is exposed only when runtime glibc provides it.
+# This workaround is specific to glibc builds; the UAPI overlay itself can also
+# be used with other Linux libcs.
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-posixmodule-memfd-create-weak-3.13.patch"
+    fi
+
+    # Python 3.10 checks for memfd_create with a custom compile test instead
+    # of the cached ac_cv_func_memfd_create check used by newer versions.
+    if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
+        patch -p1 -i "${ROOT}/patch-configure-memfd-create-3.10.patch"
+    fi
+
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_memfd_create=yes"
 fi
 
 # Define the base PGO profiling task, which we'll extend below with ignores

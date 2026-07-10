@@ -1132,7 +1132,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
 
             for (symbol_index, symbol) in symbols.enumerate() {
                 let name = String::from_utf8_lossy(symbol.name(endian, strings)?);
-                let is_undefined = symbol.is_undefined(endian);
+                let is_undefined_symbol = symbol.is_undefined(endian);
 
                 // Stack protector and fortify are compiler features rather than
                 // ELF properties. Their symbols provide a useful heuristic that
@@ -1140,7 +1140,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                 if matches!(name.as_ref(), "__stack_chk_fail" | "__stack_chk_fail_local") {
                     has_stack_protector_symbol = true;
                 }
-                if is_undefined && name.starts_with("__") && name.ends_with("_chk") {
+                if is_undefined_symbol && name.starts_with("__") && name.ends_with("_chk") {
                     has_fortify_symbol = true;
                 }
 
@@ -1164,7 +1164,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     None
                 };
 
-                if is_undefined {
+                if is_undefined_symbol {
                     if ELF_BANNED_SYMBOLS.contains(&name.as_ref()) {
                         context.errors.push(format!(
                             "{} defines banned ELF symbol {}",

@@ -1175,6 +1175,7 @@ def main():
             "ncurses",
             "openssl-3.5",
             "patchelf",
+            "pkgconf",
             "sqlite",
             "tcl",
             "uuid",
@@ -1185,7 +1186,7 @@ def main():
             "zlib",
             "zstd",
         ):
-            tools_path = "host" if action in ("m4", "patchelf") else "deps"
+            tools_path = "host" if action in ("m4", "patchelf", "pkgconf") else "deps"
             extra_archives = {
                 "tcl": {"zlib"},
             }.get(action)

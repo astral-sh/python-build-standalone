@@ -108,6 +108,7 @@ aarch64-apple-darwin:
     - m4
     - mpdecimal
     - openssl-3.5
+    - pkgconf
     - sqlite
     - tcl
     - tk
@@ -660,6 +661,7 @@ x86_64-apple-darwin:
     - m4
     - mpdecimal
     - openssl-3.5
+    - pkgconf
     - sqlite
     - tcl
     - tk

@@ -15,6 +15,13 @@ export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib
 # Ensure that `pkg-config` invocations include the static libraries
 export PKG_CONFIG="pkg-config --static"
 
+# Dependency pkg-config files use /tools/deps as their prefix. macOS builds
+# extract dependencies into a temporary directory, so have pkgconf relocate
+# their prefix based on the location of each .pc file.
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
+    export PKG_CONFIG="${PKG_CONFIG} --define-prefix"
+fi
+
 # configure somehow has problems locating llvm-profdata even though it is in
 # PATH. The macro it is using allows us to specify its path via an
 # environment variable.

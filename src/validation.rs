@@ -1826,11 +1826,23 @@ fn validate_extension_modules(
             "_xxtestfuzz",
         ]);
 
+        if matches!(python_major_minor, "3.12" | "3.13" | "3.14" | "3.15") {
+            wanted.insert("_testclinic");
+        }
+
+        if matches!(python_major_minor, "3.13" | "3.14" | "3.15") {
+            wanted.insert("_testclinic_limited");
+        }
+
         if !static_crt {
             wanted.insert("_testcapi");
 
             if !matches!(python_major_minor, "3.10" | "3.11" | "3.12") {
                 wanted.insert("_testlimitedcapi");
+            }
+
+            if python_major_minor == "3.15" {
+                wanted.insert("xxlimited_3_13");
             }
         }
     }

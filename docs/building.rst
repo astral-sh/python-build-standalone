@@ -37,7 +37,8 @@ Linux
 The host system must be x86-64 or aarch64. 
 The execution environment must have access to a Docker
 daemon (all build operations are performed in Docker containers for
-isolation from the host system).
+isolation from the host system). Docker Buildx must be installed and available
+as ``docker buildx``.
 
 ``build.py`` accepts a ``--target-triple`` argument to support building
 for non-native targets (i.e. cross-compiling). 

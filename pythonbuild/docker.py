@@ -6,6 +6,7 @@ import io
 import operator
 import os
 import pathlib
+import subprocess
 import sys
 import tarfile
 import typing
@@ -66,33 +67,43 @@ def build_docker_image(
     )
 
 
-def ensure_docker_image(client, fh, image_path=None, platform=None):
-    res = client.api.build(fileobj=fh, decode=True, platform=platform)
+def ensure_docker_image(client, fh, image_path, platform=None):
+    args = [
+        "docker",
+        "buildx",
+        "build",
+        "--progress=plain",
+        "--load",
+        f"--iidfile={image_path}",
+    ]
+    if platform:
+        args.append(f"--platform={platform}")
+    args.append("-")
 
-    image = None
+    with subprocess.Popen(
+        args,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    ) as process:
+        assert process.stdin is not None
+        assert process.stdout is not None
+        process.stdin.write(fh.read())
+        process.stdin.close()
 
-    for s in res:
-        if "stream" in s:
-            for l in s["stream"].strip().splitlines():
-                log(l)
+        for line in process.stdout:
+            log(line.rstrip(b"\r\n"))
 
-        if "aux" in s and "ID" in s["aux"]:
-            image = s["aux"]["ID"]
+        returncode = process.wait()
 
-        if "error" in s:
-            log(s["error"])
+    if returncode:
+        raise subprocess.CalledProcessError(returncode, args)
 
-    if not image:
-        raise Exception("unable to determine built Docker image")
-
-    if image_path:
-        tar_path = pathlib.Path(str(image_path) + ".tar")
-        with tar_path.open("wb") as fh:
-            for chunk in client.images.get(image).save():
-                fh.write(chunk)
-
-        with image_path.open("w") as fh:
-            fh.write(image + "\n")
+    image = image_path.read_text().strip()
+    tar_path = pathlib.Path(str(image_path) + ".tar")
+    with tar_path.open("wb") as fh:
+        for chunk in client.images.get(image).save():
+            fh.write(chunk)
 
     return image
 

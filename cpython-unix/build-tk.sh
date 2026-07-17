@@ -31,6 +31,10 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
 else
     LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
     EXTRA_CONFIGURE_FLAGS="--x-includes=${TOOLS_PATH}/deps/include --x-libraries=${TOOLS_PATH}/deps/lib"
+
+    # Make pkg-config --static resolve libX11's private xcb and Xau dependencies.
+    sed -i '/^Requires: /a\
+Requires.private: x11' tk.pc.in
 fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \

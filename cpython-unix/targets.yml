@@ -114,7 +114,6 @@ aarch64-apple-darwin:
     - tk
     - uuid
     - xz
-    - zlib
     - zstd
   openssl_target: darwin64-arm64-cc
 
@@ -667,7 +666,6 @@ x86_64-apple-darwin:
     - tk
     - uuid
     - xz
-    - zlib
     - zstd
   openssl_target: darwin64-x86_64-cc
 

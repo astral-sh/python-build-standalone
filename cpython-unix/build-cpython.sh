@@ -210,23 +210,12 @@ if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-remove-system.patch"
 fi
 
-# Python 3.11 has configure support for configuring extension modules. We really,
-# really, really want to use this feature because it looks promising. But at the
-# time we added this code the functionality didn't support all extension modules
-# nor did it easily support static linking, including static linking of extra
-# libraries (which appears to be a limitation of `makesetup`). So for now we
-# disable the functionality and require our auto-generated Setup.local to provide
-# everything.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-        # This sets MODULE_<NAME>_STATE=disabled in the Makefile for all extension
-        # modules that are not unavailable (n/a) based on the platform.
-        # Valid STATE variables are needed to create the _missing_stdlib_info.py
-        # file during the build in Python 3.15+
-        patch -p1 -i "${ROOT}/patch-configure-disable-stdlib-mod-3.12.patch"
-    else
-        patch -p1 -i "${ROOT}/patch-configure-disable-stdlib-mod.patch"
-    fi
+# CPython 3.11 does not configure every standard-library extension, so disable
+# its incomplete generated rules and supply all rules through Setup.local.
+# CPython 3.12+ uses Setup.stdlib with a small Setup.local for per-module
+# link-type overrides.
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
+    patch -p1 -i "${ROOT}/patch-configure-disable-stdlib-mod.patch"
 
     # This hack also prevents the conditional definition of the pwd module in
     # Setup.bootstrap.in from working. So we remove that conditional.
@@ -252,17 +241,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-file-pool.patch"
 else
     patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.11.patch"
-fi
-
-# There's a post-build Python script that verifies modules were
-# built correctly. Ideally we'd invoke this. But our nerfing of
-# the configure-based module building and replacing it with our
-# own Setup-derived version completely breaks assumptions in this
-# script. So leave it off for now... at our own peril.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
-    patch -p1 -i "${ROOT}/patch-checksharedmods-disable-3.15.patch"
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    patch -p1 -i "${ROOT}/patch-checksharedmods-disable.patch"
 fi
 
 # CPython < 3.11 always linked against libcrypt. We backport part of
@@ -371,13 +349,6 @@ if [[ "${CC}" = "clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-tail-call-interp"
 fi
 
-# On Python 3.12+ we need to link the special hacl library provided some SHA-256
-# implementations. Since we hack up the regular extension building mechanism, we
-# need to reinvent this wheel.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    LDFLAGS="${LDFLAGS} -LModules/_hacl"
-fi
-
 # On PPC we need to prevent the glibc 2.22 __tls_get_addr_opt symbol
 # from being introduced to preserve runtime compatibility with older
 # glibc.
@@ -406,6 +377,12 @@ CONFIGURE_FLAGS="
     --with-system-libmpdec
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+    # Build standard-library extensions as built-ins by default. Setup.local
+    # overrides only the extensions that must remain shared or disabled.
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=static --enable-loadable-sqlite-extensions"
+fi
 
 
 # Build a libpython3.x.so, but statically link the interpreter against
@@ -788,6 +765,12 @@ BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:
 # Supplement produced Makefile with our modifications.
 cat ../Makefile.extra >> Makefile
 
+if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
+    # configure-derived MODLIBS uses plain -l flags. Hide symbols from bundled
+    # static dependency libraries in both libpython and the interpreter.
+    printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
+fi
+
 # Debian's PPC64LE GCC 6 defaults to PIE but selects the non-PIE startup object unless -pie is
 # passed explicitly. Add it only to LINKFORSHARED, which CPython uses when linking executables.
 # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81170.
@@ -1123,9 +1106,6 @@ if linux_uapi_include_arch:
         "",
     )
 replace_in_all("-isystem %s/deps/linux-uapi/usr/include" % tools_path, "")
-# See https://github.com/python/cpython/issues/145810#issuecomment-4068139183
-replace_in_all("-LModules/_hacl", "")
-
 EOF
 
 ${BUILD_PYTHON} "${ROOT}/hack_sysconfig.py" "${ROOT}/out/python"

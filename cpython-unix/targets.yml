@@ -923,8 +923,6 @@ x86_64_v4-unknown-linux-gnu:
 x86_64-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
-    # Rosetta doesn't support AVX-512. So we cannot run x86-64-v4 binaries
-    # under Rosetta. But they can build correctly.
     - macos_arm64
   pythons_supported:
     - '3.10'
@@ -1095,6 +1093,8 @@ x86_64_v3-unknown-linux-musl:
 x86_64_v4-unknown-linux-musl:
   host_platforms:
     - linux_x86_64
+    # Rosetta doesn't support AVX-512. So we cannot run x86-64-v4 binaries
+    # under Rosetta. But they can build correctly.
     - macos_arm64
   pythons_supported:
     - '3.10'

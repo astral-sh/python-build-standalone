@@ -727,11 +727,15 @@ _testcapi:
 
 _testclinic:
   minimum-python-version: '3.12'
+  disabled-targets:
+    - .*
   sources:
     - _testclinic.c
 
 _testclinic_limited:
   minimum-python-version: '3.13'
+  disabled-targets:
+    - .*
   sources:
     - _testclinic_limited.c
 
@@ -1114,7 +1118,8 @@ xxlimited_35:
 
 xxlimited_3_13:
   minimum-python-version: '3.15'
-  build-mode: shared-or-disabled
+  disabled-targets:
+    - .*
   sources:
     - xxlimited_3_13.c
 

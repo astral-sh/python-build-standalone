@@ -318,6 +318,19 @@ fi
 # from that header. Include it whenever configure finds the header.
 patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
 
+# Older glibc headers do not define SYS_getrandom even when the modern UAPI
+# headers provide __NR_getrandom. Use the UAPI syscall number directly so
+# CPython can compile os.getrandom without raising the minimum glibc version.
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+        patch -p1 -i "${ROOT}/patch-getrandom-use-nr-3.15.patch"
+    elif [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
+        patch -p1 -i "${ROOT}/patch-getrandom-use-nr-3.14.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-getrandom-use-nr-3.12.patch"
+    fi
+fi
+
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

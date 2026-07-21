@@ -388,6 +388,42 @@ class TestPythonInterpreter(unittest.TestCase):
         finally:
             os.close(fd)
 
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "copy_file_range weak linking is enabled for Linux GNU targets",
+    )
+    def test_os_copy_file_range(self):
+        import ctypes
+        import errno
+
+        libc = ctypes.CDLL(None)
+        libc_has_copy_file_range = hasattr(libc, "copy_file_range")
+        self.assertEqual(
+            hasattr(os, "copy_file_range"), libc_has_copy_file_range
+        )
+
+        if not libc_has_copy_file_range:
+            return
+
+        data = b"copy_file_range"
+        with tempfile.TemporaryFile() as src, tempfile.TemporaryFile() as dst:
+            src.write(data)
+            src.flush()
+            src.seek(0)
+
+            try:
+                copied = os.copy_file_range(src.fileno(), dst.fileno(), len(data))
+            except OSError as exc:
+                if exc.errno == errno.ENOSYS:
+                    self.skipTest(
+                        "the runtime kernel does not support copy_file_range"
+                    )
+                raise
+
+            self.assertEqual(copied, len(data))
+            dst.seek(0)
+            self.assertEqual(dst.read(), data)
+
     def test_linux_uapi_not_in_sysconfig(self):
         import sysconfig
 

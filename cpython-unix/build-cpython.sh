@@ -623,6 +623,19 @@ if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && "${TARGET_TRIPLE}" == *-linux-gnu* ]]
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_memfd_create=yes"
 fi
 
+# Some glibc sysroots predate the copy_file_range() wrapper. Force the
+# configure check on and weak-link the wrapper so the function is exposed only
+# when runtime glibc provides it.
+if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+        patch -p1 -i "${ROOT}/patch-posixmodule-copy-file-range-weak.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-posixmodule-copy-file-range-weak-3.13.patch"
+    fi
+
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_copy_file_range=yes"
+fi
+
 # Define the base PGO profiling task, which we'll extend below with ignores
 export PROFILE_TASK='-m test --pgo'
 

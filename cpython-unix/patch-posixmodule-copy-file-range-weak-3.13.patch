@@ -1,0 +1,31 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -10431,4 +10431,9 @@
+ #ifdef HAVE_COPY_FILE_RANGE
++/* Weak references. */
++__attribute__((weak))
++ssize_t copy_file_range(int src, off_t *offset_src, int dst,
++                        off_t *offset_dst, size_t count, unsigned int flags);
++
+ /*[clinic input]
+ 
+ os.copy_file_range
+@@ -15737,5 +15742,17 @@ posixmodule_exec(PyObject *m)
+ #endif
+ 
++#ifdef HAVE_COPY_FILE_RANGE
++    if (copy_file_range == NULL) {
++        PyObject *dict = PyModule_GetDict(m);
++        if (dict == NULL) {
++            return -1;
++        }
++        if (PyDict_DelItemString(dict, "copy_file_range") < 0) {
++            return -1;
++        }
++    }
++#endif
++
+     /* Initialize environ dictionary */
+     PyObject *v = convertenviron();
+     Py_XINCREF(v);

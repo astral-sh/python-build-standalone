@@ -495,7 +495,11 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         # https://github.com/python/cpython/issues/128514
         # https://github.com/python/cpython/pull/134642
         # https://github.com/llvm/llvm-project/issues/174191
-        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=RC4_options/1"
+        # BOLT's allocation combiner can remove required stack allocations in
+        # the HACL hash compressors, leaving frame-pointer-relative accesses
+        # below the x86-64 red zone. Match BOLT's `/N` suffix for local symbols.
+        # https://github.com/astral-sh/uv/issues/20618
+        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=RC4_options/1,sha256_update/.*,sha512_update/.*,PyBlake2_blake2b_compress/.*,PyBlake2_blake2s_compress/.*,update_block.*"
         BOLT_APPLY_FLAGS="${BOLT_COMMON_FLAGS} \
 -reorder-blocks=ext-tsp \
 -reorder-functions=cdsort \

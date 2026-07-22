@@ -398,9 +398,7 @@ class TestPythonInterpreter(unittest.TestCase):
 
         libc = ctypes.CDLL(None)
         libc_has_copy_file_range = hasattr(libc, "copy_file_range")
-        self.assertEqual(
-            hasattr(os, "copy_file_range"), libc_has_copy_file_range
-        )
+        self.assertEqual(hasattr(os, "copy_file_range"), libc_has_copy_file_range)
 
         if not libc_has_copy_file_range:
             return
@@ -415,9 +413,7 @@ class TestPythonInterpreter(unittest.TestCase):
                 copied = os.copy_file_range(src.fileno(), dst.fileno(), len(data))
             except OSError as exc:
                 if exc.errno == errno.ENOSYS:
-                    self.skipTest(
-                        "the runtime kernel does not support copy_file_range"
-                    )
+                    self.skipTest("the runtime kernel does not support copy_file_range")
                 raise
 
             self.assertEqual(copied, len(data))

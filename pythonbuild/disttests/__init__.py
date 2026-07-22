@@ -361,6 +361,24 @@ class TestPythonInterpreter(unittest.TestCase):
 
     @unittest.skipUnless(
         "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "modern kernel UAPI headers are currently enabled for Linux GNU targets",
+    )
+    def test_os_getrandom(self):
+        import errno
+
+        self.assertTrue(hasattr(os, "getrandom"))
+
+        try:
+            data = os.getrandom(16)
+        except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                self.skipTest("the runtime kernel does not support getrandom")
+            raise
+
+        self.assertEqual(len(data), 16)
+
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
         "memfd_create weak linking is enabled for Linux GNU targets",
     )
     def test_os_memfd_create(self):

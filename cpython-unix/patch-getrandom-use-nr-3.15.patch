@@ -1,0 +1,24 @@
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -7689 +7689 @@
+-        (void)syscall(SYS_getrandom, buffer, buflen, flags);
++        (void)syscall(__NR_getrandom, buffer, buflen, flags);
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -17258 +17258 @@
+-        n = syscall(SYS_getrandom, data, size, flags);
++        n = syscall(__NR_getrandom, data, size, flags);
+diff --git a/Python/bootstrap_hash.c b/Python/bootstrap_hash.c
+--- a/Python/bootstrap_hash.c
++++ b/Python/bootstrap_hash.c
+@@ -26 +26 @@
+-#    include <sys/syscall.h>      // SYS_getrandom
++#    include <sys/syscall.h>      // __NR_getrandom
+@@ -134 +134 @@
+-            n = syscall(SYS_getrandom, dest, n, flags);
++            n = syscall(__NR_getrandom, dest, n, flags);
+@@ -138 +138 @@
+-            n = syscall(SYS_getrandom, dest, n, flags);
++            n = syscall(__NR_getrandom, dest, n, flags);

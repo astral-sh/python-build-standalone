@@ -515,6 +515,14 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 -indirect-call-promotion=all \
 -dyno-stats \
 -frame-opt=hot"
+        if [[ "${TARGET_TRIPLE}" == aarch64* ]]; then
+            # CDSplit requires the prohibitively slow compact code model on
+            # AArch64, indirect-call promotion crashes on calls, and frame
+            # optimization is only supported on x86.
+            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/-split-strategy=cdsplit/-split-strategy=profile2}"
+            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/-indirect-call-promotion=all/-indirect-call-promotion=jump-tables}"
+            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/ -frame-opt=hot/}"
+        fi
     fi
 
     # Allow users to enable the experimental JIT on 3.13+

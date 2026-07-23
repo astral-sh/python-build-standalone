@@ -2,9 +2,12 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import dataclasses
+import json
 import pathlib
 import re
 import tarfile
+from typing import Optional
 
 import jsonschema
 import yaml
@@ -137,6 +140,65 @@ EXTENSION_MODULES_SCHEMA = {
     },
 }
 
+STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES = {
+    "reason": {"type": "string"},
+    "targets": {
+        "type": "array",
+        "items": {"type": "string"},
+    },
+    "ignore-targets": {
+        "type": "array",
+        "items": {"type": "string"},
+    },
+    "minimum-python-version": {"type": "string"},
+    "maximum-python-version": {"type": "string"},
+    "build-option": {"type": "string"},
+    "no-build-option": {"type": "string"},
+}
+
+STDLIB_TEST_ANNOTATIONS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "harness-skips": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    **STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES,
+                },
+                "additionalProperties": False,
+                "required": ["name", "reason"],
+            },
+        },
+        "module-excludes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "module": {"type": "string"},
+                    **STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES,
+                },
+                "additionalProperties": False,
+                "required": ["module", "reason"],
+            },
+        },
+        "expected-failures": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "dont-verify": {"type": "boolean"},
+                    "intermittent": {"type": "boolean"},
+                    **STDLIB_TEST_ANNOTATION_COMMON_PROPERTIES,
+                },
+                "additionalProperties": False,
+                "required": ["name", "reason"],
+            },
+        },
+    },
+}
 
 # Packages that define tests.
 STDLIB_TEST_PACKAGES = {
@@ -750,3 +812,139 @@ def extension_modules_config(yaml_path: pathlib.Path):
     jsonschema.validate(data, EXTENSION_MODULES_SCHEMA)
 
     return data
+
+
+TEST_ANNOTATION_HARNESS_SKIP = "harness-skip"
+TEST_ANNOTATION_MODULE_EXCLUDE = "module-exclude"
+TEST_ANNOTATION_TEST_FAILURE = "test-failure"
+
+
+@dataclasses.dataclass
+class TestAnnotation:
+    # Describes the type of annotation.
+    flavor: str
+    # Name/pattern of test.
+    name: str
+    # Describes why the annotation exists.
+    reason: str
+    # Whether the test is expected to fail.
+    expect_test_failure: bool
+    # Whether to skip verification of failures.
+    dont_verify: bool
+    # Whether test failure is intermittent. Should only be true if
+    # expect_test_failure also true.
+    intermittent_test_failure: bool
+    # Whether to exclude loading the test module when running tests.
+    exclude_testing: bool
+
+
+@dataclasses.dataclass
+class TestAnnotations:
+    annotations: list[TestAnnotation]
+
+    def json_dump(self, of):
+        data = [dataclasses.asdict(a) for a in self.annotations]
+        json.dump(data, of, indent=2)
+
+
+def filter_stdlib_test_entry(
+    flavor: str,
+    test,
+    python_version: str,
+    target_triple: str,
+    build_options: set[str],
+) -> Optional[TestAnnotation]:
+    name = test["name"]
+
+    if targets := test.get("targets"):
+        matches_target = any(re.match(p, target_triple) for p in targets)
+    else:
+        matches_target = True
+
+    for m in test.get("ignore-targets", []):
+        if re.match(m, target_triple):
+            matches_target = False
+
+    if not matches_target:
+        log(f"ignoring {flavor} rule (target doesn't match): {name}")
+        return None
+
+    python_minimum_version = test.get("minimum-python-version", "1.0")
+    python_maximum_version = test.get("maximum-python-version", "100.0")
+
+    if not meets_python_minimum_version(python_version, python_minimum_version):
+        log(
+            f"ignoring {flavor} rule ({python_version} < {python_minimum_version} (min)): {name}"
+        )
+        return None
+
+    if not meets_python_maximum_version(python_version, python_maximum_version):
+        log(
+            f"ignoring {flavor} rule ({python_version} > {python_maximum_version} (max)): {name}"
+        )
+        return None
+
+    if option := test.get("build-option"):
+        if option not in build_options:
+            log(f"ignoring {flavor} rule (build option {option} not present): {name}")
+            return None
+
+    if option := test.get("no-build-option"):
+        if option in build_options:
+            log(f"ignoring {flavor} rule (build option {option} is present): {name}")
+            return None
+
+    # Filtering complete. This rule applies to the current build.
+
+    log(f"relevant {flavor} test rule: {name}: {test['reason']}")
+
+    return TestAnnotation(
+        flavor=flavor,
+        name=name,
+        reason=test["reason"],
+        expect_test_failure=True,
+        dont_verify=test.get("dont-verify", False),
+        intermittent_test_failure=test.get("intermittent", False),
+        exclude_testing=test.get("exclude", False),
+    )
+
+
+def stdlib_test_annotations(
+    yaml_path: pathlib.Path,
+    python_version: str,
+    target_triple: str,
+    build_options: set[str],
+) -> TestAnnotations:
+    """Processes the test-annotations.yml file for a given build configuration."""
+    with yaml_path.open("r", encoding="utf-8") as fh:
+        data = yaml.load(fh, Loader=yaml.SafeLoader)
+
+    jsonschema.validate(data, STDLIB_TEST_ANNOTATIONS_SCHEMA)
+
+    annotations = []
+
+    log(f"processing {len(data['expected-failures'])} stdlib test annotations")
+
+    raw_entries = []
+
+    for entry in data["harness-skips"]:
+        raw_entries.append((TEST_ANNOTATION_HARNESS_SKIP, entry))
+
+    for entry in data["module-excludes"]:
+        entry["name"] = entry["module"]
+        raw_entries.append((TEST_ANNOTATION_MODULE_EXCLUDE, entry))
+
+    for entry in data["expected-failures"]:
+        raw_entries.append((TEST_ANNOTATION_TEST_FAILURE, entry))
+
+    for flavor, entry in raw_entries:
+        if a := filter_stdlib_test_entry(
+            flavor,
+            entry,
+            python_version,
+            target_triple,
+            build_options,
+        ):
+            annotations.append(a)
+
+    return TestAnnotations(annotations)

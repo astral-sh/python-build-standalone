@@ -37,7 +37,8 @@ Linux
 The host system must be x86-64 or aarch64. 
 The execution environment must have access to a Docker
 daemon (all build operations are performed in Docker containers for
-isolation from the host system).
+isolation from the host system). Docker Buildx must be installed and available
+as ``docker buildx``.
 
 ``build.py`` accepts a ``--target-triple`` argument to support building
 for non-native targets (i.e. cross-compiling). 
@@ -76,9 +77,11 @@ The ``--target-triple`` argument can be used to build for an Intel Mac on an arm
 
     $ ./build.py --target-triple x86_64-apple-darwin
 
-Additionally, an arm64 macOS host can be used to build Linux aarch64 targets using Docker::
+Additionally, an arm64 macOS host can be used to build Linux aarch64 and x86-64
+targets using Docker::
 
     $ ./build.py --target-triple aarch64-unknown-linux-gnu
+    $ ./build.py --target-triple x86_64-unknown-linux-gnu
 
 The ``APPLE_SDK_PATH`` environment variable is recognized as the path
 to the Apple SDK to use. If not defined, the build will attempt to find

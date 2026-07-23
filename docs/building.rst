@@ -77,9 +77,11 @@ The ``--target-triple`` argument can be used to build for an Intel Mac on an arm
 
     $ ./build.py --target-triple x86_64-apple-darwin
 
-Additionally, an arm64 macOS host can be used to build Linux aarch64 targets using Docker::
+Additionally, an arm64 macOS host can be used to build Linux aarch64 and x86-64
+targets using Docker::
 
     $ ./build.py --target-triple aarch64-unknown-linux-gnu
+    $ ./build.py --target-triple x86_64-unknown-linux-gnu
 
 The ``APPLE_SDK_PATH`` environment variable is recognized as the path
 to the Apple SDK to use. If not defined, the build will attempt to find

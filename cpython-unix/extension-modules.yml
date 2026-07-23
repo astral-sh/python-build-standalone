@@ -108,6 +108,7 @@ _csv:
     - _csv.c
 
 _ctypes:
+  build-mode: shared
   sources:
     - _ctypes/_ctypes.c
     - _ctypes/callbacks.c

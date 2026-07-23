@@ -302,7 +302,6 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
                 || artifact.name.contains("dockerbuild")
                 || artifact.name.contains("crate-")
                 || artifact.name.contains("image-")
-                || artifact.name.contains("junit")
             {
                 continue;
             }

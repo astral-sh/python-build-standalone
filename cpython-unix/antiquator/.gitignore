@@ -1,0 +1,10 @@
+lib*_placeholder.c
+lib*_placeholder.versions
+lib*_placeholder.so
+*.o
+*.a
+glibc-*/
+glibc_*.debian.tar.xz
+glibc_*.dsc
+glibc_*.orig.tar.xz
+glibc_*.orig.tar.xz.asc

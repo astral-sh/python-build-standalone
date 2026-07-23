@@ -186,6 +186,9 @@ $(OUTDIR)/libedit-$(LIBEDIT_VERSION)-$(PACKAGE_SUFFIX).tar: $(LIBEDIT_DEPENDS)
 $(OUTDIR)/patchelf-$(PATCHELF_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-patchelf.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) patchelf
 
+$(OUTDIR)/pkgconf-$(PKGCONF_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-pkgconf.sh
+	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) pkgconf
+
 $(OUTDIR)/sqlite-$(SQLITE_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP_DEPENDS) $(HERE)/build-sqlite.sh
 	$(RUN_BUILD) --docker-image $(DOCKER_IMAGE_BUILD) sqlite
 
@@ -265,6 +268,7 @@ PYTHON_DEPENDS_$(1) := \
     $$(if $$(NEED_OPENSSL_1_1),$$(OUTDIR)/openssl-1.1-$$(OPENSSL_1.1_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_OPENSSL_3_5),$$(OUTDIR)/openssl-3.5-$$(OPENSSL_3.5_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_PATCHELF),$$(OUTDIR)/patchelf-$$(PATCHELF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_PKGCONF),$$(OUTDIR)/pkgconf-$$(PKGCONF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_SQLITE),$$(OUTDIR)/sqlite-$$(SQLITE_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TCL),$$(OUTDIR)/tcl-$$(TCL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_TK),$$(OUTDIR)/tk-$$(TK_VERSION)-$$(PACKAGE_SUFFIX).tar) \

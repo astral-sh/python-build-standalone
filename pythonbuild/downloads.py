@@ -286,6 +286,12 @@ DOWNLOADS = {
         "sha256": "39e8aeccd7495d54df094d2b4a7c08010ff7777036faaf24f28e07777d1598e2",
         "version": "0.13.1",
     },
+    "pkgconf": {
+        "url": "https://github.com/pkgconf/pkgconf/releases/download/pkgconf-3.0.3/pkgconf-3.0.3.tar.xz",
+        "size": 415512,
+        "sha256": "aa033abb2b777ba4e66635495a931e53c49d86e4e4e38af68c0f76d666cbd8cf",
+        "version": "3.0.3",
+    },
     "pip": {
         "url": "https://files.pythonhosted.org/packages/5d/95/6b5cb3461ea5673ba0995989746db58eb18b91b54dbf331e72f569540946/pip-26.1.2-py3-none-any.whl",
         "size": 1813144,

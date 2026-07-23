@@ -725,6 +725,20 @@ _testcapi:
     - source: _testcapi/weakref.c
       minimum-python-version: "3.13"
 
+_testclinic:
+  minimum-python-version: '3.12'
+  disabled-targets:
+    - .*
+  sources:
+    - _testclinic.c
+
+_testclinic_limited:
+  minimum-python-version: '3.13'
+  disabled-targets:
+    - .*
+  sources:
+    - _testclinic_limited.c
+
 _testexternalinspection:
   minimum-python-version: '3.13'
   maximum-python-version: '3.13'
@@ -1101,6 +1115,13 @@ xxlimited_35:
   # Example extension. We don't care about it.
   disabled-targets:
     - .*
+
+xxlimited_3_13:
+  minimum-python-version: '3.15'
+  disabled-targets:
+    - .*
+  sources:
+    - xxlimited_3_13.c
 
 xxsubtype:
   setup-enabled-conditional:

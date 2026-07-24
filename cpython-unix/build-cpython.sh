@@ -504,7 +504,6 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 -reorder-blocks=ext-tsp \
 -reorder-functions=cdsort \
 -split-functions \
--split-strategy=cdsplit \
 -icf=safe \
 -inline-all \
 -split-eh \
@@ -512,16 +511,18 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 -peepholes=none \
 -jump-tables=aggressive \
 -inline-ap \
--indirect-call-promotion=all \
--dyno-stats \
--frame-opt=hot"
+-dyno-stats"
         if [[ "${TARGET_TRIPLE}" == aarch64* ]]; then
             # CDSplit requires the prohibitively slow compact code model on
-            # AArch64, indirect-call promotion crashes on calls, and frame
-            # optimization is only supported on x86.
-            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/-split-strategy=cdsplit/-split-strategy=profile2}"
-            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/-indirect-call-promotion=all/-indirect-call-promotion=jump-tables}"
-            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS/ -frame-opt=hot/}"
+            # AArch64, and indirect-call promotion crashes on calls.
+            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS} \
+-split-strategy=profile2 \
+-indirect-call-promotion=jump-tables"
+        elif [[ "${TARGET_TRIPLE}" == x86_64* ]]; then
+            BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS} \
+-split-strategy=cdsplit \
+-indirect-call-promotion=all \
+-frame-opt=hot"
         fi
     fi
 

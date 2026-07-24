@@ -125,14 +125,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 fi
 
-# Add a make target to write the PYTHON_FOR_BUILD variable so we can
-# invoke the host Python on our own.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    patch -p1 -i "${ROOT}/patch-write-python-for-build-3.12.patch"
-else
-    patch -p1 -i "${ROOT}/patch-write-python-for-build.patch"
-fi
-
 # Object files can get listed multiple times leading to duplicate symbols
 # when linking. Prevent this.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
@@ -835,12 +827,18 @@ if [ -n "${CPYTHON_DEBUG}" ]; then
     PYTHON_BINARY_SUFFIX="${PYTHON_BINARY_SUFFIX}d"
 fi
 
-# Python interpreter to use during the build. When cross-compiling,
-# we have the Makefile emit a script which sets some environment
-# variables that force the invoked Python to pick up the configuration
-# of the target Python but invoke the host binary.
+# Python interpreter to use during the build. When cross-compiling, emit a
+# script with Make's expanded PYTHON_FOR_BUILD value. This sets environment
+# variables that force the invoked Python to pick up the configuration of the
+# target Python but invoke the host binary.
 if [ -n "${CROSS_COMPILING}" ]; then
-    make write-python-for-build
+    make -f - python-for-build <<'EOF'
+include Makefile
+
+python-for-build:
+	printf "%s\n" "#!/bin/sh" "set -e" "exec env $(PYTHON_FOR_BUILD) \$$@" > python-for-build
+	chmod +x python-for-build
+EOF
     BUILD_PYTHON=$(pwd)/python-for-build
 else
     BUILD_PYTHON=${ROOT}/out/python/install/bin/python3

@@ -108,6 +108,7 @@ _csv:
     - _csv.c
 
 _ctypes:
+  build-mode: shared
   sources:
     - _ctypes/_ctypes.c
     - _ctypes/callbacks.c
@@ -128,6 +129,8 @@ _ctypes:
     - HAVE_FFI_PREP_CLOSURE_LOC=1
     - HAVE_FFI_CLOSURE_ALLOC=1
   defines-conditional:
+    - define: Py_BUILD_CORE_MODULE
+      maximum-python-version: "3.10"
     - define: MACOSX
       targets:
         - .*-apple-.*

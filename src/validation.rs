@@ -865,6 +865,7 @@ const GLOBAL_EXTENSIONS_WINDOWS_NO_STATIC: &[&str] = &["_testinternalcapi", "_tk
 /// Extension modules that should be built as shared libraries.
 const SHARED_LIBRARY_EXTENSIONS: &[&str] = &[
     "_crypt",
+    "_ctypes",
     "_ctypes_test",
     "_dbm",
     "_testbuffer",

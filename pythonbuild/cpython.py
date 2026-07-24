@@ -697,7 +697,7 @@ def derive_setup_local(
 
     for target in sorted(extra_cflags):
         make_lines.append(
-            b"%s: PY_STDMODULE_CFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
+            b"%s: PY_CPPFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
         )
 
     return {

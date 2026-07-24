@@ -465,7 +465,7 @@ def derive_setup_local(
     # agrees fully with the distribution's knowledge of extensions. So we can
     # treat our metadata as canonical.
 
-    RE_DEFINE = re.compile(rb"-D[^=]+=[^\s]+")
+    RE_DEFINE = re.compile(rb"-D[^=\s]+=[^\s]+")
 
     # Translate our YAML metadata into Setup lines.
 

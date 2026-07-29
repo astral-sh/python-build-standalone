@@ -46,6 +46,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "mipsel-unknown-linux-gnu",
     "mips64el-unknown-linux-gnuabi64",
     "ppc64le-unknown-linux-gnu",
+    "ppc64le_power9-unknown-linux-gnu",
     "riscv64-unknown-linux-gnu",
     "s390x-unknown-linux-gnu",
     "x86_64-apple-darwin",
@@ -199,6 +200,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
+            "ppc64le_power9-unknown-linux-gnu",
+            version_compare::Version::from("2.17").unwrap(),
+        );
+        versions.insert(
             "riscv64-unknown-linux-gnu",
             version_compare::Version::from("2.28").unwrap(),
         );
@@ -271,6 +276,10 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
             ),
             ("mips64el-unknown-linux-gnuabi64", vec![]),
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
+            (
+                "ppc64le_power9-unknown-linux-gnu",
+                vec!["ld64.so.1", "ld64.so.2"],
+            ),
             (
                 "riscv64-unknown-linux-gnu",
                 vec!["ld-linux-riscv64-lp64d.so.1", "libatomic.so.1"],
@@ -552,6 +561,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("mipsel-unknown-linux-gnu", "linux-mipsel"),
         ("mips64el-unknown-linux-gnuabi64", "todo"),
         ("ppc64le-unknown-linux-gnu", "linux-powerpc64le"),
+        ("ppc64le_power9-unknown-linux-gnu", "linux-powerpc64le"),
         ("riscv64-unknown-linux-gnu", "linux-riscv64"),
         ("s390x-unknown-linux-gnu", "linux-s390x"),
         ("x86_64-apple-darwin", "macosx-10.15-x86_64"),
@@ -964,6 +974,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "mipsel-unknown-linux-gnu" => object::elf::EM_MIPS,
         "mips64el-unknown-linux-gnuabi64" => 0,
         "ppc64le-unknown-linux-gnu" => object::elf::EM_PPC64,
+        "ppc64le_power9-unknown-linux-gnu" => object::elf::EM_PPC64,
         "riscv64-unknown-linux-gnu" => object::elf::EM_RISCV,
         "s390x-unknown-linux-gnu" => object::elf::EM_S390,
         "x86_64-unknown-linux-gnu" => object::elf::EM_X86_64,

@@ -8,7 +8,7 @@ use {
     clap::ArgMatches,
     normalize_path::NormalizePath,
     object::{
-        Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
+        Architecture, Endianness, FileKind, Object, ObjectSymbol, SectionIndex, SymbolScope,
         elf::{
             DF_1_NOW, DF_BIND_NOW, DF_TEXTREL, DT_BIND_NOW, DT_FLAGS, DT_FLAGS_1, DT_TEXTREL,
             ET_DYN, ET_EXEC, FileHeader32, FileHeader64, PF_W, PF_X, PT_GNU_RELRO, PT_GNU_STACK,
@@ -896,6 +896,15 @@ pub struct ValidationContext {
     /// Symbols exported from dynamic libpython library.
     pub libpython_exported_symbols: BTreeSet<String>,
 
+    /// Python symbols defined in the dynamic libpython library.
+    libpython_defined_symbols: BTreeSet<String>,
+
+    /// Python symbols defined by object files advertised in PYTHON.json.
+    advertised_object_defined_symbols: BTreeSet<String>,
+
+    /// Strong undefined Python symbols referenced by advertised object files.
+    advertised_object_undefined_symbols: BTreeSet<String>,
+
     /// Undefined Mach-O symbols that are required / non-weak.
     pub macho_undefined_symbols_strong: RequiredSymbols,
 
@@ -910,11 +919,86 @@ impl ValidationContext {
         self.seen_dylibs.extend(other.seen_dylibs);
         self.libpython_exported_symbols
             .extend(other.libpython_exported_symbols);
+        self.libpython_defined_symbols
+            .extend(other.libpython_defined_symbols);
+        self.advertised_object_defined_symbols
+            .extend(other.advertised_object_defined_symbols);
+        self.advertised_object_undefined_symbols
+            .extend(other.advertised_object_undefined_symbols);
         self.macho_undefined_symbols_strong
             .merge(other.macho_undefined_symbols_strong);
         self.macho_undefined_symbols_weak
             .merge(other.macho_undefined_symbols_weak);
     }
+}
+
+fn normalize_object_symbol<'a>(name: &'a str, triple: &str) -> &'a str {
+    let name = if triple.contains("-apple-darwin") {
+        name.strip_prefix('_').unwrap_or(name)
+    } else if triple == "i686-pc-windows-msvc" {
+        name.strip_prefix(['_', '@']).unwrap_or(name)
+    } else {
+        name
+    };
+
+    if triple == "i686-pc-windows-msvc"
+        && let Some((name, suffix)) = name.rsplit_once('@')
+        && !name.is_empty()
+        && !suffix.is_empty()
+        && suffix.bytes().all(|byte| byte.is_ascii_digit())
+    {
+        return name;
+    }
+
+    name
+}
+
+fn is_python_symbol(name: &str) -> bool {
+    name.starts_with("Py") || name.starts_with("_Py")
+}
+
+fn is_libpython_file(path: &Path, suffix: &str) -> bool {
+    path.file_name()
+        .map(|filename| {
+            let filename = filename.to_string_lossy();
+            filename.starts_with("libpython") && filename.ends_with(suffix)
+        })
+        .unwrap_or(false)
+}
+
+fn validate_libpython_object_symbols(
+    context: &ValidationContext,
+    object_coverage_complete: bool,
+    libpython_definition_coverage_complete: bool,
+) -> Vec<String> {
+    if !object_coverage_complete {
+        return vec![];
+    }
+
+    // Linked libpython binaries can also contain linker-generated symbols and
+    // private symbols from statically linked dependencies. Restrict this check
+    // to the Python API namespace so those unrelated symbols do not require
+    // advertising dependency object files in PYTHON.json.
+    let mut required_symbols = context
+        .libpython_exported_symbols
+        .iter()
+        .filter(|symbol| is_python_symbol(symbol))
+        .collect::<BTreeSet<_>>();
+
+    if libpython_definition_coverage_complete {
+        required_symbols.extend(
+            context
+                .advertised_object_undefined_symbols
+                .intersection(&context.libpython_defined_symbols)
+                .filter(|symbol| is_python_symbol(symbol)),
+        );
+    }
+
+    required_symbols
+        .into_iter()
+        .filter(|symbol| !context.advertised_object_defined_symbols.contains(*symbol))
+        .map(|symbol| format!("libpython symbol {symbol} is not defined by an advertised object"))
+        .collect()
 }
 
 fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
@@ -935,6 +1019,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
             .file_name()
             .map(|name| name.to_string_lossy().starts_with("python"))
             .unwrap_or(false);
+    let is_libpython = is_libpython_file(path, ".so.1.0");
     let mut has_stack_protector_symbol = false;
     let mut has_fortify_symbol = false;
 
@@ -1133,6 +1218,13 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
             for (symbol_index, symbol) in symbols.enumerate() {
                 let name = String::from_utf8_lossy(symbol.name(endian, strings)?);
                 let is_undefined_symbol = symbol.is_undefined(endian);
+                if is_libpython
+                    && !is_undefined_symbol
+                    && !name.is_empty()
+                    && is_python_symbol(&name)
+                {
+                    context.libpython_defined_symbols.insert(name.to_string());
+                }
 
                 // Stack protector and fortify are compiler features rather than
                 // ELF properties. Their symbols provide a useful heuristic that
@@ -1209,17 +1301,12 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                         ));
                     }
 
-                    if let Some(filename) = path.file_name() {
-                        let filename = filename.to_string_lossy();
-
-                        if filename.starts_with("libpython")
-                            && filename.ends_with(".so.1.0")
-                            && matches!(symbol.st_bind(), STB_GLOBAL | STB_WEAK)
-                            && symbol.st_shndx(endian) != SHN_UNDEF
-                            && symbol.st_visibility() == STV_DEFAULT
-                        {
-                            context.libpython_exported_symbols.insert(name.to_string());
-                        }
+                    if is_libpython
+                        && matches!(symbol.st_bind(), STB_GLOBAL | STB_WEAK)
+                        && symbol.st_shndx(endian) != SHN_UNDEF
+                        && symbol.st_visibility() == STV_DEFAULT
+                    {
+                        context.libpython_exported_symbols.insert(name.to_string());
                     }
                 }
             }
@@ -1345,6 +1432,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     let advertised_sdk_version = semver::Version::parse(&format!("{advertised_sdk_version}.0"))?;
 
     let endian = header.endian()?;
+    let is_libpython = is_libpython_file(path, ".dylib");
 
     let wanted_cpu_type = match target_triple {
         "aarch64-apple-darwin" => object::macho::CPU_TYPE_ARM64,
@@ -1443,6 +1531,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                 for symbol in table.iter() {
                     let name = symbol.name(endian, strings)?;
                     let name = String::from_utf8(name.to_vec())?;
+                    let search_name = normalize_object_symbol(&name, target_triple);
 
                     if symbol.is_undefined() {
                         undefined_symbols.push(MachOSymbol {
@@ -1450,6 +1539,10 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                             library_ordinal: symbol.library_ordinal(endian),
                             weak: symbol.n_desc(endian) & (object::macho::N_WEAK_REF) != 0,
                         });
+                    } else if is_libpython && is_python_symbol(search_name) {
+                        context
+                            .libpython_defined_symbols
+                            .insert(search_name.to_string());
                     }
 
                     // Ensure specific symbols in dynamic binaries have proper visibility.
@@ -1467,12 +1560,6 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                             SymbolScope::Dynamic
                         };
 
-                        let search_name = if let Some(v) = name.strip_prefix('_') {
-                            v
-                        } else {
-                            name.as_str()
-                        };
-
                         if DEPENDENCY_PACKAGE_SYMBOLS.contains(&search_name)
                             && scope == SymbolScope::Dynamic
                         {
@@ -1483,17 +1570,10 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                             ));
                         }
 
-                        if let Some(filename) = path.file_name() {
-                            let filename = filename.to_string_lossy();
-
-                            if filename.starts_with("libpython")
-                                && filename.ends_with(".dylib")
-                                && scope == SymbolScope::Dynamic
-                            {
-                                context
-                                    .libpython_exported_symbols
-                                    .insert(search_name.to_string());
-                            }
+                        if is_libpython && scope == SymbolScope::Dynamic {
+                            context
+                                .libpython_exported_symbols
+                                .insert(search_name.to_string());
                         }
                     }
                 }
@@ -1632,9 +1712,8 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
 
     if filename.starts_with("python") && filename.ends_with(".dll") {
         for symbol in pe.exports()? {
-            context
-                .libpython_exported_symbols
-                .insert(String::from_utf8(symbol.name().to_vec())?);
+            let symbol = String::from_utf8(symbol.name().to_vec())?;
+            context.libpython_exported_symbols.insert(symbol);
         }
     }
 
@@ -1733,6 +1812,202 @@ fn validate_possible_object_file(
     }
 
     Ok(context)
+}
+
+fn collect_advertised_object_symbols(
+    context: &mut ValidationContext,
+    triple: &str,
+    declared_format: &str,
+    path: &Path,
+    data: &[u8],
+) -> bool {
+    // LLVM bitcode objects used by LTO builds are not supported by the object
+    // crate. Only grant that exemption when both the metadata and bytes identify
+    // bitcode. LTO builds can also advertise native assembly objects, so dispatch
+    // those by their actual format while keeping overall symbol coverage partial.
+    let bitcode_declared = is_declared_llvm_bitcode_format(declared_format);
+    if bitcode_declared && has_recognizable_llvm_bitcode_container(data) {
+        return false;
+    }
+    let expected_format = if bitcode_declared {
+        target_object_format(triple).unwrap_or(declared_format)
+    } else {
+        declared_format
+    };
+
+    let Ok(kind) = FileKind::parse(data) else {
+        let expected = if bitcode_declared {
+            format!("LLVM bitcode or {expected_format}")
+        } else {
+            expected_format.to_string()
+        };
+        context.errors.push(format!(
+            "advertised object {} could not be parsed as {expected}",
+            path.display()
+        ));
+        return false;
+    };
+    if !object_kind_matches_declared_format(kind, expected_format) {
+        context.errors.push(format!(
+            "advertised object {} is {kind:?}, not the expected {expected_format} format",
+            path.display()
+        ));
+        return false;
+    }
+
+    let Ok(file) = object::File::parse(data) else {
+        context.errors.push(format!(
+            "advertised object {} could not be parsed as {expected_format}",
+            path.display()
+        ));
+        return false;
+    };
+    if file.kind() != object::ObjectKind::Relocatable {
+        context.errors.push(format!(
+            "advertised object {} is {:?}, not a relocatable object",
+            path.display(),
+            file.kind()
+        ));
+        return false;
+    }
+    if let Some(expected) = expected_object_architecture(triple)
+        && file.architecture() != expected
+    {
+        context.errors.push(format!(
+            "advertised object {} has architecture {:?}, expected {expected:?} for {triple}",
+            path.display(),
+            file.architecture()
+        ));
+        return false;
+    }
+    if let Some(expected) = expected_object_endianness(triple)
+        && file.endianness() != expected
+    {
+        context.errors.push(format!(
+            "advertised object {} has endianness {:?}, expected {expected:?} for {triple}",
+            path.display(),
+            file.endianness()
+        ));
+        return false;
+    }
+
+    for symbol in file.symbols() {
+        if symbol.is_global()
+            && let Ok(name) = symbol.name()
+        {
+            let name = normalize_object_symbol(name, triple);
+            if !is_python_symbol(name) {
+                continue;
+            }
+
+            if symbol.is_common()
+                || (!symbol.is_undefined()
+                    && !matches!(
+                        symbol.kind(),
+                        object::SymbolKind::Section | object::SymbolKind::File
+                    ))
+            {
+                context
+                    .advertised_object_defined_symbols
+                    .insert(name.to_string());
+            } else if symbol.is_undefined() && !symbol.is_weak() {
+                context
+                    .advertised_object_undefined_symbols
+                    .insert(name.to_string());
+            }
+        }
+    }
+
+    !bitcode_declared
+}
+
+fn has_recognizable_llvm_bitcode_container(data: &[u8]) -> bool {
+    const RAW_MAGIC: &[u8] = &[0x42, 0x43, 0xc0, 0xde];
+    const WRAPPER_MAGIC: &[u8] = &[0xde, 0xc0, 0x17, 0x0b];
+
+    // The object crate cannot parse LLVM bitcode. Recognize the container and
+    // reject truncated magic or an invalid wrapper, but do not claim to validate
+    // the embedded bitstream. Symbol coverage remains unavailable for bitcode.
+    if data.starts_with(RAW_MAGIC) {
+        return data.len() >= 16;
+    }
+    if !data.starts_with(WRAPPER_MAGIC) || data.len() < 16 {
+        return false;
+    }
+
+    let offset = u32::from_le_bytes(data[8..12].try_into().unwrap()) as usize;
+    let size = u32::from_le_bytes(data[12..16].try_into().unwrap()) as usize;
+    let Some(end) = offset.checked_add(size) else {
+        return false;
+    };
+
+    size >= 16
+        && data
+            .get(offset..end)
+            .map(|payload| payload.starts_with(RAW_MAGIC))
+            .unwrap_or(false)
+}
+
+fn is_declared_llvm_bitcode_format(format: &str) -> bool {
+    format
+        .strip_prefix("llvm-bitcode:")
+        .map(|version| !version.is_empty())
+        .unwrap_or(false)
+}
+
+fn object_kind_matches_declared_format(kind: FileKind, declared_format: &str) -> bool {
+    match declared_format {
+        "elf" => matches!(kind, FileKind::Elf32 | FileKind::Elf64),
+        "mach-o" => matches!(kind, FileKind::MachO32 | FileKind::MachO64),
+        "coff" => matches!(kind, FileKind::Coff | FileKind::CoffBig),
+        _ => false,
+    }
+}
+
+fn target_object_format(triple: &str) -> Option<&'static str> {
+    if triple.contains("-apple-darwin") {
+        Some("mach-o")
+    } else if triple.contains("-pc-windows-") {
+        Some("coff")
+    } else if triple.contains("-unknown-linux-") {
+        Some("elf")
+    } else {
+        None
+    }
+}
+
+fn expected_object_architecture(triple: &str) -> Option<Architecture> {
+    if triple.starts_with("aarch64-") {
+        Some(Architecture::Aarch64)
+    } else if triple.starts_with("armv7-") {
+        Some(Architecture::Arm)
+    } else if triple.starts_with("i686-") {
+        Some(Architecture::I386)
+    } else if triple.starts_with("mips64") {
+        Some(Architecture::Mips64)
+    } else if triple.starts_with("mips") {
+        Some(Architecture::Mips)
+    } else if triple.starts_with("ppc64") {
+        Some(Architecture::PowerPc64)
+    } else if triple.starts_with("riscv64-") {
+        Some(Architecture::Riscv64)
+    } else if triple.starts_with("s390x-") {
+        Some(Architecture::S390x)
+    } else if triple.starts_with("x86_64") {
+        Some(Architecture::X86_64)
+    } else {
+        None
+    }
+}
+
+fn expected_object_endianness(triple: &str) -> Option<Endianness> {
+    if triple.starts_with("mips-") || triple.starts_with("s390x-") {
+        Some(Endianness::Big)
+    } else if RECOGNIZED_TRIPLES.contains(&triple) {
+        Some(Endianness::Little)
+    } else {
+        None
+    }
 }
 
 fn validate_extension_modules(
@@ -2005,6 +2280,30 @@ fn validate_distribution(
         ));
     }
 
+    if json.is_none() {
+        return Ok(context.errors);
+    }
+
+    let advertised_object_paths = json
+        .as_ref()
+        .map(|json| {
+            json.all_object_paths()
+                .into_iter()
+                .map(|path| PathBuf::from("python").join(path))
+                .collect::<BTreeSet<_>>()
+        })
+        .unwrap_or_default();
+    let object_file_format = json.as_ref().unwrap().build_info.object_file_format.clone();
+    let supports_object_symbol_validation =
+        matches!(object_file_format.as_str(), "coff" | "elf" | "mach-o");
+    let is_llvm_bitcode_format = is_declared_llvm_bitcode_format(&object_file_format);
+    if !is_static && !supports_object_symbol_validation && !is_llvm_bitcode_format {
+        context.errors.push(format!(
+            "PYTHON.json declares unsupported object_file_format {object_file_format}"
+        ));
+    }
+    let mut advertised_object_symbol_coverage_complete = true;
+
     let mut bin_python = None;
     let mut bin_python3 = None;
 
@@ -2042,6 +2341,18 @@ fn validate_distribution(
             &path,
             &data,
         )?);
+        if !is_static
+            && (supports_object_symbol_validation || is_llvm_bitcode_format)
+            && advertised_object_paths.contains(&path)
+        {
+            advertised_object_symbol_coverage_complete &= collect_advertised_object_symbols(
+                &mut context,
+                triple,
+                &object_file_format,
+                &path,
+                &data,
+            );
+        }
 
         // Descend into archive files (static libraries are archive files and members
         // are usually object files).
@@ -2287,16 +2598,22 @@ fn validate_distribution(
     }
 
     // Ensure all referenced object paths are in the archive.
-    for object_path in json.as_ref().unwrap().all_object_paths() {
-        let wanted_path = PathBuf::from("python").join(object_path);
-
-        if !seen_paths.contains(&wanted_path) {
-            context.errors.push(format!(
-                "PYTHON.json referenced object file not in tar archive: {}",
-                wanted_path.display()
-            ));
-        }
+    for wanted_path in advertised_object_paths.difference(&seen_paths) {
+        context.errors.push(format!(
+            "PYTHON.json referenced object file not in tar archive: {}",
+            wanted_path.display()
+        ));
     }
+
+    let object_symbol_coverage_complete = !is_static
+        && supports_object_symbol_validation
+        && advertised_object_symbol_coverage_complete
+        && advertised_object_paths.is_subset(&seen_paths);
+    context.errors.extend(validate_libpython_object_symbols(
+        &context,
+        object_symbol_coverage_complete,
+        object_symbol_coverage_complete && object_file_format != "coff",
+    ));
 
     Ok(context.errors)
 }
@@ -2329,5 +2646,195 @@ pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
         Ok(())
     } else {
         Err(anyhow!("errors found"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalizes_platform_object_symbols() {
+        assert_eq!(
+            normalize_object_symbol("_PyToken_Init", "x86_64-unknown-linux-gnu"),
+            "_PyToken_Init"
+        );
+        assert_eq!(
+            normalize_object_symbol("__PyToken_Init", "aarch64-apple-darwin"),
+            "_PyToken_Init"
+        );
+        assert_eq!(
+            normalize_object_symbol("_PyLong_FromLong", "i686-pc-windows-msvc"),
+            "PyLong_FromLong"
+        );
+        assert_eq!(
+            normalize_object_symbol("__PyToken_Init", "i686-pc-windows-msvc"),
+            "_PyToken_Init"
+        );
+        assert_eq!(
+            normalize_object_symbol("_PyArg_ParseTuple@8", "i686-pc-windows-msvc"),
+            "PyArg_ParseTuple"
+        );
+        assert_eq!(
+            normalize_object_symbol("@PyArg_ParseTuple@8", "i686-pc-windows-msvc"),
+            "PyArg_ParseTuple"
+        );
+    }
+
+    #[test]
+    fn reports_missing_symbols_deterministically() {
+        let exported = BTreeSet::from([
+            "PyLong_FromLong".to_string(),
+            "PyMissingExport".to_string(),
+            "_init".to_string(),
+        ]);
+        let libpython_defined = BTreeSet::from([
+            "PyLong_FromLong".to_string(),
+            "_PyToken_Init".to_string(),
+            "_PyTokenizer_Get".to_string(),
+            "sqlite3_open".to_string(),
+        ]);
+        let object_defined =
+            BTreeSet::from(["PyLong_FromLong".to_string(), "_Py_tss_tstate".to_string()]);
+        let object_undefined = BTreeSet::from([
+            "_PyTokenizer_Get".to_string(),
+            "_PyToken_Init".to_string(),
+            "external_system_symbol".to_string(),
+            "sqlite3_open".to_string(),
+        ]);
+        let context = ValidationContext {
+            libpython_exported_symbols: exported,
+            libpython_defined_symbols: libpython_defined,
+            advertised_object_defined_symbols: object_defined,
+            advertised_object_undefined_symbols: object_undefined,
+            ..ValidationContext::default()
+        };
+
+        assert_eq!(
+            validate_libpython_object_symbols(&context, true, true),
+            vec![
+                "libpython symbol PyMissingExport is not defined by an advertised object",
+                "libpython symbol _PyToken_Init is not defined by an advertised object",
+                "libpython symbol _PyTokenizer_Get is not defined by an advertised object",
+            ]
+        );
+    }
+
+    #[test]
+    fn skips_symbol_comparison_without_complete_object_coverage() {
+        let context = ValidationContext {
+            libpython_exported_symbols: BTreeSet::from(["_PyToken_Init".to_string()]),
+            ..ValidationContext::default()
+        };
+
+        assert!(validate_libpython_object_symbols(&context, false, false).is_empty());
+    }
+
+    #[test]
+    fn coff_checks_exports_without_claiming_hidden_symbol_coverage() {
+        let context = ValidationContext {
+            libpython_exported_symbols: BTreeSet::from(["PyMissingExport".to_string()]),
+            libpython_defined_symbols: BTreeSet::from(["_PyHidden".to_string()]),
+            advertised_object_undefined_symbols: BTreeSet::from(["_PyHidden".to_string()]),
+            ..ValidationContext::default()
+        };
+
+        assert_eq!(
+            validate_libpython_object_symbols(&context, true, false),
+            vec!["libpython symbol PyMissingExport is not defined by an advertised object"]
+        );
+    }
+
+    #[test]
+    fn merge_preserves_collected_symbol_sets() {
+        let mut context = ValidationContext {
+            libpython_defined_symbols: BTreeSet::from(["_PyDefinedA".to_string()]),
+            advertised_object_defined_symbols: BTreeSet::from(["_PyObjectA".to_string()]),
+            advertised_object_undefined_symbols: BTreeSet::from(["_PyUndefinedA".to_string()]),
+            ..ValidationContext::default()
+        };
+        context.merge(ValidationContext {
+            libpython_defined_symbols: BTreeSet::from(["_PyDefinedB".to_string()]),
+            advertised_object_defined_symbols: BTreeSet::from(["_PyObjectB".to_string()]),
+            advertised_object_undefined_symbols: BTreeSet::from(["_PyUndefinedB".to_string()]),
+            ..ValidationContext::default()
+        });
+
+        assert_eq!(
+            context.libpython_defined_symbols,
+            BTreeSet::from(["_PyDefinedA".to_string(), "_PyDefinedB".to_string()])
+        );
+        assert_eq!(
+            context.advertised_object_defined_symbols,
+            BTreeSet::from(["_PyObjectA".to_string(), "_PyObjectB".to_string()])
+        );
+        assert_eq!(
+            context.advertised_object_undefined_symbols,
+            BTreeSet::from(["_PyUndefinedA".to_string(), "_PyUndefinedB".to_string()])
+        );
+    }
+
+    #[test]
+    fn recognizes_llvm_bitcode_container_structure() {
+        assert!(!has_recognizable_llvm_bitcode_container(&[
+            0x42, 0x43, 0xc0, 0xde
+        ]));
+        assert!(has_recognizable_llvm_bitcode_container(&[
+            0x42, 0x43, 0xc0, 0xde, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00,
+            0x00, 0x00
+        ]));
+
+        let mut wrapped = vec![0xde, 0xc0, 0x17, 0x0b, 0, 0, 0, 0];
+        wrapped.extend_from_slice(&16_u32.to_le_bytes());
+        wrapped.extend_from_slice(&16_u32.to_le_bytes());
+        wrapped.extend_from_slice(&[
+            0x42, 0x43, 0xc0, 0xde, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00,
+            0x00, 0x00,
+        ]);
+        assert!(has_recognizable_llvm_bitcode_container(&wrapped));
+
+        wrapped[12..16].copy_from_slice(&50_u32.to_le_bytes());
+        assert!(!has_recognizable_llvm_bitcode_container(&wrapped));
+        assert!(!has_recognizable_llvm_bitcode_container(b"not bitcode"));
+    }
+
+    #[test]
+    fn maps_supported_target_architectures() {
+        assert_eq!(
+            expected_object_architecture("aarch64-pc-windows-msvc"),
+            Some(Architecture::Aarch64)
+        );
+        assert_eq!(
+            expected_object_architecture("i686-pc-windows-msvc"),
+            Some(Architecture::I386)
+        );
+        assert_eq!(
+            expected_object_architecture("mips64el-unknown-linux-gnuabi64"),
+            Some(Architecture::Mips64)
+        );
+        assert_eq!(
+            expected_object_architecture("x86_64_v3-unknown-linux-gnu"),
+            Some(Architecture::X86_64)
+        );
+        assert_eq!(
+            expected_object_endianness("mips-unknown-linux-gnu"),
+            Some(Endianness::Big)
+        );
+        assert_eq!(
+            expected_object_endianness("mipsel-unknown-linux-gnu"),
+            Some(Endianness::Little)
+        );
+        assert_eq!(
+            expected_object_endianness("s390x-unknown-linux-gnu"),
+            Some(Endianness::Big)
+        );
+        assert_eq!(
+            target_object_format("x86_64_v2-unknown-linux-gnu"),
+            Some("elf")
+        );
+        assert_eq!(
+            target_object_format("aarch64-pc-windows-msvc"),
+            Some("coff")
+        );
     }
 }

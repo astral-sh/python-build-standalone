@@ -1976,6 +1976,10 @@ fn target_object_format(triple: &str) -> Option<&'static str> {
     }
 }
 
+fn declared_native_object_format_matches_target(triple: &str, declared_format: &str) -> bool {
+    target_object_format(triple) == Some(declared_format)
+}
+
 fn expected_object_architecture(triple: &str) -> Option<Architecture> {
     if triple.starts_with("aarch64-") {
         Some(Architecture::Aarch64)
@@ -2297,9 +2301,17 @@ fn validate_distribution(
     let supports_object_symbol_validation =
         matches!(object_file_format.as_str(), "coff" | "elf" | "mach-o");
     let is_llvm_bitcode_format = is_declared_llvm_bitcode_format(&object_file_format);
-    if !is_static && !supports_object_symbol_validation && !is_llvm_bitcode_format {
+    let native_object_format_matches_target = !supports_object_symbol_validation
+        || declared_native_object_format_matches_target(triple, &object_file_format);
+    if !supports_object_symbol_validation && !is_llvm_bitcode_format {
         context.errors.push(format!(
             "PYTHON.json declares unsupported object_file_format {object_file_format}"
+        ));
+    }
+    if supports_object_symbol_validation && !native_object_format_matches_target {
+        context.errors.push(format!(
+            "PYTHON.json declares object_file_format {object_file_format}, but {triple} requires {}",
+            target_object_format(triple).unwrap_or("its native object format")
         ));
     }
     let mut advertised_object_symbol_coverage_complete = true;
@@ -2341,8 +2353,7 @@ fn validate_distribution(
             &path,
             &data,
         )?);
-        if !is_static
-            && (supports_object_symbol_validation || is_llvm_bitcode_format)
+        if (supports_object_symbol_validation || is_llvm_bitcode_format)
             && advertised_object_paths.contains(&path)
         {
             advertised_object_symbol_coverage_complete &= collect_advertised_object_symbols(
@@ -2607,6 +2618,7 @@ fn validate_distribution(
 
     let object_symbol_coverage_complete = !is_static
         && supports_object_symbol_validation
+        && native_object_format_matches_target
         && advertised_object_symbol_coverage_complete
         && advertised_object_paths.is_subset(&seen_paths);
     context.errors.extend(validate_libpython_object_symbols(
@@ -2836,5 +2848,13 @@ mod tests {
             target_object_format("aarch64-pc-windows-msvc"),
             Some("coff")
         );
+        assert!(declared_native_object_format_matches_target(
+            "x86_64-unknown-linux-gnu",
+            "elf"
+        ));
+        assert!(!declared_native_object_format_matches_target(
+            "x86_64-unknown-linux-gnu",
+            "coff"
+        ));
     }
 }

@@ -1431,7 +1431,7 @@ if [ -d "${TOOLS_PATH}/deps/lib/tcl9" ]; then
     # Copy tcl/tk resources needed by tkinter.
     mkdir "${ROOT}/out/python/install/lib/tcl"
     # Keep this list in sync with tcl_library_paths.
-    for source in ${TOOLS_PATH}/deps/lib/{itcl4.3.5,tcl9,tcl9.0,thread3.0.4,tk9.0}; do
+    for source in ${TOOLS_PATH}/deps/lib/{itcl4.3.8,tcl9,tcl9.0,thread3.0.6,tk9.0}; do
         cp -av "$source" "${ROOT}/out/python/install/lib/"
     done
 

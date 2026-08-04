@@ -403,7 +403,7 @@ UNSUPPORTED: dict[str, str] = {
     "tix": "source dependency snapshot",
     "tcl-8612": "legacy compatibility version",
     "tk-8612": "legacy compatibility version",
-    "tk-windows-bin-903": "commit-pinned CPython binary dependency",
+    "tk-windows-bin-904": "commit-pinned CPython binary dependency",
     "tk-windows-bin-8614": "commit-pinned CPython binary dependency",
     "tk-windows-bin-8612": "commit-pinned CPython binary dependency",
     "uuid": "inactive upstream project",

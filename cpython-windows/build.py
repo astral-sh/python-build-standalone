@@ -397,7 +397,7 @@ def hack_props(
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
     if meets_python_minimum_version(python_version, "3.15"):
-        tcltk_commit = DOWNLOADS["tk-windows-bin-903"]["git_commit"]
+        tcltk_commit = DOWNLOADS["tk-windows-bin-904"]["git_commit"]
     elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tcltk_commit = DOWNLOADS["tk-windows-bin-8614"]["git_commit"]
     else:
@@ -1403,7 +1403,7 @@ def build_cpython(
     # is not available for arm64 so we use a newer release there as well.
     # On CPython 3.14+ we match the version included in the Python.org release.
     if meets_python_minimum_version(python_version, "3.15"):
-        tk_bin_entry = "tk-windows-bin-903"
+        tk_bin_entry = "tk-windows-bin-904"
     elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
         tk_bin_entry = "tk-windows-bin-8614"
     else:
@@ -1513,7 +1513,7 @@ def build_cpython(
             shutil.copyfile(source, dest)
 
         # Delete the tk nmake helper, it's not needed and links msvc
-        if tk_bin_entry in ("tk-windows-bin-8614", "tk-windows-bin-903"):
+        if tk_bin_entry in ("tk-windows-bin-8614", "tk-windows-bin-904"):
             tcltk_commit: str = DOWNLOADS[tk_bin_entry]["git_commit"]
             tcltk_path = td / ("cpython-bin-deps-%s" % tcltk_commit)
             (

@@ -342,12 +342,12 @@ DOWNLOADS = {
         "licenses": ["TCL"],
         "license_file": "LICENSE.tcl.txt",
     },
-    "tk-windows-bin-903": {
-        "url": "https://github.com/python/cpython-bin-deps/archive/2f788ebecac8d4bc3c7fa982b55a6c6923aa55fb.tar.gz",
-        "size": 18527780,
-        "sha256": "ac7e489d1fdabb0dbb69896aa8d191b5a87d053ce306fdffa51bbd77b94dbafc",
-        "version": "9.0.3",
-        "git_commit": "2f788ebecac8d4bc3c7fa982b55a6c6923aa55fb",
+    "tk-windows-bin-904": {
+        "url": "https://github.com/python/cpython-bin-deps/archive/907f3f4de820cb74fc8fb4431a39beae4c690915.tar.gz",
+        "size": 15632291,
+        "sha256": "e7aaa6417b7c2301ecd876307cced7e5bc4575a0b96e66dd08fcb6ab0d5d87a8",
+        "version": "9.0.4",
+        "git_commit": "907f3f4de820cb74fc8fb4431a39beae4c690915",
     },
     "tk-windows-bin-8614": {
         "url": "https://github.com/python/cpython-bin-deps/archive/c624cc881bd0e5071dec9de4b120cbe9985d8c14.tar.gz",

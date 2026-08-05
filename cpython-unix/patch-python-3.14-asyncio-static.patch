@@ -44,28 +44,27 @@ diff --git a/Modules/_remote_debugging_module.c b/Modules/_remote_debugging_modu
 index a26e6820f55..a8c9b077a09 100644
 --- a/Modules/_remote_debugging_module.c
 +++ b/Modules/_remote_debugging_module.c
-@@ -826,7 +826,7 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
+@@ -1330,7 +1330,7 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
      }
  #elif defined(__linux__)
      // On Linux, search for asyncio debug in executable or DLL
 -    address = search_linux_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython", NULL);
 +    address = search_linux_map_for_section(handle, "AsyncioDebug", "python", NULL);
      if (address == 0) {
-         // Error out: 'python' substring covers both executable and DLL
-         PyObject *exc = PyErr_GetRaisedException();
-@@ -835,10 +835,10 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
+         if (!_Py_RemoteDebug_HasPermissionError()) {
+             PyObject *exc = PyErr_GetRaisedException();
+@@ -1340,10 +1340,10 @@ _Py_RemoteDebug_GetAsyncioDebugAddress(proc_handle_t* handle)
      }
  #elif defined(__APPLE__) && TARGET_OS_OSX
      // On macOS, try libpython first, then fall back to python
 -    address = search_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython", NULL);
 +    address = search_map_for_section(handle, "AsyncioDebug", "libpython", NULL);
-     if (address == 0) {
+     if (address == 0 && !_Py_RemoteDebug_HasPermissionError()) {
          PyErr_Clear();
 -        address = search_map_for_section(handle, "AsyncioDebug", "_asyncio.cpython", NULL);
 +        address = search_map_for_section(handle, "AsyncioDebug", "python", NULL);
      }
      if (address == 0) {
-         // Error out: 'python' substring covers both executable and DLL
+         if (!_Py_RemoteDebug_HasPermissionError()) {
 -- 
 2.50.1 (Apple Git-155)
-

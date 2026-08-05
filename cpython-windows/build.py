@@ -396,9 +396,9 @@ def hack_props(
 
     mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
 
-    if meets_python_minimum_version(python_version, "3.15"):
+    if meets_python_minimum_version(python_version, "3.14"):
         tcltk_commit = DOWNLOADS["tk-windows-bin-904"]["git_commit"]
-    elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
+    elif arch == "arm64":
         tcltk_commit = DOWNLOADS["tk-windows-bin-8614"]["git_commit"]
     else:
         tcltk_commit = DOWNLOADS["tk-windows-bin-8612"]["git_commit"]
@@ -690,7 +690,7 @@ def hack_project_files(
 
     # Python 3.12+ uses the the pre-built tk-windows-bin 8.6.12 which doesn't
     # have a standalone zlib DLL, so we remove references to it. For Python
-    # 3.14+, we're using tk-windows-bin 8.6.14 which includes a prebuilt zlib
+    # 3.14+, we're using tk-windows-bin 9.0.4 which includes a prebuilt zlib
     # DLL, so we skip this patch there.
     # On arm64, we use the new version of tk-windows-bin for all versions.
     if meets_python_minimum_version(python_version, "3.12") and (
@@ -1402,9 +1402,9 @@ def build_cpython(
     # use an old version prior to CPython 3.14. The older tck/tk release
     # is not available for arm64 so we use a newer release there as well.
     # On CPython 3.14+ we match the version included in the Python.org release.
-    if meets_python_minimum_version(python_version, "3.15"):
+    if meets_python_minimum_version(python_version, "3.14"):
         tk_bin_entry = "tk-windows-bin-904"
-    elif meets_python_minimum_version(python_version, "3.14") or arch == "arm64":
+    elif arch == "arm64":
         tk_bin_entry = "tk-windows-bin-8614"
     else:
         tk_bin_entry = "tk-windows-bin-8612"

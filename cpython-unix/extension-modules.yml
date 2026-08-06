@@ -789,11 +789,11 @@ _testlimitedcapi:
     - _testlimitedcapi/vectorcall_limited.c
   sources-conditional:
     - source: _testlimitedcapi/capsule.c
-      minimum-python-version: "3.14"
+      minimum-python-version: "3.13"
     - source: _testlimitedcapi/codec.c
       minimum-python-version: "3.14"
     - source: _testlimitedcapi/run.c
-      minimum-python-version: "3.14"
+      minimum-python-version: "3.13"
     - source: _testlimitedcapi/slots.c
       minimum-python-version: "3.15"
     - source: _testlimitedcapi/threadstate.c

@@ -363,7 +363,7 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
     h.insert(
         "aarch64-unknown-linux-musl",
         TripleRelease {
-            suffixes: vec!["debug", "lto", "noopt"],
+            suffixes: linux_suffixes_musl.clone(),
             install_only_suffix: "lto",
             freethreaded_install_only_suffix: "freethreaded+lto",
             python_version_requirement: None,

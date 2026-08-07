@@ -98,7 +98,9 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
     extra_host_cflags = []
     extra_host_ldflags = []
 
-    # Add compiler-rt for aarch64-musl to resolve missing builtins
+    # aarch64 libgcc is built against glibc and initializes LSE atomics using
+    # __getauxval, which musl does not export.
+    # Use compiler-rt instead, which uses the public getauxval interface.
     if target_triple == "aarch64-unknown-linux-musl":
         extra_target_cflags.append("--rtlib=compiler-rt")
         extra_target_ldflags.append("--rtlib=compiler-rt")

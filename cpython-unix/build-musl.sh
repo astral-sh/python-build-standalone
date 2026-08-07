@@ -105,4 +105,17 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
 make -j "$(nproc)"
 make -j "$(nproc)" install DESTDIR=/build/out
 
+if [ -n "${STATIC}" ] && [[ "$(clang -dumpmachine)" == aarch64-* ]]; then
+    # musl's linker wrapper appends libc after other arguments, including
+    # compiler-rt supplied through the target compiler flags. On aarch64,
+    # static libc uses compiler runtime builtins such as __multf3. GNU ld
+    # searches archives left to right and does not revisit earlier archives,
+    # so append compiler-rt again after libc to resolve those symbols.
+    # TODO(jjh): Remove this adjustment when lld is available; it can resolve
+    # references to previously encountered archives.
+    sed -i \
+        's/"$@" -lc -dynamic-linker/"$@" -lc "$($cc --rtlib=compiler-rt -print-libgcc-file-name)" -dynamic-linker/' \
+        /build/out/tools/host/bin/ld.musl-clang
+fi
+
 popd

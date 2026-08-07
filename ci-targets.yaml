@@ -360,10 +360,9 @@ linux:
       - "3.14"
       - "3.15"
     build_options:
-      # TODO: Static support is current blocked by some compiler-rt linking issues
-      # - debug+static
-      # - noopt+static
-      # - lto+static
+      - debug+static
+      - noopt+static
+      - lto+static
       - debug
       - noopt
       - lto

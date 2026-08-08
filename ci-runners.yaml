@@ -10,7 +10,7 @@ depot-ubuntu-22.04-arm-4:
   platform: linux
   free: false
 
-depot-macos-latest:
+namespace-profile-macos-15:
   arch: aarch64
   platform: darwin
   free: false

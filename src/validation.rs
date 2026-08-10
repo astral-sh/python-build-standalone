@@ -1834,6 +1834,9 @@ fn collect_advertised_object_symbols(
     } else {
         declared_format
     };
+    if expected_format == "coff" && is_structurally_valid_msvc_ltcg_object(data, triple) {
+        return false;
+    }
 
     let Ok(kind) = FileKind::parse(data) else {
         let expected = if bitcode_declared {
@@ -1919,6 +1922,41 @@ fn collect_advertised_object_symbols(
     }
 
     !bitcode_declared
+}
+
+fn is_structurally_valid_msvc_ltcg_object(data: &[u8], triple: &str) -> bool {
+    const HEADER_SIZE: usize = 32;
+    const CLASS_ID: [u8; 16] = [
+        0x38, 0xfe, 0xb3, 0x0c, 0xa5, 0xd9, 0xab, 0x4d, 0xac, 0x9b, 0xd6, 0xb6, 0x22, 0x26, 0x53,
+        0xc2,
+    ];
+
+    let Some(header) = data.get(..HEADER_SIZE) else {
+        return false;
+    };
+    let Some(expected_machine) = expected_coff_machine(triple) else {
+        return false;
+    };
+    let version = u16::from_le_bytes([header[4], header[5]]);
+    let machine = u16::from_le_bytes([header[6], header[7]]);
+    let payload_size =
+        u32::from_le_bytes(header[28..32].try_into().expect("fixed-size header")) as usize;
+
+    header[..4] == [0x00, 0x00, 0xff, 0xff]
+        && version == 1
+        && machine == expected_machine
+        && header[12..28] == CLASS_ID
+        && payload_size > 0
+        && HEADER_SIZE.checked_add(payload_size) == Some(data.len())
+}
+
+fn expected_coff_machine(triple: &str) -> Option<u16> {
+    match triple {
+        "aarch64-pc-windows-msvc" => Some(object::pe::IMAGE_FILE_MACHINE_ARM64),
+        "i686-pc-windows-msvc" => Some(object::pe::IMAGE_FILE_MACHINE_I386),
+        "x86_64-pc-windows-msvc" => Some(object::pe::IMAGE_FILE_MACHINE_AMD64),
+        _ => None,
+    }
 }
 
 fn has_recognizable_llvm_bitcode_container(data: &[u8]) -> bool {
@@ -2755,6 +2793,54 @@ mod tests {
             validate_libpython_object_symbols(&context, true, false),
             vec!["libpython symbol PyMissingExport is not defined by an advertised object"]
         );
+    }
+
+    #[test]
+    fn accepts_msvc_ltcg_object_as_partial_coverage() {
+        let mut data = [
+            0x00, 0x00, 0xff, 0xff, 0x01, 0x00, 0x64, 0x86, 0x00, 0x00, 0x00, 0x00, 0x38, 0xfe,
+            0xb3, 0x0c, 0xa5, 0xd9, 0xab, 0x4d, 0xac, 0x9b, 0xd6, 0xb6, 0x22, 0x26, 0x53, 0xc2,
+            0x04, 0x00, 0x00, 0x00, 0x13, 0x0c, 0x07, 0x00,
+        ];
+        let mut context = ValidationContext::default();
+
+        assert!(!collect_advertised_object_symbols(
+            &mut context,
+            "x86_64-pc-windows-msvc",
+            "coff",
+            Path::new("python/build/core/Python-ast.obj"),
+            &data,
+        ));
+        assert!(context.errors.is_empty(), "{:?}", context.errors);
+
+        for index in [0, 4, 6, 12, 28] {
+            data[index] ^= 1;
+            let mut malformed_context = ValidationContext::default();
+            assert!(!collect_advertised_object_symbols(
+                &mut malformed_context,
+                "x86_64-pc-windows-msvc",
+                "coff",
+                Path::new("python/build/core/Python-ast.obj"),
+                &data,
+            ));
+            assert_eq!(malformed_context.errors.len(), 1);
+            data[index] ^= 1;
+        }
+
+        for (triple, malformed_data) in [
+            ("x86_64-pc-windows-msvc", &data[..31]),
+            ("aarch64-pc-windows-msvc", &data[..]),
+        ] {
+            let mut malformed_context = ValidationContext::default();
+            assert!(!collect_advertised_object_symbols(
+                &mut malformed_context,
+                triple,
+                "coff",
+                Path::new("python/build/core/Python-ast.obj"),
+                malformed_data,
+            ));
+            assert_eq!(malformed_context.errors.len(), 1);
+        }
     }
 
     #[test]

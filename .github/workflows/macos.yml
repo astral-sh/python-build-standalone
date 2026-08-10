@@ -171,6 +171,12 @@ jobs:
           repository: phracker/MacOSX-SDKs
           ref: master
           path: macosx-sdks
+          sparse-checkout: |
+            /MacOSX10.15.sdk/SDKSettings.json
+            /MacOSX10.15.sdk/**/*.tbd
+            /MacOSX11.*.sdk/SDKSettings.json
+            /MacOSX11.*.sdk/**/*.tbd
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Validate Distribution

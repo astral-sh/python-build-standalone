@@ -79,6 +79,9 @@ fi
 # An alternative is to include these when calling ./configure AND make
 export CFLAGS LDFLAGS
 export CPPFLAGS="${CFLAGS}"
+# Tcl's Thread package leaves this unset when configuring Tcl 8 compatibility.
+# Initialize it so that package configure does not require an installed Tcl 9.
+export ZIPFS_BUILD=0
 
 ./configure \
     --build="${BUILD_TRIPLE}" \

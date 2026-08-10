@@ -139,12 +139,15 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "tk86t.dll",
 ];
 
-// CPython 3.14 and ARM64 use a newer version of tcl/tk (8.6.14+) which includes a bundled zlib that
-// dynamically links some system libraries
+// CPython 3.14 uses Tcl/Tk 9, which includes a bundled zlib and additional DLLs.
 const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
     "zlib1.dll",
     "api-ms-win-crt-private-l1-1-0.dll", // zlib loads this library on arm64, 3.14+
     "msvcrt.dll",                        // zlib loads this library
+    "libtommath.dll",
+    "tcl90.dll",
+    "tcl9tk90.dll",
+    "WINSPOOL.DRV",
 ];
 const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
 const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
@@ -152,7 +155,7 @@ const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
     "zlib1.dll",
     "api-ms-win-crt-private-l1-1-0.dll",
     "msvcrt.dll",
-    // Tcl/Tk 9 is used in CPython 3.15+
+    // Tcl/Tk 9 is used in CPython 3.14+
     "libtommath.dll",
     "tcl90.dll",
     "tcl9tk90.dll",

@@ -105,7 +105,7 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
 make -j "$(nproc)"
 make -j "$(nproc)" install DESTDIR=/build/out
 
-if [ -n "${STATIC}" ] && [[ "$(clang -dumpmachine)" == aarch64-* ]]; then
+if [[ $STATIC && $(clang -dumpmachine) == aarch64-* ]]; then
     # musl's linker wrapper appends libc after other arguments, including
     # compiler-rt supplied through the target compiler flags. On aarch64,
     # static libc uses compiler runtime builtins such as __multf3. GNU ld

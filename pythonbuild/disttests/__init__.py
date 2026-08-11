@@ -379,18 +379,12 @@ class TestPythonInterpreter(unittest.TestCase):
 
     @unittest.skipUnless(
         "-linux-gnu" in os.environ["TARGET_TRIPLE"],
-        "memfd_create weak linking is enabled for Linux GNU targets",
+        "the memfd_create syscall fallback is enabled for Linux GNU targets",
     )
     def test_os_memfd_create(self):
-        import ctypes
         import errno
 
-        libc = ctypes.CDLL(None)
-        libc_has_memfd_create = hasattr(libc, "memfd_create")
-        self.assertEqual(hasattr(os, "memfd_create"), libc_has_memfd_create)
-
-        if not libc_has_memfd_create:
-            return
+        self.assertTrue(hasattr(os, "memfd_create"))
 
         try:
             fd = os.memfd_create("python-build-standalone-test")
@@ -408,18 +402,12 @@ class TestPythonInterpreter(unittest.TestCase):
 
     @unittest.skipUnless(
         "-linux-gnu" in os.environ["TARGET_TRIPLE"],
-        "copy_file_range weak linking is enabled for Linux GNU targets",
+        "the copy_file_range syscall fallback is enabled for Linux GNU targets",
     )
     def test_os_copy_file_range(self):
-        import ctypes
         import errno
 
-        libc = ctypes.CDLL(None)
-        libc_has_copy_file_range = hasattr(libc, "copy_file_range")
-        self.assertEqual(hasattr(os, "copy_file_range"), libc_has_copy_file_range)
-
-        if not libc_has_copy_file_range:
-            return
+        self.assertTrue(hasattr(os, "copy_file_range"))
 
         data = b"copy_file_range"
         with tempfile.TemporaryFile() as src, tempfile.TemporaryFile() as dst:

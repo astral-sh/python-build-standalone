@@ -418,6 +418,12 @@ if [[ "${PYTHON_MAJMIN_VERSION}" = "3.12" && "${PYBUILD_PLATFORM}" = macos* ]]; 
     export LIBMPDEC_CFLAGS="-DCONFIG_64=1"
 fi
 
+if [[ "${PYTHON_MAJMIN_VERSION}" = "3.12" && "${TARGET_TRIPLE}" == *-linux-* ]]; then
+    # The panelw archive needs ncursesw during configure's link probe.
+    export PANEL_CFLAGS="-I${TOOLS_PATH}/deps/include/ncursesw"
+    export PANEL_LIBS="-lpanelw -lncursesw"
+fi
+
 # Build a libpython3.x.so, but statically link the interpreter against
 # libpython.
 # Merged upstream in Python 3.15, https://github.com/python/cpython/pull/133313

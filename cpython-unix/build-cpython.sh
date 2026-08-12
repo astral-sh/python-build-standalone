@@ -20,6 +20,13 @@ export PKG_CONFIG="pkg-config --static"
 # their prefix based on the location of each .pc file.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     export PKG_CONFIG="${PKG_CONFIG} --define-prefix"
+
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+        # On macOS, CPython prefers the system libffi and provides no way to
+        # # select a non-system version. Disable its system-library probe so
+        # # _ctypes uses the bundled libffi instead.
+        export ac_cv_lib_ffi_ffi_call=no
+    fi
 fi
 
 # configure somehow has problems locating llvm-profdata even though it is in

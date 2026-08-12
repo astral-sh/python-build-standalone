@@ -636,11 +636,27 @@ pub fn convert_to_stripped<W: Write>(
                 | FileKind::Pe32
                 | FileKind::Pe64)
         ) {
-            // Skip stripping MSVC runtime DLLs and Tcl/Tk DLLs containing ZIPFS data.
+            // Skip stripping MSVC runtime DLLs and Tcl/Tk DLLs containing ZIPFS data or
+            // valid signatures.
+            // Tcl 9 DLLs contain ZIPFS data. The other DLLs are signed by Microsoft or by the
+            // Tcl maintainers. `llvm-strip` removes the signature but keeps
+            // the certificate table entry in the PE header.
+            // This makes the binaries impossible to re-sign with `signtool`, which in turn
+            // means that they can never be bundled into a Microsoft Store-compatible .msix.
             let filename = path.file_name().and_then(|n| n.to_str());
             if !matches!(
                 filename,
-                Some("tcl90.dll" | "tcl9tk90.dll" | "vcruntime140.dll" | "vcruntime140_1.dll")
+                Some(
+                    "tcl86t.dll"
+                        | "tcl90.dll"
+                        | "tcl9tk90.dll"
+                        | "tcldde14.dll"
+                        | "tclreg13.dll"
+                        | "tk86t.dll"
+                        | "vcruntime140.dll"
+                        | "vcruntime140_1.dll"
+                        | "vcruntime140_threads.dll"
+                )
             ) {
                 data = llvm_strip(&data, llvm_dir)
                     .with_context(|| format!("failed to strip {}", path.display()))?;

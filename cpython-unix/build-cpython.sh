@@ -412,6 +412,11 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=static --enable-loadable-sqlite-extensions"
 fi
 
+if [[ "${PYTHON_MAJMIN_VERSION}" = "3.12" && "${PYBUILD_PLATFORM}" = macos* ]]; then
+    # CPython 3.12 always uses UNIVERSAL on macOS for libmpdec,
+    # while the bundled dependency requires CONFIG_64.
+    export LIBMPDEC_CFLAGS="-DCONFIG_64=1"
+fi
 
 # Build a libpython3.x.so, but statically link the interpreter against
 # libpython.

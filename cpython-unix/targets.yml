@@ -178,11 +178,7 @@ aarch64-unknown-linux-gnu:
     - zlib
     - zstd
   openssl_target: linux-aarch64
-  # Blocked on:
-  #   BOLT-ERROR: Cannot relax adr in non-simple function
-  #   trampoline_code_table/1. Use --strict option to override
-  # See https://github.com/llvm/llvm-project/issues/146541
-  # bolt_capable: true
+  bolt_capable: true
 
 armv7-unknown-linux-gnueabi:
   linux_uapi_include_arch: arm-linux-gnueabi

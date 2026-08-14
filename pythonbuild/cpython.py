@@ -465,7 +465,7 @@ def derive_setup_local(
     # agrees fully with the distribution's knowledge of extensions. So we can
     # treat our metadata as canonical.
 
-    RE_DEFINE = re.compile(rb"-D[^=]+=[^\s]+")
+    RE_DEFINE = re.compile(rb"-D[^=\s]+=[^\s]+")
 
     # Translate our YAML metadata into Setup lines.
 
@@ -697,7 +697,7 @@ def derive_setup_local(
 
     for target in sorted(extra_cflags):
         make_lines.append(
-            b"%s: PY_STDMODULE_CFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
+            b"%s: PY_CPPFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
         )
 
     return {

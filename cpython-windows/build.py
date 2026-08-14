@@ -1527,18 +1527,6 @@ def build_cpython(
         cpython_source_path = td / ("Python-%s" % python_version)
         pcbuild_path = cpython_source_path / "PCbuild"
 
-        # Cherry-pick python/cpython#100373 from 3.12 onto 3.10/3.11 to fix DER
-        # parsing with OpenSSL 3.5.7.  The old implementation does heuristics
-        # on the error codes returned from the ASN.1 parser, which have changed
-        # slightly in openssl/openssl#30986 (commit 738688d762 in 3.5.7). The
-        # new implementation does a better job of parsing and avoids the
-        # heuristics in the first place.
-        if meets_python_maximum_version(python_version, "3.11"):
-            apply_source_patch(
-                cpython_source_path,
-                SUPPORT / "patch-python-der-eof-parsing.patch",
-            )
-
         out_dir = td / "out"
 
         build_dir = out_dir / "python" / "build"

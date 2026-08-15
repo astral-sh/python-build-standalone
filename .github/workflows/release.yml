@@ -22,19 +22,65 @@ permissions: {}
 
 jobs:
   release-gate:
-    name: Release gate
+    # This job must remain named `release-gate` so the environment protection rule can
+    # validate that the gate job in this workflow run completed successfully.
+    name: release-gate
+    if: ${{ github.event.inputs.dry-run == 'false' }}
     runs-on: ubuntu-latest
-    environment: release
+    environment:
+      name: release-gate
+      deployment: true
+    permissions:
+      deployments: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
-      - run: echo "Release approved"
+      - name: Resolve target SHA
+        id: vars
+        env:
+          INPUT_SHA: ${{ github.event.inputs.sha }}
+        run: |
+          target_sha="$INPUT_SHA"
+          if [ -z "$target_sha" ]; then
+            target_sha="$GITHUB_SHA"
+          fi
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+
+      - name: Create deployment for target SHA
+        id: create_deployment
+        env:
+          TARGET_SHA: ${{ steps.vars.outputs.target_sha }}
+        run: |
+          payload=$(jq -nc \
+            --arg ref "$TARGET_SHA" \
+            '{
+              ref: $ref,
+              environment: "release",
+              auto_merge: false,
+              required_contexts: [],
+              description: "Release deployment for target SHA"
+            }')
+
+          deployment_id=$(printf '%s' "$payload" | gh api repos/${GITHUB_REPOSITORY}/deployments --method POST --input - --jq '.id')
+          echo "deployment_id=$deployment_id" >> "$GITHUB_OUTPUT"
+
+      - name: Mark deployment successful
+        run: |
+          gh api repos/${GITHUB_REPOSITORY}/deployments/${{ steps.create_deployment.outputs.deployment_id }}/statuses \
+            --method POST \
+            -f state=success \
+            -F auto_inactive=false >/dev/null
 
   release:
     name: Release
-    needs: release-gate
+    needs:
+      - release-gate
+    if: ${{ always() && (github.event.inputs.dry-run == 'true' || needs.release-gate.result == 'success') }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: depot-ubuntu-24.04-8
-    environment: release
+    environment:
+      name: ${{ github.event.inputs.dry-run == 'false' && 'release' || '' }}
 
     permissions:
       contents: write
@@ -56,12 +102,24 @@ jobs:
 
       - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
 
+      - name: Resolve target SHA
+        id: vars
+        env:
+          INPUT_SHA: ${{ github.event.inputs.sha }}
+        run: |
+          target_sha="$INPUT_SHA"
+          if [ -z "$target_sha" ]; then
+            target_sha="$GITHUB_SHA"
+          fi
+          echo "target_sha=$target_sha" >> "$GITHUB_OUTPUT"
+
       # Perform a release in dry-run mode.
       - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
         if: ${{ github.event.inputs.dry-run == 'true' }}
         env:
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
+          GITHUB_EVENT_INPUTS_SHA: ${{ steps.vars.outputs.target_sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+
       - name: Configure Git identity
         if: ${{ github.event.inputs.dry-run == 'false' }}
         run: |
@@ -74,14 +132,15 @@ jobs:
         run: just release-create ${GITHUB_EVENT_INPUTS_TAG} ${GITHUB_EVENT_INPUTS_SHA}
         env:
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
+          GITHUB_EVENT_INPUTS_SHA: ${{ steps.vars.outputs.target_sha }}
 
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
         if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
+          GITHUB_EVENT_INPUTS_SHA: ${{ steps.vars.outputs.target_sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
+
       - name: Generate attestations
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         if: ${{ github.event.inputs.dry-run == 'false' }}
@@ -181,4 +240,3 @@ jobs:
           # Wait for PR to be created before merging
           sleep 10
           gh pr merge --squash "$BRANCH_NAME"
-

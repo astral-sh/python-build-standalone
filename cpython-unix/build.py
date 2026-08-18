@@ -111,6 +111,8 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
             .replace("ppc64le_power9-", "ppc64le-")
+            .replace("ppc64le_power10-", "ppc64le-")
+            .replace("ppc64le_power11-", "ppc64le-")
         )
 
         # On macOS, we support building Linux in a virtualized container that

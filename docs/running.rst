@@ -80,6 +80,14 @@ familiar with LLVM target triples, here is an overview:
 ``i686-unknown-linux-*``
    Linux 32-bit Intel/AMD CPUs.
 
+``ppc64le-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC (ELFv2 ABI baseline).
+
+``ppc64le_power9-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER9.
+
+   Compiled with ``-mcpu=power9 -mtune=power9``.
+
 ``x86_64_v2-*``
    Targets 64-bit Intel/AMD CPUs approximately newer than
    `Nehalem <https://en.wikipedia.org/wiki/Nehalem_(microarchitecture)>`_

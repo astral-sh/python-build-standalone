@@ -39,3 +39,4 @@ dev = [
 
 [tool.uv]
 no-build = true
+no-binary-package = ["python-build-standalone"]

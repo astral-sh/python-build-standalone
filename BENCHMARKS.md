@@ -14,7 +14,7 @@ From top to bottom, the distributions shown are:
 * The Docker `python:3.14` image for x86-64, providing CPython 3.14.6.
 * A conda-forge Python 3.14.6 environment for `linux-64`.
 * The system Python 3.14.6 in a `fedora:44` x86-64 Docker container.
-* The system Python 3.14.6 in a debian:forky x86-64 Docker container.
+* The system Python 3.14.6 in a `debian:forky` x86-64 Docker container.
 * CPython 3.14.6 from the [Python.org macOS installer](https://www.python.org/ftp/python/3.14.6/python-3.14.6-macos11.pkg) on an arm64 Mac.
 * A conda-forge Python 3.14.6 environment for `osx-arm64`.
 * CPython 3.14.6 installed through Homebrew on an arm64 Mac.

@@ -366,13 +366,26 @@ def derive_setup_local(
     )
 
     setup_stdlib_lines = {}
+    setup_stdlib_linkage = {}
+    # CPython 3.12+ is configured with MODULE_BUILDTYPE=static.
+    setup_stdlib_section = "static"
 
     for line in setup_stdlib_in:
-        if m := RE_STDLIB_EXTENSION_MODULE.match(line.rstrip()):
+        line = line.rstrip()
+
+        if line == b"*shared*":
+            setup_stdlib_section = "shared"
+            continue
+        elif line == b"*static*":
+            setup_stdlib_section = "static"
+            continue
+
+        if m := RE_STDLIB_EXTENSION_MODULE.match(line):
             line = m.group(1)
             name = line.split()[0].decode("ascii")
             dist_modules.add(name)
             setup_stdlib_lines[name] = line
+            setup_stdlib_linkage[name] = setup_stdlib_section
 
     # Setup.bootstrap.in has a simple format.
     for line in setup_bootstrap_in:
@@ -482,9 +495,9 @@ def derive_setup_local(
 
     # And with verification out of way, now we generate a Setup.local file.
     # Python 3.12+ builds extensions from Setup.stdlib using configure-derived
-    # compiler and linker flags. In that case Setup.local only contains the
-    # shared and disabled overrides; older versions still use the YAML-derived
-    # compilation rules for every extension.
+    # compiler and linker flags. Setup.local only disables modules or overrides
+    # linkage that differs from Setup.stdlib; older versions still use the
+    # YAML-derived compilation rules for every extension.
 
     RE_DEFINE = re.compile(rb"-D[^=]+=[^\s]+")
 
@@ -711,13 +724,13 @@ def derive_setup_local(
 
         if not use_setup_stdlib:
             section_lines[section].append(line)
-        elif section == "shared":
+        elif section != setup_stdlib_linkage.get(name, "static"):
             if name not in setup_stdlib_lines:
                 raise Exception(
-                    f"shared extension {name} has no Modules/Setup.stdlib.in entry"
+                    f"{section} extension {name} has no Modules/Setup.stdlib.in entry"
                 )
 
-            # A rule without explicit compiler/linker flags inherits the
+            # Override Setup.stdlib's linkage while inheriting the
             # MODULE_<name>_CFLAGS/LDFLAGS values produced by configure.
             section_lines[section].append(setup_stdlib_lines[name])
 

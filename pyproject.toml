@@ -40,3 +40,7 @@ dev = [
 [tool.uv]
 no-build = true
 no-binary-package = ["python-build-standalone"]
+# Pin the isolated build environment for source-build exceptions.
+build-constraint-dependencies = [
+    "uv-build==0.11.33",
+]

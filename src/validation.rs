@@ -1862,6 +1862,18 @@ fn validate_extension_modules(
     Ok(errors)
 }
 
+fn is_shared_library(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|filename| filename.to_str())
+        .is_some_and(|filename| {
+            filename.ends_with(".so")
+                || filename.contains(".so.")
+                || filename.ends_with(".dylib")
+                || filename.ends_with(".dll")
+                || filename.ends_with(".pyd")
+        })
+}
+
 fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<Vec<String>> {
     let mut errors = vec![];
 
@@ -2014,6 +2026,13 @@ fn validate_distribution(
     for entry in entries {
         let mut entry = entry.map_err(|e| anyhow!("failed to iterate over archive: {}", e))?;
         let path = entry.path()?.to_path_buf();
+
+        if is_static && is_shared_library(&path) {
+            context.errors.push(format!(
+                "static distribution contains shared library {}",
+                path.display()
+            ));
+        }
 
         seen_paths.insert(path.clone());
 

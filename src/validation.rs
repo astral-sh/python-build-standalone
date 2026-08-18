@@ -2027,7 +2027,9 @@ fn validate_distribution(
         let mut entry = entry.map_err(|e| anyhow!("failed to iterate over archive: {}", e))?;
         let path = entry.path()?.to_path_buf();
 
-        if is_static && is_shared_library(&path) {
+        // TODO(jjh): Do not include shared modules in Python 3.10, 3.11 static builds
+        // https://github.com/astral-sh/python-build-standalone/issues/1222
+        if is_static && !matches!(python_major_minor, "3.10" | "3.11") && is_shared_library(&path) {
             context.errors.push(format!(
                 "static distribution contains shared library {}",
                 path.display()

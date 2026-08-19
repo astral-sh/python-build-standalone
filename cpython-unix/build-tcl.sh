@@ -83,12 +83,6 @@ export CPPFLAGS="${CFLAGS}"
 # Initialize it so that package configure does not require an installed Tcl 9.
 export ZIPFS_BUILD=0
 
-# CPython uses the macOS SDK's zlib without a zlib.pc file. Keep the -lz in
-# Libs.private, but do not make pkg-config require the missing metadata.
-if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    sed -i '' -e 's/ zlib >= 1.2.3//' tcl.pc.in
-fi
-
 ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \

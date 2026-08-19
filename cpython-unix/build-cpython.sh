@@ -15,18 +15,17 @@ export PKG_CONFIG_PATH=${TOOLS_PATH}/deps/share/pkgconfig:${TOOLS_PATH}/deps/lib
 # Ensure that `pkg-config` invocations include the static libraries
 export PKG_CONFIG="pkg-config --static"
 
-# Dependency pkg-config files use /tools/deps as their prefix. macOS builds
-# extract dependencies into a temporary directory, so have pkgconf relocate
-# their prefix based on the location of each .pc file.
-if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-    export PKG_CONFIG="${PKG_CONFIG} --define-prefix"
+if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
+    # Provide Tcl/Tk configuration directly to avoid needing pkg-config.
+    # Additionally the macOS SDK zlib is used which does not have pkg-config
+    # metadata.
+    export TCLTK_CFLAGS="-I${TOOLS_PATH}/deps/include"
+    export TCLTK_LIBS="-L${TOOLS_PATH}/deps/lib -ltcl9tk9.0 -ltcl9.0"
 
-    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-        # On macOS, CPython prefers the system libffi and provides no way to
-        # # select a non-system version. Disable its system-library probe so
-        # # _ctypes uses the bundled libffi instead.
-        export ac_cv_lib_ffi_ffi_call=no
-    fi
+    # On macOS, CPython prefers the system libffi and provides no way to
+    # select a non-system version. Disable its system-library probe so
+    # _ctypes uses the bundled libffi instead.
+    export ac_cv_lib_ffi_ffi_call=no
 fi
 
 # configure somehow has problems locating llvm-profdata even though it is in

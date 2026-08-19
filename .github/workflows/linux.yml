@@ -11,6 +11,7 @@ concurrency:
 
 env:
   FORCE_COLOR: 1
+  CPYTHON_314_REF: f9140e201c5b0372d0195ea3e289e8fa7761f78f
 
 permissions: { }
 
@@ -246,6 +247,21 @@ jobs:
           restore-keys: |
             ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.py')}}
             ${{ matrix.target_triple }}-
+
+      - name: Checkout CPython 3.14 source
+        if: ${{ ! matrix.dry-run && matrix.python == '3.14' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: python/cpython
+          ref: ${{ env.CPYTHON_314_REF }}
+          path: cpython-3.14-source
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Prepare CPython 3.14 source override
+        if: ${{ ! matrix.dry-run && matrix.python == '3.14' }}
+        run: |
+          uv run --no-dev ci-prepare-cpython-source.py --python 3.14 --source-dir cpython-3.14-source
 
       - name: Load Docker Images
         run: |

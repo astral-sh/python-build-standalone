@@ -351,6 +351,11 @@ POLICIES: dict[str, Policy] = {
         r"(?P<version>[0-9.]+)",
         artifact_name="patchelf-{version}.tar.bz2",
     ),
+    "pkgconf": github_policy(
+        "pkgconf/pkgconf",
+        r"pkgconf-(?P<version>[0-9.]+)",
+        artifact_name="pkgconf-{version}.tar.xz",
+    ),
     "pip": Policy(PyPIDiscovery("pip", r"pip-[0-9A-Za-z.+-]+-py3-none-any\.whl")),
     "setuptools": Policy(
         PyPIDiscovery("setuptools", r"setuptools-[0-9A-Za-z.+-]+-py3-none-any\.whl")

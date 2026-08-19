@@ -23,8 +23,9 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
 
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         # On macOS, CPython prefers the system libffi and provides no way to
-        # # select a non-system version. Disable its system-library probe so
-        # # _ctypes uses the bundled libffi instead.
+        # select a non-system version. Disable its system-library probe so
+        # _ctypes uses the bundled libffi instead.
+        # https://github.com/python/cpython/issues/155813
         export ac_cv_lib_ffi_ffi_call=no
     fi
 fi

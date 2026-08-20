@@ -726,7 +726,6 @@ _testcapi:
       minimum-python-version: "3.13"
 
 _testclinic:
-  minimum-python-version: '3.12'
   disabled-targets:
     - .*
   sources:

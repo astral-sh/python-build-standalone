@@ -958,7 +958,7 @@ x86_64-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1015,7 +1015,7 @@ x86_64_v2-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1072,7 +1072,7 @@ x86_64_v3-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1131,7 +1131,7 @@ x86_64_v4-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1190,7 +1190,7 @@ aarch64-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb

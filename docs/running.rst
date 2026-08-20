@@ -4,10 +4,36 @@
 Running Distributions
 =====================
 
+Using uv
+========
+
+The most common method of using the prebuilt distributions from this
+project is with `uv <https://docs.astral.sh/uv/>`_. By default, uv will
+download, install, and use an appropriate distribution if the system does
+not provide a compatible Python installation that uv can discover. These
+downloaded distributions are referred to as *managed* Python installations,
+as compared to *system* Python installations. You can configure uv to
+always use a *managed* Python installation, for example by using the
+``--managed-python`` flag.
+
+To run a particular distribution using ``uv``::
+
+    uvx --managed-python python
+
+A Python version or another specifier can be included::
+
+    uvx --managed-python python@3.13
+    uvx --managed-python python@3.14+freethreaded
+
+The uv documentation on
+`installing Python <https://docs.astral.sh/uv/guides/install-python/>`_
+and `Python versions <https://docs.astral.sh/uv/concepts/python-versions/>`_
+provides more information and examples.
+
 Obtaining Distributions
 =======================
 
-Pre-built distributions are published as releases on GitHub at
+Prebuilt distributions are published as releases on GitHub at
 https://github.com/astral-sh/python-build-standalone/releases.
 Simply go to that page and find the latest release along with
 its release notes.
@@ -28,38 +54,23 @@ Published distributions vary by their:
 The Python version is hopefully pretty obvious.
 
 The target machine architecture defines the CPU type and operating
-system the distribution runs on. We use LLVM target triples. If you aren't
-familiar with LLVM target triples, here is an overview:
+system the distribution runs on. We use LLVM target triples.
+Distributions are produced for the following target triples:
 
 ``aarch64-apple-darwin``
-   macOS ARM CPUs. i.e. M1 native binaries.
+   macOS ARM CPUs, i.e., Apple Silicon.
 
 ``x86_64-apple-darwin``
    macOS Intel CPUs.
 
-``i686-pc-windows-msvc``
-   Windows 32-bit Intel/AMD CPUs.
-
 ``x86_64-pc-windows-msvc``
    Windows 64-bit Intel/AMD CPUs.
 
-``*-windows-msvc-shared``
-   This is a standard build of Python for Windows. There are DLLs for
-   Python and extensions. These builds behave like the official Python
-   for Windows distributions.
+``i686-pc-windows-msvc``
+   Windows 32-bit Intel/AMD CPUs.
 
-   These builds are now published without the `-shared` suffix.
-
-``*-windows-msvc-static``
-   These builds of Python are statically linked.
-
-   These builds are extremely brittle and have several known incompatibilities.
-   We recommend not using them unless you have comprehensive test coverage and
-   have confidence they work for your use case.
-
-   See :ref:`quirk_windows_static_distributions` for more.
-
-   These builds are no longer published.
+``aarch64-pc-windows-msvc``
+   Windows 64-bit ARM CPUs. Available for CPython 3.11 and newer.
 
 ``x86_64-unknown-linux-gnu``
    Linux 64-bit Intel/AMD CPUs linking against GNU libc.
@@ -67,18 +78,17 @@ familiar with LLVM target triples, here is an overview:
 ``x86_64-unknown-linux-musl``
    Linux 64-bit Intel/AMD CPUs linking against musl libc.
 
-   These binaries are static and have no shared library dependencies.
-   A side-effect of static binaries is they cannot load Python ``.so``
-   extensions, as static binaries cannot load shared libraries.
+   Distributions are provided that dynamically link musl or are fully static
+   (``+static``). Dynamically linked distributions require musl to be installed
+   on the host. Fully static distributions have no shared library dependencies,
+   but cannot load Python ``.so`` extensions.
 
 ``aarch64-unknown-linux-*``
-   Similar to above except targeting Linux on ARM64 CPUs.
+   Similar to above except targeting Linux on ARM64 CPUs. Distributions
+   are provided for GNU libc, musl, and static musl.
 
-   This is what you want for e.g. AWS Graviton EC2 instances. Many Linux
-   ARM devices are also ``aarch64``.
-
-``i686-unknown-linux-*``
-   Linux 32-bit Intel/AMD CPUs.
+   For example, this target supports AWS Graviton EC2 instances. Many
+   Linux ARM devices are also ``aarch64``.
 
 ``x86_64_v2-*``
    Targets 64-bit Intel/AMD CPUs approximately newer than
@@ -122,25 +132,48 @@ binaries, as these should be slightly faster since they take advantage
 of more modern CPU instructions which are more efficient. But if you want
 maximum portability, stick with the baseline ``x86_64`` builds.
 
-We recommend using the ``*-windows-msvc-shared`` builds on Windows, as these
-are highly compatible with the official Python distributions.
+``armv7-unknown-linux-gnueabi``
+   Linux 32-bit ARM CPUs without hardware floating-point instructions,
+   linking against GNU libc.
+
+   This is an uncommon platform. In most cases, the hardware floating-point
+   target should be used. These distributions can be used on Debian's
+   ``armel`` port.
+
+``armv7-unknown-linux-gnueabihf``
+   Linux 32-bit ARM CPUs with hardware floating-point instructions,
+   linking against GNU libc.
+
+   This is a common 32-bit ARM platform. Raspberry Pi model 2 and later
+   can use these distributions on many 32-bit Linux distributions.
+
+``ppc64le-unknown-linux-gnu``
+   Linux 64-bit POWER8+ CPUs linking against GNU libc.
+
+``riscv64-unknown-linux-gnu``
+   Linux 64-bit RISC-V CPUs linking against GNU libc.
+
+``s390x-unknown-linux-gnu``
+   Linux 64-bit IBM Z (s390x) CPUs linking against GNU libc.
 
 We recommend using the ``*-unknown-linux-gnu`` builds on Linux, since they
-are able to load compiled Python extensions. If you don't need to load
-compiled extensions not provided by the standard library or you are willing
-to compile and link 3rd party extensions into a custom binary, the
+are able to load compiled Python extensions. The non-static
+``*-unknown-linux-musl`` builds should be used on musl-based Linux
+distributions like Alpine Linux. If you don't need to load compiled
+extensions not provided by the standard library, or you are willing to
+compile and link third-party extensions into a custom binary, the static
 ``*-unknown-linux-musl`` builds should work just fine.
 
 The build configuration denotes how Python and its dependencies were built.
 Common configurations include:
 
 ``pgo+lto``
-   Profile guided optimization and link-time optimization. **These should be
+   Profile-guided optimization and link-time optimization. **These should be
    the fastest distributions since they have the most build-time
    optimizations.**
 
 ``pgo``
-   Profile guided optimization.
+   Profile-guided optimization.
 
    Starting with CPython 3.12, BOLT is also applied alongside traditional
    PGO on platforms supporting BOLT. (Currently just Linux x86-64.)
@@ -154,18 +187,32 @@ Common configurations include:
 ``debug``
    A debug build. No optimizations.
 
+``freethreaded``
+   A free-threaded build, available for CPython 3.13 and newer. This
+   option is combined with an optimization option, such as
+   ``freethreaded+pgo+lto`` or ``freethreaded+lto``.
+
+``static``
+   A fully static musl build. Has no shared library dependencies and
+   cannot load dynamically linked Python extensions.
+
 The archive flavor denotes the content in the archive. See
 :ref:`distributions` for more.
 
 Casual users will likely want to use the ``install_only`` archive, as most
 users do not need the build artifacts present in the ``full`` archive.
-The ``install_only`` archive doesn't include the build configuration in its
-file name. It's based on the fastest available build configuration for a given
-target.
+The ``install_only`` archive does not include the optimization options in
+its filename. For each Python version, target, and threading variant,
+it uses the fastest available build configuration.
 
 An ``install_only_stripped`` archive is also available. This archive is
-equivalent to ``install_only``, but without debug symbols, which results in a
-smaller download and on-disk footprint.
+equivalent to ``install_only``, but without debug symbols, which results
+in a smaller download and on-disk footprint. For CPython 3.13 and newer,
+free-threaded archives are identified by ``freethreaded`` in the filename.
+
+Fully static musl builds are only available as ``full`` archives with
+``+static`` in their build options. The ``install_only`` and
+``install_only_stripped`` musl archives use dynamically linked builds.
 
 Extracting Distributions
 ========================
@@ -215,17 +262,20 @@ Linux
 The produced Linux binaries have minimal references to shared
 libraries and thus can be executed on most Linux systems.
 
-The following shared libraries are referenced:
+Distributions linked against glibc may reference the following shared
+libraries:
 
 * linux-vdso.so.1
 * libpthread.so.0
 * libdl.so.2 (required by ctypes extension)
 * libutil.so.1
 * librt.so.1
-* libcrypt.so.1 (required by crypt extension)
 * libm.so.6
 * libc.so.6
 * ld-linux-x86-64.so.2
+
+On Python 3.12 and earlier, the deprecated ``crypt`` module additionally
+requires ``libcrypt.so.1``.
 
 The minimum glibc version required for most targets is 2.17. This should make
 binaries compatible with the following Linux distributions:
@@ -236,12 +286,14 @@ binaries compatible with the following Linux distributions:
 * Debian 8+ (Jessie)
 * Ubuntu 14.04+
 
-For the ``mips-unknown-linux-gnu`` and ``mipsel-unknown-linux-gnu`` targets,
-the minimum glibc version is 2.19.
+For the ``riscv64-unknown-linux-gnu`` target, the minimum glibc version is
+2.28.
 
-If built with MUSL, no shared library dependencies nor glibc version
-requirements exist and the binaries should *just work* on practically any
-Linux system.
+Distributions linked against musl do not depend on glibc. By default, musl
+distributions are dynamically linked and require musl to be installed on the
+host. Fully static distributions use the ``+static`` build option and have
+no shared library dependencies, but cannot load dynamically linked Python
+extension modules.
 
 Windows
 -------
@@ -249,12 +301,11 @@ Windows
 Windows distributions model the requirements of the official Python
 distributions:
 
-* Windows 8 or Windows Server 2012 or newer
+* CPython 3.14 and newer: Windows 10 or newer.
+* CPython 3.13 and earlier: Windows 8.1 or newer.
 
-Windows binaries have a dependency on the Microsoft Visual C++ Redistributable,
-likely from MSVC 2015 (``vcruntime140.dll``). This dependency is not
-provided in the distribution and will need to be provided by downstream
-distributors.
+Windows Server support follows the corresponding CPython release's
+upstream platform policy.
 
 Extra Python Software
 =====================
@@ -315,6 +366,14 @@ errors like the following::
     Intrinsic has incorrect argument type!
     void (i8*, i8, i64, i1)* @llvm.memset.p0i8.i64
 
-In the future, we will allow configuring the toolchain used so it can match
-requirements of downstream consumers. For the moment, we hard-code the toolchain
-version.
+The distributions that contain object files are useful for
+embedding Python in a larger binary. See the
+`PyOxidizer <https://github.com/indygreg/PyOxidizer>`_ sister project
+for such a downstream repackager.
+
+Some users of these distributions might be better served by the
+`PyOxy <https://pyoxidizer.readthedocs.io/en/latest/pyoxy.html>`_
+sister project. PyOxy takes these Python distributions and adds Rust code
+to enhance the functionality of the Python interpreter. The official
+PyOxy release binaries are single-file executables providing
+a full-featured Python interpreter.

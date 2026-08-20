@@ -13,6 +13,24 @@ tar -xf "libffi-${LIBFFI_VERSION}.tar.gz"
 
 pushd "libffi-${LIBFFI_VERSION}"
 
+# libffi uses linux/limits.h and linux/types.h for PATH_MAX. 
+# Use the standard header so musl builds do not require Linux headers.
+patch -p1 <<'EOF'
+diff --git a/src/tramp.c b/src/tramp.c
+--- a/src/tramp.c
++++ b/src/tramp.c
+@@ -53,9 +53,3 @@
+ #include <tramp.h>
+-#ifdef __linux__
+-#include <linux/limits.h>
+-#include <linux/types.h>
+-#endif
+-#ifdef __CYGWIN__
+ #include <limits.h>
+-#endif
+ #endif
+EOF
+
 EXTRA_CONFIGURE=
 
 # mkostemp() was introduced in macOS 10.10 and libffi doesn't have

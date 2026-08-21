@@ -299,12 +299,17 @@ def generate_crate_build_matrix_entries(
         {
             "platform": platform,
             "arch": arch,
-            # Use the GitHub runner for Windows, because the Depot one is
-            # missing a Rust toolchain. On Linux, it's important that the the
+            # Use a larger GitHub runner for Windows, because the Depot one is
+            # missing a Rust toolchain and standard runners share a busy pool.
+            # On Linux, it's important that the
             # `python-build` runner matches the `crate-build` runner because of
             # GLIBC version mismatches.
-            "runner": find_runner(
-                runners, platform, arch, True if platform == "windows" else False
+            "runner": (
+                "windows-latest-large"
+                if platform == "windows" and "windows-latest-large" in runners
+                else find_runner(
+                    runners, platform, arch, True if platform == "windows" else False
+                )
             ),
             "crate_artifact_name": crate_artifact_name(
                 platform,

@@ -8,37 +8,29 @@ There is support for producing CPython distributions for Windows,
 macOS, and Linux. All distributions are highly self-contained and have
 limited shared library dependencies.
 
-Planned and features include:
-
-* Static/dynamic linking toggles for dependencies
-* Support for configuring which toolchain/version to use
-* Support for BSDs
-* Support for Android
-* Support for Python distributions that aren't CPython
-
 Target Notes
 ============
 
-Non-x86 Linux Targets
----------------------
+Linux x86_64 and aarch64 targets (``x86_64-*`` and ``aarch64-*``) are built on
+native hardware using a modern LLVM toolchain.
 
-Linux targets for non-x86 (not ``i686-*`` or ``x86_64-*``) are considered alpha
-quality.
-
-The Linux cross builds use a different build environment based on Debian
-Stretch (as opposed to Debian Jessie) and they use the cross tools Debian
-packages (as opposed to using a modern Clang built from source).
-
-These builds haven't been widely tested. There are likely several rough
-edges with them.
-
-Only Python 3.9 is currently supported.
+All other architectures are cross-compiled on x86_64 using Debian-provided
+cross-compilation tools. As a result, these targets are not as highly
+optimized as aarch64 and x86_64 targets.
 
 Test Failures
 =============
 
-This repository contains ``test-distribution.py`` script that can be
+This repository contains a ``test-distribution.py`` script that can be
 used to run the Python test harness from a distribution archive.
+
+Currently, this script is only used to validate a limited set of
+functionality for each distribution. The entire Python test harness is
+not run on a regular basis. Work is ongoing to perform this type of
+testing on a regular basis.
+
+The details below on known failing and skipped tests are out of date. In
+the future, this information will be updated and presented elsewhere.
 
 Here, we track the various known failures when running
 ``test-distribution.py --stdlib -- /path/to/distribution.tar.zst -u all``.

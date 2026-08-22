@@ -1,0 +1,92 @@
+#!/bin/bash
+
+set -eu
+
+linker_cmdline=(ld)
+outputs=()
+while [ "$#" -gt 0 ]; do
+    arg="$1"
+    shift
+    if [ "${arg::9}" = "-fuse-ld=" ]; then
+        linker_cmdline[0]="${arg:9}"
+    else
+        if [ "${linker_cmdline[-1]}" = "-o" ]; then
+            outputs+=("$arg")
+        fi
+        linker_cmdline+=("$arg")
+    fi
+done
+
+if [ "${#outputs[@]}" -eq 0 ]; then
+    outputs=(a.out)
+fi
+
+set -x
+
+"${linker_cmdline[0]}" \
+    -L"${antiquator}" \
+    --push-state --as-needed \
+    -lantiquator_helpers \
+    -lanl_placeholder \
+    -lc_placeholder \
+    -ldl_placeholder \
+    -lm_placeholder \
+    -lpthread_placeholder \
+    -lresolv_placeholder \
+    -lrt_placeholder \
+    -lutil_placeholder \
+    --pop-state \
+    "${linker_cmdline[@]:1}"
+
+patchelf \
+    --replace-needed libanl_placeholder.so libanl.so.1 \
+    --replace-needed libc_placeholder.so libc.so.6 \
+    --replace-needed libdl_placeholder.so libdl.so.2 \
+    --replace-needed libm_placeholder.so libm.so.6 \
+    --replace-needed libpthread_placeholder.so libpthread.so.0 \
+    --replace-needed libresolv_placeholder.so libresolv.so.2 \
+    --replace-needed librt_placeholder.so librt.so.1 \
+    --replace-needed libutil_placeholder.so libutil.so.1 \
+    --rename-dynamic-symbols <(echo {real,_}_libc_start_main) \
+    "${outputs[@]}"
+
+# The following code is unneceesary because of the weak symbol
+# de-versioning in make_shadow_libraries.py, but it works. If we ever
+# raise our glibc baseline to 2.30+ and the linkers still aren't fixed,
+# we can re-enable this (... or rewrite it in not-bash).
+exit 0
+# Set VER_FLG_WEAK on the vernaux entry for a symbol version if all the
+# symbols of that version are weak. It turns out that linkers don't
+# actually have support for setting this flag, but glibc processes it
+# fine. (gold has a comment noting the oversight.)
+for output in "${outputs[@]}"; do
+    # First, note down which symbol versions we see referenced from at
+    # least one weak symbol and nothing else.
+    declare -A seen strong_seen
+    while read -a line; do
+        if [ "${line[6]:-}" == "UND" ] && [[ "${line[7]:-}" == *@* ]]; then
+            version=${line[7]##*@}
+            seen["$version"]=1
+            if [ "${line[4]}" != "WEAK" ]; then
+                strong_seen["$version"]=1
+            fi
+        fi
+    done < <(readelf --dyn-syms --wide "$output")
+
+    verneed=0
+    readelf --version-info "$output" | while read -a line; do
+        if [ "${line[*]::3}" = "Version needs section" ]; then
+            verneed=1
+        elif [ "${#line[@]}" -eq 0 ]; then
+            verneed=0
+        elif [ "$verneed" -eq 1 ] && [ "${line[2]}" = "Offset:" ]; then
+            base_offset=$((line[3]))
+        elif [ "$verneed" -eq 1 ] && [ "${line[1]}" = "Name:" ]; then
+            if [ "${seen[${line[2]}]:-0}" -eq 1 ] && [ "${strong_seen[${line[2]}]:-0}" -eq 0 ]; then
+                # vna_flags is 4 bytes into Elfxx_Vernaux
+                offset=$((base_offset + "${line[0]%:}" + 4))
+                echo 0200 | xxd -r -p | dd of="$output" bs=1 seek="$offset" conv=notrunc status=none
+            fi
+        fi
+    done
+done

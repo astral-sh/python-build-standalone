@@ -1,6 +1,7 @@
 .idea/
 build/
 docs/_build/
+site/
 dist/
 target/
 venv/

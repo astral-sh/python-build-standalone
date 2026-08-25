@@ -36,6 +36,10 @@ check = [
 dev = [
     "moto[server]>=5.1.22",
 ]
+docs = [
+    "mkdocs>=1.6.0",
+    "mkdocs-material>=9.6.0",
+]
 
 [tool.uv]
 no-build = true

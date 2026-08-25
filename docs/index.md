@@ -1,5 +1,4 @@
-Python Standalone Builds
-========================
+# Python Standalone Builds
 
 This project produces self-contained, highly portable, high-performance
 Python distributions. These Python distributions contain a fully usable,
@@ -19,30 +18,17 @@ BOLT post-link binary optimization. Together, these techniques improve
 runtime performance while preserving portability.
 
 The most common method of using these distributions is with
-`uv <https://docs.astral.sh/uv/>`_.
+[uv](https://docs.astral.sh/uv/).
 
-To run a particular distribution using ``uv``::
+To run a particular distribution using `uv`:
 
-    uvx --managed-python python
+```
+uvx --managed-python python
+```
 
-A Python version or another specifier can be included::
+A Python version or another specifier can be included:
 
-    uvx --managed-python python@3.13
-    uvx --managed-python python@3.14+freethreaded
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   running
-   building
-   quirks
-   technotes
-   distributions
-   status
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`search`
+```
+uvx --managed-python python@3.13
+uvx --managed-python python@3.14+freethreaded
+```

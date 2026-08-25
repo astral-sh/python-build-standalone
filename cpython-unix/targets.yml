@@ -534,6 +534,8 @@ riscv64-unknown-linux-gnu:
   target_cc: /usr/bin/riscv64-linux-gnu-clang
   target_cxx: /usr/bin/riscv64-linux-gnu-clang++
   target_cflags:
+    # Avoid relocations unsupported by the older RISC-V cross-linker.
+    - '-fdebug-default-version=4'
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'

@@ -24,6 +24,7 @@ from pythonbuild.cpython import (
     meets_python_maximum_version,
     meets_python_minimum_version,
     parse_setup_line,
+    stdlib_test_annotations,
 )
 from pythonbuild.docker import (
     build_docker_image,
@@ -56,6 +57,7 @@ DOWNLOADS_PATH = BUILD / "downloads"
 SUPPORT = ROOT / "cpython-unix"
 EXTENSION_MODULES = SUPPORT / "extension-modules.yml"
 TARGETS_CONFIG = SUPPORT / "targets.yml"
+STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
 
 LINUX_ALLOW_SYSTEM_LIBRARIES = {
     "c",
@@ -757,6 +759,13 @@ def build_cpython(
     setuptools_archive = download_entry("setuptools", DOWNLOADS_PATH)
     pip_archive = download_entry("pip", DOWNLOADS_PATH)
 
+    test_annotations = stdlib_test_annotations(
+        STDLIB_TEST_ANNOTATIONS,
+        python_version,
+        target_triple,
+        parsed_build_options,
+    )
+
     ems = extension_modules_config(EXTENSION_MODULES)
 
     setup = derive_setup_local(
@@ -828,6 +837,14 @@ def build_cpython(
             fh.flush()
 
             build_env.copy_file(fh.name, dest_name="Makefile.extra")
+
+        # Install the derived test annotations.
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8") as fh:
+            os.chmod(fh.name, 0o644)
+            test_annotations.json_dump(fh)
+            fh.flush()
+
+            build_env.copy_file(fh.name, dest_name="stdlib-test-annotations.json")
 
         env = {
             "PIP_VERSION": DOWNLOADS["pip"]["version"],
@@ -1100,7 +1117,7 @@ def main():
             write_dockerfiles(SUPPORT, BUILD)
         elif action == "makefiles":
             targets = get_targets(TARGETS_CONFIG)
-            write_triples_makefiles(targets, BUILD, SUPPORT)
+            write_triples_makefiles(targets, ROOT, BUILD, SUPPORT)
             write_target_settings(targets, BUILD / "targets")
             write_package_versions(BUILD / "versions")
 

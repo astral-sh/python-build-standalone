@@ -1,0 +1,258 @@
+name: stdlib
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "The full SHA of a commit with completed build workflows."
+        required: true
+        type: string
+      filters:
+        description: "Optional CI filters (e.g., 'platform:linux,python:3.14,build:pgo')."
+        required: false
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ inputs.sha }}-${{ inputs.filters }}
+  cancel-in-progress: false
+
+env:
+  FORCE_COLOR: 1
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  generate-matrix:
+    name: Generate test matrix
+    runs-on: ubuntu-latest
+    outputs:
+      linux-matrix-0: ${{ steps.set-matrix.outputs.linux-matrix-0 }}
+      linux-matrix-1: ${{ steps.set-matrix.outputs.linux-matrix-1 }}
+      macos-matrix: ${{ steps.set-matrix.outputs.macos-matrix }}
+      windows-matrix: ${{ steps.set-matrix.outputs.windows-matrix }}
+      any-linux-0: ${{ steps.set-matrix.outputs.any-linux-0 }}
+      any-linux-1: ${{ steps.set-matrix.outputs.any-linux-1 }}
+      any-macos: ${{ steps.set-matrix.outputs.any-macos }}
+      any-windows: ${{ steps.set-matrix.outputs.any-windows }}
+      linux-run-id: ${{ steps.find-runs.outputs.linux-run-id }}
+      macos-run-id: ${{ steps.find-runs.outputs.macos-run-id }}
+      windows-run-id: ${{ steps.find-runs.outputs.windows-run-id }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Generate test matrix
+        id: set-matrix
+        env:
+          INPUT_FILTERS: ${{ inputs.filters }}
+        run: |
+          uv run ci-matrix.py --platform linux --max-shards 2 --event push --labels "${INPUT_FILTERS}" > linux.json
+          uv run ci-matrix.py --platform darwin --event push --labels "${INPUT_FILTERS}" > macos.json
+          uv run ci-matrix.py --platform windows --event push --labels "${INPUT_FILTERS}" > windows.json
+
+          linux_0=$(jq -c '."python-build"."0" | .include |= map(select(.run == "true"))' linux.json)
+          linux_1=$(jq -c '."python-build"."1" | .include |= map(select(.run == "true"))' linux.json)
+          macos=$(jq -c '."python-build" | .include |= map(select(.run == "true"))' macos.json)
+          windows=$(jq -c '."python-build" | .include |= map(select(.run == "true"))' windows.json)
+
+          echo "linux-matrix-0=${linux_0}" >> "${GITHUB_OUTPUT}"
+          echo "linux-matrix-1=${linux_1}" >> "${GITHUB_OUTPUT}"
+          echo "macos-matrix=${macos}" >> "${GITHUB_OUTPUT}"
+          echo "windows-matrix=${windows}" >> "${GITHUB_OUTPUT}"
+
+          echo "any-linux-0=$(jq -r '.include | length > 0' <<< "${linux_0}")" >> "${GITHUB_OUTPUT}"
+          echo "any-linux-1=$(jq -r '.include | length > 0' <<< "${linux_1}")" >> "${GITHUB_OUTPUT}"
+          echo "any-macos=$(jq -r '.include | length > 0' <<< "${macos}")" >> "${GITHUB_OUTPUT}"
+          echo "any-windows=$(jq -r '.include | length > 0' <<< "${windows}")" >> "${GITHUB_OUTPUT}"
+
+          jq -n \
+            --argjson linux_0 "${linux_0}" \
+            --argjson linux_1 "${linux_1}" \
+            --argjson macos "${macos}" \
+            --argjson windows "${windows}" \
+            '{"linux-0": $linux_0, "linux-1": $linux_1, macos: $macos, windows: $windows}'
+
+      - name: Find build workflow runs
+        id: find-runs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SHA: ${{ inputs.sha }}
+          ANY_LINUX_0: ${{ steps.set-matrix.outputs.any-linux-0 }}
+          ANY_LINUX_1: ${{ steps.set-matrix.outputs.any-linux-1 }}
+          ANY_MACOS: ${{ steps.set-matrix.outputs.any-macos }}
+          ANY_WINDOWS: ${{ steps.set-matrix.outputs.any-windows }}
+        run: |
+          find_run() {
+            local name="$1"
+            local workflow="$2"
+            local wanted="$3"
+
+            if [ "${wanted}" != "true" ]; then
+              return
+            fi
+
+            run_id=$(gh api --method GET \
+              "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs" \
+              -f head_sha="${INPUT_SHA}" \
+              -f status=success \
+              -f per_page=100 \
+              --jq '.workflow_runs[0].id // empty')
+
+            if [ -z "${run_id}" ]; then
+              echo "No successful ${name} build workflow found for ${INPUT_SHA}" >&2
+              exit 1
+            fi
+
+            echo "${name}-run-id=${run_id}" >> "${GITHUB_OUTPUT}"
+          }
+
+          if [ "${ANY_LINUX_0}" = "true" ] || [ "${ANY_LINUX_1}" = "true" ]; then
+            find_run linux linux.yml true
+          fi
+          find_run macos macos.yml "${ANY_MACOS}"
+          find_run windows windows.yml "${ANY_WINDOWS}"
+
+  linux-0:
+    name: linux / ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    if: ${{ needs.generate-matrix.outputs.any-linux-0 == 'true' }}
+    needs: generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix-0) }}
+    steps: &linux_steps
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Download distribution
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.generate-matrix.outputs.linux-run-id }}
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist
+
+      - name: Run stdlib tests
+        env:
+          JUNIT_FILENAME: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml
+          MATRIX_LIBC: ${{ matrix.libc }}
+        run: |
+          if [ "${MATRIX_LIBC}" = "musl" ]; then
+            sudo apt install --yes musl-dev
+            unset LD_LIBRARY_PATH
+          fi
+
+          uv run --no-dev test-distribution.py --junit-xml "${JUNIT_FILENAME}" --stdlib dist/*.tar.zst
+
+      - name: Upload JUnit test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}-junit
+          path: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml
+
+  linux-1:
+    name: linux / ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    if: ${{ needs.generate-matrix.outputs.any-linux-1 == 'true' }}
+    needs: generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.linux-matrix-1) }}
+    steps: *linux_steps
+
+  macos:
+    name: macos / ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    if: ${{ needs.generate-matrix.outputs.any-macos == 'true' }}
+    needs: generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.macos-matrix) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Download distribution
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.generate-matrix.outputs.macos-run-id }}
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist
+
+      - name: Run stdlib tests
+        env:
+          JUNIT_FILENAME: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml
+        run: uv run --no-dev test-distribution.py --junit-xml "${JUNIT_FILENAME}" --stdlib dist/*.tar.zst
+
+      - name: Upload JUnit test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}-junit
+          path: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml
+
+  windows:
+    name: windows / ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    if: ${{ needs.generate-matrix.outputs.any-windows == 'true' }}
+    needs: generate-matrix
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.windows-matrix) }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ inputs.sha }}
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7.6.0
+        with:
+          enable-cache: false
+
+      - name: Download distribution
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ needs.generate-matrix.outputs.windows-run-id }}
+          name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
+          path: dist
+
+      - name: Run stdlib tests
+        env:
+          JUNIT_FILENAME: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml
+        run: |
+          $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
+          uv run --no-dev test-distribution.py --junit-xml $env:JUNIT_FILENAME --stdlib $Dists
+
+      - name: Upload JUnit test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}-junit
+          path: junit-cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}.xml

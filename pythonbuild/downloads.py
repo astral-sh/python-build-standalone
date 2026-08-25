@@ -256,10 +256,10 @@ DOWNLOADS = {
     },
     # Remember to update OPENSSL_VERSION_INFO in pythonbuild/disttests/ whenever upgrading.
     "openssl-3.5": {
-        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.7/openssl-3.5.7.tar.gz",
-        "size": 53153930,
-        "sha256": "a8c0d28a529ca480f9f36cf5792e2cd21984552a3c8e4aa11a24aa31aeac98e8",
-        "version": "3.5.7",
+        "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.8/openssl-3.5.8.tar.gz",
+        "size": 53213818,
+        "sha256": "a8f84a39918ec6415ce765d9b429d313ba97b8143169c172e734b9514464f5b2",
+        "version": "3.5.8",
         "library_names": ["crypto", "ssl"],
         "licenses": ["Apache-2.0"],
         "license_file": "LICENSE.openssl-3.txt",

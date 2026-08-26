@@ -290,10 +290,10 @@ DOWNLOADS = {
         "version": "26.2.1",
     },
     "setuptools": {
-        "url": "https://files.pythonhosted.org/packages/9d/76/f789f7a86709c6b087c5a2f52f911838cad707cc613162401badc665acfe/setuptools-82.0.1-py3-none-any.whl",
-        "size": 1006223,
-        "sha256": "a59e362652f08dcd477c78bb6e7bd9d80a7995bc73ce773050228a348ce2e5bb",
-        "version": "82.0.1",
+        "url": "https://files.pythonhosted.org/packages/95/9c/c510029fc6ef33a6275cd2c5d3cecd6613dfd6aa401d57c54f1c18852ccf/setuptools-84.0.0-py3-none-any.whl",
+        "size": 818216,
+        "sha256": "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+        "version": "84.0.0",
     },
     # Remember to update pythonbuild/disttests/ when version changed.
     "sqlite": {

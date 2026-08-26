@@ -5,6 +5,9 @@
 import pathlib
 import re
 import tarfile
+from collections.abc import Iterable
+from dataclasses import dataclass
+from typing import IO
 
 import jsonschema
 import yaml
@@ -226,169 +229,96 @@ def link_for_target(lib: str, target_triple: str) -> str:
         return f"-l{lib}"
 
 
-def meets_python_minimum_version(got: str, wanted: str) -> bool:
+def meets_python_minimum_version(got: str, wanted: str | dict) -> bool:
+    if isinstance(wanted, dict):
+        wanted_version: str = wanted.get("minimum-python-version", "1.0")
+    else:
+        wanted_version = wanted
+
     parts = got.split(".")
     got_major, got_minor = int(parts[0]), int(parts[1])
 
-    parts = wanted.split(".")
+    parts = wanted_version.split(".")
     wanted_major, wanted_minor = int(parts[0]), int(parts[1])
 
     return (got_major, got_minor) >= (wanted_major, wanted_minor)
 
 
-def meets_python_maximum_version(got: str, wanted: str) -> bool:
+def meets_python_maximum_version(got: str, wanted: str | dict) -> bool:
+    if isinstance(wanted, dict):
+        wanted_version: str = wanted.get("maximum-python-version", "100.0")
+    else:
+        wanted_version = wanted
+
     parts = got.split(".")
     got_major, got_minor = int(parts[0]), int(parts[1])
 
-    parts = wanted.split(".")
+    parts = wanted_version.split(".")
     wanted_major, wanted_minor = int(parts[0]), int(parts[1])
 
     return (got_major, got_minor) <= (wanted_major, wanted_minor)
 
 
-def derive_setup_local(
-    cpython_source_archive,
-    python_version,
-    target_triple,
-    build_options,
-    extension_modules,
-):
-    """Derive the content of the Modules/Setup.local file."""
+def _render_setup_local(section_lines: dict[str, list[bytes]]) -> bytes:
+    lines = []
 
-    use_setup_stdlib = meets_python_minimum_version(python_version, "3.12")
-
-    # The first part of this function validates that our extension modules YAML
-    # based metadata is in sync with the various files declaring extension
-    # modules in the Python distribution.
-
-    disabled = set()
-    ignored = set()
-    setup_enabled_wanted = set()
-    config_c_only_wanted = set()
-
-    # Collect metadata about our extension modules as they relate to this
-    # Python target.
-    for name, info in sorted(extension_modules.items()):
-        python_min_match = meets_python_minimum_version(
-            python_version, info.get("minimum-python-version", "1.0")
-        )
-        python_max_match = meets_python_maximum_version(
-            python_version, info.get("maximum-python-version", "100.0")
-        )
-
-        if info.get("build-mode") not in (
-            None,
-            "shared",
-            "static",
-            "shared-or-disabled",
-        ):
-            raise Exception("unsupported build-mode for extension module %s" % name)
-
-        if not (python_min_match and python_max_match):
-            log(f"ignoring extension module {name} because Python version incompatible")
-            ignored.add(name)
+    for section, section_content in sorted(section_lines.items()):
+        if not section_content:
             continue
 
-        if targets := info.get("disabled-targets"):
-            if any(re.match(p, target_triple) for p in targets):
-                log(
-                    "disabling extension module %s because disabled for this target triple"
-                    % name
-                )
-                disabled.add(name)
+        lines.append(b"\n*%s*\n" % section.encode("ascii"))
+        lines.extend(section_content)
 
-        # Extension is demanding it be built as shared. If this isn't possible due to
-        # a static build, disable the extension.
-        if info.get("build-mode") == "shared-or-disabled" and "static" in build_options:
-            disabled.add(name)
+    lines.append(b"")
 
-        if info.get("setup-enabled", False):
-            setup_enabled_wanted.add(name)
+    return b"\n".join(lines)
 
-        for entry in info.get("setup-enabled-conditional", []):
-            python_min_match_setup = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match_setup = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
 
-            if entry.get("enabled", False) and (
-                python_min_match_setup and python_max_match_setup
-            ):
-                setup_enabled_wanted.add(name)
+def _render_make_data(extra_cflags: dict[bytes, list[bytes]]) -> bytes:
+    lines = []
 
-        if info.get("config-c-only"):
-            config_c_only_wanted.add(name)
+    for target in sorted(extra_cflags):
+        lines.append(
+            b"%s: PY_STDMODULE_CFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
+        )
 
-        for entry in info.get("config-c-only-conditional", []):
-            python_min_match_setup = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match_setup = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
-            if entry.get("config-c-only", False) and (
-                python_min_match_setup and python_max_match_setup
-            ):
-                config_c_only_wanted.add(name)
+    return b"\n".join(lines)
 
-    # Parse more files in the distribution for their metadata.
 
-    with tarfile.open(str(cpython_source_archive)) as tf:
-        ifh = tf.extractfile("Python-%s/Modules/Setup" % python_version)
-        setup_lines = ifh.readlines()
+def _parse_setup_stdlib(
+    setup_stdlib_lines: Iterable[bytes],
+) -> tuple[dict[str, bytes], dict[str, str]]:
+    extension_pattern = re.compile(rb"^@MODULE_[A-Z0-9_]+_TRUE@([a-z0-9_]+\s+.*)$")
+    module_lines = {}
+    module_linkage = {}
 
-        try:
-            ifh = tf.extractfile(f"Python-{python_version}/Modules/Setup.bootstrap.in")
-            setup_bootstrap_in = ifh.readlines()
-        except KeyError:
-            setup_bootstrap_in = []
-
-        if use_setup_stdlib:
-            ifh = tf.extractfile(f"Python-{python_version}/Modules/Setup.stdlib.in")
-            setup_stdlib_in = ifh.readlines()
-        else:
-            setup_stdlib_in = []
-
-        ifh = tf.extractfile("Python-%s/Modules/config.c.in" % python_version)
-        config_c_in = ifh.read()
-
-    dist_modules = set()
-    setup_enabled_actual = set()
-    setup_enabled_lines = {}
+    # CPython 3.12+ is configured with MODULE_BUILDTYPE=static.
     section = "static"
 
-    RE_VARIABLE = re.compile(rb"^[a-zA-Z_]+\s*=")
-    RE_EXTENSION_MODULE = re.compile(rb"^([a-z_]+)\s.*[a-zA-Z/_-]+\.c\b")
-    RE_STDLIB_EXTENSION_MODULE = re.compile(
-        rb"^@MODULE_[A-Z0-9_]+_TRUE@([a-z0-9_]+\s+.*)$"
-    )
-
-    setup_stdlib_lines = {}
-    setup_stdlib_linkage = {}
-    # CPython 3.12+ is configured with MODULE_BUILDTYPE=static.
-    setup_stdlib_section = "static"
-
-    for line in setup_stdlib_in:
+    for line in setup_stdlib_lines:
         line = line.rstrip()
 
         if line == b"*shared*":
-            setup_stdlib_section = "shared"
+            section = "shared"
             continue
         elif line == b"*static*":
-            setup_stdlib_section = "static"
+            section = "static"
             continue
 
-        if m := RE_STDLIB_EXTENSION_MODULE.match(line):
-            line = m.group(1)
+        if match := extension_pattern.match(line):
+            line = match.group(1)
             name = line.split()[0].decode("ascii")
-            dist_modules.add(name)
-            setup_stdlib_lines[name] = line
-            setup_stdlib_linkage[name] = setup_stdlib_section
+            module_lines[name] = line
+            module_linkage[name] = section
 
-    # Setup.bootstrap.in has a simple format.
-    for line in setup_bootstrap_in:
+    return module_lines, module_linkage
+
+
+def _parse_setup_bootstrap(setup_bootstrap_lines: Iterable[bytes]) -> dict[str, bytes]:
+    extension_pattern = re.compile(rb"^([a-z_]+)\s.*[a-zA-Z/_-]+\.c\b")
+    module_lines = {}
+
+    for line in setup_bootstrap_lines:
         if b"#" in line:
             line = line[: line.index(b"#")]
 
@@ -404,12 +334,22 @@ def derive_setup_local(
         if not line:
             continue
 
-        if m := RE_EXTENSION_MODULE.match(line):
-            name = m.group(1).decode("ascii")
+        if match := extension_pattern.match(line):
+            name = match.group(1).decode("ascii")
+            module_lines[name] = line
 
-            dist_modules.add(name)
-            setup_enabled_actual.add(name)
-            setup_enabled_lines[name] = line
+    return module_lines
+
+
+def _parse_setup(
+    setup_lines: Iterable[bytes],
+) -> tuple[set[str], set[str], dict[str, bytes]]:
+    variable_pattern = re.compile(rb"^[a-zA-Z_]+\s*=")
+    extension_pattern = re.compile(rb"^([a-z_]+)\s.*[a-zA-Z/_-]+\.c\b")
+    modules = set()
+    enabled_modules = set()
+    enabled_lines = {}
+    section = "static"
 
     for line in setup_lines:
         line = line.rstrip()
@@ -418,21 +358,21 @@ def derive_setup_local(
             continue
 
         # Looks like a variable assignment.
-        if RE_VARIABLE.match(line):
+        if variable_pattern.match(line):
             continue
 
         # Look for extension syntax before and after comment.
-        for i, part in enumerate(line.split(b"#")):
-            if m := RE_EXTENSION_MODULE.match(part):
-                dist_modules.add(m.group(1).decode("ascii"))
+        for index, part in enumerate(line.split(b"#")):
+            if match := extension_pattern.match(part):
+                name = match.group(1).decode("ascii")
+                modules.add(name)
 
-                if i == 0:
-                    setup_enabled_actual.add(m.group(1).decode("ascii"))
+                if index == 0:
+                    enabled_modules.add(name)
 
                 break
 
         # Now look for enabled extensions and stash away the line.
-
         if line == b"*static*":
             section = "static"
             continue
@@ -447,63 +387,364 @@ def derive_setup_local(
             line = line[: line.index(b"#")].strip()
 
         if line and section != "disabled":
-            setup_enabled_lines[line.split()[0].decode("ascii")] = line
+            enabled_lines[line.split()[0].decode("ascii")] = line
 
-    config_c_extensions = parse_config_c(config_c_in.decode("utf-8"))
+    return modules, enabled_modules, enabled_lines
 
-    for extension in sorted(config_c_extensions):
-        dist_modules.add(extension)
 
-    # With ours and theirs extension module metadata collections, compare and
-    # make sure our metadata is comprehensive. This isn't strictly necessary.
-    # But it makes it drastically easier to catch bugs due to our metadata being
-    # out of sync with the distribution. This has historically caused several
-    # subtle and hard-to-diagnose bugs, which is why we do it.
+@dataclass
+class CPythonModuleInfo:
+    # Maps extension names to lines in Modules/Setup.stdlib.in
+    stdlib_lines: dict[str, bytes]
+    # Maps extension names to default linkage in Setup.stdlib.in
+    stdlib_linkage: dict[str, str]
+    # Maps extension names to uncommented lines in Modules/{Setup,Setup.bootstrap.in}
+    setup_lines: dict[str, bytes]
+    # Modules enabled by Setup or Setup.bootstrap.in
+    setup_enabled: set[str]
+    # Maps extension names to init function name defined in Modules/config.c.in
+    config_c_extensions: dict[str, str]
+    # Names of all modules declared in Setup.stdlib.in, Setup, Setup.bootstrap or config.c
+    module_names: set[str]
 
-    missing = dist_modules - set(extension_modules.keys())
+
+@dataclass
+class ExtensionClassification:
+    # Extension modules that are available but disabled for the target or build
+    disabled: set[str]
+    # Not applicable for the Python version
+    ignored: set[str]
+    # Enabled via Modules/{Setup,Setup.bootstrap.in}
+    setup_enabled: set[str]
+    # Declared in Modules/config.c.in, not an external extension module
+    config_c_only: set[str]
+
+
+def _parse_cpython_module_info(
+    cpython_source_archive: pathlib.Path,
+    python_version: str,
+    read_setup_stdlib: bool,
+) -> CPythonModuleInfo:
+    """Parse extension module information from the CPython source archive."""
+    with tarfile.open(str(cpython_source_archive)) as source_archive:
+
+        def extract_file(filename: str) -> IO[bytes]:
+            archive_path = f"Python-{python_version}/Modules/{filename}"
+            file = source_archive.extractfile(archive_path)
+            if file is None:
+                raise ValueError(f"not a regular file: {archive_path}")
+            return file
+
+        if read_setup_stdlib:
+            with extract_file("Setup.stdlib.in") as stdlib_file:
+                stdlib_lines, stdlib_linkage = _parse_setup_stdlib(stdlib_file)
+        else:
+            stdlib_lines, stdlib_linkage = {}, {}
+
+        with extract_file("Setup") as setup_file:
+            setup_modules, setup_enabled, setup_lines = _parse_setup(setup_file)
+
+        try:
+            bootstrap_file = extract_file("Setup.bootstrap.in")
+        except KeyError:
+            bootstrap_lines = {}
+        else:
+            with bootstrap_file:
+                bootstrap_lines = _parse_setup_bootstrap(bootstrap_file)
+
+        with extract_file("config.c.in") as config_file:
+            config_c_extensions = parse_config_c(config_file.read().decode("utf-8"))
+
+    setup_lines = bootstrap_lines | setup_lines
+    setup_enabled = set(bootstrap_lines) | setup_enabled
+    module_names = setup_modules.union(
+        stdlib_lines, bootstrap_lines, config_c_extensions
+    )
+
+    return CPythonModuleInfo(
+        stdlib_lines=stdlib_lines,
+        stdlib_linkage=stdlib_linkage,
+        setup_lines=setup_lines,
+        setup_enabled=setup_enabled,
+        config_c_extensions=config_c_extensions,
+        module_names=module_names,
+    )
+
+
+def _classify_extension_modules(
+    extension_modules: dict[str, dict],
+    python_version: str,
+    target_triple: str,
+    build_options: set[str],
+) -> ExtensionClassification:
+    """Classify extension modules based on the YAML based metadata."""
+    disabled = set()
+    ignored = set()
+    setup_enabled = set()
+    config_c_only = set()
+
+    for name, info in sorted(extension_modules.items()):
+        supported_build_modes = (None, "shared", "static", "shared-or-disabled")
+        if info.get("build-mode") not in supported_build_modes:
+            raise Exception("unsupported build-mode for extension module %s" % name)
+
+        python_min_match = meets_python_minimum_version(python_version, info)
+        python_max_match = meets_python_maximum_version(python_version, info)
+        if not (python_min_match and python_max_match):
+            log(f"ignoring extension module {name} because Python version incompatible")
+            ignored.add(name)
+            continue
+
+        if targets := info.get("disabled-targets"):
+            if any(re.match(p, target_triple) for p in targets):
+                log(
+                    f"disabling extension module {name} because disabled for this target triple"
+                )
+                disabled.add(name)
+
+        # If the extension is to be built as shared but this isn't possible due to
+        # a static build, disable the extension.
+        if info.get("build-mode") == "shared-or-disabled" and "static" in build_options:
+            disabled.add(name)
+
+        if info.get("setup-enabled", False):
+            setup_enabled.add(name)
+
+        for entry in info.get("setup-enabled-conditional", []):
+            min_match = meets_python_minimum_version(python_version, entry)
+            max_match = meets_python_maximum_version(python_version, entry)
+            if entry.get("enabled", False) and (min_match and max_match):
+                setup_enabled.add(name)
+
+        if info.get("config-c-only"):
+            config_c_only.add(name)
+
+        for entry in info.get("config-c-only-conditional", []):
+            min_match = meets_python_minimum_version(python_version, entry)
+            max_match = meets_python_maximum_version(python_version, entry)
+            if entry.get("config-c-only", False) and (min_match and max_match):
+                config_c_only.add(name)
+
+    return ExtensionClassification(
+        disabled=disabled,
+        ignored=ignored,
+        setup_enabled=setup_enabled,
+        config_c_only=config_c_only,
+    )
+
+
+def _validate_extension_modules(
+    extension_modules: dict[str, dict],
+    source: CPythonModuleInfo,
+    classification: ExtensionClassification,
+) -> None:
+    # Comparing our metadata with CPython's declarations makes it easier to
+    # catch subtle bugs caused by extension metadata getting out of sync.
+    missing = source.module_names - set(extension_modules.keys())
 
     if missing:
         raise Exception(
             "missing extension modules from YAML: %s" % ", ".join(sorted(missing))
         )
 
-    missing = setup_enabled_actual - setup_enabled_wanted
+    missing = source.setup_enabled - classification.setup_enabled
     if missing:
         raise Exception(
             "Setup enabled extensions missing YAML setup-enabled annotation: %s"
             % ", ".join(sorted(missing))
         )
 
-    extra = setup_enabled_wanted - setup_enabled_actual
+    extra = classification.setup_enabled - source.setup_enabled
     if extra:
         raise Exception(
             "YAML setup-enabled extensions not present in Setup: %s"
             % ", ".join(sorted(extra))
         )
 
-    if missing := set(config_c_extensions) - config_c_only_wanted:
+    if missing := set(source.config_c_extensions) - classification.config_c_only:
         raise Exception(
             "config.c.in extensions missing YAML config-c-only annotation: %s"
             % ", ".join(sorted(missing))
         )
 
-    if extra := config_c_only_wanted - set(config_c_extensions):
+    if extra := classification.config_c_only - set(source.config_c_extensions):
         raise Exception(
             "YAML config-c-only extensions not present in config.c.in: %s"
             % ", ".join(sorted(extra))
         )
 
-    # And with verification out of way, now we generate a Setup.local file.
+
+def _matches_extension_condition(
+    condition: dict,
+    python_version: str,
+    target_triple: str,
+) -> bool:
+    if targets := condition.get("targets", []):
+        target_match = any(re.match(pattern, target_triple) for pattern in targets)
+    else:
+        target_match = True
+
+    python_min_match = meets_python_minimum_version(python_version, condition)
+    python_max_match = meets_python_maximum_version(python_version, condition)
+
+    return target_match and python_min_match and python_max_match
+
+
+def _build_yaml_setup_line(
+    name: str,
+    info: dict,
+    python_version: str,
+    target_triple: str,
+    build_mode: str,
+    use_setup_stdlib: bool,
+    extra_cflags: dict[bytes, list[bytes]],
+) -> bytes:
+    line = name
+
+    for source in info.get("sources", []):
+        line += " %s" % source
+
+    for entry in info.get("sources-conditional", []):
+        condition_matches = _matches_extension_condition(
+            entry,
+            python_version,
+            target_triple,
+        )
+
+        if required_build_mode := entry.get("build-mode"):
+            build_mode_match = build_mode == required_build_mode
+        else:
+            build_mode_match = True
+
+        if condition_matches and build_mode_match:
+            if source := entry.get("source"):
+                line += f" {source}"
+            for source in entry.get("sources", []):
+                line += f" {source}"
+
+    for define in info.get("defines", []):
+        line += f" -D{define}"
+
+    for entry in info.get("defines-conditional", []):
+        if _matches_extension_condition(entry, python_version, target_triple):
+            line += f" -D{entry['define']}"
+
+    for path in info.get("includes", []):
+        line += f" -I{path}"
+
+    for entry in info.get("includes-conditional", []):
+        if _matches_extension_condition(entry, python_version, target_triple):
+            # TODO: Change to `include` and drop support for `path`
+            if include := entry.get("path"):
+                line += f" -I{include}"
+            for include in entry.get("includes", []):
+                line += f" -I{include}"
+
+    for path in info.get("includes-deps", []):
+        # Includes are added to global search path.
+        if "-apple-" in target_triple:
+            continue
+
+        line += f" -I/tools/deps/{path}"
+
+    for lib in info.get("links", []):
+        line += " %s" % link_for_target(lib, target_triple)
+
+    for entry in info.get("links-conditional", []):
+        if _matches_extension_condition(entry, python_version, target_triple):
+            line += " %s" % link_for_target(entry["name"], target_triple)
+
+    if "-apple-" in target_triple:
+        for framework in info.get("frameworks", []):
+            line += f" -framework {framework}"
+
+    for entry in info.get("linker-args", []):
+        if any(re.match(p, target_triple) for p in entry["targets"]):
+            for arg in entry["args"]:
+                line += f" -Xlinker {arg}"
+
+    setup_line = line.encode("ascii")
+    define_pattern = re.compile(rb"-D[^=]+=[^\s]+")
+
+    # This extra parse is a holder from older code and could likely be
+    # factored away.
+    parsed = parse_setup_line(setup_line, python_version=python_version)
+
+    if not parsed:
+        raise Exception("we should always parse a setup line we generated")
+
+    # makesetup interprets lines containing = as configuration options. Move
+    # -Dname=value defines into Makefile overrides for legacy Python builds.
+    if not use_setup_stdlib:
+        for match in define_pattern.finditer(parsed["line"]):
+            for obj_path in sorted(parsed["posix_obj_paths"]):
+                extra_cflags.setdefault(bytes(obj_path), []).append(match.group(0))
+
+    setup_line = define_pattern.sub(b"", setup_line)
+
+    if b"=" in setup_line:
+        raise Exception(
+            "= appears in EXTRA_MODULES line; will confuse "
+            "makesetup: %s" % setup_line.decode("utf-8")
+        )
+
+    return setup_line
+
+
+def _determine_module_linkage(info: dict, build_options: set[str]) -> str:
+    # Fully static builds override the configured per-module linkage.
+    build_mode = (
+        "static" if "static" in build_options else info.get("build-mode", "static")
+    )
+
+    # shared-or-disabled modules have already been disabled for static builds.
+    return "shared" if build_mode == "shared-or-disabled" else build_mode
+
+
+def _init_extension_metadata(
+    name: str, info: dict, module_info: CPythonModuleInfo
+) -> dict:
+    metadata = dict(info)
+
+    # The initialization function is usually PyInit_{extension}. But some
+    # config.c.in extensions don't follow this convention!
+    if name in module_info.config_c_extensions:
+        metadata["init_fn"] = module_info.config_c_extensions[name]
+        metadata["in_core"] = True
+    else:
+        metadata["init_fn"] = f"PyInit_{name}"
+        metadata["in_core"] = False
+
+    return metadata
+
+
+def derive_setup_local(
+    cpython_source_archive: pathlib.Path,
+    python_version: str,
+    target_triple: str,
+    build_options: set[str],
+    extension_modules: dict[str, dict],
+):
+    """Derive the content of the Modules/Setup.local file."""
+
+    use_setup_stdlib = meets_python_minimum_version(python_version, "3.12")
+
+    # Validate that the YAML based metadata is in sync with the various files declaring extension
+    # modules in the Python source archive.
+    classification = _classify_extension_modules(
+        extension_modules, python_version, target_triple, build_options
+    )
+    module_info = _parse_cpython_module_info(
+        cpython_source_archive, python_version, use_setup_stdlib
+    )
+    _validate_extension_modules(extension_modules, module_info, classification)
+
+    # Generate a Setup.local file.
     # Python 3.12+ builds extensions from Setup.stdlib using configure-derived
     # compiler and linker flags. Setup.local only disables modules or overrides
-    # linkage that differs from Setup.stdlib; older versions still use the
-    # YAML-derived compilation rules for every extension.
-
-    RE_DEFINE = re.compile(rb"-D[^=]+=[^\s]+")
-
-    # Translate our YAML metadata into Setup lines.
-
-    section_lines = {
+    # linkage that differs from Setup.stdlib.
+    # Python 3.10 and 3.11 use YAML-derived compilation rules for every extension.
+    section_lines: dict[str, list[bytes]] = {
         "disabled": [],
         "shared": [],
         "static": [],
@@ -513,56 +754,35 @@ def derive_setup_local(
     # to be no easy way to define e.g. -Dfoo=bar in Setup.local. We hack
     # around this by producing a Makefile supplement that overrides the build
     # rules for certain targets to include these missing values.
-    extra_cflags = {}
+    extra_cflags: dict[bytes, list[bytes]] = {}
 
     enabled_extensions = {}
 
     for name, info in sorted(extension_modules.items()):
-        if name in ignored:
+        if name in classification.ignored:
             continue
 
-        if name in disabled:
+        if name in classification.disabled:
             section_lines["disabled"].append(name.encode("ascii"))
             continue
 
-        enabled_extensions[name] = dict(info)
-
-        # The initialization function is usually PyInit_{extension}. But some
-        # config.c.in extensions don't follow this convention!
-        if name in config_c_extensions:
-            init_fn = config_c_extensions[name]
-            in_core = True
-        else:
-            init_fn = f"PyInit_{name}"
-            in_core = False
-
-        enabled_extensions[name]["init_fn"] = init_fn
-        enabled_extensions[name]["in_core"] = in_core
+        enabled_extensions[name] = _init_extension_metadata(name, info, module_info)
 
         # config.c.in only extensions are part of core object files. There is
         # nothing else to process.
-        if name in config_c_only_wanted:
+        if name in classification.config_c_only:
             log(f"extension {name} enabled through config.c")
             enabled_extensions[name]["setup_line"] = name.encode("ascii")
             continue
 
-        # Force static linking if we're doing a fully static build, otherwise,
-        # respect the `build-mode` falling back to `static` if not defined.
-        section = (
-            "static" if "static" in build_options else info.get("build-mode", "static")
-        )
-
-        # shared-or-disabled maps to shared or disabled.
-        if section == "shared-or-disabled":
-            section = "shared"
-
+        section = _determine_module_linkage(info, build_options)
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's
         # Setup. Lack of sources means we don't need to derive a Setup.local
         # line.
         if "sources" not in info and "sources-conditional" not in info:
-            if name not in setup_enabled_lines:
+            if name not in module_info.setup_lines:
                 raise Exception(
                     f"found a sourceless extension ({name}) with no Setup entry"
                 )
@@ -571,191 +791,47 @@ def derive_setup_local(
 
             # But we do record a placeholder Setup line in the returned metadata
             # as this is what's used to derive PYTHON.json metadata.
-            enabled_extensions[name]["setup_line"] = setup_enabled_lines[name]
+            enabled_extensions[name]["setup_line"] = module_info.setup_lines[name]
             continue
 
-        if use_setup_stdlib and name in setup_stdlib_lines:
+        if use_setup_stdlib and name in module_info.stdlib_lines:
             log(f"extension {name} being configured via Modules/Setup.stdlib")
         else:
             log(f"extension {name} being configured via YAML metadata")
 
-        line = name
-
-        for source in info.get("sources", []):
-            line += " %s" % source
-
-        for entry in info.get("sources-conditional", []):
-            if targets := entry.get("targets", []):
-                target_match = any(re.match(p, target_triple) for p in targets)
-            else:
-                target_match = True
-
-            python_min_match = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
-
-            if build_mode := entry.get("build-mode"):
-                build_mode_match = section == build_mode
-            else:
-                build_mode_match = True
-
-            if (
-                target_match
-                and python_min_match
-                and python_max_match
-                and build_mode_match
-            ):
-                if source := entry.get("source"):
-                    line += f" {source}"
-                for source in entry.get("sources", []):
-                    line += f" {source}"
-
-        for define in info.get("defines", []):
-            line += f" -D{define}"
-
-        for entry in info.get("defines-conditional", []):
-            if targets := entry.get("targets", []):
-                target_match = any(re.match(p, target_triple) for p in targets)
-            else:
-                target_match = True
-
-            python_min_match = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
-
-            if target_match and (python_min_match and python_max_match):
-                line += f" -D{entry['define']}"
-
-        for path in info.get("includes", []):
-            line += f" -I{path}"
-
-        for entry in info.get("includes-conditional", []):
-            if targets := entry.get("targets", []):
-                target_match = any(re.match(p, target_triple) for p in targets)
-            else:
-                target_match = True
-
-            python_min_match = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
-
-            if target_match and (python_min_match and python_max_match):
-                # TODO: Change to `include` and drop support for `path`
-                if include := entry.get("path"):
-                    line += f" -I{include}"
-                for include in entry.get("includes", []):
-                    line += f" -I{include}"
-
-        for path in info.get("includes-deps", []):
-            # Includes are added to global search path.
-            if "-apple-" in target_triple:
-                continue
-
-            line += f" -I/tools/deps/{path}"
-
-        for lib in info.get("links", []):
-            line += " %s" % link_for_target(lib, target_triple)
-
-        for entry in info.get("links-conditional", []):
-            if targets := entry.get("targets", []):
-                target_match = any(re.match(p, target_triple) for p in targets)
-            else:
-                target_match = True
-
-            python_min_match = meets_python_minimum_version(
-                python_version, entry.get("minimum-python-version", "1.0")
-            )
-            python_max_match = meets_python_maximum_version(
-                python_version, entry.get("maximum-python-version", "100.0")
-            )
-
-            if target_match and (python_min_match and python_max_match):
-                line += " %s" % link_for_target(entry["name"], target_triple)
-
-        if "-apple-" in target_triple:
-            for framework in info.get("frameworks", []):
-                line += f" -framework {framework}"
-
-        for entry in info.get("linker-args", []):
-            if any(re.match(p, target_triple) for p in entry["targets"]):
-                for arg in entry["args"]:
-                    line += f" -Xlinker {arg}"
-
-        line = line.encode("ascii")
-
-        # This extra parse is a holder from older code and could likely be
-        # factored away.
-        parsed = parse_setup_line(line, python_version=python_version)
-
-        if not parsed:
-            raise Exception("we should always parse a setup line we generated")
-
-        # makesetup parses lines with = as extra config options. There appears
-        # to be no easy way to define e.g. -Dfoo=bar in Setup.local. We hack
-        # around this by detecting the syntax we'd like to support and move the
-        # variable defines to a Makefile supplement that overrides variables for
-        # specific targets.
-        if not use_setup_stdlib:
-            for m in RE_DEFINE.finditer(parsed["line"]):
-                for obj_path in sorted(parsed["posix_obj_paths"]):
-                    extra_cflags.setdefault(bytes(obj_path), []).append(m.group(0))
-
-        line = RE_DEFINE.sub(b"", line)
-
-        if b"=" in line:
-            raise Exception(
-                "= appears in EXTRA_MODULES line; will confuse "
-                "makesetup: %s" % line.decode("utf-8")
-            )
+        line = _build_yaml_setup_line(
+            name,
+            info,
+            python_version,
+            target_triple,
+            section,
+            use_setup_stdlib,
+            extra_cflags,
+        )
 
         # The YAML-derived line is still used to describe packaged object files
         # and dependency libraries in PYTHON.json, even when compilation is
         # driven by Setup.stdlib.
         enabled_extensions[name]["setup_line"] = line
 
-        if not use_setup_stdlib:
-            section_lines[section].append(line)
-        elif section != setup_stdlib_linkage.get(name, "static"):
-            if name not in setup_stdlib_lines:
+        if use_setup_stdlib:
+            if section == module_info.stdlib_linkage.get(name, "static"):
+                continue
+
+            if name not in module_info.stdlib_lines:
                 raise Exception(
                     f"{section} extension {name} has no Modules/Setup.stdlib.in entry"
                 )
 
-            # Override Setup.stdlib's linkage while inheriting the
-            # MODULE_<name>_CFLAGS/LDFLAGS values produced by configure.
-            section_lines[section].append(setup_stdlib_lines[name])
+            # Inherit the MODULE_<name>_CFLAGS/LDFLAGS produced by configure.
+            line = module_info.stdlib_lines[name]
 
-    dest_lines = []
-
-    for section, lines in sorted(section_lines.items()):
-        if not lines:
-            continue
-
-        dest_lines.append(b"\n*%s*\n" % section.encode("ascii"))
-        dest_lines.extend(lines)
-
-    dest_lines.append(b"")
-
-    make_lines = []
-
-    for target in sorted(extra_cflags):
-        make_lines.append(
-            b"%s: PY_STDMODULE_CFLAGS += %s" % (target, b" ".join(extra_cflags[target]))
-        )
+        section_lines[section].append(line)
 
     return {
         "extensions": enabled_extensions,
-        "setup_local": b"\n".join(dest_lines),
-        "make_data": b"\n".join(make_lines),
+        "setup_local": _render_setup_local(section_lines),
+        "make_data": _render_make_data(extra_cflags),
     }
 
 

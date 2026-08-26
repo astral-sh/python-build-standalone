@@ -6,7 +6,7 @@ import pathlib
 import re
 import tarfile
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import IO
 
 import jsonschema
@@ -392,6 +392,189 @@ def _parse_setup(
     return modules, enabled_modules, enabled_lines
 
 
+def _parse_makefile_variables(makefile: bytes) -> dict[str, bytes]:
+    """Parse Makefile assignments, including continued and appended values."""
+    assignment_pattern = re.compile(rb"^([A-Za-z_][A-Za-z0-9_]*)\s*([+:?]?)=\s*(.*)$")
+    variables: dict[str, bytes] = {}
+
+    for line in makefile.replace(b"\\\n", b" ").splitlines():
+        if not (match := assignment_pattern.match(line)):
+            continue
+
+        name = match.group(1).decode("ascii")
+        operator = match.group(2)
+        value = match.group(3).strip()
+
+        if operator == b"+" and name in variables:
+            variables[name] += b" " + value
+        elif operator != b"?" or name not in variables:
+            variables[name] = value
+
+    return variables
+
+
+def _expand_makefile_variables(value: bytes, variables: dict[str, bytes]) -> bytes:
+    """Expand simple Makefile variable references in archive and object lists."""
+    reference_pattern = re.compile(rb"\$\(([A-Za-z_][A-Za-z0-9_]*)\)")
+    expanded: dict[str, bytes] = {}
+    expanding: set[str] = set()
+
+    def replace(match: re.Match[bytes]) -> bytes:
+        name = match.group(1).decode("ascii")
+        if name not in variables:
+            return match.group(0)
+        if name in expanded:
+            return expanded[name]
+        if name in expanding:
+            raise ValueError("recursive Makefile variable references")
+        expanding.add(name)
+        try:
+            result = reference_pattern.sub(replace, variables[name])
+        finally:
+            expanding.remove(name)
+        expanded[name] = result
+        return result
+
+    return reference_pattern.sub(replace, value)
+
+
+def _configured_setup_lines(
+    setup_files: Iterable[bytes], python_version: str
+) -> dict[str, bytes]:
+    """Return a mapping between module names and lines, respecting makesetup's first-rule precedence."""
+    setup_lines: dict[str, bytes] = {}
+    for setup_file in setup_files:
+        _, _, current_setup_lines = _parse_setup(setup_file.splitlines())
+        for name, line in current_setup_lines.items():
+            parsed = parse_setup_line(line, python_version)
+            if parsed and parsed["posix_obj_paths"]:
+                setup_lines.setdefault(name, line)
+    return setup_lines
+
+
+def _internal_archive_objects(makefile: bytes) -> dict[str, set[pathlib.Path]]:
+    """Map CPython's internal static archives to their constituent object files."""
+    variables = _parse_makefile_variables(makefile)
+    archives = {}
+
+    for name, value in variables.items():
+        if name.endswith("_LIB_STATIC"):
+            object_variable = f"{name.removesuffix('_LIB_STATIC')}_OBJS"
+        elif name.endswith("_A"):
+            object_variable = f"{name.removesuffix('_A')}_OBJS"
+        else:
+            continue
+
+        if object_variable not in variables:
+            continue
+
+        archive = _expand_makefile_variables(value, variables).decode("ascii")
+        objects = _expand_makefile_variables(variables[object_variable], variables)
+        archives[archive] = {
+            pathlib.Path(path.decode("ascii"))
+            for path in objects.split()
+            if path.endswith(b".o")
+        }
+
+    return archives
+
+
+@dataclass
+class ExtensionInfo:
+    """Build-artifact metadata consumed when generating PYTHON.json."""
+
+    init_fn: str
+    in_core: bool
+    setup_line: bytes
+    # "static", "shared", None if in core
+    build_mode: str | None = None
+    # Object files linked indirectly through CPython's internal static archives.
+    # For example via libHacl_HMAC.a
+    archive_obj_paths: set[pathlib.Path] = field(default_factory=set)
+    required_targets: list[str] | None = None
+
+    def to_dict(self) -> dict[str, object]:
+        metadata: dict[str, object] = {
+            "init_fn": self.init_fn,
+            "in_core": self.in_core,
+            "setup_line": self.setup_line,
+        }
+        if self.required_targets is not None:
+            metadata["required-targets"] = self.required_targets
+        if self.build_mode is not None:
+            metadata["build-mode"] = self.build_mode
+            metadata["archive_obj_paths"] = self.archive_obj_paths
+        return metadata
+
+
+def configured_extension_modules(
+    python_version: str,
+    setup_files: Iterable[bytes],
+    config_c: bytes,
+    makefile: bytes,
+    config_vars: dict[str, str],
+    extension_modules: dict[str, dict],
+) -> dict[str, dict]:
+    """Derive extension metadata from built CPython artifacts."""
+    built_modules = set(config_vars["MODBUILT_NAMES"].split())
+    shared_modules = set(config_vars["MODSHARED_NAMES"].split())
+    builtin_modules = parse_config_c(config_c.decode("utf-8"))
+    module_names = built_modules | set(builtin_modules)
+
+    # Validate that all modules have YAML metadata and were built
+    if missing := module_names - set(extension_modules):
+        raise ValueError(f"modules lack metadata: {', '.join(missing)}")
+    if missing := set(extension_modules) - module_names:
+        raise ValueError(f"modules were not built: {', '.join(missing)}")
+
+    setup_lines = _configured_setup_lines(setup_files, python_version)
+    archive_objects = _internal_archive_objects(makefile)
+    extensions: dict[str, ExtensionInfo] = {}
+
+    for name in sorted(module_names):
+        policy = extension_modules[name]
+        in_core = name not in built_modules
+        extension_info = ExtensionInfo(
+            init_fn=builtin_modules.get(name, f"PyInit_{name}"),
+            in_core=in_core,
+            setup_line=name.encode("ascii"),
+            required_targets=policy.get("required-targets"),
+        )
+
+        if in_core:
+            extensions[name] = extension_info
+            continue
+
+        if name not in setup_lines:
+            raise ValueError(f"configured extension {name} has no Modules/Setup rule")
+
+        build_mode = "shared" if name in shared_modules else "static"
+        expected_build_mode = policy.get("build-mode")
+        if build_mode != expected_build_mode:
+            raise ValueError(
+                f"extension {name} built as {build_mode}; expected {expected_build_mode}"
+            )
+
+        setup_line = setup_lines[name]
+        linker_flags = config_vars.get(f"MODULE_{name.upper()}_LDFLAGS", "")
+        if linker_flags:
+            setup_line += f" {linker_flags}".encode("ascii")
+
+        archive_obj_paths: set[pathlib.Path] = set()
+        for word in setup_line.split():
+            if word.endswith(b".a") and not word.startswith(b"-"):
+                archive = word.decode("ascii")
+                obj_paths = archive_objects.get(archive, ())
+                archive_obj_paths.update(obj_paths)
+
+        extension_info.setup_line = setup_line
+        extension_info.build_mode = build_mode
+        extension_info.archive_obj_paths = archive_obj_paths
+        extensions[name] = extension_info
+
+    return {name: metadata.to_dict() for name, metadata in extensions.items()}
+
+
 @dataclass
 class CPythonModuleInfo:
     # Maps extension names to lines in Modules/Setup.stdlib.in
@@ -596,7 +779,6 @@ def _build_yaml_setup_line(
     python_version: str,
     target_triple: str,
     build_mode: str,
-    use_setup_stdlib: bool,
     extra_cflags: dict[bytes, list[bytes]],
 ) -> bytes:
     line = name
@@ -675,10 +857,9 @@ def _build_yaml_setup_line(
 
     # makesetup interprets lines containing = as configuration options. Move
     # -Dname=value defines into Makefile overrides for legacy Python builds.
-    if not use_setup_stdlib:
-        for match in define_pattern.finditer(parsed["line"]):
-            for obj_path in sorted(parsed["posix_obj_paths"]):
-                extra_cflags.setdefault(bytes(obj_path), []).append(match.group(0))
+    for match in define_pattern.finditer(parsed["line"]):
+        for obj_path in sorted(parsed["posix_obj_paths"]):
+            extra_cflags.setdefault(bytes(obj_path), []).append(match.group(0))
 
     setup_line = define_pattern.sub(b"", setup_line)
 
@@ -789,32 +970,17 @@ def derive_setup_local(
 
             log(f"extension {name} enabled through distribution's Modules/Setup file")
 
-            # But we do record a placeholder Setup line in the returned metadata
-            # as this is what's used to derive PYTHON.json metadata.
+            # Preserve the Setup line for Python 3.10/3.11 metadata generation.
+            # Python 3.12+ reconstructs metadata from configured build files.
             enabled_extensions[name]["setup_line"] = module_info.setup_lines[name]
             continue
 
-        if use_setup_stdlib and name in module_info.stdlib_lines:
-            log(f"extension {name} being configured via Modules/Setup.stdlib")
-        else:
-            log(f"extension {name} being configured via YAML metadata")
+        if use_setup_stdlib:  # 3.12+
+            if name in module_info.stdlib_lines:
+                log(f"extension {name} being configured via Modules/Setup.stdlib")
+            else:
+                log(f"extension {name} being configured via Modules/Setup.bootstrap")
 
-        line = _build_yaml_setup_line(
-            name,
-            info,
-            python_version,
-            target_triple,
-            section,
-            use_setup_stdlib,
-            extra_cflags,
-        )
-
-        # The YAML-derived line is still used to describe packaged object files
-        # and dependency libraries in PYTHON.json, even when compilation is
-        # driven by Setup.stdlib.
-        enabled_extensions[name]["setup_line"] = line
-
-        if use_setup_stdlib:
             if section == module_info.stdlib_linkage.get(name, "static"):
                 continue
 
@@ -824,14 +990,24 @@ def derive_setup_local(
                 )
 
             # Inherit the MODULE_<name>_CFLAGS/LDFLAGS produced by configure.
-            line = module_info.stdlib_lines[name]
-
-        section_lines[section].append(line)
+            section_lines[section].append(module_info.stdlib_lines[name])
+        else:  # 3.10 and 3.11
+            log(f"extension {name} being configured via YAML metadata")
+            line = _build_yaml_setup_line(
+                name,
+                info,
+                python_version,
+                target_triple,
+                section,
+                extra_cflags,
+            )
+            enabled_extensions[name]["setup_line"] = line
+            section_lines[section].append(line)
 
     return {
         "extensions": enabled_extensions,
         "setup_local": _render_setup_local(section_lines),
-        "make_data": _render_make_data(extra_cflags),
+        "make_data": _render_make_data(extra_cflags),  # Empty in 3.12+
     }
 
 

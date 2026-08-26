@@ -19,6 +19,7 @@ import zstandard
 from pythonbuild.buildenv import build_environment
 from pythonbuild.cpython import (
     STDLIB_TEST_PACKAGES,
+    configured_extension_modules,
     derive_setup_local,
     extension_modules_config,
     meets_python_maximum_version,
@@ -660,7 +661,9 @@ def python_build_info(
 
         objs = []
 
-        for obj in sorted(d["posix_obj_paths"]):
+        object_paths = d["posix_obj_paths"] | info.get("archive_obj_paths", set())
+
+        for obj in sorted(object_paths):
             obj = pathlib.Path("build") / obj
             log("adding object file %s for extension %s" % (obj, extension))
             objs.append(str(obj))
@@ -682,6 +685,10 @@ def python_build_info(
             # annotations.
             if libname.endswith(".a"):
                 continue
+
+            # The macOS SDK's readline compatibility stub resolves to libedit.
+            if platform.startswith("macos_") and libname == "readline":
+                libname = "edit"
 
             log("adding library %s for extension %s" % (libname, extension))
 
@@ -767,7 +774,6 @@ def build_cpython(
         extension_modules=ems,
     )
 
-    enabled_extensions = setup["extensions"]
     setup_local_content = setup["setup_local"]
     extra_make_content = setup["make_data"]
 
@@ -913,6 +919,27 @@ def build_cpython(
             raise ValueError("unhandled platform: %s" % host_platform)
 
         extra_metadata = json.loads(build_env.get_file("metadata.json"))
+
+        if meets_python_minimum_version(python_version, "3.12"):
+            setup_directory = "out/python/build/Modules"
+            config_directory = extra_metadata["python_stdlib_platform_config"]
+
+            enabled_extensions = configured_extension_modules(
+                python_version=python_version,
+                setup_files=[
+                    build_env.get_file(f"{setup_directory}/Setup.local"),
+                    build_env.get_file(f"{setup_directory}/Setup.stdlib"),
+                    build_env.get_file(f"{setup_directory}/Setup.bootstrap"),
+                    build_env.get_file(f"{setup_directory}/Setup"),
+                ],
+                config_c=build_env.get_file(f"{setup_directory}/config.c"),
+                makefile=build_env.get_file(f"out/python/{config_directory}/Makefile"),
+                config_vars=extra_metadata["python_config_vars"],
+                extension_modules=setup["extensions"],
+            )
+        else:
+            # TODO: Remove YAML-derived extension metadata when Python 3.11 is dropped.
+            enabled_extensions = setup["extensions"]
 
         # TODO: Remove `optimizations` in the future, deprecated in favor of
         # `build_options` in metadata version 8.

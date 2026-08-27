@@ -88,14 +88,18 @@ EXTRA_FLAGS="${EXTRA_FLAGS} --disable-loadable-xcursor"
 
 # CC_FOR_BUILD is here because configure doesn't look for `clang` when
 # cross-compiling. So we force it.
+# LDFLAGS_FOR_BUILD must be nonempty. For native builds, configure otherwise
+# replaces it with target LDFLAGS, mixing host headers with the target sysroot.
+# Use a space when no host flags are needed.
 # RAWCPP is X.Org's stdin-fed preprocessor command. Use the full path to
 # the target compiler driver with "-" to read from stdin.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   LDFLAGS="${EXTRA_TARGET_LDFLAGS}" \
   CC_FOR_BUILD="${HOST_CC}" \
-  CFLAGS_FOR_BUILD="-I/tools/deps/include" \
-  CPPFLAGS_FOR_BUILD="-I/tools/deps/include" \
+  CFLAGS_FOR_BUILD="${EXTRA_HOST_CFLAGS} -I/tools/deps/include" \
+  CPPFLAGS_FOR_BUILD="${EXTRA_HOST_CFLAGS} -I/tools/deps/include" \
+  LDFLAGS_FOR_BUILD="${EXTRA_HOST_LDFLAGS:- }" \
   RAWCPP="$(command -v "${CC}") -E -"\
   ./configure \
     --build="${BUILD_TRIPLE}" \

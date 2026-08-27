@@ -5,6 +5,7 @@
 import pathlib
 import re
 import tarfile
+from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import IO
@@ -779,8 +780,7 @@ def _build_yaml_setup_line(
     python_version: str,
     target_triple: str,
     build_mode: str,
-    extra_cflags: dict[bytes, list[bytes]],
-) -> bytes:
+) -> tuple[bytes, dict[bytes, list[bytes]]]:
     line = name
 
     for source in info.get("sources", []):
@@ -857,9 +857,10 @@ def _build_yaml_setup_line(
 
     # makesetup interprets lines containing = as configuration options. Move
     # -Dname=value defines into Makefile overrides for legacy Python builds.
+    module_cflags: defaultdict[bytes, list[bytes]] = defaultdict(list)
     for match in define_pattern.finditer(parsed["line"]):
         for obj_path in sorted(parsed["posix_obj_paths"]):
-            extra_cflags.setdefault(bytes(obj_path), []).append(match.group(0))
+            module_cflags[bytes(obj_path)].append(match.group(0))
 
     setup_line = define_pattern.sub(b"", setup_line)
 
@@ -869,7 +870,7 @@ def _build_yaml_setup_line(
             "makesetup: %s" % setup_line.decode("utf-8")
         )
 
-    return setup_line
+    return setup_line, module_cflags
 
 
 def _determine_module_linkage(info: dict, build_options: set[str]) -> str:
@@ -935,7 +936,7 @@ def derive_setup_local(
     # to be no easy way to define e.g. -Dfoo=bar in Setup.local. We hack
     # around this by producing a Makefile supplement that overrides the build
     # rules for certain targets to include these missing values.
-    extra_cflags: dict[bytes, list[bytes]] = {}
+    extra_cflags: defaultdict[bytes, list[bytes]] = defaultdict(list)
 
     enabled_extensions = {}
 
@@ -993,14 +994,15 @@ def derive_setup_local(
             section_lines[section].append(module_info.stdlib_lines[name])
         else:  # 3.10 and 3.11
             log(f"extension {name} being configured via YAML metadata")
-            line = _build_yaml_setup_line(
+            line, module_cflags = _build_yaml_setup_line(
                 name,
                 info,
                 python_version,
                 target_triple,
                 section,
-                extra_cflags,
             )
+            for obj_path, flags in module_cflags.items():
+                extra_cflags[obj_path].extend(flags)
             enabled_extensions[name]["setup_line"] = line
             section_lines[section].append(line)
 

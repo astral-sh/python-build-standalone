@@ -565,8 +565,11 @@ def configured_extension_modules(
         for word in setup_line.split():
             if word.endswith(b".a") and not word.startswith(b"-"):
                 archive = word.decode("ascii")
-                obj_paths = archive_objects.get(archive, ())
-                archive_obj_paths.update(obj_paths)
+                if archive not in archive_objects:
+                    raise ValueError(
+                        f"extension {name} references unknown static archive {archive}"
+                    )
+                archive_obj_paths.update(archive_objects[archive])
 
         extension_info.setup_line = setup_line
         extension_info.build_mode = build_mode

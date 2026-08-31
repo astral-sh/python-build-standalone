@@ -11,6 +11,8 @@ concurrency:
 
 env:
   FORCE_COLOR: 1
+  # Keep uv's cache on the same volume as the workspace so uv can hardlink
+  UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
 
 permissions: { }
 

@@ -335,7 +335,7 @@ def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Pa
         normalized_patch.unlink()
 
 
-OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
+OPENSSL_PROPS_REMOVE_RULES_LEGACY = rb"""
   <ItemGroup>
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
@@ -350,7 +350,7 @@ OPENSSL_PROPS_REMOVE_RULES_LEGACY = b"""
   </Target>
 """
 
-OPENSSL_PROPS_REMOVE_RULES = b"""
+OPENSSL_PROPS_REMOVE_RULES = rb"""
   <ItemGroup>
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />

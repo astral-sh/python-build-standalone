@@ -56,8 +56,13 @@ include $(OUTDIR)/versions/VERSION.*
 # Always write out expanded Dockerfiles.
 $(shell $(RUN_BUILD) placeholder_archive dockerfiles)
 
+# Host executables are shared only by builds using the same producer image.
+# Native, non-Docker builds must not reuse executables from a container.
+BINUTILS_SUFFIX := $(HOST_PLATFORM)-$(if $(PYBUILD_NO_DOCKER),local,$(DOCKER_IMAGE_GCC))
+HOST_PYTHON_SUFFIX := $(HOST_PLATFORM)-$(if $(PYBUILD_NO_DOCKER),local,$(DOCKER_IMAGE_BUILD))
+
 BASE_TOOLCHAIN_DEPENDS := \
-    $(if $(NEED_BINUTILS),$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar) \
+    $(if $(NEED_BINUTILS),$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(BINUTILS_SUFFIX).tar) \
     $(OUTDIR)/$(CLANG_FILENAME) \
     $(NULL)
 
@@ -72,7 +77,7 @@ PYTHON_DEP_DEPENDS := \
     $(TOOLCHAIN_DEPENDS) \
     $(NULL)
 
-HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(HOST_PLATFORM).tar
+HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(HOST_PYTHON_SUFFIX).tar
 
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
@@ -81,7 +86,7 @@ $(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
 
-$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(HOST_PLATFORM).tar: $(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar $(HERE)/build-binutils.sh
+$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(BINUTILS_SUFFIX).tar: $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar) $(HERE)/build-binutils.sh
 	$(RUN_BUILD) --toolchain --docker-image $(DOCKER_IMAGE_GCC) binutils
 
 $(OUTDIR)/$(CLANG_FILENAME):
@@ -252,7 +257,7 @@ PYTHON_DEPENDS_$(1) := \
     $$(PYTHON_SUPPORT_FILES) \
     $$(OUTDIR)/versions/VERSION.pip \
     $$(OUTDIR)/versions/VERSION.setuptools \
-    $$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PLATFORM).tar \
+    $$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar \
     $$(if$$(NEED_AUTOCONF),$$(OUTDIR)/autoconf-$$(AUTOCONF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BDB),$$(OUTDIR)/bdb-$$(BDB_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BZIP2),$$(OUTDIR)/bzip2-$$(BZIP2_VERSION)-$$(PACKAGE_SUFFIX).tar) \
@@ -282,7 +287,7 @@ ALL_PYTHON_DEPENDS_$(1) = \
     $$(PYTHON_DEPENDS_$(1)) \
     $$(NULL)
 
-$$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PLATFORM).tar: $$(PYTHON_HOST_DEPENDS)
+$$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar: $$(PYTHON_HOST_DEPENDS)
 	$$(RUN_BUILD) --docker-image $$(DOCKER_IMAGE_BUILD) cpython-$(1)-host
 
 $$(OUTDIR)/cpython-$$(CPYTHON_$(1)_VERSION)-$$(PACKAGE_SUFFIX).tar: $$(ALL_PYTHON_DEPENDS_$(1))

@@ -1,0 +1,37 @@
+# Spec file for GCC. `gcc -specs antiquator.spec`
+#
+# There are two ways to add to a spec intead of replacing it. One is to
+# use +, which appends. But we need -lc_placeholder to come before -lc.
+# The usual trick for that (documented in the GCC manual) is
+#     %rename lib old_lib
+#     *lib: -lc_placeholder %(old_lib)
+# but GCC gets mad if old_lib already exists, and contrary to the
+# documentation you cannot delete a spec, and if you set -specs in both
+# CFLAGS and LDFLAGS, then this spec file runs twice if you build a
+# program in one command with $(CC) $(CFLAGS) $(LDFLAGS), which autoconf
+# does for test programs, causing it to fail. So, instead take advantage
+# of %(mflib), an unused variable in the built-in specs in a spot we
+# like (from the old "Mudflap" precursor to ASan, which was removed from
+# GCC over a decade ago but they left this variable in the specs). Just
+# in case anyone else had the same clever idea, we append to it, but we
+# expect it to be empty. (Everything we add is idempotent, just wasteful
+# to run twice.)
+*cpp:
++ -isystem %:getenv(antiquator /)
+
+*mflib:
++ -L %:getenv(antiquator /) \
+--push-state --as-needed \
+-lantiquator_helpers \
+-lanl_placeholder \
+-lc_placeholder \
+-ldl_placeholder \
+-lm_placeholder \
+-lpthread_placeholder \
+-lresolv_placeholder \
+-lrt_placeholder \
+-lutil_placeholder \
+--pop-state
+
+*post_link: +
+%:getenv(antiquator /wrap-linker) -fuse-ld=true %{o*}

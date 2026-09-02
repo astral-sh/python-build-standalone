@@ -1,0 +1,65 @@
+:root {
+  --black: #261230;
+  --white: #ffffff;
+  --radiate: #d7ff64;
+  --flare: #6340ac;
+  --galaxy: #261230;
+  --space: #30173d;
+  --cosmic: #de5fe9;
+  --sun: #ffac2f;
+  --electron: #46ebe1;
+  --neutron: #cff3cf;
+  --supernova: #f1aff6;
+  --starlight: #f4f4f1;
+  --asteroid: #e3cee3;
+}
+
+[data-md-color-scheme="astral-light"] {
+  --md-default-bg-color--dark: var(--black);
+  --md-primary-fg-color: var(--galaxy);
+  --md-typeset-a-color: var(--flare);
+  --md-accent-fg-color: var(--cosmic);
+  --md-default-fg-color--lightest: rgba(0, 0, 0, 0.14);
+}
+
+[data-md-color-scheme="astral-dark"] {
+  --md-default-bg-color: var(--galaxy);
+  --md-default-fg-color: var(--white);
+  --md-default-fg-color--light: var(--white);
+  --md-default-fg-color--lighter: var(--white);
+  --md-default-fg-color--lightest: rgba(255, 255, 255, 0.5);
+  --md-primary-fg-color: var(--space);
+  --md-primary-bg-color: var(--white);
+  --md-accent-fg-color: var(--cosmic);
+  --md-typeset-color: var(--white);
+  --md-typeset-a-color: var(--radiate);
+  --md-typeset-mark-color: var(--sun);
+  --md-code-fg-color: var(--white);
+  --md-code-bg-color: var(--space);
+  --md-code-hl-comment-color: var(--asteroid);
+  --md-code-hl-punctuation-color: var(--asteroid);
+  --md-code-hl-generic-color: var(--supernova);
+  --md-code-hl-variable-color: var(--starlight);
+  --md-code-hl-string-color: var(--radiate);
+  --md-code-hl-keyword-color: var(--supernova);
+  --md-code-hl-operator-color: var(--supernova);
+  --md-code-hl-number-color: var(--electron);
+  --md-code-hl-special-color: var(--electron);
+  --md-code-hl-function-color: var(--neutron);
+  --md-code-hl-constant-color: var(--radiate);
+  --md-code-hl-name-color: var(--md-code-fg-color);
+  --md-typeset-table-color: hsla(0, 0%, 100%, 0.12);
+  --md-typeset-table-color--light: hsla(0, 0%, 100%, 0.035);
+}
+
+.toclink {
+  color: unset !important;
+}
+
+.toclink:hover {
+  color: var(--md-accent-fg-color) !important;
+}
+
+.md-nav__link--active {
+  font-weight: bold;
+}

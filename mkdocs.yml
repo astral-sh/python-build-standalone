@@ -1,0 +1,75 @@
+site_name: Python Standalone Builds
+site_description: Self-contained, highly portable, high-performance Python distributions.
+site_author: astral-sh
+site_url: https://docs.astral.sh/python-build-standalone/
+repo_url: https://github.com/astral-sh/python-build-standalone
+repo_name: astral-sh/python-build-standalone
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.instant.prefetch
+    - navigation.instant.progress
+    - navigation.tracking
+    - navigation.footer
+    - navigation.top
+    - toc.follow
+    - content.code.copy
+  palette:
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: astral-light
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: astral-dark
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - toc:
+      anchorlink: true
+      anchorlink_class: toclink
+
+plugins:
+  - search
+
+extra_css:
+  - stylesheets/extra.css
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/astral-sh/python-build-standalone
+    - icon: fontawesome/brands/discord
+      link: https://discord.com/invite/astral-sh
+
+nav:
+  - Introduction: index.md
+  - Running Distributions: running.md
+  - Building: building.md
+  - Behavior Quirks: quirks.md
+  - Technical Notes: technotes.md
+  - Distribution Archives: distributions.md
+  - Project Status: status.md
+
+validation:
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn

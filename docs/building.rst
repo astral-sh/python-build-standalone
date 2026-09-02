@@ -56,6 +56,41 @@ Or on an x86-64 host for different architectures::
     $ ./build.py --target-triple riscv64-unknown-linux-gnu
     $ ./build.py --target-triple s390x-unknown-linux-gnu
 
+Jessie image package authentication
+-----------------------------------
+
+The ``build``, ``gcc``, and ``rust`` Dockerfiles include
+``cpython-unix/base.Dockerfile``. These amd64 images use Debian Jessie
+for build compatibility. Cross-compilation targets also use the ``gcc``
+image for toolchain builds.
+
+Building these images requires Docker Buildx with support for Dockerfile
+1.6's ``ADD --checksum`` instruction.
+
+The base Dockerfile pins the SHA-256 digests of the three archived
+``Packages.gz`` indexes because Jessie's archive signing keys have expired.
+Docker fetches them over HTTPS and verifies their digests before APT uses
+them. APT then verifies downloaded packages against the hashes in these
+fixed indexes. ``trusted=yes`` permits this separate trust root;
+``apt-get update`` is blocked to prevent replacing the pinned indexes with
+unauthenticated metadata.
+
+The pinned base image lacks both ``apt-transport-https`` and
+``ca-certificates``. Their bootstrap download uses HTTP, authenticated by
+the pinned package hashes. Once they are installed, subsequent package
+downloads use HTTPS with certificate verification.
+
+The index digests come from the SHA256 sections of the archived
+`Jessie Release <https://snapshot.debian.org/archive/debian/20230322T152120Z/dists/jessie/Release>`_,
+`Jessie updates Release <https://snapshot.debian.org/archive/debian/20230322T152120Z/dists/jessie-updates/Release>`_, and
+`Jessie security Release <https://snapshot.debian.org/archive/debian-security/20230322T152120Z/dists/jessie/updates/Release>`_
+files. The corresponding archive key fingerprints in the digest-pinned
+base image are ``126C0D24BD8A2942CC7DF8AC7638D0442B90D010``
+for Jessie and Jessie updates, and
+``D21169141CECD440F2EB8DDA9D6D8F6BC857C906`` for Jessie security. Any change
+to the snapshot or index digests requires independently authenticating the
+replacement metadata.
+
 macOS
 =====
 

@@ -764,7 +764,7 @@ pub fn produce_install_only_stripped(tar_gz_path: &Path, llvm_dir: &Path) -> Res
 
 /// URL from which to download LLVM.
 ///
-/// To be kept in sync with `pythonbuild/downloads.py`.
+/// To be kept in sync with `pythonbuild/downloads.json`.
 static LLVM_URL: Lazy<Url> = Lazy::new(|| {
     if cfg!(target_os = "macos") {
         if std::env::consts::ARCH == "aarch64" {

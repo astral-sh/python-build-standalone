@@ -11,7 +11,7 @@ export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 
 tar -xf "patchelf-${PATCHELF_VERSION}.tar.bz2"
 
-pushd patchelf-0.13.1.20211127.72b6d44
+pushd "patchelf-${PATCHELF_VERSION}"
 
 # TODO: Drop this patch once patchelf is updated to 0.14.0 or newer,
 # which includes native LoongArch64 support.

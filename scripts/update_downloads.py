@@ -9,7 +9,7 @@
 # ]
 # ///
 
-"""Find and optionally apply updates to pythonbuild/downloads.py.
+"""Find and optionally apply updates to pythonbuild/downloads.json.
 
 From the repository root, run ``uv run scripts/update_downloads.py`` to list
 possible updates. Pass one or more package names and ``--write`` to download
@@ -42,7 +42,7 @@ from typing import Any, Protocol, cast
 from packaging.version import InvalidVersion, Version
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DOWNLOADS_PATH = ROOT / "pythonbuild" / "downloads.py"
+DOWNLOADS_PATH = ROOT / "pythonbuild" / "downloads.json"
 DISTTESTS_PATH = ROOT / "pythonbuild" / "disttests" / "__init__.py"
 DEFAULT_STAGING_DIR = ROOT / "build" / "download-updates"
 MIRROR_BASE_URL = "https://astral-sh.github.io/mirror/files/"
@@ -417,17 +417,10 @@ UNSUPPORTED: dict[str, str] = {
 
 
 def load_downloads(path: pathlib.Path = DOWNLOADS_PATH) -> dict[str, dict[str, Any]]:
-    tree = ast.parse(path.read_text(), filename=str(path))
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "DOWNLOADS"
-            for target in node.targets
-        ):
-            value = ast.literal_eval(node.value)
-            if not isinstance(value, dict):
-                break
-            return value
-    raise ValueError(f"could not find a literal DOWNLOADS dictionary in {path}")
+    value = json.loads(path.read_text())
+    if not isinstance(value, dict):
+        raise ValueError(f"download metadata must be a dictionary in {path}")
+    return value
 
 
 def find_update(
@@ -564,98 +557,14 @@ def _line_offsets(source: str) -> list[int]:
     return offsets
 
 
-def _literal(value: Any) -> str:
-    if isinstance(value, str):
-        return json.dumps(value)
-    return repr(value)
-
-
-def update_download_literals(
+def update_downloads(
     path: pathlib.Path,
     changes: dict[str, dict[str, Any]],
-    source_comments: dict[str, tuple[str, bool]] | None = None,
 ) -> None:
-    source = path.read_text()
-    tree = ast.parse(source, filename=str(path))
-    offsets = _line_offsets(source)
-    replacements: list[tuple[int, int, str]] = []
-
-    downloads_node: ast.Dict | None = None
-    for node in tree.body:
-        if isinstance(node, ast.Assign) and any(
-            isinstance(target, ast.Name) and target.id == "DOWNLOADS"
-            for target in node.targets
-        ):
-            if isinstance(node.value, ast.Dict):
-                downloads_node = node.value
-            break
-    if downloads_node is None:
-        raise ValueError(f"could not locate DOWNLOADS in {path}")
-
-    entries = {
-        key.value: value
-        for key, value in zip(downloads_node.keys, downloads_node.values, strict=True)
-        if isinstance(key, ast.Constant)
-        and isinstance(key.value, str)
-        and isinstance(value, ast.Dict)
-    }
-    source_comments = source_comments or {}
+    downloads = load_downloads(path)
     for package, fields in changes.items():
-        entry = entries.get(package)
-        if entry is None:
-            raise KeyError(f"DOWNLOADS has no {package!r} entry")
-        values = {
-            key.value: value
-            for key, value in zip(entry.keys, entry.values, strict=True)
-            if isinstance(key, ast.Constant) and isinstance(key.value, str)
-        }
-        if package in source_comments:
-            url_node = values.get("url")
-            if url_node is None:
-                raise KeyError(f"{package!r} has no editable 'url' field")
-            lines = source.splitlines(keepends=True)
-            for line_number in range(entry.lineno, url_node.lineno):
-                line = lines[line_number - 1]
-                match = re.match(
-                    r"^(\s*)# (?:Mirrored from|Upstream source \(mirror pending\):) "
-                    r"https?://",
-                    line,
-                )
-                if not match:
-                    continue
-                upstream_url, using_mirror = source_comments[package]
-                label = (
-                    "Mirrored from"
-                    if using_mirror
-                    else "Upstream source (mirror pending):"
-                )
-                start = offsets[line_number - 1]
-                end = offsets[line_number]
-                replacements.append(
-                    (
-                        start,
-                        end,
-                        f"{match.group(1)}# {label} {upstream_url}\n",
-                    )
-                )
-                break
-            else:
-                raise ValueError(f"{package!r} has no upstream source comment")
-        for field, new_value in fields.items():
-            field_node = values.get(field)
-            if (
-                field_node is None
-                or field_node.end_lineno is None
-                or field_node.end_col_offset is None
-            ):
-                raise KeyError(f"{package!r} has no editable {field!r} field")
-            start = offsets[field_node.lineno - 1] + field_node.col_offset
-            end = offsets[field_node.end_lineno - 1] + field_node.end_col_offset
-            replacements.append((start, end, _literal(new_value)))
-
-    for start, end, replacement in sorted(replacements, reverse=True):
-        source = source[:start] + replacement + source[end:]
-    path.write_text(source)
+        downloads[package].update(fields)
+    path.write_text(json.dumps(downloads, indent=4) + "\n")
 
 
 def update_openssl_disttest_version(
@@ -697,7 +606,7 @@ def update_openssl_disttest_version(
         raise ValueError(f"could not locate OpenSSL version tuple in {path}")
     start = offsets[node.lineno - 1] + node.col_offset
     end = offsets[node.end_lineno - 1] + node.end_col_offset
-    path.write_text(source[:start] + _literal(wanted_version) + source[end:])
+    path.write_text(source[:start] + repr(wanted_version) + source[end:])
 
 
 def validate_package_names(
@@ -729,7 +638,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--write",
         action="store_true",
-        help="download updates and modify pythonbuild/downloads.py",
+        help="download updates and modify pythonbuild/downloads.json",
     )
     parser.add_argument(
         "--upstream-urls",
@@ -839,18 +748,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "sha256": sha256,
                 "version": result.release.version,
             }
+            if POLICIES[result.package].mirrored:
+                changes[result.package]["upstream_url"] = result.release.url
         if changes:
-            update_download_literals(
-                args.downloads_file,
-                changes,
-                {
-                    result.package: (result.release.url, not args.upstream_urls)
-                    for result in results
-                    if result.release
-                    and result.package in changes
-                    and POLICIES[result.package].mirrored
-                },
-            )
+            update_downloads(args.downloads_file, changes)
             if "openssl-3.5" in changes:
                 update_openssl_disttest_version(changes["openssl-3.5"]["version"])
             print(

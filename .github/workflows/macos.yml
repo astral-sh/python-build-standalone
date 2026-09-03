@@ -83,7 +83,7 @@ jobs:
           BASE_REF: ${{ github.event.pull_request.base.ref || 'main' }}
         run: |
           merge_base=$(git merge-base HEAD "origin/${BASE_REF}")
-          if git diff --quiet "${merge_base}...HEAD" -- ':src/*.rs'; then
+          if git diff --quiet "${merge_base}...HEAD" -- ':src/*.rs' ':pythonbuild/downloads.json'; then
               echo "changed=false" >> "$GITHUB_OUTPUT"
           else
               echo "changed=true" >> "$GITHUB_OUTPUT"

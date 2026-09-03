@@ -4,6 +4,7 @@
 
 use anyhow::Context;
 use futures::StreamExt;
+use serde::Deserialize;
 
 use object::FileKind;
 use std::{
@@ -762,30 +763,29 @@ pub fn produce_install_only_stripped(tar_gz_path: &Path, llvm_dir: &Path) -> Res
     Ok(dest_path)
 }
 
-/// URL from which to download LLVM.
-///
-/// To be kept in sync with `pythonbuild/downloads.py`.
-static LLVM_URL: Lazy<Url> = Lazy::new(|| {
-    if cfg!(target_os = "macos") {
-        if std::env::consts::ARCH == "aarch64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-aarch64-apple-darwin.tar.zst").unwrap()
-        } else if std::env::consts::ARCH == "x86_64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst").unwrap()
-        } else {
-            panic!("unsupported macOS architecture");
-        }
-    } else if cfg!(target_os = "linux") {
-        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
-    } else {
-        panic!("unsupported platform");
-    }
+#[derive(Deserialize)]
+struct Download {
+    url: String,
+}
+
+/// The same pinned archives used by `pythonbuild/downloads.py`.
+static DOWNLOADS: Lazy<BTreeMap<String, Download>> = Lazy::new(|| {
+    serde_json::from_str(include_str!("../pythonbuild/downloads.json"))
+        .expect("invalid download metadata")
 });
+
+fn llvm_download(os: &str, arch: &str) -> Result<&'static Download> {
+    DOWNLOADS
+        .get(&format!("llvm-{arch}-{os}"))
+        .with_context(|| format!("unsupported LLVM bootstrap platform: {os}-{arch}"))
+}
 
 /// Bootstrap `llvm` for the current platform.
 ///
 /// Returns the path to the top-level `llvm` directory.
 pub async fn bootstrap_llvm() -> Result<PathBuf> {
-    let url = &*LLVM_URL;
+    let download = llvm_download(std::env::consts::OS, std::env::consts::ARCH)?;
+    let url = Url::parse(&download.url)?;
     let filename = url.path_segments().unwrap().next_back().unwrap();
 
     let llvm_dir = Path::new("build").join("llvm");

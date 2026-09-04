@@ -1,0 +1,40 @@
+name: build
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "The full SHA of the commit to build (defaults to the latest commit on main)."
+        type: string
+        required: false
+
+env:
+  FORCE_COLOR: 1
+
+permissions: {}
+
+jobs:
+  linux:
+    uses: ./.github/workflows/linux.yml
+    with:
+      ref: ${{ inputs.sha || github.sha }}
+    permissions:
+      packages: write
+      id-token: write
+      attestations: write
+
+  macos:
+    uses: ./.github/workflows/macos.yml
+    with:
+      ref: ${{ inputs.sha || github.sha }}
+    permissions:
+      id-token: write
+      attestations: write
+
+  windows:
+    uses: ./.github/workflows/windows.yml
+    with:
+      ref: ${{ inputs.sha || github.sha }}
+    permissions:
+      id-token: write
+      attestations: write

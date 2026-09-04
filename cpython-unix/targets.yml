@@ -687,6 +687,7 @@ x86_64-apple-darwin:
   openssl_target: darwin64-x86_64-cc
 
 x86_64-unknown-linux-gnu:
+  docker_image_suffix: .debian13-x86_64
   linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
@@ -704,6 +705,8 @@ x86_64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target libc independent of the modern build container.
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -716,6 +719,7 @@ x86_64-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -750,6 +754,7 @@ x86_64-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v2-unknown-linux-gnu:
+  docker_image_suffix: .debian13-x86_64
   linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
@@ -767,6 +772,8 @@ x86_64_v2-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target libc independent of the modern build container.
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -780,6 +787,7 @@ x86_64_v2-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -814,6 +822,7 @@ x86_64_v2-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v3-unknown-linux-gnu:
+  docker_image_suffix: .debian13-x86_64
   linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
@@ -831,6 +840,8 @@ x86_64_v3-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target libc independent of the modern build container.
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -844,6 +855,7 @@ x86_64_v3-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -878,6 +890,7 @@ x86_64_v3-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64_v4-unknown-linux-gnu:
+  docker_image_suffix: .debian13-x86_64
   linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
@@ -897,6 +910,8 @@ x86_64_v4-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target libc independent of the modern build container.
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -910,6 +925,7 @@ x86_64_v4-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/x86_64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -944,6 +960,7 @@ x86_64_v4-unknown-linux-gnu:
   bolt_capable: true
 
 x86_64-unknown-linux-musl:
+  docker_image_suffix: .debian13-x86_64
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -1001,6 +1018,7 @@ x86_64-unknown-linux-musl:
   openssl_target: linux-x86_64
 
 x86_64_v2-unknown-linux-musl:
+  docker_image_suffix: .debian13-x86_64
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -1059,6 +1077,7 @@ x86_64_v2-unknown-linux-musl:
   openssl_target: linux-x86_64
 
 x86_64_v3-unknown-linux-musl:
+  docker_image_suffix: .debian13-x86_64
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -1117,6 +1136,7 @@ x86_64_v3-unknown-linux-musl:
   openssl_target: linux-x86_64
 
 x86_64_v4-unknown-linux-musl:
+  docker_image_suffix: .debian13-x86_64
   host_platforms:
     - linux_x86_64
     # Rosetta doesn't support AVX-512. So we cannot run x86-64-v4 binaries

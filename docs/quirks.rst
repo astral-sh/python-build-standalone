@@ -194,6 +194,22 @@ compile extensions, too.
 If there is a build time normalization that you think should be performed to
 make distributions more portable, please file a GitHub issue.
 
+.. _quirk_ld_preload_doesnt_work:
+
+``LD_PRELOAD`` Does Not Work
+============================
+
+This project applies various build optimizations that undermine the
+ability for ``LD_PRELOAD`` to reliably intercept symbols provided by
+``libpython``:
+
+* Functions can be aggressively inlined - bypassing the PLT - and inlined
+  function calls cannot be intercepted by ``LD_PRELOAD``'d libraries.
+* Use of the linker option ``-Bsymbolic-functions`` on ``libpython`` forces
+  symbols to resolve to the local library (``libpython``) instead of going
+  through the regular loader lookup sequence, which would otherwise process
+  ``LD_PRELOAD``'d libraries before ``libpython``.
+
 .. _quirk_former:
 .. _quirk_missing_libcrypt:
 .. _quirk_linux_libx11:

@@ -39,13 +39,14 @@ class ContainerContext:
         copy_file_to_container(source, self.container, dest_path, dest_name)
 
     def install_toolchain_archive(
-        self, build_dir, package_name, host_platform, version=None
+        self, build_dir, package_name, host_platform, version=None, image_name=None
     ):
         entry = DOWNLOADS[package_name]
-        basename = "%s-%s-%s.tar" % (
+        basename = "%s-%s-%s%s.tar" % (
             package_name,
             version or entry["version"],
             host_platform,
+            f"-{image_name}" if image_name else "",
         )
 
         p = build_dir / basename
@@ -73,13 +74,19 @@ class ContainerContext:
         build_dir,
         host_platform,
         target_triple: str,
+        binutils_image: str,
         binutils=False,
         musl=False,
         clang=False,
         static=False,
     ):
         if binutils:
-            self.install_toolchain_archive(build_dir, "binutils", host_platform)
+            self.install_toolchain_archive(
+                build_dir,
+                "binutils",
+                host_platform,
+                image_name=binutils_image,
+            )
 
         if clang:
             self.install_toolchain_archive(
@@ -162,12 +169,14 @@ class TempdirContext:
         shutil.copy(source, dest_dir / dest_name)
 
     def install_toolchain_archive(
-        self, build_dir, package_name, host_platform, version=None
+        self, build_dir, package_name, host_platform, version=None, image_name=None
     ):
-        basename = "%s-%s-%s.tar" % (
+        # Image-qualified tools built without Docker use the local cache instead.
+        basename = "%s-%s-%s%s.tar" % (
             package_name,
             version or DOWNLOADS[package_name]["version"],
             host_platform,
+            "-local" if image_name else "",
         )
 
         p = build_dir / basename
@@ -196,13 +205,16 @@ class TempdirContext:
         build_dir,
         platform,
         target_triple,
+        binutils_image,
         binutils=False,
         musl=False,
         clang=False,
         static=False,
     ):
         if binutils:
-            self.install_toolchain_archive(build_dir, "binutils", platform)
+            self.install_toolchain_archive(
+                build_dir, "binutils", platform, image_name=binutils_image
+            )
 
         if clang:
             self.install_toolchain_archive(

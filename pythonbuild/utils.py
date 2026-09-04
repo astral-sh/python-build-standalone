@@ -79,6 +79,14 @@ def get_target_settings(yaml_path: pathlib.Path, target: str):
     return get_targets(yaml_path)[target]
 
 
+def docker_image_names(settings) -> dict[str, str]:
+    """Select the images used to build dependencies and GCC-hosted tools."""
+    suffix = settings.get("docker_image_suffix", "")
+    # Cross builds share the bare GCC image for their host tools.
+    gcc_suffix = "" if suffix.startswith(".cross") else suffix
+    return {"build": f"build{suffix}", "gcc": f"gcc{gcc_suffix}"}
+
+
 def supported_targets(yaml_path: pathlib.Path):
     """Obtain a set of named targets that we can build."""
     targets = set()
@@ -195,15 +203,9 @@ def write_triples_makefiles(
                     "NEED_%s := 1\n" % need.upper().replace("-", "_").replace(".", "_")
                 )
 
-            image_suffix = settings.get("docker_image_suffix", "")
-
-            # On cross builds, we can just use the bare `gcc` image
-            gcc_image_suffix = (
-                image_suffix if not image_suffix.startswith(".cross") else ""
-            )
-
-            lines.append("DOCKER_IMAGE_BUILD := build%s\n" % image_suffix)
-            lines.append("DOCKER_IMAGE_GCC := gcc%s\n" % gcc_image_suffix)
+            images = docker_image_names(settings)
+            lines.append("DOCKER_IMAGE_BUILD := %s\n" % images["build"])
+            lines.append("DOCKER_IMAGE_GCC := %s\n" % images["gcc"])
 
             entry = clang_toolchain(host_platform, triple)
             lines.append(

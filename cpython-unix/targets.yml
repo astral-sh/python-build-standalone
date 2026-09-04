@@ -558,7 +558,6 @@ ppc64le_power9-unknown-linux-gnu:
     - zstd
   openssl_target: linux-ppc64le
 
-
 ppc64le_power10-unknown-linux-gnu:
   linux_uapi_include_arch: powerpc64le-linux-gnu
   host_platforms:
@@ -628,8 +627,8 @@ ppc64le_power11-unknown-linux-gnu:
   docker_image_suffix: .cross-ppc64le_power11
   host_cc: /usr/bin/x86_64-linux-gnu-gcc
   host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/powerpc64le-linux-gnu-gcc
-  target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
+  target_cc: /usr/bin/powerpc64le-linux-gnu-gcc-14
+  target_cxx: /usr/bin/powerpc64le-linux-gnu-g++-14
   target_cflags:
     # Hardening
     - '-fstack-protector'

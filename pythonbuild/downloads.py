@@ -150,7 +150,7 @@ DOWNLOADS = {
         "version": "0.5",
     },
     "libX11": {
-        "url": "https://www.x.org/releases/individual/lib/libX11-1.8.13.tar.gz",
+        "url": "https://xorg.freedesktop.org/archive/individual/lib/libX11-1.8.13.tar.gz",
         "size": 3217264,
         "sha256": "acf0e7cd7541110e6330ecb539441a2d53061f386ec7be6906dfde0de2598470",
         "version": "1.8.13",
@@ -159,7 +159,7 @@ DOWNLOADS = {
         "license_file": "LICENSE.libX11.txt",
     },
     "libXau": {
-        "url": "https://www.x.org/releases/individual/lib/libXau-1.0.12.tar.gz",
+        "url": "https://xorg.freedesktop.org/archive/individual/lib/libXau-1.0.12.tar.gz",
         "size": 418722,
         "sha256": "2402dd938da4d0a332349ab3d3586606175e19cb32cb9fe013c19f1dc922dcee",
         "version": "1.0.12",
@@ -334,7 +334,7 @@ DOWNLOADS = {
         "license_file": "LICENSE.tix.txt",
     },
     "tk": {
-        "url": "https://prdownloads.sourceforge.net/tcl/tk9.0.4-src.tar.gz",
+        "url": "https://downloads.sourceforge.net/project/tcl/Tcl/9.0.4/tk9.0.4-src.tar.gz",
         "size": 4613019,
         "sha256": "d7a146d2917eb8b5cc95276dbf0e3d03c7464d2b19c1675357857c989301dbb4",
         "version": "9.0.4",
@@ -403,7 +403,7 @@ DOWNLOADS = {
         "version": "1.17.0",
     },
     "xorgproto": {
-        "url": "https://www.x.org/releases/individual/proto/xorgproto-2025.1.tar.gz",
+        "url": "https://xorg.freedesktop.org/archive/individual/proto/xorgproto-2025.1.tar.gz",
         "size": 1127613,
         "sha256": "d6f89f65bafb8c9b735e0515882b8a1511e8e864dde5e9513e191629369f2256",
         "version": "2025.1",

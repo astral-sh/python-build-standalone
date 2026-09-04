@@ -9,7 +9,8 @@ RUN ln -sf bash /bin/sh
 # Use the same Jessie snapshots as the former native x86-64 build image.
 # Extract libc, kernel headers, symlinks, and their dependencies without running
 # maintainer scripts. The archived keys and gpgv helper retain signature
-# verification while allowing Jessie's expired signing keys.
+# verification while allowing Jessie's expired signing keys. Each source is
+# restricted to its Jessie archive or security key; ! excludes signing subkeys.
 RUN mmdebstrap --variant=extract --mode=root \
     --skip=chroot/mount \
     --architectures=amd64 \
@@ -19,9 +20,9 @@ RUN mmdebstrap --variant=extract --mode=root \
     --aptopt='Apt::Key::gpgvcommand "/usr/libexec/mmdebstrap/gpgvnoexpkeysig"' \
     --include=libc6,libc6-dev,linux-libc-dev,symlinks \
     jessie /sysroot \
-    'deb https://snapshot.debian.org/archive/debian/20230322T152120Z/ jessie main' \
-    'deb https://snapshot.debian.org/archive/debian/20230322T152120Z/ jessie-updates main' \
-    'deb https://snapshot.debian.org/archive/debian-security/20230322T152120Z/ jessie/updates main'
+    'deb [signed-by=126C0D24BD8A2942CC7DF8AC7638D0442B90D010!] https://snapshot.debian.org/archive/debian/20230322T152120Z/ jessie main' \
+    'deb [signed-by=126C0D24BD8A2942CC7DF8AC7638D0442B90D010!] https://snapshot.debian.org/archive/debian/20230322T152120Z/ jessie-updates main' \
+    'deb [signed-by=D21169141CECD440F2EB8DDA9D6D8F6BC857C906!] https://snapshot.debian.org/archive/debian-security/20230322T152120Z/ jessie/updates main'
 
 # Absolute symlinks would escape the sysroot into the Trixie host filesystem.
 # Run Jessie's symlinks utility inside the sysroot so targets resolve there.

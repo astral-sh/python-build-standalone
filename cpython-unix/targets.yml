@@ -135,13 +135,15 @@ aarch64-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
-  docker_image_suffix: .debian9
+  docker_image_suffix: .debian13
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target headers and glibc independent of the modern build container.
+    - '--sysroot=/usr/aarch64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -154,6 +156,7 @@ aarch64-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/aarch64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -1186,7 +1189,7 @@ aarch64-unknown-linux-musl:
     - '3.14'
     - '3.15'
   needs_toolchain: true
-  docker_image_suffix: .debian9
+  docker_image_suffix: .debian13
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++

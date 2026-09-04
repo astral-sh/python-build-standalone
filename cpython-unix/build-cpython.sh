@@ -1098,6 +1098,12 @@ if xcode_path:
 # -fdebug-default-version is Clang only. Strip so compiling works on GCC.
 replace_in_all("-fdebug-default-version=4", "")
 
+# Target sysroots only exist in the build container. Keeping their paths in
+# sysconfig would make downstream extension builds search a nonexistent root.
+for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():
+    if flag.startswith("--sysroot="):
+        replace_in_all(flag, "")
+
 # Remove some build environment paths.
 # This is /tools on Linux but can be a dynamic path / temp directory on macOS
 # and when not using container builds.

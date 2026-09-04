@@ -45,6 +45,11 @@
 #
 #    Values will be added to LDFLAGS.
 #
+#    Linux targets pass -Wl,--build-id=sha1 so binaries carry a GNU build ID.
+#    Debuginfod is keyed entirely on that ID, so without it debuggers cannot
+#    request debug symbols for these distributions at all. sha1 is derived from
+#    the linked content, so it does not affect build reproducibility.
+#
 # apple_sdk_platform
 #    Name of the Apple SDK platform to use when building.
 #
@@ -108,6 +113,7 @@ aarch64-apple-darwin:
     - m4
     - mpdecimal
     - openssl-3.5
+    - pkgconf
     - sqlite
     - tcl
     - tk
@@ -129,13 +135,15 @@ aarch64-unknown-linux-gnu:
     - '3.13'
     - '3.14'
     - '3.15'
-  docker_image_suffix: .debian9
+  docker_image_suffix: .debian13
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
   target_cc: clang
   target_cxx: clang++
   target_cflags:
+    # Keep target headers and glibc independent of the modern build container.
+    - '--sysroot=/usr/aarch64-linux-gnu'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -148,10 +156,12 @@ aarch64-unknown-linux-gnu:
     # Needed to prevent BOLT from crashing.
     - '-fdebug-default-version=4'
   target_ldflags:
+    - '--sysroot=/usr/aarch64-linux-gnu'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -210,6 +220,7 @@ armv7-unknown-linux-gnueabi:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -263,6 +274,7 @@ armv7-unknown-linux-gnueabihf:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -316,6 +328,7 @@ loongarch64-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
     - '-Wl,-z,max-page-size=0x10000'
   needs:
     - autoconf
@@ -370,6 +383,7 @@ mips-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -423,6 +437,7 @@ mipsel-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -476,6 +491,7 @@ ppc64le-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -694,6 +710,7 @@ riscv64-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -749,6 +766,7 @@ s390x-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -824,6 +842,7 @@ x86_64-apple-darwin:
     - m4
     - mpdecimal
     - openssl-3.5
+    - pkgconf
     - sqlite
     - tcl
     - tk
@@ -866,6 +885,7 @@ x86_64-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -929,6 +949,7 @@ x86_64_v2-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -992,6 +1013,7 @@ x86_64_v3-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1057,6 +1079,7 @@ x86_64_v4-unknown-linux-gnu:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1114,6 +1137,7 @@ x86_64-unknown-linux-musl:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1121,7 +1145,7 @@ x86_64-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1171,6 +1195,7 @@ x86_64_v2-unknown-linux-musl:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1178,7 +1203,7 @@ x86_64_v2-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1228,6 +1253,7 @@ x86_64_v3-unknown-linux-musl:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1235,7 +1261,7 @@ x86_64_v3-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1287,6 +1313,7 @@ x86_64_v4-unknown-linux-musl:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1294,7 +1321,7 @@ x86_64_v4-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb
@@ -1327,7 +1354,7 @@ aarch64-unknown-linux-musl:
     - '3.14'
     - '3.15'
   needs_toolchain: true
-  docker_image_suffix: .debian9
+  docker_image_suffix: .debian13
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -1346,6 +1373,7 @@ aarch64-unknown-linux-musl:
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
   needs:
     - autoconf
     - bdb
@@ -1353,7 +1381,7 @@ aarch64-unknown-linux-musl:
     - bzip2
     - expat
     - libedit
-    - libffi-3.3
+    - libffi
     - libX11
     - libXau
     - libxcb

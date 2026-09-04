@@ -7,18 +7,34 @@ Technical Notes
 How It Works
 ============
 
-The first thing the ``build-*`` scripts do is bootstrap an environment
-for building Python. On Linux, a base Docker image based on a deterministic
-snapshot of Debian Wheezy is created. A modern binutils and GCC are built
-in this environment. That modern GCC is then used to build a modern Clang.
-Clang is then used to build all of Python's dependencies (openssl, ncurses,
-libedit, sqlite, etc). Finally, Python itself is built.
+The first thing the ``build.py`` scripts do is bootstrap an environment
+for building Python. Linux builds use Docker images based on deterministic
+Debian snapshots selected for each target:
+
+* x86-64 targets use Debian Jessie and a prebuilt Clang toolchain.
+* aarch64 targets use Debian Stretch and a prebuilt Clang toolchain.
+* Other cross-compiled targets generally use Debian Stretch and
+  Debian-provided GCC cross-compilers.
+* riscv64 targets use Debian Buster and a Debian-provided GCC
+  cross-compiler.
+
+The selected toolchain is used to build Python's dependencies (OpenSSL,
+ncurses, libedit, SQLite, etc.). Finally, Python itself is built.
 
 Python is built in such a way that extensions are statically linked
-against their dependencies. e.g. instead of the ``sqlite3`` Python
+against their dependencies. For example, instead of the ``sqlite3`` Python
 extension having a run-time dependency against ``libsqlite3.so``, the
 SQLite symbols are statically inlined into the Python extension object
-file.
+file. Extension modules are statically linked into ``python`` rather than
+provided as shared extensions in the ``lib-dynload`` directory.
+
+``_dbm`` and ``_tkinter`` are handled differently. On dynamically linked
+Linux builds, ``_dbm`` is provided as a shared extension with Berkeley DB
+statically linked. This allows the module to be easily removed when the
+Berkeley DB license is undesired (see the DBM section below). On macOS,
+``_dbm`` instead uses the system NDBM implementation. ``_tkinter`` is
+also provided as a shared extension, with Tcl and Tk dynamically linked,
+on builds that support shared extensions.
 
 From the built Python, we produce an archive containing the raw Python
 distribution (as if you had run ``make install``) as well as other files
@@ -27,22 +43,22 @@ useful for downstream consumers.
 Setup.local Hackery
 ===================
 
-Python's build system reads the ``Modules/Setup`` and ``Modules/Setup.local``
-files to influence how C extensions are built. By default, many extensions
-have no entry in these files and the ``setup.py`` script performs work
-to compile these extensions. (``setup.py`` looks for headers, libraries,
-etc, and sets up the proper compiler flags.)
+Starting with Python 3.12, C extension modules are configured and built
+using ``configure``, ``Modules/Setup.stdlib``, and ``Makefile``. A
+generated ``Modules/Setup.local`` file disables selected modules and
+overrides whether others are linked statically or built as shared
+libraries.
 
-``setup.py`` doesn't provide a lot of flexibility and relies on a lot
-of default behavior in ``distutils`` as well as other inline code in
-``setup.py``. This default behavior is often undesirable for our
-desired outcome of producing a standalone Python distribution.
+Prior to 3.12, many extensions were configured and built using ``setup.py``
+scripts. These scripts do not provide much flexibility and rely on default
+behaviors in ``distutils``, as well as other inline code in ``setup.py``.
+This default behavior is often undesirable for our desired outcome of
+producing a standalone Python distribution.
 
-Since the build environment is mostly deterministic and since we have
-special requirements, we generate a custom ``Setup.local`` file that
-builds C extensions in a specific manner. The undesirable behavior of
-``setup.py`` is bypassed and the Python C extensions are compiled just
-the way we want.
+Because of this, when building Python prior to 3.12, a custom ``Setup.local``
+file is generated that builds all C extensions in a specific manner.
+The undesirable behavior of ``setup.py`` is bypassed and the Python C
+extensions are compiled just the way we want.
 
 Dependency Notes
 ================
@@ -50,12 +66,15 @@ Dependency Notes
 DBM
 ---
 
-Python has the option of building its ``_dbm`` extension against
-NDBM, GDBM, and Berkeley DB. Both NDBM and GDBM are GNU GPL Version 3.
-Modern versions of Berkeley DB are GNU AGPL v3. Versions 6.0.19 and
-older are licensed under the Sleepycat License. The Sleepycat License
-is more permissive. So we build the ``_dbm`` extension against BDB
-6.0.19.
+Python has the option of building its ``_dbm`` extension against NDBM,
+GDBM, and Berkeley DB. GDBM and its NDBM compatibility libraries are
+licensed under GNU GPL Version 3. Modern versions of Berkeley DB are
+licensed under GNU AGPL v3. Versions 6.0.19 and older are licensed under
+the more permissive Sleepycat License.
+
+On Linux, we build the ``_dbm`` extension against Berkeley DB 6.0.19. On
+macOS, ``_dbm`` uses the NDBM implementation provided by the system
+``libSystem`` library instead.
 
 We explicitly disable the ``_gdbm`` extension on all targets to avoid
 the GPL dependency.
@@ -64,8 +83,8 @@ readline / libedit / ncurses
 ----------------------------
 
 Python has the option of building its ``readline`` extension against
-either ``libreadline`` or ``libedit``. ``libreadline`` is licensed GNU
-GPL Version 3 and ``libedit`` has a more permissive license.
+either ``libreadline`` or ``libedit``. ``libreadline`` is licensed under
+GNU GPL Version 3, and ``libedit`` has a more permissive license.
 
 ``libedit``/``libreadline`` link against a curses library, most likely
 ``ncurses``. And ``ncurses`` has tie-ins with a terminal database. This
@@ -122,8 +141,7 @@ we've decided to not build it instead of adding complexity to deal with
 the ``libnsl`` dependency. See further discussion in
 https://github.com/astral-sh/python-build-standalone/issues/51.
 
-If ``nis`` functionality is important to you, please file a GitHub issue
-to request it.
+The ``nis`` module was deprecated in Python 3.11 and removed in 3.13.
 
 Upgrading CPython
 =================
@@ -141,42 +159,10 @@ These are a must review.
 ``Modules/Setup``
 -----------------
 
-The ``Modules/Setup`` file defines the default extension build settings
-for *boring* extensions which are always compiled the same way.
+The ``Modules/Setup`` file defines the default extension build settings.
 
 We need to audit it for differences such as added/removed extensions,
 changes to compile settings, etc just in case we have special code
 handling an extension defined in this file.
 
 See code in ``cpython.py`` dealing with this file.
-
-``setup.py`` / ``static-modules``
----------------------------------
-
-The ``setup.py`` script in the Python source distribution defines
-logic for dynamically building C extensions depending on environment
-settings.
-
-Because we don't like what this file does by default in many cases,
-we have instead defined static compilation invocations for various
-extensions in ``static-modules.*`` files. Presence of an extension
-in this file overrides CPython's ``setup.py`` logic. Essentially what
-we've done is encoded what ``setup.py`` would have done into our
-``static-modules.*`` files, bypassing ``setup.py``.
-
-This means that we need to audit ``setup.py`` every time we perform
-an upgrade to see if we need to adjust the content of our
-``static-modules.*`` files.
-
-A telltale way to find added extension is to look for ``.so`` files
-in ``python/install/lib/pythonX.Y/lib-dynload``. If an extension
-exists in a static build, it is being built by ``setup.py`` and
-we may be missing an entry in our ``static-modules.*`` files.
-
-The most robust method to audit changes is to run a build of CPython
-out of a source checkout and then manually compare the compiler
-invocations for each extension against what exists in our
-``static-modules.*`` files. Differences like missing source files
-should be obvious, as they usually result in a compilation failure.
-But differences in preprocessor defines are more subtle and can
-sneak in if we aren't careful.

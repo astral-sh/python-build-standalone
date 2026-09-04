@@ -11,8 +11,9 @@ use {
         Architecture, Endianness, FileKind, Object, SectionIndex, SymbolScope,
         elf::{
             DF_1_NOW, DF_BIND_NOW, DF_TEXTREL, DT_BIND_NOW, DT_FLAGS, DT_FLAGS_1, DT_TEXTREL,
-            ET_DYN, ET_EXEC, FileHeader32, FileHeader64, PF_W, PF_X, PT_GNU_RELRO, PT_GNU_STACK,
-            PT_LOAD, SHN_UNDEF, STB_GLOBAL, STB_WEAK, STV_DEFAULT, STV_HIDDEN,
+            ELF_NOTE_GNU, ET_DYN, ET_EXEC, FileHeader32, FileHeader64, NT_GNU_BUILD_ID, PF_W, PF_X,
+            PT_GNU_RELRO, PT_GNU_STACK, PT_LOAD, PT_NOTE, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
+            STV_DEFAULT, STV_HIDDEN,
         },
         macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
@@ -1276,12 +1277,25 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     // .note.GNU-stack section, which we are overriding with -Wl,-z,noexecstack.
 
     if matches!(elf.e_type(endian), ET_EXEC | ET_DYN) {
+        let mut found_gnu_build_id = false;
         let mut found_pt_gnu_stack = false;
         let mut found_pt_gnu_relro = false;
         for phdr in elf.program_headers(endian, data)? {
             let flags = phdr.p_flags(endian);
 
             match phdr.p_type(endian) {
+                PT_NOTE => {
+                    if let Some(mut notes) = phdr.notes(endian, data)? {
+                        while let Some(note) = notes.next()? {
+                            if note.name() == ELF_NOTE_GNU
+                                && note.n_type(endian) == NT_GNU_BUILD_ID
+                                && !note.desc().is_empty()
+                            {
+                                found_gnu_build_id = true;
+                            }
+                        }
+                    }
+                }
                 PT_GNU_STACK => {
                     found_pt_gnu_stack = true;
                     if flags & PF_X != 0 {
@@ -1299,6 +1313,12 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                 }
                 _ => {}
             }
+        }
+        if !found_gnu_build_id {
+            context.errors.push(format!(
+                "{} is missing a GNU build ID (NT_GNU_BUILD_ID)",
+                path.display(),
+            ));
         }
         if !found_pt_gnu_stack {
             context.errors.push(format!(
@@ -1895,6 +1915,18 @@ fn validate_extension_modules(
     Ok(errors)
 }
 
+fn is_shared_library(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|filename| filename.to_str())
+        .is_some_and(|filename| {
+            filename.ends_with(".so")
+                || filename.contains(".so.")
+                || filename.ends_with(".dylib")
+                || filename.ends_with(".dll")
+                || filename.ends_with(".pyd")
+        })
+}
+
 fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<Vec<String>> {
     let mut errors = vec![];
 
@@ -2047,6 +2079,13 @@ fn validate_distribution(
     for entry in entries {
         let mut entry = entry.map_err(|e| anyhow!("failed to iterate over archive: {}", e))?;
         let path = entry.path()?.to_path_buf();
+
+        if is_static && is_shared_library(&path) {
+            context.errors.push(format!(
+                "static distribution contains shared library {}",
+                path.display()
+            ));
+        }
 
         seen_paths.insert(path.clone());
 

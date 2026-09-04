@@ -31,6 +31,22 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
 else
     LDFLAGS="${LDFLAGS} -Wl,--exclude-libs,ALL"
     EXTRA_CONFIGURE_FLAGS="--x-includes=${TOOLS_PATH}/deps/include --x-libraries=${TOOLS_PATH}/deps/lib"
+
+    # Tk's pkg-config metadata omits its private X11 dependency. Add it so
+    # pkg-config --static also resolves X11's xcb and Xau dependencies.
+    patch -p1 <<'EOF'
+diff --git a/tk.pc.in b/tk.pc.in
+--- a/tk.pc.in
++++ b/tk.pc.in
+@@ -10,6 +10,7 @@ Description: Tk is a cross-platform graphical user interface toolkit, the stand
+ URL: https://www.tcl-lang.org/
+ Version: @TK_VERSION@@TK_PATCH_LEVEL@
+ Requires: tcl >= 9.0
++Requires.private: x11
+ Libs: -L${libdir} @TK_LIB_FLAG@ @TK_STUB_LIB_FLAG@
+ Libs.private: @XFT_LIBS@ @XLIBSW@
+ Cflags: -I${includedir}
+EOF
 fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${LDFLAGS}" ./configure \

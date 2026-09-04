@@ -64,8 +64,8 @@ build_options
    String indicating what build options were used. Options are separated
    by a ``+``.
 
-   Known values include ``debug``, ``noopt``, ``pgo``, ``lto``, and
-   ``freethreading``.
+   Known values include ``debug``, ``noopt``, ``pgo``, ``lto``, ``static``,
+   and ``freethreaded``.
 
    (Version 8 or above only.)
 
@@ -601,9 +601,22 @@ rewriting ``python/install/*`` to ``python/*``. All files not under
 ``python/install/*`` are not carried forward to the *install only*
 archive.
 
-The fastest available build for a given target is used for the *install
-only* archive. Builds are generally preferred in the following order:
-``pgo+lto``, ``pgo``, ``lto``, ``noopt``.
+For each Python version, target, and threading variant, the fastest
+available build is selected for the *install only* archive. Builds are
+generally preferred in the following order: ``pgo+lto``, ``pgo``,
+``lto``, ``noopt``.
 
-For maximum compatibility, gzipped compressed versions of the
-*install only* archives are made available.
+An *install only stripped* archive is also available. This archive is
+equivalent to *install only*, but without debug symbols, which results in a
+smaller download and on-disk footprint.
+
+For CPython 3.13 and newer, *install only* and *install only stripped*
+archives are created separately for the GIL-enabled and free-threaded
+variants. Free-threaded archives include ``freethreaded`` in the filename.
+
+For musl targets, *install only* archives use dynamically linked builds.
+Fully static musl builds are only available as *full* archives with
+``+static`` in their build options.
+
+For maximum compatibility, *install only* and *install only stripped*
+archives use gzip compression.

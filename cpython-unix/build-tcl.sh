@@ -83,6 +83,25 @@ export CPPFLAGS="${CFLAGS}"
 # Initialize it so that package configure does not require an installed Tcl 9.
 export ZIPFS_BUILD=0
 
+# macOS uses SDK zlib, which provides -lz but no zlib.pc. Remove Tcl's
+# pkg-config requirement while retaining its Libs.private: -lz linkage.
+if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
+    patch -p1 <<'EOF'
+diff --git a/tcl.pc.in b/tcl.pc.in
+--- a/tcl.pc.in
++++ b/tcl.pc.in
+@@ -9,7 +9,7 @@ Name: Tool Command Language
+ Description: Tcl is a powerful, easy-to-learn dynamic programming language, suitable for a wide range of uses.
+ URL: https://www.tcl-lang.org/
+ Version: @TCL_VERSION@@TCL_PATCH_LEVEL@
+-Requires.private: @TCL_PC_REQUIRES_PRIVATE@ zlib >= 1.2.3
++Requires.private: @TCL_PC_REQUIRES_PRIVATE@
+ Libs: -L${libdir} @TCL_LIB_FLAG@ @TCL_STUB_LIB_FLAG@
+ Libs.private: @TCL_LIBS@
+ Cflags: -I${includedir} @TCL_PC_CFLAGS@
+EOF
+fi
+
 ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \

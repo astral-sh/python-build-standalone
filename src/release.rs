@@ -2,8 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-use anyhow::Context;
+use anyhow::{Context, ensure};
 use futures::StreamExt;
+use serde::Deserialize;
+use sha2::{Digest, Sha256};
+use tokio::io::AsyncWriteExt;
 
 use object::FileKind;
 use std::{
@@ -18,7 +21,7 @@ use {
     pep440_rs::VersionSpecifier,
     std::{
         collections::{BTreeMap, BTreeSet},
-        io::{BufRead, Read, Write},
+        io::{BufRead, Read, Seek, Write},
         path::{Path, PathBuf},
     },
 };
@@ -780,64 +783,124 @@ pub fn produce_install_only_stripped(tar_gz_path: &Path, llvm_dir: &Path) -> Res
     Ok(dest_path)
 }
 
-/// URL from which to download LLVM.
-///
-/// To be kept in sync with `pythonbuild/downloads.py`.
-static LLVM_URL: Lazy<Url> = Lazy::new(|| {
-    if cfg!(target_os = "macos") {
-        if std::env::consts::ARCH == "aarch64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-aarch64-apple-darwin.tar.zst").unwrap()
-        } else if std::env::consts::ARCH == "x86_64" {
-            Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst").unwrap()
-        } else {
-            panic!("unsupported macOS architecture");
-        }
-    } else if cfg!(target_os = "linux") {
-        Url::parse("https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-x86_64-unknown-linux-gnu.tar.zst").unwrap()
-    } else {
-        panic!("unsupported platform");
-    }
+#[derive(Deserialize)]
+struct Download {
+    url: String,
+    size: u64,
+    sha256: String,
+}
+
+/// The same pinned archives used by `pythonbuild/downloads.py`.
+static DOWNLOADS: Lazy<BTreeMap<String, Download>> = Lazy::new(|| {
+    serde_json::from_str(include_str!("../pythonbuild/downloads.json"))
+        .expect("invalid download metadata")
 });
+
+fn llvm_download(os: &str, arch: &str) -> Result<&'static Download> {
+    DOWNLOADS
+        .get(&format!("llvm-{arch}-{os}"))
+        .with_context(|| format!("unsupported LLVM bootstrap platform: {os}-{arch}"))
+}
+
+/// Verify the compressed archive before it reaches the decompressor.
+fn verify_llvm_archive(mut file: std::fs::File, download: &Download) -> Result<std::fs::File> {
+    let size = file.metadata()?.len();
+    ensure!(
+        size == download.size,
+        "LLVM archive size mismatch: expected {}, got {size}",
+        download.size
+    );
+
+    let mut hasher = Sha256::new();
+    std::io::copy(&mut file, &mut hasher)?;
+    let sha256 = hex::encode(hasher.finalize());
+    ensure!(
+        sha256 == download.sha256,
+        "LLVM archive SHA-256 mismatch: expected {}, got {sha256}",
+        download.sha256
+    );
+    file.rewind()?;
+    Ok(file)
+}
 
 /// Bootstrap `llvm` for the current platform.
 ///
 /// Returns the path to the top-level `llvm` directory.
 pub async fn bootstrap_llvm() -> Result<PathBuf> {
-    let url = &*LLVM_URL;
-    let filename = url.path_segments().unwrap().next_back().unwrap();
-
+    let download = llvm_download(std::env::consts::OS, std::env::consts::ARCH)?;
+    let url = Url::parse(&download.url)?;
+    let filename = url
+        .path_segments()
+        .and_then(|mut segments| segments.next_back())
+        .filter(|name| !name.is_empty())
+        .context("LLVM URL has no filename")?;
     let llvm_dir = Path::new("build").join("llvm");
     std::fs::create_dir_all(&llvm_dir)?;
 
-    // If `llvm` is already available with the target version, return it.
-    if llvm_dir.join(filename).exists() {
-        return Ok(llvm_dir.join("llvm"));
-    }
+    // Always verify cached bytes. The marker ties the extracted tree to a
+    // successful verified extraction, so older, unverified caches are rebuilt.
+    // The local workspace (including the marker and extracted tree) is trusted.
+    let cached_tarball = match std::fs::File::open(llvm_dir.join(filename)) {
+        Ok(file) => {
+            let file = verify_llvm_archive(file, download).with_context(|| {
+                format!(
+                    "cached LLVM archive failed verification; remove {} and retry",
+                    llvm_dir.display()
+                )
+            })?;
+            if std::fs::read_to_string(llvm_dir.join(".verified-sha256"))
+                .ok()
+                .as_deref()
+                == Some(download.sha256.as_str())
+            {
+                return Ok(llvm_dir.join("llvm"));
+            }
+            Some(file)
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
+        Err(err) => return Err(err).context("failed to open cached LLVM archive"),
+    };
 
-    println!("Downloading LLVM tarball from: {url}");
+    // Stage on the same filesystem as the cache, and publish only after both
+    // verification and extraction succeed.
+    let temp_dir = tempfile::Builder::new()
+        .prefix(".llvm-")
+        .tempdir_in(llvm_dir.parent().context("LLVM cache has no parent")?)?;
+    let tarball_path = temp_dir.path().join(filename);
+    let tarball = if let Some(mut file) = cached_tarball {
+        std::io::copy(&mut file, &mut std::fs::File::create(&tarball_path)?)?;
+        file.rewind()?;
+        file
+    } else {
+        println!("Downloading LLVM tarball from: {url}");
+        let mut bytes_stream = reqwest::Client::new()
+            .get(url.clone())
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes_stream();
+        let mut tarball_file = tokio::fs::File::create(&tarball_path).await?;
+        let mut size = 0;
+        while let Some(chunk) = bytes_stream.next().await {
+            let chunk = chunk?;
+            size += chunk.len() as u64;
+            ensure!(
+                size <= download.size,
+                "LLVM archive exceeds expected size of {} bytes",
+                download.size
+            );
+            tarball_file.write_all(&chunk).await?;
+        }
+        tarball_file.flush().await?;
+        drop(tarball_file);
+        verify_llvm_archive(std::fs::File::open(&tarball_path)?, download)?
+    };
 
-    // Create a temporary directory to download and extract the LLVM tarball.
-    let temp_dir = tempfile::TempDir::new()?;
-
-    // Download the tarball.
-    let tarball_path = temp_dir
-        .path()
-        .join(url.path_segments().unwrap().next_back().unwrap());
-    let mut tarball_file = tokio::fs::File::create(&tarball_path).await?;
-    let mut bytes_stream = reqwest::Client::new()
-        .get(url.clone())
-        .send()
-        .await?
-        .bytes_stream();
-    while let Some(chunk) = bytes_stream.next().await {
-        tokio::io::copy(&mut chunk?.as_ref(), &mut tarball_file).await?;
-    }
-
-    // Decompress the tarball.
-    let tarball = std::fs::File::open(&tarball_path)?;
+    // Only verified bytes may be decompressed or extracted.
     let tar = zstd::stream::Decoder::new(std::io::BufReader::new(tarball))?;
     let mut archive = tar::Archive::new(tar);
     archive.unpack(temp_dir.path())?;
+    std::fs::write(temp_dir.path().join(".verified-sha256"), &download.sha256)?;
 
     // Persist the directory.
     match tokio::fs::remove_dir_all(&llvm_dir).await {
@@ -845,7 +908,7 @@ pub async fn bootstrap_llvm() -> Result<PathBuf> {
         Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
         Err(err) => return Err(err).context("failed to remove existing llvm directory"),
     }
-    tokio::fs::rename(temp_dir.keep(), &llvm_dir).await?;
+    tokio::fs::rename(temp_dir.path(), &llvm_dir).await?;
 
     Ok(llvm_dir.join("llvm"))
 }

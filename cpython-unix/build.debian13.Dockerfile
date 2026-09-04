@@ -1,12 +1,37 @@
-# Keep target headers, startup objects, and shared libraries on the same
-# Debian Stretch snapshot previously used for the entire aarch64 build image.
-{% include 'base.debian9.Dockerfile' %}
+{% include 'base.debian13.Dockerfile' %}
 
-RUN ulimit -n 10000 && apt-get install libc6-dev-arm64-cross
+RUN apt-get install ca-certificates mmdebstrap gpgv
+
+# mmdebstrap's APT hooks can redirect file descriptors above 9, which dash
+# rejects. Use bash only in this preparation stage, not in the final image.
+RUN ln -sf bash /bin/sh
+
+# Use the same Stretch snapshots as the former native aarch64 build image.
+# Extract libc, kernel headers, symlinks, and their dependencies without running
+# maintainer scripts. The archived keys and gpgv helper retain signature
+# verification while allowing Stretch's expired signing keys.
+RUN mmdebstrap --variant=extract --mode=root \
+    --skip=chroot/mount \
+    --architectures=arm64 \
+    --keyring=/usr/share/keyrings/debian-archive-removed-keys.gpg \
+    --aptopt='Acquire::Check-Valid-Until "false"' \
+    --aptopt='Acquire::Retries "5"' \
+    --aptopt='Apt::Key::gpgvcommand "/usr/libexec/mmdebstrap/gpgvnoexpkeysig"' \
+    --include=libc6,libc6-dev,linux-libc-dev,symlinks \
+    stretch /sysroot \
+    'deb https://snapshot.debian.org/archive/debian/20230423T032736Z/ stretch main' \
+    'deb https://snapshot.debian.org/archive/debian/20230423T032736Z/ stretch-updates main' \
+    'deb https://snapshot.debian.org/archive/debian-security/20230423T032736Z/ stretch/updates main'
+
+# Absolute symlinks would escape the sysroot into the Trixie host filesystem.
+# Run Stretch's symlinks utility inside the sysroot so targets resolve there.
+# Keep linker scripts unchanged: ld resolves their absolute paths via --sysroot.
+RUN chroot /sysroot /usr/bin/symlinks -cr /
 
 # Build tools and host programs run against current Debian Trixie libraries.
 {% include 'base.debian13.Dockerfile' %}
 
+# libffi and zlib are used by host Python, independently of the target sysroot.
 RUN apt-get install \
     bzip2 \
     ca-certificates \
@@ -24,13 +49,6 @@ RUN apt-get install \
     zip \
     zlib1g-dev
 
-COPY --from=0 /usr/aarch64-linux-gnu/ /usr/aarch64-linux-gnu/
-
-# Cross libc linker scripts contain absolute /usr/aarch64-linux-gnu/lib paths,
-# which ld resolves relative to --sysroot. Mirror that prefix and the standard
-# /usr/include and /usr/lib paths inside the otherwise flat cross sysroot.
-RUN sysroot=/usr/aarch64-linux-gnu && \
-    mkdir "${sysroot}/usr" && \
-    ln -s .. "${sysroot}/usr/aarch64-linux-gnu" && \
-    ln -s ../include "${sysroot}/usr/include" && \
-    ln -s ../lib "${sysroot}/usr/lib"
+# Copy the native multiarch layout, without mmdebstrap's APT state or packages.
+COPY --from=0 /sysroot/lib/ /usr/aarch64-linux-gnu/lib/
+COPY --from=0 /sysroot/usr/ /usr/aarch64-linux-gnu/usr/

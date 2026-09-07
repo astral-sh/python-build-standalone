@@ -15,9 +15,9 @@ pushd "expat-${EXPAT_VERSION}"
 
 EXPAT_CONFIGURE_FLAGS=()
 # Expat 2.8.2 no longer enables /dev/urandom by default. Enable it for
-# # x86-64 Linux, whose older glibc target cannot use getrandom().
+# Linux targets whose older glibc target cannot use getrandom() / getentropy().
 # https://github.com/libexpat/libexpat/pull/1257
-if [[ "${TARGET_TRIPLE}" = x86_64-*-linux-* ]]; then
+if [[ "${TARGET_TRIPLE}" = x86_64-*-linux-* || "${TARGET_TRIPLE}" = powerpc64le-*-linux-* ]]; then
     # Older Linux targets may not expose newer entropy APIs to configure.
     EXPAT_CONFIGURE_FLAGS+=(--with-dev-urandom)
 fi

@@ -114,6 +114,9 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
             target_triple.replace("x86_64_v2-", "x86_64-")
             .replace("x86_64_v3-", "x86_64-")
             .replace("x86_64_v4-", "x86_64-")
+            .replace("ppc64le_power9-", "ppc64le-")
+            .replace("ppc64le_power10-", "ppc64le-")
+            .replace("ppc64le_power11-", "ppc64le-")
         )
 
         # On macOS, we support building Linux in a virtualized container that
@@ -249,8 +252,10 @@ def toolchain_archive_path(package_name, host_platform):
     return BUILD / basename
 
 
-def install_binutils(platform):
-    return not platform.startswith("macos_")
+def install_binutils(host_platform, target_triple=None):
+    if target_triple and "ppc64le" in target_triple:
+        return False
+    return not host_platform.startswith("macos_")
 
 
 def simple_build(
@@ -275,7 +280,7 @@ def simple_build(
                 host_platform,
                 target_triple,
                 binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
@@ -399,7 +404,7 @@ def build_libedit(
                 host_platform,
                 target_triple,
                 binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
@@ -447,15 +452,16 @@ def build_cpython_host(
             )
 
     with build_environment(client, image) as build_env:
-        build_env.install_toolchain(
-            BUILD,
-            host_platform,
-            target_triple,
-            binutils_image=docker_image_names(settings)["gcc"],
-            binutils=install_binutils(host_platform),
-            clang=True,
-            static="static" in build_options,
-        )
+        if settings.get("needs_toolchain"):
+            build_env.install_toolchain(
+                BUILD,
+                host_platform,
+                target_triple,
+                binutils_image=docker_image_names(settings)["gcc"],
+                binutils=install_binutils(host_platform, target_triple),
+                clang=True,
+                static="static" in build_options,
+            )
 
         build_env.copy_file(archive)
 
@@ -791,7 +797,7 @@ def build_cpython(
                 host_platform,
                 target_triple,
                 binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
+                binutils=install_binutils(host_platform, target_triple),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,

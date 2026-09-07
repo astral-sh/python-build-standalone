@@ -456,6 +456,205 @@ ppc64le-unknown-linux-gnu:
     - zstd
   openssl_target: linux-ppc64le
 
+ppc64le_power9-unknown-linux-gnu:
+  linux_uapi_include_arch: powerpc64le-linux-gnu
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.11'
+    - '3.12'
+    - '3.13'
+    - '3.14'
+    - '3.15'
+    - '3.16'
+  docker_image_suffix: .cross
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
+  target_cflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
+    # Hardening
+    - '-fstack-protector'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=2'
+    - '-mcpu=pwr9'
+    - '-mtune=pwr9'
+  target_ldflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    # Avoid a shared libgcc dependency for long-double operations.
+    - '-static-libgcc'
+    # Hardening
+    - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
+  needs:
+    - autoconf
+    - bdb
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - linux-uapi
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux-ppc64le
+
+ppc64le_power10-unknown-linux-gnu:
+  linux_uapi_include_arch: powerpc64le-linux-gnu
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.12'
+    - '3.13'
+    - '3.14'
+    - '3.15'
+    - '3.16'
+  docker_image_suffix: .cross
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
+  target_cflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
+    # Hardening
+    - '-fstack-protector'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=2'
+    - '-mcpu=pwr10'
+    - '-mtune=pwr10'
+  target_ldflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    # Avoid a shared libgcc dependency for long-double operations.
+    - '-static-libgcc'
+    # Hardening
+    - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
+  needs:
+    - autoconf
+    - bdb
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - linux-uapi
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux-ppc64le
+
+ppc64le_power11-unknown-linux-gnu:
+  linux_uapi_include_arch: powerpc64le-linux-gnu
+  host_platforms:
+    - linux_x86_64
+  pythons_supported:
+    - '3.12'
+    - '3.13'
+    - '3.14'
+    - '3.15'
+    - '3.16'
+  docker_image_suffix: .cross
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
+  target_cflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
+    # Hardening
+    - '-fstack-protector'
+    - '-U_FORTIFY_SOURCE'
+    - '-D_FORTIFY_SOURCE=2'
+    - '-mcpu=pwr11'
+    - '-mtune=pwr11'
+  target_ldflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    # Avoid a shared libgcc dependency for long-double operations.
+    - '-static-libgcc'
+    # Hardening
+    - '-Wl,-z,noexecstack'
+    - '-Wl,-z,relro'
+    - '-Wl,-z,now'
+    - '-Wl,--build-id=sha1'
+  needs:
+    - autoconf
+    - bdb
+    - bzip2
+    - expat
+    - libedit
+    - libffi
+    - libX11
+    - libXau
+    - libxcb
+    - linux-uapi
+    - m4
+    - mpdecimal
+    - ncurses
+    - openssl-3.5
+    - patchelf
+    - sqlite
+    - tcl
+    - tk
+    - uuid
+    - xorgproto
+    - xz
+    - zlib
+    - zstd
+  openssl_target: linux-ppc64le
+
 riscv64-unknown-linux-gnu:
   linux_uapi_include_arch: riscv64-linux-gnu
   host_platforms:

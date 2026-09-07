@@ -34,5 +34,9 @@ CC="${LIBTOOL_CC}" CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGE
     --prefix=/tools/deps \
     ${EXTRA_FLAGS}
 
+# Libtool's shared-library link filter drops these Clang cross-compilation
+# flags, which would otherwise select host startup objects and runtimes.
+sed -i 's/|--sysroot=\*|/|--sysroot=*|--target=*|--gcc-install-dir=*|/g' libtool
+
 make -j "$(nproc)"
 make -j "$(nproc)" install DESTDIR="${ROOT}/out"

@@ -18,17 +18,17 @@ CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
 # curl
-RUN apt-get update && apt install --yes curl
+RUN apt-get update && apt-get install --yes ca-certificates curl
 
-# Add the LLVM project repository
+# Add the LLVM 23 repository.
 RUN curl -fsSL https://apt.llvm.org/llvm-snapshot.gpg.key \
         -o /etc/apt/trusted.gpg.d/apt.llvm.org.asc \
-    && echo "deb http://apt.llvm.org/trixie/ llvm-toolchain-trixie-22 main" \
+    && echo "deb https://apt.llvm.org/trixie/ llvm-toolchain-trixie-23 main" \
         > /etc/apt/sources.list.d/llvm.list
 
-# Add buster as an source for riscv sysroot packages
+# Add buster as a source for riscv sysroot packages
 RUN for s in debian_buster debian_buster-updates debian-security_buster/updates; do \
-      echo "deb http://snapshot.debian.org/archive/${s%_*}/20250109T084424Z/ ${s#*_} main"; \
+      echo "deb https://snapshot.debian.org/archive/${s%_*}/20250109T084424Z/ ${s#*_} main"; \
     done > /etc/apt/sources.list.d/buster.list && \
     ( echo 'quiet "true";'; \
       echo 'APT::Get::Assume-Yes "true";'; \
@@ -60,9 +60,9 @@ RUN apt-get install \
 
 # LLVM
 RUN apt-get install \
-    clang-22 \
-    lld-22 \
-    llvm-22
+    clang-23 \
+    lld-23 \
+    llvm-23
 
 RUN apt-get install \
     libc6-dev-riscv64-cross \
@@ -71,7 +71,14 @@ RUN apt-get install \
     libgcc1-riscv64-cross \
     libgcc-8-dev-riscv64-cross
 
-RUN ln -s /usr/bin/clang-22 /usr/bin/riscv64-linux-gnu-clang && \
-    ln -s /usr/bin/clang++-22 /usr/bin/riscv64-linux-gnu-clang++ && \
-    ln -s /usr/lib/llvm-22/bin/ld.lld /usr/bin/riscv64-linux-gnu-ld && \
-    ln -s /usr/lib/llvm-22/bin/llvm-ar /usr/bin/riscv64-unknown-linux-gnu-llvm-ar
+# Cross libc linker scripts use absolute /usr/riscv64-linux-gnu/lib paths,
+# which the linker resolves relative to --sysroot. Mirror that prefix and
+# provide the standard include/library directories in the flat cross sysroot.
+RUN sysroot=/usr/riscv64-linux-gnu && \
+    mkdir "${sysroot}/usr" && \
+    ln -s .. "${sysroot}/usr/riscv64-linux-gnu" && \
+    ln -s ../include "${sysroot}/usr/include" && \
+    ln -s ../lib "${sysroot}/usr/lib"
+
+# CPython's configure searches for a target-prefixed archiver when cross-building.
+RUN ln -s /usr/lib/llvm-23/bin/llvm-ar /usr/bin/riscv64-unknown-linux-gnu-llvm-ar

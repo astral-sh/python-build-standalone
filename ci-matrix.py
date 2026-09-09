@@ -387,9 +387,9 @@ def create_python_build_entry(
         min_version = conditional["minimum-python-version"]
         if meets_conditional_version(python_version, min_version):
             entry["vs_version"] = conditional["vs_version"]
-    # TODO remove once VS 2026 is available in 'standard' runnners
+    # VS 2026 builds need the Windows Server 2025 image.
     if entry.get("vs_version") == "2026":
-        entry["runner"] = "windows-2025-vs2026"
+        entry["runner"] = "github-windows-2025-x86_64-8"
     return entry
 
 

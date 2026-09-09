@@ -35,6 +35,11 @@ windows-latest-large:
   platform: windows
   free: false
 
+github-windows-2025-x86_64-8:
+  arch: x86_64
+  platform: windows
+  free: false
+
 windows-latest:
   arch: x86_64
   platform: windows
@@ -44,6 +49,11 @@ windows-2025-vs2026:
   arch: x86_64
   platform: windows
   free: true
+
+github-windows-11-aarch64-8:
+  arch: aarch64
+  platform: windows
+  free: false
 
 windows-11-arm:
   arch: aarch64

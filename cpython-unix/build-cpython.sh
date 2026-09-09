@@ -692,6 +692,16 @@ if [ -n "${CROSS_COMPILING}" ]; then
         arm64*|aarch64*|armv7*|thumb7*|ppc64*|s390*|x86*)
             CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_aligned_required=no"
             ;;
+        riscv64*)
+            # Cross-configure defaults to FNV on RISC-V. SipHash uses memcpy
+            # for unaligned reads, so select it without changing the target's
+            # alignment requirements. Preserve each Python version's algorithm.
+            if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
+                CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-hash-algorithm=siphash24"
+            else
+                CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-hash-algorithm=siphash13"
+            fi
+            ;;
     esac
 
     # When cross-compiling, configure defaults to assuming `sem_getvalue` is broken,

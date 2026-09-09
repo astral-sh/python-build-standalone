@@ -1244,7 +1244,7 @@ ${BUILD_PYTHON} "${ROOT}/generate_metadata.py" "${ROOT}/metadata.json"
 cat "${ROOT}/metadata.json"
 
 if [ "${CC}" != "musl-clang" ]; then
-    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep GLIBC_ | awk '{print $5}' | awk -F_ '{print $2}' | sort -V | tail -n 1 > "${ROOT}/glibc_version.txt"
+    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | cut -d_ -f2 | sort -V | tail -n 1 > "${ROOT}/glibc_version.txt"
     cat "${ROOT}/glibc_version.txt"
 fi
 

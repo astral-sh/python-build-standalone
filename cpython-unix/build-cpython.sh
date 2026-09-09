@@ -1145,8 +1145,19 @@ import importlib.machinery
 import importlib.util
 import json
 import os
+import runpy
 import sys
 import sysconfig
+
+# The cross-build helper reads sysconfig from the unmodified build tree.
+# Use the cleaned installed values for PYTHON.json as well.
+lib_suffix = "t" if os.environ.get("CPYTHON_FREETHREADED") else ""
+sysconfig_data = os.path.join(
+    os.environ["ROOT"], "out", "python", "install", "lib",
+    "python%s%s" % (sysconfig.get_python_version(), lib_suffix),
+    sysconfig._get_sysconfigdata_name() + ".py",
+)
+installed_config_vars = runpy.run_path(sysconfig_data)["build_time_vars"]
 
 # When doing cross builds, sysconfig still picks up abiflags from the
 # host Python, which is never built in debug or free-threaded mode. Patch abiflags accordingly.
@@ -1174,6 +1185,11 @@ extension_suffixes.append(".abi3.so")
 
 extension_suffixes.append(".so")
 
+# Merge into a separate dictionary: newer Python versions can reinitialize
+# sysconfig's cache and restore the unmodified build-tree values.
+config_vars = dict(sysconfig.get_config_vars())
+config_vars.update(installed_config_vars)
+
 metadata = {
     "python_abi_tag": sys.abiflags,
     "python_implementation_cache_tag": sys.implementation.cache_tag,
@@ -1194,7 +1210,7 @@ metadata = {
     "python_exe": "install/bin/python%s%s" % (sysconfig.get_python_version(), sys.abiflags),
     "python_major_minor_version": sysconfig.get_python_version(),
     "python_stdlib_platform_config": sysconfig.get_config_var("LIBPL").lstrip("/"),
-    "python_config_vars": {k: str(v) for k, v in sysconfig.get_config_vars().items()},
+    "python_config_vars": {k: str(v) for k, v in config_vars.items()},
 }
 
 # When cross-compiling, we use a host Python to run this script. There are

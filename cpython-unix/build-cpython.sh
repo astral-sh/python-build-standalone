@@ -960,6 +960,12 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                     "${ROOT}/out/python/install/lib/libpython3.so"
             fi
         fi
+
+        # Let _tkinter locate bundled Tcl/Tk libraries independently of the
+        # interpreter.
+        for module in "${ROOT}"/out/python/install/lib/python*/lib-dynload/_tkinter*.so; do
+            patchelf --force-rpath --set-rpath "\$ORIGIN/../.." "$module"
+        done
     fi
 fi
 

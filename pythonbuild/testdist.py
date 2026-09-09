@@ -185,6 +185,16 @@ def run_stdlib_tests(
     junit_path = Path(td.name) / "junit.xml"
 
     if raw_harness_args:
+        # Honor an explicit harness destination; relative paths are interpreted
+        # from the distribution root, where the subprocess runs.
+        parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+        parser.add_argument("--junit-xml", type=Path)
+        harness_options, _ = parser.parse_known_args(raw_harness_args)
+        if harness_options.junit_xml is not None:
+            junit_path = dist_root / harness_options.junit_xml
+        else:
+            # Insert before forwarded arguments, which may contain `--`.
+            args.extend(["--junit-xml", str(junit_path)])
         args.extend(raw_harness_args)
     else:
         args.extend(

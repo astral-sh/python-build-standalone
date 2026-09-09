@@ -610,6 +610,7 @@ def main(pbs_source_dir: Path, raw_args: list[str]) -> int:
         if junit_xml_path is not None:
             junit_xml_path.parent.mkdir(parents=True, exist_ok=True)
             with junit_xml_path.open("w", encoding="utf-8") as fh:
+                junit.update_statistics()
                 junit.write(fh, pretty=True)
 
         if len(codes) == 0:

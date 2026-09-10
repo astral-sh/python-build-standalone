@@ -300,13 +300,9 @@ def generate_crate_build_matrix_entries(
         {
             "platform": platform,
             "arch": arch,
-            # The paid x86-64 Windows runner has a Rust toolchain. Other Windows
-            # builds use a GitHub runner with Rust. On Linux, the `python-build`
-            # runner matches the `crate-build` runner because of GLIBC version
-            # mismatches.
-            "runner": find_runner(
-                runners, platform, arch, platform == "windows" and arch != "x86_64"
-            ),
+            # On Linux, the `python-build` runner matches the `crate-build`
+            # runner because of GLIBC version mismatches.
+            "runner": find_runner(runners, platform, arch, False),
             "crate_artifact_name": crate_artifact_name(
                 platform,
                 arch,

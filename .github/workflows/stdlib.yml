@@ -36,13 +36,25 @@ jobs:
       any-linux-1: ${{ steps.set-matrix.outputs.any-linux-1 }}
       any-macos: ${{ steps.set-matrix.outputs.any-macos }}
       any-windows: ${{ steps.set-matrix.outputs.any-windows }}
-      linux-run-id: ${{ steps.find-runs.outputs.linux-run-id }}
-      macos-run-id: ${{ steps.find-runs.outputs.macos-run-id }}
-      windows-run-id: ${{ steps.find-runs.outputs.windows-run-id }}
+      linux-run-id: ${{ steps.set-matrix.outputs.linux-run-id }}
+      macos-run-id: ${{ steps.set-matrix.outputs.macos-run-id }}
+      windows-run-id: ${{ steps.set-matrix.outputs.windows-run-id }}
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      # The helper may not exist at the commit whose artifacts we are testing.
+      - name: Check out workflow helper
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: workflow-tools
+          sparse-checkout: scripts/stdlib_test_matrix.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Check out target configuration
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           ref: ${{ inputs.sha }}
+          path: target
           persist-credentials: false
 
       - name: Set up uv
@@ -50,109 +62,23 @@ jobs:
         with:
           enable-cache: false
 
-      - name: Generate candidate matrix
-        id: candidates
-        env:
-          INPUT_FILTERS: ${{ inputs.filters }}
-        run: |
-          uv run ci-matrix.py --platform linux --max-shards 2 --event push --labels "${INPUT_FILTERS}" > linux.json
-          uv run ci-matrix.py --platform darwin --event push --labels "${INPUT_FILTERS}" > macos.json
-          uv run ci-matrix.py --platform windows --event push --labels "${INPUT_FILTERS}" > windows.json
-
-          echo "any-linux=$(jq -r '[."python-build"[].include[] | select(.run == "true")] | length > 0' linux.json)" >> "${GITHUB_OUTPUT}"
-          echo "any-macos=$(jq -r '[."python-build".include[] | select(.run == "true")] | length > 0' macos.json)" >> "${GITHUB_OUTPUT}"
-          echo "any-windows=$(jq -r '[."python-build".include[] | select(.run == "true")] | length > 0' windows.json)" >> "${GITHUB_OUTPUT}"
-
-      - name: Find build workflow runs and artifacts
-        id: find-runs
-        shell: bash
+      - name: Generate test matrix
+        id: set-matrix
+        working-directory: target
         env:
           GH_TOKEN: ${{ github.token }}
           INPUT_SHA: ${{ inputs.sha }}
-          ANY_LINUX: ${{ steps.candidates.outputs.any-linux }}
-          ANY_MACOS: ${{ steps.candidates.outputs.any-macos }}
-          ANY_WINDOWS: ${{ steps.candidates.outputs.any-windows }}
+          INPUT_FILTERS: ${{ inputs.filters }}
         run: |
-          find_run() {
-            local name="$1"
-            local workflow="$2"
-            local wanted="$3"
-            local run_id
+          uv run ci-matrix.py --platform linux --event push --labels "${INPUT_FILTERS}" > linux.json
+          uv run ci-matrix.py --platform darwin --event push --labels "${INPUT_FILTERS}" > macos.json
+          uv run ci-matrix.py --platform windows --event push --labels "${INPUT_FILTERS}" > windows.json
 
-            echo '[]' > "${name}-artifacts.json"
-            if [ "${wanted}" != "true" ]; then
-              return
-            fi
-
-            run_id=$(gh api --method GET \
-              "repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs" \
-              -f head_sha="${INPUT_SHA}" \
-              -f status=success \
-              -f per_page=100 \
-              --jq '.workflow_runs[0].id // empty')
-
-            if [ -z "${run_id}" ]; then
-              echo "No successful ${name} build workflow found for ${INPUT_SHA}; skipping ${name}." >&2
-              return
-            fi
-
-            gh api --method GET --paginate \
-              "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts" \
-              -f per_page=100 \
-              | jq -s '[.[].artifacts[] | select(.expired == false) | .name]' \
-              > "${name}-artifacts.json"
-
-            echo "${name}-run-id=${run_id}" >> "${GITHUB_OUTPUT}"
-          }
-
-          find_run linux linux.yml "${ANY_LINUX}"
-          find_run macos macos.yml "${ANY_MACOS}"
-          find_run windows windows.yml "${ANY_WINDOWS}"
-
-      - name: Intersect test matrix with available artifacts
-        id: set-matrix
-        run: |
-          filter_matrix() {
-            local matrix_file="$1"
-            local selector="$2"
-            local artifacts_file="$3"
-
-            # Windows artifacts use vcvars instead of the target triple.
-            jq -c --slurpfile artifacts "${artifacts_file}" "${selector}"'
-              | .include |= map(
-                  select(.run == "true")
-                  | "cpython-\(.python)-\(.vcvars // .target_triple)-\(.build_options)" as $name
-                  | select($artifacts[0] | index($name))
-                )' "${matrix_file}"
-          }
-
-          linux_0=$(filter_matrix linux.json '."python-build"."0"' linux-artifacts.json)
-          linux_1=$(filter_matrix linux.json '."python-build"."1"' linux-artifacts.json)
-          macos=$(filter_matrix macos.json '."python-build"' macos-artifacts.json)
-          windows=$(filter_matrix windows.json '."python-build"' windows-artifacts.json)
-
-          echo "linux-matrix-0=${linux_0}" >> "${GITHUB_OUTPUT}"
-          echo "linux-matrix-1=${linux_1}" >> "${GITHUB_OUTPUT}"
-          echo "macos-matrix=${macos}" >> "${GITHUB_OUTPUT}"
-          echo "windows-matrix=${windows}" >> "${GITHUB_OUTPUT}"
-
-          echo "any-linux-0=$(jq -r '.include | length > 0' <<< "${linux_0}")" >> "${GITHUB_OUTPUT}"
-          echo "any-linux-1=$(jq -r '.include | length > 0' <<< "${linux_1}")" >> "${GITHUB_OUTPUT}"
-          echo "any-macos=$(jq -r '.include | length > 0' <<< "${macos}")" >> "${GITHUB_OUTPUT}"
-          echo "any-windows=$(jq -r '.include | length > 0' <<< "${windows}")" >> "${GITHUB_OUTPUT}"
-
-          jq -n \
-            --argjson linux_0 "${linux_0}" \
-            --argjson linux_1 "${linux_1}" \
-            --argjson macos "${macos}" \
-            --argjson windows "${windows}" \
-            '{"linux-0": $linux_0, "linux-1": $linux_1, macos: $macos, windows: $windows}' \
-            | tee test-matrix.json
-
-          if ! jq -e '[.[].include[]] | length > 0' test-matrix.json > /dev/null; then
-            echo "No unexpired distribution artifacts match the requested test matrix in successful build workflows." >&2
-            exit 1
-          fi
+          uv run --script ../workflow-tools/scripts/stdlib_test_matrix.py \
+            --repository "${GITHUB_REPOSITORY}" \
+            --sha "${INPUT_SHA}" \
+            --matrix-dir . \
+            --github-output "${GITHUB_OUTPUT}"
 
   linux-0:
     name: linux / ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}

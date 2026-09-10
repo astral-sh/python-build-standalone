@@ -300,18 +300,12 @@ def generate_crate_build_matrix_entries(
         {
             "platform": platform,
             "arch": arch,
-            # Use Namespace for x86-64 Windows crate builds. Other Windows
-            # builds need a GitHub runner with a Rust toolchain. On Linux, the
-            # `python-build` runner matches the `crate-build` runner because of
-            # GLIBC version mismatches.
-            "runner": (
-                "namespace-profile-windows-2022-x86-64-16x32"
-                if platform == "windows"
-                and arch == "x86_64"
-                and "namespace-profile-windows-2022-x86-64-16x32" in runners
-                else find_runner(
-                    runners, platform, arch, True if platform == "windows" else False
-                )
+            # The paid x86-64 Windows runner has a Rust toolchain. Other Windows
+            # builds use a GitHub runner with Rust. On Linux, the `python-build`
+            # runner matches the `crate-build` runner because of GLIBC version
+            # mismatches.
+            "runner": find_runner(
+                runners, platform, arch, platform == "windows" and arch != "x86_64"
             ),
             "crate_artifact_name": crate_artifact_name(
                 platform,

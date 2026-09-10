@@ -134,9 +134,8 @@ jobs:
           persist-credentials: false
 
       - name: Install Cygwin Environment
-        uses: cygwin/cygwin-install-action@3f0a3f9f988f7e96b8c18098ae05eaec175f5b52 # v6
-        with:
-          packages: autoconf automake libtool
+        shell: pwsh
+        run: ./scripts/install-cygwin.ps1 -Packages autoconf,automake,libtool
 
       - name: Set up uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1

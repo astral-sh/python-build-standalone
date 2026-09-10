@@ -12,6 +12,8 @@ $PSNativeCommandUseErrorActionPreference = $true
 
 # Available versions: https://cygwin.com/setup/
 # Published SHA512 hashes: https://cygwin.com/setup/sha512.sum
+#$setupUrl = 'https://astral-sh.github.io/mirror/files/setup-2.939.x86_64.exe'
+# Mirrored from:
 $setupUrl = 'https://cygwin.com/setup/setup-2.939.x86_64.exe'
 $setupSha512 = 'e5a8ad58eeec0b3d9800e75783234ec6e788147d0f428aeeb8f7ad4a5f187e94b6a6f4b589f850266fb0a55d81e6d295a4a3cd2678accab5d062fc56216bf875'
 

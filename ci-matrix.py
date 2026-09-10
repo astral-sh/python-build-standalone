@@ -300,8 +300,9 @@ def generate_crate_build_matrix_entries(
         {
             "platform": platform,
             "arch": arch,
-            # On Linux, the `python-build` runner matches the `crate-build`
-            # runner because of GLIBC version mismatches.
+            # Linux distribution jobs execute the uploaded `pythonbuild` binary.
+            # Select the same runner to avoid requiring a newer glibc than the
+            # consumer has.
             "runner": find_runner(runners, platform, arch, False),
             "crate_artifact_name": crate_artifact_name(
                 platform,

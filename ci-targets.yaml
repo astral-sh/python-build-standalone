@@ -387,9 +387,11 @@ windows:
       - "3.15"
     vs_version: "2022"
     build_options:
+      - debug
       - pgo
     build_options_conditional:
       - options:
+          - freethreaded+debug
           - freethreaded+pgo
         minimum-python-version: "3.13"
 
@@ -408,9 +410,11 @@ windows:
       vs_version: "2026"
       minimum-python-version: "3.15"
     build_options:
+      - debug
       - pgo
     build_options_conditional:
       - options:
+          - freethreaded+debug
           - freethreaded+pgo
         minimum-python-version: "3.13"
 
@@ -427,8 +431,10 @@ windows:
       - "3.15"
     vs_version: "2022"
     build_options:
+      - debug
       - pgo
     build_options_conditional:
       - options:
+          - freethreaded+debug
           - freethreaded+pgo
         minimum-python-version: "3.13"

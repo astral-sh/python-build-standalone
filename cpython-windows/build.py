@@ -777,8 +777,15 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
-    # Build tail-calling Python for 3.15+
-    if python_version.startswith("3.15") and platform == "x64":
+    # Build tail-calling Python for 3.15+, but not in Debug. [[msvc::musttail]]
+    # requires /O2 and under /Od MSVC reports C4737 at every dispatch site.
+    # See https://learn.microsoft.com/en-us/cpp/cpp/attributes#msvcmusttail
+    # and https://github.com/python/cpython/issues/148047
+    if (
+        python_version.startswith("3.15")
+        and platform == "x64"
+        and configuration != "Debug"
+    ):
         args.append("/property:UseTailCallInterp=true")
 
     exec_and_log(args, str(pcbuild_path), os.environ)
@@ -1211,12 +1218,13 @@ def collect_python_build_artifacts(
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
+    debug_suffix = "_d" if config == "Debug" else ""
     if freethreaded:
-        abi_tag = ".cp%st-%s" % (python_majmin, abi_platform)
-        lib_suffix = "t"
+        abi_tag = "%s.cp%st-%s" % (debug_suffix, python_majmin, abi_platform)
+        lib_suffix = "t%s" % debug_suffix
     else:
-        abi_tag = ""
-        lib_suffix = ""
+        abi_tag = debug_suffix
+        lib_suffix = debug_suffix
 
     # Copy object files for core sources into their own directory.
     core_dir = out_dir / "build" / "core"
@@ -1345,15 +1353,15 @@ def collect_python_build_artifacts(
 
     # Copy libraries for dependencies into the lib directory.
     for depend in sorted(depends_projects):
-        static_source = outputs_path / ("%s.lib" % depend)
-        static_dest = lib_dir / ("%s.lib" % depend)
+        static_source = outputs_path / ("%s%s.lib" % (depend, debug_suffix))
+        static_dest = lib_dir / ("%s%s.lib" % (depend, debug_suffix))
 
         log("copying link library %s" % static_source)
         shutil.copyfile(static_source, static_dest)
 
-        shared_source = outputs_path / ("%s.dll" % depend)
+        shared_source = outputs_path / ("%s%s.dll" % (depend, debug_suffix))
         if shared_source.exists():
-            shared_dest = lib_dir / ("%s.dll" % depend)
+            shared_dest = lib_dir / ("%s%s.dll" % (depend, debug_suffix))
             log("copying shared library %s" % shared_source)
             shutil.copyfile(shared_source, shared_dest)
 
@@ -1372,6 +1380,7 @@ def build_cpython(
     openssl_entry: str,
 ) -> pathlib.Path:
     parsed_build_options = set(build_options.split("+"))
+    debug = "debug" in parsed_build_options
     pgo = "pgo" in parsed_build_options
     freethreaded = "freethreaded" in parsed_build_options
 
@@ -1426,13 +1435,14 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
+    debug_suffix = "_d" if debug else ""
     if freethreaded:
         (major, minor, _) = python_version.split(".")
-        python_exe = f"python{major}.{minor}t.exe"
-        pythonw_exe = f"pythonw{major}.{minor}t.exe"
+        python_exe = f"python{major}.{minor}t{debug_suffix}.exe"
+        pythonw_exe = f"pythonw{major}.{minor}t{debug_suffix}.exe"
     else:
-        python_exe = "python.exe"
-        pythonw_exe = "pythonw.exe"
+        python_exe = f"python{debug_suffix}.exe"
+        pythonw_exe = f"pythonw{debug_suffix}.exe"
 
     # Python 3.15 uses the default name for the executable in a suffixed directory
     instrumented_python_exe = python_exe
@@ -1635,13 +1645,13 @@ def build_cpython(
             run_msbuild(
                 msbuild,
                 pcbuild_path,
-                configuration="Release",
+                configuration="Debug" if debug else "Release",
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
                 freethreaded=freethreaded,
             )
-            artifact_config = "Release"
+            artifact_config = "Debug" if debug else "Release"
 
         install_dir = out_dir / "python" / "install"
 
@@ -1674,6 +1684,9 @@ def build_cpython(
 
         if freethreaded:
             args.append("--include-freethreaded")
+
+        if debug:
+            args.append("--debug")
 
         # CPython 3.12 removed distutils.
         if not meets_python_minimum_version(python_version, "3.12"):
@@ -1946,10 +1959,10 @@ def main() -> None:
         default="cpython-3.11",
         help="Python distribution to build",
     )
-    optimizations = {"noopt", "pgo"}
+    options = {"debug", "noopt", "pgo"}
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options.union({f"freethreaded+{o}" for o in options}),
         default="noopt",
         help="Build options to apply when compiling Python",
     )

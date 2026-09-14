@@ -218,6 +218,14 @@ class TestPythonInterpreter(unittest.TestCase):
         ssl.create_default_context()
 
     @unittest.skipIf(os.name != "nt", "Windows-specific OpenSSL uplink regression")
+    # CPython's own suite skips keylog tests on Windows debug builds, to avoid
+    # mixing the debug and release CRT; 3.12+ refuses the call outright.
+    # https://github.com/python/cpython/blob/v3.11.16/Lib/test/test_ssl.py#L4827
+    # https://github.com/python/cpython/blob/v3.12.14/Modules/_ssl/debughelpers.c#L168
+    @unittest.skipIf(
+        os.name == "nt" and "debug" in os.environ["BUILD_OPTIONS"].split("+"),
+        "keylog_filename is unsupported on Windows debug builds",
+    )
     def test_ssl_with_keylogfile(self):
         # Validate that a SSLContext can be created when SSLKEYLOGFILE is set
         # https://github.com/astral-sh/python-build-standalone/issues/640

@@ -148,5 +148,16 @@ with Visual Studio 2026::
 
    $ uv run --no-dev build.py --sh c:\cygwin\bin\sh.exe --vs 2026 --python cpython-3.15
 
+To produce a debug build, pass ``--options debug`` or ``freethreaded+debug``::
+
+   $ uv run --no-dev build.py --sh c:\cygwin\bin\sh.exe --options debug
+
+The artifacts carry the ``_d`` suffix of CPython's Debug configuration
+(``python_d.exe``, ``python314_d.dll``, ``_asyncio_d.pyd``) and link against
+the debug C runtime (``ucrtbased.dll`` and ``vcruntime*d.dll``). That
+runtime ships with Visual Studio and `is not redistributable
+<https://learn.microsoft.com/en-us/cpp/windows/determining-which-dlls-to-redistribute>`_,
+so a debug distribution only runs on a machine with Visual Studio installed.
+
 To build a 32-bit x86 binary, simply use an
 ``x86 Native Tools Command Prompt`` instead of ``x64``.

@@ -298,8 +298,7 @@ def get_visual_studio_environment(
 ) -> dict[str, str]:
     """Return the selected Visual Studio build environment."""
     vcvarsall = find_vcvarsall_path(msvc_version)
-    # Use the x64 native cross tools to build arm64 as the arm toolset ignores PGO
-    vcvars_arch = {"x86": "x86", "amd64": "amd64", "arm64": "amd64_arm64"}[arch]
+    vcvars_arch = {"x86": "x86", "amd64": "amd64", "arm64": "arm64"}[arch]
     log(
         f"activating Visual Studio {msvc_version}: {vcvarsall} {vcvars_arch} "
         f"-vcvars_ver={vc_tools_version}"

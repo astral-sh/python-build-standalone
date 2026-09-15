@@ -273,10 +273,19 @@ def find_vs_path(path, msvc_version):
     return p
 
 
-def find_msbuild(msvc_version):
-    return find_vs_path(
-        pathlib.Path("MSBuild") / "Current" / "Bin" / "MSBuild.exe", msvc_version
+def is_arm64_host() -> bool:
+    # PROCESSOR_ARCHITEW6432 identifies the native host in an emulated shell.
+    return any(
+        os.environ.get(name, "").lower() == "arm64"
+        for name in ("PROCESSOR_ARCHITECTURE", "PROCESSOR_ARCHITEW6432")
     )
+
+
+def find_msbuild(msvc_version):
+    path = pathlib.Path("MSBuild") / "Current" / "Bin"
+    if is_arm64_host():
+        path /= "arm64"
+    return find_vs_path(path / "MSBuild.exe", msvc_version)
 
 
 def find_vcvarsall_path(msvc_version):
@@ -774,6 +783,9 @@ def run_msbuild(
         f"/property:DefaultWindowsSDKVersion={windows_sdk_version}",
     ]
 
+    if is_arm64_host():
+        args.append("/property:PreferredToolArchitecture=arm64")
+
     if freethreaded:
         args.append("/property:DisableGil=true")
 
@@ -1019,6 +1031,15 @@ def build_libffi(
             / "PCbuild"
             / "prepare_libffi.bat"
         )
+
+        if arch == "arm64" and is_arm64_host():
+            # The upstream script selects x86-hosted ARM64 tools. Keep its
+            # configure arguments but use the native ARM64 compiler and tools.
+            static_replace_in_file(
+                prepare_libffi,
+                b"call %VCVARSALL% %VCVARS_PLATFORM%",
+                b"call %VCVARSALL% arm64",
+            )
 
         env = dict(os.environ)
         env["LIBFFI_SOURCE"] = str(ffi_source_path)

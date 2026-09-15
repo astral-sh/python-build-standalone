@@ -427,6 +427,12 @@ def add_python_build_entries_for_config(
         base_entry["libc"] = config["libc"]
     if "vcvars" in config:
         base_entry["vcvars"] = config["vcvars"]
+        if (
+            platform == "windows"
+            and arch == "aarch64"
+            and runners[runner]["arch"] == "aarch64"
+        ):
+            base_entry["vcvars"] = "vcvarsarm64.bat"
     if "vs_version" in config:
         base_entry["vs_version"] = config["vs_version"]
 

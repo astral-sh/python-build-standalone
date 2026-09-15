@@ -791,6 +791,22 @@ def hack_project_files(
     except NoSearchStringError:
         pass
 
+    # The freeze helper runs on the build host. On native ARM64 builds, avoid
+    # requiring the v143 x86 target tools absent from the VS 2026 ARM64 runner
+    # image. Override only this project's target platform; changing
+    # PreferredToolArchitecture globally would also affect the PGO compiler.
+    if (
+        arch == "arm64"
+        and default_target_triple() == "aarch64-pc-windows-msvc"
+        and meets_python_minimum_version(python_version, "3.11")
+    ):
+        static_replace_in_file(
+            pcbuild_proj,
+            b'<FreezeProjects Include="_freeze_module.vcxproj" />',
+            b'<FreezeProjects Include="_freeze_module.vcxproj">'
+            b"<Platform>ARM64</Platform></FreezeProjects>",
+        )
+
 
 def run_msbuild(
     msbuild: pathlib.Path,

@@ -260,7 +260,7 @@ def find_vs_path(path, msvc_version):
         [
             str(vswhere),
             "-utf8",
-            # Visual Studio 2019.
+            "-latest",
             "-version",
             version,
             "-property",

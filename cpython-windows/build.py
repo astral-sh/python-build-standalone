@@ -280,12 +280,6 @@ def find_vs_path(path, msvc_version):
     return p
 
 
-def find_msbuild(msvc_version):
-    return find_vs_path(
-        pathlib.Path("MSBuild") / "Current" / "Bin" / "MSBuild.exe", msvc_version
-    )
-
-
 def find_vcvarsall_path(msvc_version):
     """Find path to vcvarsall.bat"""
     return find_vs_path(
@@ -1459,7 +1453,11 @@ def build_cpython(
     pgo = "pgo" in parsed_build_options
     freethreaded = "freethreaded" in parsed_build_options
 
-    msbuild = find_msbuild(msvc_version)
+    msbuild = shutil.which("MSBuild.exe")
+    if msbuild is None:
+        raise RuntimeError(
+            "MSBuild.exe was not found on PATH after setting up the Visual Studio environment"
+        )
     log("found MSBuild at %s" % msbuild)
 
     # The python.props file keys off MSBUILD, so it needs to be set.

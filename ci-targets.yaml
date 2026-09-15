@@ -377,7 +377,6 @@ linux:
 windows:
   i686-pc-windows-msvc:
     arch: x86
-    vcvars: vcvars32.bat
     python_versions:
       - "3.10"
       - "3.11"
@@ -397,7 +396,6 @@ windows:
 
   x86_64-pc-windows-msvc:
     arch: x86_64
-    vcvars: vcvars64.bat
     python_versions:
       - "3.10"
       - "3.11"
@@ -420,7 +418,6 @@ windows:
 
   aarch64-pc-windows-msvc:
     arch: aarch64
-    vcvars: vcvarsamd64_arm64.bat
     python_versions:
       # On 3.10, `_tkinter` is failing to be included in the build
       # - "3.10"

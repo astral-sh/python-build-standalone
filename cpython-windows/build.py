@@ -28,6 +28,7 @@ from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.utils import (
     compress_python_archive,
     create_tar_from_directory,
+    default_target_triple,
     download_entry,
     extract_tar_to_directory,
     extract_zip_to_directory,
@@ -41,6 +42,12 @@ BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 SUPPORT = ROOT / "cpython-windows"
 STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
+
+TARGET_ARCHITECTURES = {
+    "i686-pc-windows-msvc": "x86",
+    "x86_64-pc-windows-msvc": "amd64",
+    "aarch64-pc-windows-msvc": "arm64",
+}
 
 LOG_PREFIX = [None]
 LOG_FH = [None]
@@ -285,6 +292,42 @@ def find_vcvarsall_path(msvc_version):
     return find_vs_path(
         pathlib.Path("VC") / "Auxiliary" / "Build" / "vcvarsall.bat", msvc_version
     )
+
+
+def get_visual_studio_environment(msvc_version: str, arch: str) -> dict[str, str]:
+    """Return the selected Visual Studio build environment."""
+    vcvarsall = find_vcvarsall_path(msvc_version)
+    # Use the x64 native cross tools to build arm64 as the arm toolset ignores PGO
+    vcvars_arch = {"x86": "x86", "amd64": "amd64", "arm64": "amd64_arm64"}[arch]
+    log(f"activating Visual Studio {msvc_version}: {vcvarsall} {vcvars_arch}")
+
+    marker = "__PYBUILD_VCVARS_ENV__"
+    # Use a command string so cmd.exe receives the batch path's quotes intact.
+    # /u makes the environment dump UTF-16, preserving non-ASCII paths.
+    command = (
+        f'cmd.exe /d /u /s /c "call "{vcvarsall}" {vcvars_arch}'
+        f' && echo {marker} && set"'
+    )
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-16le",
+    )
+    output, separator, environment = result.stdout.partition(marker)
+    log(output.rstrip())
+    result.check_returncode()
+    if not separator:
+        raise RuntimeError("Visual Studio setup did not return a build environment")
+
+    env = {}
+    for line in environment.splitlines():
+        name, separator, value = line.partition("=")
+        # cmd.exe can include internal drive-directory entries such as =C:.
+        if name and separator:
+            env[name] = value
+
+    return env
 
 
 class NoSearchStringError(Exception):
@@ -1955,6 +1998,11 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--target-triple",
+        choices=TARGET_ARCHITECTURES,
+        help="Target triple to build for (defaults to the host Python architecture)",
+    )
+    parser.add_argument(
         "--vs",
         choices={"2019", "2022", "2026"},
         default="2022",
@@ -1991,23 +2039,17 @@ def main() -> None:
 
     args = parser.parse_args()
     build_options = args.options
+    target_triple = args.target_triple or default_target_triple()
+    arch = TARGET_ARCHITECTURES[target_triple]
 
     log_path = BUILD / "build.log"
 
     with log_path.open("wb") as log_fh:
         LOG_FH[0] = log_fh
 
-        if os.environ.get("Platform") == "x86":
-            target_triple = "i686-pc-windows-msvc"
-            arch = "x86"
-        elif os.environ.get("Platform") == "arm64":
-            target_triple = "aarch64-pc-windows-msvc"
-            arch = "arm64"
-        elif os.environ.get("Platform") == "x64":
-            target_triple = "x86_64-pc-windows-msvc"
-            arch = "amd64"
-        else:
-            raise Exception("unhandled architecture: %s" % os.environ.get("Platform"))
+        log(f"building for {target_triple}")
+        build_env = get_visual_studio_environment(args.vs, arch)
+        os.environ.update(build_env)
 
         # TODO need better dependency checking.
 

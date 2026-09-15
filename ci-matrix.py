@@ -425,8 +425,6 @@ def add_python_build_entries_for_config(
         base_entry["arch_variant"] = config["arch_variant"]
     if "libc" in config:
         base_entry["libc"] = config["libc"]
-    if "vcvars" in config:
-        base_entry["vcvars"] = config["vcvars"]
     if "vs_version" in config:
         base_entry["vs_version"] = config["vs_version"]
 

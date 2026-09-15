@@ -840,6 +840,11 @@ def run_msbuild(
         f"/property:DefaultWindowsSDKVersion={windows_sdk_version}",
     ]
 
+    # Match the x64-hosted ARM64 cross tools selected by vcvarsall. MSBuild
+    # otherwise defaults to x86-hosted tools, regardless of the shell setup.
+    if platform.lower() == "arm64":
+        args.append("/property:PreferredToolArchitecture=x64")
+
     if freethreaded:
         args.append("/property:DisableGil=true")
 

@@ -389,8 +389,8 @@ def create_python_build_entry(
             for field in ("vs_version", "platform_toolset", "vc_tools_version"):
                 if field in conditional:
                     entry[field] = conditional[field]
-    # VS 2026 builds need the Windows Server 2025 image.
-    if entry.get("vs_version") == "2026":
+    # x86-64 VS 2026 builds need the Windows Server 2025 image.
+    if entry.get("vs_version") == "2026" and entry["arch"] == "x86_64":
         entry["runner"] = "github-windows-2025-x86_64-8"
     return entry
 

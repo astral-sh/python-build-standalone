@@ -16,6 +16,7 @@ import stat
 import string
 import subprocess
 import sys
+import sysconfig
 import tarfile
 import time
 import urllib.error
@@ -49,6 +50,18 @@ def current_host_platform() -> str:
             return "macos_x86_64"
         else:
             raise Exception(f"unhanded macOS machine type: {machine}")
+    elif sys.platform == "win32":
+        # Unlike platform.machine(), this describes the running Python, even
+        # when it is a 32-bit or emulated interpreter on a 64-bit host.
+        python_platform = sysconfig.get_platform()
+        if python_platform == "win32":
+            return "windows_x86"
+        elif python_platform == "win-amd64":
+            return "windows_x86_64"
+        elif python_platform == "win-arm64":
+            return "windows_arm64"
+        else:
+            raise Exception(f"unsupported Windows Python platform: {python_platform}")
     else:
         raise Exception(f"unsupported host platform: {sys.platform}")
 
@@ -64,6 +77,12 @@ def default_target_triple() -> str:
         return "aarch64-apple-darwin"
     elif host == "macos_x86_64":
         return "x86_64-apple-darwin"
+    elif host == "windows_x86":
+        return "i686-pc-windows-msvc"
+    elif host == "windows_x86_64":
+        return "x86_64-pc-windows-msvc"
+    elif host == "windows_arm64":
+        return "aarch64-pc-windows-msvc"
     else:
         raise Exception(f"unrecognized host platform: {host}")
 

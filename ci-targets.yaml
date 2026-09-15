@@ -377,7 +377,6 @@ linux:
 windows:
   i686-pc-windows-msvc:
     arch: x86
-    vcvars: vcvars32.bat
     python_versions:
       - "3.10"
       - "3.11"
@@ -386,6 +385,8 @@ windows:
       - "3.14"
       - "3.15"
     vs_version: "2022"
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
     build_options:
       - pgo
     build_options_conditional:
@@ -395,7 +396,6 @@ windows:
 
   x86_64-pc-windows-msvc:
     arch: x86_64
-    vcvars: vcvars64.bat
     python_versions:
       - "3.10"
       - "3.11"
@@ -404,8 +404,12 @@ windows:
       - "3.14"
       - "3.15"
     vs_version: "2022"
-    vs_version_override_conditional:
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
+    windows_toolchain_override_conditional:
       vs_version: "2026"
+      platform_toolset: "v145"
+      vc_tools_version: "14.5"
       minimum-python-version: "3.15"
     build_options:
       - pgo
@@ -416,7 +420,6 @@ windows:
 
   aarch64-pc-windows-msvc:
     arch: aarch64
-    vcvars: vcvarsamd64_arm64.bat
     python_versions:
       # On 3.10, `_tkinter` is failing to be included in the build
       # - "3.10"
@@ -425,7 +428,9 @@ windows:
       - "3.13"
       - "3.14"
       - "3.15"
-    vs_version: "2022"
+    vs_version: "2026"
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
     build_options:
       - pgo
     build_options_conditional:

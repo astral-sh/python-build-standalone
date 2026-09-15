@@ -385,6 +385,8 @@ windows:
       - "3.14"
       - "3.15"
     vs_version: "2022"
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
     build_options:
       - pgo
     build_options_conditional:
@@ -402,8 +404,12 @@ windows:
       - "3.14"
       - "3.15"
     vs_version: "2022"
-    vs_version_override_conditional:
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
+    windows_toolchain_override_conditional:
       vs_version: "2026"
+      platform_toolset: "v145"
+      vc_tools_version: "14.5"
       minimum-python-version: "3.15"
     build_options:
       - pgo
@@ -423,6 +429,8 @@ windows:
       - "3.14"
       - "3.15"
     vs_version: "2022"
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
     build_options:
       - pgo
     build_options_conditional:

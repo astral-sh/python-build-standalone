@@ -259,7 +259,7 @@ def find_vs_path(path, msvc_version):
         [
             str(vswhere),
             "-utf8",
-            # Visual Studio 2019.
+            "-latest",
             "-version",
             version,
             "-property",
@@ -293,19 +293,24 @@ def find_vcvarsall_path(msvc_version):
     )
 
 
-def get_visual_studio_environment(msvc_version: str, arch: str) -> dict[str, str]:
+def get_visual_studio_environment(
+    msvc_version: str, arch: str, vc_tools_version: str
+) -> dict[str, str]:
     """Return the selected Visual Studio build environment."""
     vcvarsall = find_vcvarsall_path(msvc_version)
     # Use the x64 native cross tools to build arm64 as the arm toolset ignores PGO
     vcvars_arch = {"x86": "x86", "amd64": "amd64", "arm64": "amd64_arm64"}[arch]
-    log(f"activating Visual Studio {msvc_version}: {vcvarsall} {vcvars_arch}")
+    log(
+        f"activating Visual Studio {msvc_version}: {vcvarsall} {vcvars_arch} "
+        f"-vcvars_ver={vc_tools_version}"
+    )
 
     marker = "__PYBUILD_VCVARS_ENV__"
     # Use a command string so cmd.exe receives the batch path's quotes intact.
     # /u makes the environment dump UTF-16, preserving non-ASCII paths.
     command = (
         f'cmd.exe /d /u /s /c "call "{vcvarsall}" {vcvars_arch}'
-        f' && echo {marker} && set"'
+        f' -vcvars_ver={vc_tools_version} && echo {marker} && set"'
     )
     result = subprocess.run(
         command,
@@ -794,6 +799,7 @@ def run_msbuild(
     platform: str,
     python_version: str,
     windows_sdk_version: str,
+    platform_toolset: str,
     freethreaded: bool,
 ):
     args = [
@@ -802,6 +808,7 @@ def run_msbuild(
         "/target:Build",
         "/property:Configuration=%s" % configuration,
         "/property:Platform=%s" % platform,
+        f"/property:PlatformToolset={platform_toolset}",
         "/maxcpucount",
         "/nologo",
         "/verbosity:normal",
@@ -1014,6 +1021,7 @@ def build_libffi(
     arch: str,
     sh_exe: pathlib.Path,
     msvc_version: str,
+    vc_tools_version: str,
     dest_archive: pathlib.Path,
 ):
     with tempfile.TemporaryDirectory(prefix="libffi-build-") as td:
@@ -1061,6 +1069,17 @@ def build_libffi(
             / ("Python-%s" % python_entry["version"])
             / "PCbuild"
             / "prepare_libffi.bat"
+        )
+
+        # The upstream script activates Visual Studio again. Keep it on the
+        # same version selection as OpenSSL and CPython, and stop if setup fails.
+        static_replace_in_file(
+            prepare_libffi,
+            b"call %VCVARSALL% %VCVARS_PLATFORM%",
+            (
+                f"call %VCVARSALL% %VCVARS_PLATFORM% -vcvars_ver={vc_tools_version}\n"
+                "if errorlevel 1 exit /B %ERRORLEVEL%"
+            ).encode("ascii"),
         )
 
         env = dict(os.environ)
@@ -1409,6 +1428,7 @@ def build_cpython(
     arch: str,
     build_options: str,
     msvc_version: str,
+    platform_toolset: str,
     windows_sdk_version: str,
     openssl_archive,
     libffi_archive,
@@ -1600,6 +1620,7 @@ def build_cpython(
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
 
@@ -1670,6 +1691,7 @@ def build_cpython(
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
             artifact_config = "PGUpdate"
@@ -1682,6 +1704,7 @@ def build_cpython(
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
             artifact_config = "Release"
@@ -1982,6 +2005,16 @@ def main() -> None:
         help="Visual Studio version to use",
     )
     parser.add_argument(
+        "--platform-toolset",
+        choices=("v143", "v145"),
+        help="MSVC toolset (defaults to v145 for x64 CPython 3.15+, otherwise v143)",
+    )
+    parser.add_argument(
+        "--vc-tools-version",
+        help="MSVC version or prefix passed to vcvarsall "
+        "(defaults to 14.4 for v143 and 14.5 for v145)",
+    )
+    parser.add_argument(
         "--python",
         choices={
             "cpython-3.10",
@@ -2014,6 +2047,15 @@ def main() -> None:
     build_options = args.options
     target_triple = args.target_triple or default_target_triple()
     arch = TARGET_ARCHITECTURES[target_triple]
+    platform_toolset = args.platform_toolset or (
+        "v145"
+        if arch == "amd64"
+        and meets_python_minimum_version(DOWNLOADS[args.python]["version"], "3.15")
+        else "v143"
+    )
+    vc_tools_version = args.vc_tools_version or (
+        "14.5" if platform_toolset == "v145" else "14.4"
+    )
 
     log_path = BUILD / "build.log"
 
@@ -2021,8 +2063,11 @@ def main() -> None:
         LOG_FH[0] = log_fh
 
         log(f"building for {target_triple}")
-        build_env = get_visual_studio_environment(args.vs, arch)
+        log(f"using {platform_toolset} with MSVC {vc_tools_version}")
+        build_env = get_visual_studio_environment(args.vs, arch, vc_tools_version)
         os.environ.update(build_env)
+
+        compiler_cache_key = f"{platform_toolset}-{vc_tools_version}"
 
         # TODO need better dependency checking.
 
@@ -2041,7 +2086,7 @@ def main() -> None:
             openssl_build_options = f"{build_options}-no-uplink"
 
         openssl_archive = BUILD / (
-            "%s-%s-%s.tar" % (openssl_entry, target_triple, openssl_build_options)
+            f"{openssl_entry}-{target_triple}-{openssl_build_options}-{compiler_cache_key}.tar"
         )
         if not openssl_archive.exists():
             perl_path = fetch_strawberry_perl() / "perl" / "bin" / "perl.exe"
@@ -2054,13 +2099,16 @@ def main() -> None:
                 with_uplink=openssl_with_uplink,
             )
 
-        libffi_archive = BUILD / ("libffi-%s-%s.tar" % (target_triple, build_options))
+        libffi_archive = BUILD / (
+            f"libffi-{target_triple}-{build_options}-{compiler_cache_key}.tar"
+        )
         if not libffi_archive.exists():
             build_libffi(
                 args.python,
                 arch,
                 pathlib.Path(args.sh),
                 args.vs,
+                vc_tools_version,
                 libffi_archive,
             )
 
@@ -2071,6 +2119,7 @@ def main() -> None:
             arch,
             build_options=build_options,
             msvc_version=args.vs,
+            platform_toolset=platform_toolset,
             windows_sdk_version=args.windows_sdk_version,
             openssl_archive=openssl_archive,
             libffi_archive=libffi_archive,

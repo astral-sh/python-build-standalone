@@ -147,8 +147,7 @@ jobs:
         with:
           name: ${{ matrix.crate_artifact_name }}
 
-      # We need to do this before we activate the VC++ environment or else binary packages
-      # don't get compiled properly.
+      # Prepare the Python environment before starting the build.
       - name: Bootstrap Python environment
         run: |
           uv run --no-dev build.py --help
@@ -157,14 +156,9 @@ jobs:
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
-          IF "%MATRIX_VS_VERSION%"=="2026" (
-            call "C:\Program Files\Microsoft Visual Studio\18\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          ) ELSE (
-            call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\%MATRIX_VCVARS%"
-          )
-          uv run --no-dev build.py --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
+          uv run --no-dev build.py --target-triple %MATRIX_TARGET_TRIPLE% --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION%
         env:
-          MATRIX_VCVARS: ${{ matrix.vcvars }}
+          MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
           MATRIX_PYTHON: ${{ matrix.python }}
           MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
           MATRIX_VS_VERSION: ${{ matrix.vs_version }}
@@ -178,7 +172,7 @@ jobs:
       - name: Upload Distributions
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: cpython-${{ matrix.python }}-${{ matrix.vcvars }}-${{ matrix.build_options }}
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
           path: dist/*
           compression-level: '0'
 

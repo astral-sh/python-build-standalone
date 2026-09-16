@@ -1220,8 +1220,8 @@ def collect_python_build_artifacts(
 
     debug_suffix = "_d" if config == "Debug" else ""
     if freethreaded:
-        abi_tag = "%s.cp%st-%s" % (debug_suffix, python_majmin, abi_platform)
-        lib_suffix = "t%s" % debug_suffix
+        abi_tag = f"{debug_suffix}.cp{python_majmin}t-{abi_platform}"
+        lib_suffix = f"t{debug_suffix}"
     else:
         abi_tag = debug_suffix
         lib_suffix = debug_suffix
@@ -1353,15 +1353,15 @@ def collect_python_build_artifacts(
 
     # Copy libraries for dependencies into the lib directory.
     for depend in sorted(depends_projects):
-        static_source = outputs_path / ("%s%s.lib" % (depend, debug_suffix))
-        static_dest = lib_dir / ("%s%s.lib" % (depend, debug_suffix))
+        static_source = outputs_path / f"{depend}{debug_suffix}.lib"
+        static_dest = lib_dir / f"{depend}{debug_suffix}.lib"
 
         log("copying link library %s" % static_source)
         shutil.copyfile(static_source, static_dest)
 
-        shared_source = outputs_path / ("%s%s.dll" % (depend, debug_suffix))
+        shared_source = outputs_path / f"{depend}{debug_suffix}.dll"
         if shared_source.exists():
-            shared_dest = lib_dir / ("%s%s.dll" % (depend, debug_suffix))
+            shared_dest = lib_dir / f"{depend}{debug_suffix}.dll"
             log("copying shared library %s" % shared_source)
             shutil.copyfile(shared_source, shared_dest)
 

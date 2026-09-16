@@ -432,7 +432,7 @@ windows:
       - "3.13"
       - "3.14"
       - "3.15"
-    vs_version: "2022"
+    vs_version: "2026"
     platform_toolset: "v143"
     vc_tools_version: "14.4"
     build_options:

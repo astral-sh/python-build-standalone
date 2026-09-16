@@ -179,6 +179,10 @@ def run_stdlib_tests(
         "test",
     ]
 
+    if not raw_harness_args:
+        # Enable all resources for both the main run and expected-failure checks.
+        base_args.extend(["-u", "all"])
+
     args = list(base_args)
 
     td = tempfile.TemporaryDirectory()

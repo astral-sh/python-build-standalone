@@ -90,6 +90,24 @@ Distributions are produced for the following target triples:
    For example, this target supports AWS Graviton EC2 instances. Many
    Linux ARM devices are also ``aarch64``.
 
+``ppc64le-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC (ELFv2 ABI baseline).
+
+``ppc64le_power9-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER9.
+
+   Compiled with ``-mcpu=power9 -mtune=power9``.
+
+``ppc64le_power10-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER10.
+
+   Compiled with ``-mcpu=power10 -mtune=power10``.
+
+``ppc64le_power11-unknown-linux-gnu``
+   Linux on 64-bit little-endian PowerPC optimized for POWER11.
+
+   Compiled with ``-mcpu=power11 -mtune=power11``.
+
 ``x86_64_v2-*``
    Targets 64-bit Intel/AMD CPUs approximately newer than
    `Nehalem <https://en.wikipedia.org/wiki/Nehalem_(microarchitecture)>`_

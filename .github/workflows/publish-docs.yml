@@ -75,7 +75,7 @@ jobs:
           git config user.name "astral-releases-bot[bot]"
           git config user.email "328004183+astral-releases-bot[bot]@users.noreply.github.com"
 
-          branch_name="update-python-build-standalone-docs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          branch_name="update-docs-python-build-standalone-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git checkout -b "$branch_name"
           git add site/python-build-standalone
           if git diff --cached --quiet; then

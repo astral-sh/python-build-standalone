@@ -3,13 +3,14 @@ name = "python-build-standalone"
 version = "0.1.0"
 description = "Produces standalone, highly-redistributable builds of Python."
 readme = "README.rst"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "boto3>=1.37",
     "boto3-stubs[s3]>=1.42",
     "docker>=7.1.0",
     "jinja2>=3.1.5",
     "jsonschema>=4.23.0",
+    "junitparser>=4.0.2",
     "pyyaml>=6.0.2",
     "six>=1.17.0",
     "tomli>=2.2.1",

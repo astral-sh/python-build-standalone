@@ -22,11 +22,13 @@ from pythonbuild.cpython import (
     meets_python_maximum_version,
     meets_python_minimum_version,
     parse_config_c,
+    stdlib_test_annotations,
 )
 from pythonbuild.downloads import DOWNLOADS
 from pythonbuild.utils import (
     compress_python_archive,
     create_tar_from_directory,
+    default_target_triple,
     download_entry,
     extract_tar_to_directory,
     extract_zip_to_directory,
@@ -39,6 +41,13 @@ ROOT = pathlib.Path(os.path.abspath(__file__)).parent.parent
 BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 SUPPORT = ROOT / "cpython-windows"
+STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
+
+TARGET_ARCHITECTURES = {
+    "i686-pc-windows-msvc": "x86",
+    "x86_64-pc-windows-msvc": "amd64",
+    "aarch64-pc-windows-msvc": "arm64",
+}
 
 LOG_PREFIX = [None]
 LOG_FH = [None]
@@ -127,7 +136,6 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "zlib": ["zlib"],
     "_zstd": ["zstd"],
 }
-
 
 # Tests to run during PGO profiling.
 #
@@ -252,7 +260,7 @@ def find_vs_path(path, msvc_version):
         [
             str(vswhere),
             "-utf8",
-            # Visual Studio 2019.
+            "-latest",
             "-version",
             version,
             "-property",
@@ -273,17 +281,50 @@ def find_vs_path(path, msvc_version):
     return p
 
 
-def find_msbuild(msvc_version):
-    return find_vs_path(
-        pathlib.Path("MSBuild") / "Current" / "Bin" / "MSBuild.exe", msvc_version
-    )
-
-
 def find_vcvarsall_path(msvc_version):
     """Find path to vcvarsall.bat"""
     return find_vs_path(
         pathlib.Path("VC") / "Auxiliary" / "Build" / "vcvarsall.bat", msvc_version
     )
+
+
+def get_visual_studio_environment(
+    msvc_version: str, arch: str, vc_tools_version: str
+) -> dict[str, str]:
+    """Return the selected Visual Studio build environment."""
+    vcvarsall = find_vcvarsall_path(msvc_version)
+    log(
+        f"activating Visual Studio {msvc_version}: {vcvarsall} {arch} "
+        f"-vcvars_ver={vc_tools_version}"
+    )
+
+    marker = "__PYBUILD_VCVARS_ENV__"
+    # Use a command string so cmd.exe receives the batch path's quotes intact.
+    # /u makes the environment dump UTF-16, preserving non-ASCII paths.
+    command = (
+        f'cmd.exe /d /u /s /c "call "{vcvarsall}" {arch}'
+        f' -vcvars_ver={vc_tools_version} && echo {marker} && set"'
+    )
+    result = subprocess.run(
+        command,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        encoding="utf-16le",
+    )
+    output, separator, environment = result.stdout.partition(marker)
+    log(output.rstrip())
+    result.check_returncode()
+    if not separator:
+        raise RuntimeError("Visual Studio setup did not return a build environment")
+
+    env = {}
+    for line in environment.splitlines():
+        name, separator, value = line.partition("=")
+        # cmd.exe can include internal drive-directory entries such as =C:.
+        if name and separator:
+            env[name] = value
+
+    return env
 
 
 class NoSearchStringError(Exception):
@@ -751,6 +792,7 @@ def run_msbuild(
     platform: str,
     python_version: str,
     windows_sdk_version: str,
+    platform_toolset: str,
     freethreaded: bool,
 ):
     args = [
@@ -759,6 +801,7 @@ def run_msbuild(
         "/target:Build",
         "/property:Configuration=%s" % configuration,
         "/property:Platform=%s" % platform,
+        f"/property:PlatformToolset={platform_toolset}",
         "/maxcpucount",
         "/nologo",
         "/verbosity:normal",
@@ -777,8 +820,15 @@ def run_msbuild(
     if freethreaded:
         args.append("/property:DisableGil=true")
 
-    # Build tail-calling Python for 3.15+
-    if python_version.startswith("3.15") and platform == "x64":
+    # Build tail-calling Python for 3.15+, but not in Debug. [[msvc::musttail]]
+    # requires /O2 and under /Od MSVC reports C4737 at every dispatch site.
+    # See https://learn.microsoft.com/en-us/cpp/cpp/attributes#msvcmusttail
+    # and https://github.com/python/cpython/issues/148047
+    if (
+        python_version.startswith("3.15")
+        and platform == "x64"
+        and configuration != "Debug"
+    ):
         args.append("/property:UseTailCallInterp=true")
 
     exec_and_log(args, str(pcbuild_path), os.environ)
@@ -971,6 +1021,7 @@ def build_libffi(
     arch: str,
     sh_exe: pathlib.Path,
     msvc_version: str,
+    vc_tools_version: str,
     dest_archive: pathlib.Path,
 ):
     with tempfile.TemporaryDirectory(prefix="libffi-build-") as td:
@@ -1018,6 +1069,17 @@ def build_libffi(
             / ("Python-%s" % python_entry["version"])
             / "PCbuild"
             / "prepare_libffi.bat"
+        )
+
+        # The upstream script activates Visual Studio again. Keep it on the
+        # same version selection as OpenSSL and CPython, and stop if setup fails.
+        static_replace_in_file(
+            prepare_libffi,
+            b"call %VCVARSALL% %VCVARS_PLATFORM%",
+            (
+                f"call %VCVARSALL% %VCVARS_PLATFORM% -vcvars_ver={vc_tools_version}\n"
+                "if errorlevel 1 exit /B %ERRORLEVEL%"
+            ).encode("ascii"),
         )
 
         env = dict(os.environ)
@@ -1211,12 +1273,13 @@ def collect_python_build_artifacts(
     else:
         raise Exception("unhandled architecture: %s" % arch)
 
+    debug_suffix = "_d" if config == "Debug" else ""
     if freethreaded:
-        abi_tag = ".cp%st-%s" % (python_majmin, abi_platform)
-        lib_suffix = "t"
+        abi_tag = f"{debug_suffix}.cp{python_majmin}t-{abi_platform}"
+        lib_suffix = f"t{debug_suffix}"
     else:
-        abi_tag = ""
-        lib_suffix = ""
+        abi_tag = debug_suffix
+        lib_suffix = debug_suffix
 
     # Copy object files for core sources into their own directory.
     core_dir = out_dir / "build" / "core"
@@ -1345,15 +1408,15 @@ def collect_python_build_artifacts(
 
     # Copy libraries for dependencies into the lib directory.
     for depend in sorted(depends_projects):
-        static_source = outputs_path / ("%s.lib" % depend)
-        static_dest = lib_dir / ("%s.lib" % depend)
+        static_source = outputs_path / f"{depend}{debug_suffix}.lib"
+        static_dest = lib_dir / f"{depend}{debug_suffix}.lib"
 
         log("copying link library %s" % static_source)
         shutil.copyfile(static_source, static_dest)
 
-        shared_source = outputs_path / ("%s.dll" % depend)
+        shared_source = outputs_path / f"{depend}{debug_suffix}.dll"
         if shared_source.exists():
-            shared_dest = lib_dir / ("%s.dll" % depend)
+            shared_dest = lib_dir / f"{depend}{debug_suffix}.dll"
             log("copying shared library %s" % shared_source)
             shutil.copyfile(shared_source, shared_dest)
 
@@ -1365,18 +1428,22 @@ def build_cpython(
     target_triple: str,
     arch: str,
     build_options: str,
-    msvc_version: str,
+    platform_toolset: str,
     windows_sdk_version: str,
     openssl_archive,
     libffi_archive,
     openssl_entry: str,
 ) -> pathlib.Path:
     parsed_build_options = set(build_options.split("+"))
+    debug = "debug" in parsed_build_options
     pgo = "pgo" in parsed_build_options
     freethreaded = "freethreaded" in parsed_build_options
 
-    msbuild = find_msbuild(msvc_version)
-    log("found MSBuild at %s" % msbuild)
+    msbuild_path = shutil.which("MSBuild.exe")
+    if msbuild_path is None:
+        raise FileNotFoundError("MSBuild.exe was not found on PATH")
+    msbuild = pathlib.Path(msbuild_path)
+    log("using MSBuild from PATH: %s" % msbuild)
 
     # The python.props file keys off MSBUILD, so it needs to be set.
     os.environ["MSBUILD"] = str(msbuild)
@@ -1426,13 +1493,14 @@ def build_cpython(
         # as we do for Unix builds.
         mpdecimal_archive = None
 
+    debug_suffix = "_d" if debug else ""
     if freethreaded:
         (major, minor, _) = python_version.split(".")
-        python_exe = f"python{major}.{minor}t.exe"
-        pythonw_exe = f"pythonw{major}.{minor}t.exe"
+        python_exe = f"python{major}.{minor}t{debug_suffix}.exe"
+        pythonw_exe = f"pythonw{major}.{minor}t{debug_suffix}.exe"
     else:
-        python_exe = "python.exe"
-        pythonw_exe = "pythonw.exe"
+        python_exe = f"python{debug_suffix}.exe"
+        pythonw_exe = f"pythonw{debug_suffix}.exe"
 
     # Python 3.15 uses the default name for the executable in a suffixed directory
     instrumented_python_exe = python_exe
@@ -1456,6 +1524,13 @@ def build_cpython(
     # The third-party dependency archives still use the base architecture name.
     if freethreaded and meets_python_minimum_version(python_version, "3.15"):
         pcbuild_directory = f"{build_directory}t"
+
+    test_annotations = stdlib_test_annotations(
+        STDLIB_TEST_ANNOTATIONS,
+        python_version,
+        target_triple,
+        parsed_build_options,
+    )
 
     tempdir_opts = (
         {"ignore_cleanup_errors": True} if sys.version_info >= (3, 12) else {}
@@ -1557,6 +1632,7 @@ def build_cpython(
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
 
@@ -1627,6 +1703,7 @@ def build_cpython(
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
             artifact_config = "PGUpdate"
@@ -1635,13 +1712,14 @@ def build_cpython(
             run_msbuild(
                 msbuild,
                 pcbuild_path,
-                configuration="Release",
+                configuration="Debug" if debug else "Release",
                 platform=build_platform,
                 python_version=python_version,
                 windows_sdk_version=windows_sdk_version,
+                platform_toolset=platform_toolset,
                 freethreaded=freethreaded,
             )
-            artifact_config = "Release"
+            artifact_config = "Debug" if debug else "Release"
 
         install_dir = out_dir / "python" / "install"
 
@@ -1674,6 +1752,9 @@ def build_cpython(
 
         if freethreaded:
             args.append("--include-freethreaded")
+
+        if debug:
+            args.append("--debug")
 
         # CPython 3.12 removed distutils.
         if not meets_python_minimum_version(python_version, "3.12"):
@@ -1816,6 +1897,12 @@ def build_cpython(
                 out_dir / "python" / "build" / "run_tests.py",
             )
 
+        # Install a JSON file annotating tests.
+        with (out_dir / "python" / "build" / "stdlib-test-annotations.json").open(
+            "w", encoding="utf-8"
+        ) as fh:
+            test_annotations.json_dump(fh)
+
         licenses_dir = out_dir / "python" / "licenses"
         licenses_dir.mkdir()
         for f in sorted(os.listdir(ROOT)):
@@ -1928,10 +2015,25 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--target-triple",
+        choices=TARGET_ARCHITECTURES,
+        help="Target triple to build for (defaults to the host Python architecture)",
+    )
+    parser.add_argument(
         "--vs",
         choices={"2019", "2022", "2026"},
         default="2022",
         help="Visual Studio version to use",
+    )
+    parser.add_argument(
+        "--platform-toolset",
+        choices=("v143", "v145"),
+        help="MSVC toolset (defaults to v145 for x64 CPython 3.15+, otherwise v143)",
+    )
+    parser.add_argument(
+        "--vc-tools-version",
+        help="MSVC version or prefix passed to vcvarsall "
+        "(defaults to 14.4 for v143 and 14.5 for v145)",
     )
     parser.add_argument(
         "--python",
@@ -1946,10 +2048,10 @@ def main() -> None:
         default="cpython-3.11",
         help="Python distribution to build",
     )
-    optimizations = {"noopt", "pgo"}
+    options = {"debug", "noopt", "pgo"}
     parser.add_argument(
         "--options",
-        choices=optimizations.union({f"freethreaded+{o}" for o in optimizations}),
+        choices=options.union({f"freethreaded+{o}" for o in options}),
         default="noopt",
         help="Build options to apply when compiling Python",
     )
@@ -1964,23 +2066,29 @@ def main() -> None:
 
     args = parser.parse_args()
     build_options = args.options
+    target_triple = args.target_triple or default_target_triple()
+    arch = TARGET_ARCHITECTURES[target_triple]
+    platform_toolset = args.platform_toolset or (
+        "v145"
+        if arch == "amd64"
+        and meets_python_minimum_version(DOWNLOADS[args.python]["version"], "3.15")
+        else "v143"
+    )
+    vc_tools_version = args.vc_tools_version or (
+        "14.5" if platform_toolset == "v145" else "14.4"
+    )
 
     log_path = BUILD / "build.log"
 
     with log_path.open("wb") as log_fh:
         LOG_FH[0] = log_fh
 
-        if os.environ.get("Platform") == "x86":
-            target_triple = "i686-pc-windows-msvc"
-            arch = "x86"
-        elif os.environ.get("Platform") == "arm64":
-            target_triple = "aarch64-pc-windows-msvc"
-            arch = "arm64"
-        elif os.environ.get("Platform") == "x64":
-            target_triple = "x86_64-pc-windows-msvc"
-            arch = "amd64"
-        else:
-            raise Exception("unhandled architecture: %s" % os.environ.get("Platform"))
+        log(f"building for {target_triple}")
+        log(f"using {platform_toolset} with MSVC {vc_tools_version}")
+        build_env = get_visual_studio_environment(args.vs, arch, vc_tools_version)
+        os.environ.update(build_env)
+
+        compiler_cache_key = f"{platform_toolset}-{vc_tools_version}"
 
         # TODO need better dependency checking.
 
@@ -1999,7 +2107,7 @@ def main() -> None:
             openssl_build_options = f"{build_options}-no-uplink"
 
         openssl_archive = BUILD / (
-            "%s-%s-%s.tar" % (openssl_entry, target_triple, openssl_build_options)
+            f"{openssl_entry}-{target_triple}-{openssl_build_options}-{compiler_cache_key}.tar"
         )
         if not openssl_archive.exists():
             perl_path = fetch_strawberry_perl() / "perl" / "bin" / "perl.exe"
@@ -2012,13 +2120,16 @@ def main() -> None:
                 with_uplink=openssl_with_uplink,
             )
 
-        libffi_archive = BUILD / ("libffi-%s-%s.tar" % (target_triple, build_options))
+        libffi_archive = BUILD / (
+            f"libffi-{target_triple}-{build_options}-{compiler_cache_key}.tar"
+        )
         if not libffi_archive.exists():
             build_libffi(
                 args.python,
                 arch,
                 pathlib.Path(args.sh),
                 args.vs,
+                vc_tools_version,
                 libffi_archive,
             )
 
@@ -2028,7 +2139,7 @@ def main() -> None:
             target_triple,
             arch,
             build_options=build_options,
-            msvc_version=args.vs,
+            platform_toolset=platform_toolset,
             windows_sdk_version=args.windows_sdk_version,
             openssl_archive=openssl_archive,
             libffi_archive=libffi_archive,

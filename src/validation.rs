@@ -104,11 +104,14 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "RPCRT4.dll",
     "SHELL32.dll",
     "SHLWAPI.dll",
+    "ucrtbased.dll",
     "USER32.dll",
     "USERENV.dll",
     "VERSION.dll",
     "VCRUNTIME140.dll",
+    "VCRUNTIME140D.dll",
     "VCRUNTIME140_1.dll",
+    "VCRUNTIME140_1D.dll",
     "WINMM.dll",
     "WS2_32.dll",
     // Our libraries.
@@ -124,18 +127,31 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "libssl-3-arm64.dll",
     "libssl-3-x64.dll",
     "python3.dll",
+    "python3_d.dll",
     "python3t.dll",
+    "python3t_d.dll",
     "python39.dll",
+    "python39_d.dll",
     "python310.dll",
+    "python310_d.dll",
     "python311.dll",
+    "python311_d.dll",
     "python312.dll",
+    "python312_d.dll",
     "python313.dll",
+    "python313_d.dll",
     "python313t.dll",
+    "python313t_d.dll",
     "python314.dll",
+    "python314_d.dll",
     "python314t.dll",
+    "python314t_d.dll",
     "python315.dll",
+    "python315_d.dll",
     "python315t.dll",
+    "python315t_d.dll",
     "sqlite3.dll",
+    "sqlite3_d.dll",
     "tcl86t.dll",
     "tk86t.dll",
 ];
@@ -1931,14 +1947,23 @@ fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<
         ));
     }
 
-    if is_debug
-        && !json
-            .python_config_vars
-            .get("abiflags")
-            .unwrap()
-            .contains('d')
-    {
-        errors.push("abiflags does not contain 'd'".to_string());
+    if is_debug {
+        // Windows keeps `abiflags` empty on purpose and only emulates `ABIFLAGS`
+        // from 3.14, so consult EXT_SUFFIX, which every version suffixes with `_d`.
+        // See https://github.com/python/cpython/blob/v3.14.7/Lib/sysconfig/__init__.py#L407
+        let (key, marker) = if triple.contains("-windows-") {
+            ("EXT_SUFFIX", "_d")
+        } else {
+            ("abiflags", "d")
+        };
+
+        match json.python_config_vars.get(key) {
+            Some(value) if value.contains(marker) => {}
+            Some(value) => {
+                errors.push(format!("{key} is {value:?}, expected to contain {marker:?}"))
+            }
+            None => errors.push(format!("{key} is not set")),
+        }
     }
 
     for extension in json.build_info.extensions.keys() {

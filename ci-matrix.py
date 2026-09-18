@@ -382,13 +382,15 @@ def create_python_build_entry(
             "build_options": build_option,
         }
     )
-    if "vs_version_override_conditional" in config:
-        conditional = config["vs_version_override_conditional"]
+    if "windows_toolchain_override_conditional" in config:
+        conditional = config["windows_toolchain_override_conditional"]
         min_version = conditional["minimum-python-version"]
         if meets_conditional_version(python_version, min_version):
-            entry["vs_version"] = conditional["vs_version"]
-    # VS 2026 builds need the Windows Server 2025 image.
-    if entry.get("vs_version") == "2026":
+            for field in ("vs_version", "platform_toolset", "vc_tools_version"):
+                if field in conditional:
+                    entry[field] = conditional[field]
+    # x86-64 VS 2026 builds need the Windows Server 2025 image.
+    if entry.get("vs_version") == "2026" and entry["arch"] == "x86_64":
         entry["runner"] = "github-windows-2025-x86_64-8"
     return entry
 
@@ -425,10 +427,9 @@ def add_python_build_entries_for_config(
         base_entry["arch_variant"] = config["arch_variant"]
     if "libc" in config:
         base_entry["libc"] = config["libc"]
-    if "vcvars" in config:
-        base_entry["vcvars"] = config["vcvars"]
-    if "vs_version" in config:
-        base_entry["vs_version"] = config["vs_version"]
+    for field in ("vs_version", "platform_toolset", "vc_tools_version"):
+        if field in config:
+            base_entry[field] = config[field]
 
     if "dry-run" in directives:
         base_entry["dry-run"] = "true"

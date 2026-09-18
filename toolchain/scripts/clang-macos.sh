@@ -10,6 +10,7 @@
 set -ex
 
 ROOT=$(pwd)
+MACOS_SDK_PATH=${SDKROOT:-$(xcrun --sdk macosx --show-sdk-path)}
 
 mkdir bin
 export PATH=${ROOT}/bin:${PATH}
@@ -45,6 +46,7 @@ cmake \
     -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/toolchain \
+    -DCMAKE_OSX_SYSROOT="${MACOS_SDK_PATH}" \
     -DCMAKE_C_COMPILER_LAUNCHER=sccache \
     -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
     -DCMAKE_C_COMPILER=/usr/bin/clang \
@@ -61,6 +63,7 @@ cmake \
     -DLLVM_LINK_LLVM_DYLIB=ON \
     -DLLVM_TARGETS_TO_BUILD="AArch64;X86" \
     -DCLANG_DEFAULT_LINKER=lld \
+    -DDARWIN_macosx_CACHED_SYSROOT="${MACOS_SDK_PATH}" \
     -DCOMPILER_RT_ENABLE_IOS=OFF \
     -DCOMPILER_RT_ENABLE_WATCHOS=OFF \
     -DCOMPILER_RT_ENABLE_TVOS=OFF \
@@ -83,6 +86,9 @@ fi
 DESTDIR=${ROOT}/out ninja -j ${NUM_JOBS} include/llvm/Support/llvm_vcsrevision_h
 
 DESTDIR=${ROOT}/out ninja -j ${NUM_JOBS} install
+
+# Runtime architecture probes can otherwise silently omit the PGO runtime.
+test -s "${ROOT}/out/toolchain/lib/clang/${LLVM_VERSION%%.*}/lib/darwin/libclang_rt.profile_osx.a"
 
 # Move out of objdir
 popd

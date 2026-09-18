@@ -50,4 +50,11 @@ CPP
 "${toolchain}/bin/clang++" -isysroot "${sdk}" -mmacosx-version-min=11.0 \
     -std=c++17 -flto=thin -fuse-ld=lld hello.cpp -o hello-lto
 ./hello-lto
+"${toolchain}/bin/clang" -isysroot "${sdk}" -mmacosx-version-min=11.0 \
+    -fprofile-instr-generate hello.c -o hello-instrumented
+LLVM_PROFILE_FILE=hello.profraw ./hello-instrumented
+"${toolchain}/bin/llvm-profdata" merge -o hello.profdata hello.profraw
+"${toolchain}/bin/clang" -isysroot "${sdk}" -mmacosx-version-min=11.0 \
+    -O2 -flto=full -fprofile-instr-use=hello.profdata hello.c -o hello-pgo
+./hello-pgo
 echo 'Native macOS toolchain smoke tests passed.'

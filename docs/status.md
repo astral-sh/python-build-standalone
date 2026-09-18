@@ -243,7 +243,7 @@ test_ossaudiodev
 
 test_startfile
 
-: object \<module 'os' from '.../install/lib/python3.7/os.py'> has no attribute 'startfile'
+: object `<module 'os' from '.../install/lib/python3.7/os.py'>` has no attribute 'startfile'
 
 test_winconsoleio
 
@@ -311,7 +311,7 @@ test_spwd
 
 test_startfile
 
-: object \<module 'os' from '.../install/lib/python3.7/os.py'> has no attribute 'startfile'
+: object `<module 'os' from '.../install/lib/python3.7/os.py'>` has no attribute 'startfile'
 
 test_tix
 

@@ -105,7 +105,7 @@ Distributions are produced for the following target triples:
     (released in 2008).
 
     Binaries will have SSE3, SSE4, and other CPU instructions added after the
-    \~initial x86-64 CPUs were launched in 2003.
+    ~initial x86-64 CPUs were launched in 2003.
 
     Binaries will crash if you attempt to run them on an older CPU not
     supporting the newer instructions.

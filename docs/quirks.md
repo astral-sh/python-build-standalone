@@ -52,7 +52,7 @@ the *terminfo database* in an uncommon location, you can set the
 
 For instance, you may need to do something like:
 
-> \$ TERMINFO_DIRS=/uncommon/place/terminfo install/bin/python3.10
+> $ TERMINFO_DIRS=/uncommon/place/terminfo install/bin/python3.10
 
 If you are running on a relatively standard OS and this does not work
 out of the box, please file a bug report so we can add the location of

@@ -20,6 +20,9 @@ jobs:
   publish:
     name: Publish documentation
     environment: release
+    permissions:
+      contents: read
+      id-token: write # for the credential broker
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -40,13 +43,24 @@ jobs:
       - name: Record source revision
         run: echo "DOCS_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
+      - name: Get docs token
+        id: token
+        uses: open-security-tools/ost-simple-sts@bda64bffc5722085512dc618ab85f588b6c49b96 # v0.0.4
+        with:
+          exchange-url: ${{ secrets.RELEASES_STS_API_URL }}/exchange
+          audience: ${{ secrets.RELEASES_STS_API_URL }}
+          repository: astral-sh/docs
+          permissions: |
+            contents: write
+            pull_requests: write
+
       - name: Checkout docs repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: astral-sh/docs
           ref: main
           path: astral-docs
-          token: ${{ secrets.ASTRAL_DOCS_PAT }}
+          token: ${{ steps.token.outputs.token }}
           persist-credentials: false
 
       - name: Copy docs
@@ -58,10 +72,10 @@ jobs:
         id: commit
         working-directory: astral-docs
         run: |
-          git config user.name "astral-docs-bot"
-          git config user.email "176161322+astral-docs-bot@users.noreply.github.com"
+          git config user.name "astral-releases-bot[bot]"
+          git config user.email "328004183+astral-releases-bot[bot]@users.noreply.github.com"
 
-          branch_name="update-python-build-standalone-docs-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          branch_name="update-docs-python-build-standalone-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           git checkout -b "$branch_name"
           git add site/python-build-standalone
           if git diff --cached --quiet; then
@@ -78,7 +92,7 @@ jobs:
         if: steps.commit.outputs.changed == 'true'
         working-directory: astral-docs
         env:
-          GH_TOKEN: ${{ secrets.ASTRAL_DOCS_PAT }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
           DOCS_BRANCH: ${{ steps.commit.outputs.branch_name }}
         run: |
           gh auth setup-git

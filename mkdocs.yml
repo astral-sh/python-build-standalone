@@ -6,6 +6,13 @@ repo_url: https://github.com/astral-sh/python-build-standalone
 repo_name: astral-sh/python-build-standalone
 edit_uri: edit/main/docs/
 
+# Keep the legacy Sphinx sources and build output out of the MkDocs site.
+exclude_docs: |
+  *.rst
+  /conf.py
+  /Makefile
+  /_build/
+
 theme:
   name: material
   features:

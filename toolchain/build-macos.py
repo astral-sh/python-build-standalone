@@ -242,7 +242,14 @@ def build_llvm(build_path: Path) -> Path:
         dest_path = build_path / "llvm-aarch64-apple-darwin.tar.zst"
         print(f"writing {dest_path}")
 
-        with zstd.open(dest_path, "wb", level=COMPRESSION_LEVEL) as fh:
+        with zstd.open(
+            dest_path,
+            "wb",
+            options={
+                zstd.CompressionParameter.compression_level: COMPRESSION_LEVEL,
+                zstd.CompressionParameter.nb_workers: cpu_count,
+            },
+        ) as fh:
             create_normalized_tar_from_directory(
                 fh, temp_dir / "out" / "toolchain", "llvm"
             )

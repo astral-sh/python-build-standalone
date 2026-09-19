@@ -566,7 +566,8 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
 fi
 
 if [ -n "${CPYTHON_LTO}" ]; then
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto"
+    # Defaults to ThinLTO on Python 3.12+ when available, request full LTO.
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto=full"
 fi
 
 # Python 3.11 introduces a --with-build-python to denote the host Python.

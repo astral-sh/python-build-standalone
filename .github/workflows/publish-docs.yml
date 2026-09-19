@@ -1,0 +1,106 @@
+# Publish documentation via a pull request to astral-sh/docs
+name: Publish docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "The commit SHA, tag, or branch to publish. Defaults to the selected workflow ref."
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-docs
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish documentation
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # for the credential broker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@c771a70e6277c0a99b617c7a806ffedaca235ff9 # v9.0.0
+        with:
+          enable-cache: false
+          python-version: "3.12"
+
+      - name: Build docs
+        run: uv run --only-group docs mkdocs build --strict --site-dir site/python-build-standalone
+
+      - name: Record source revision
+        run: echo "DOCS_REVISION=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+
+      - name: Get docs token
+        id: token
+        uses: open-security-tools/ost-simple-sts@bda64bffc5722085512dc618ab85f588b6c49b96 # v0.0.4
+        with:
+          exchange-url: ${{ secrets.RELEASES_STS_API_URL }}/exchange
+          audience: ${{ secrets.RELEASES_STS_API_URL }}
+          repository: astral-sh/docs
+          permissions: |
+            contents: write
+            pull_requests: write
+
+      - name: Checkout docs repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: astral-sh/docs
+          ref: main
+          path: astral-docs
+          token: ${{ steps.token.outputs.token }}
+          persist-credentials: false
+
+      - name: Copy docs
+        run: |
+          mkdir -p astral-docs/site/python-build-standalone
+          rsync --archive --delete site/python-build-standalone/ astral-docs/site/python-build-standalone/
+
+      - name: Commit docs
+        id: commit
+        working-directory: astral-docs
+        run: |
+          git config user.name "astral-releases-bot[bot]"
+          git config user.email "328004183+astral-releases-bot[bot]@users.noreply.github.com"
+
+          branch_name="update-docs-python-build-standalone-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git checkout -b "$branch_name"
+          git add site/python-build-standalone
+          if git diff --cached --quiet; then
+            echo "Documentation is already up to date."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git commit -m "Update python-build-standalone documentation for ${DOCS_REVISION}"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "branch_name=$branch_name" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.commit.outputs.changed == 'true'
+        working-directory: astral-docs
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          DOCS_BRANCH: ${{ steps.commit.outputs.branch_name }}
+        run: |
+          gh auth setup-git
+          git push origin "$DOCS_BRANCH"
+          gh pr create \
+            --repo astral-sh/docs \
+            --base main \
+            --head "$DOCS_BRANCH" \
+            --title "Update python-build-standalone documentation" \
+            --body "Automated documentation update from https://github.com/${GITHUB_REPOSITORY}/commit/${DOCS_REVISION}." \
+            --label documentation

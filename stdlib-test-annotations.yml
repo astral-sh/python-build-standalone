@@ -449,12 +449,30 @@ expected-failures:
     build-option: "debug"
     reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
 
+  # Rosetta's extra thread can trigger fork warnings, depending on the host OS.
+  # https://github.com/python/cpython/issues/157870
+  - name: test.test_concurrent_futures.test_shutdown.ProcessPoolForkProcessPoolShutdownTest.test_hang_gh83386
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.14"
+    build-option: "debug"
+    reason: "fork() emits a DeprecationWarning under Rosetta, but the test expects empty stderr"
+    intermittent: true
+
   - name: test.test_concurrent_futures.test_shutdown.ProcessPoolForkserverProcessPoolShutdownTest.test_interpreter_shutdown
     targets:
       - "x86_64-apple-darwin"
     minimum-python-version: "3.12"
     build-option: "debug"
     reason: "DeprecationWarning: This process (pid=81234) is multi-threaded, use of fork() may lead to deadlocks in the child.\n  self.pid = os.fork()\n' is not false"
+
+  - name: test.test_concurrent_futures.test_shutdown.ProcessPoolForkserverProcessPoolShutdownTest.test_hang_gh83386
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.14"
+    build-option: "debug"
+    reason: "fork() emits a DeprecationWarning under Rosetta, but the test expects empty stderr"
+    intermittent: true
 
   - name: test.test_coroutines.CAPITest.test_tp_await_1
     targets:
@@ -476,6 +494,20 @@ expected-failures:
     build-option: "static"
     maximum-python-version: "3.12"
     reason: "_testcapi missing"
+
+  - name: test.test_cppext.TestCPPExt.test_build_cpp03
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.11"
+    reason: "setuptools rejects the locally built egg's macOS deployment-target tag as incompatible with the host OS"
+
+  - name: test.test_cppext.TestCPPExt.test_build_cpp11
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.11"
+    reason: "setuptools rejects the locally built egg's macOS deployment-target tag as incompatible with the host OS"
 
   - name: test.test_ctypes.test_callbacks.Callbacks.test_i38748_stackCorruption
     targets:
@@ -1646,6 +1678,14 @@ expected-failures:
     build-option: "static"
     reason: "AssertionError: 1 not less than 0"
 
+  - name: test.test_math.MathTests.test_sumprod_stress
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.13"
+    build-option: "freethreaded"
+    reason: "CPU-heavy stress test can exceed the 300-second timeout in free-threaded debug builds, especially under Rosetta"
+    intermittent: true
+
   # Passes on x86_64_v3 and x86_64_v4 for some reason.
   - name: test.test_math.FMATests.test_fma_zero_result
     targets:
@@ -2006,33 +2046,6 @@ expected-failures:
     maximum-python-version: "3.11"
     reason: "RecursionError: maximum recursion depth exceeded"
 
-  - name: test.test_sysconfig.TestSysConfig.test_config_vars_depend_on_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_sysconfig.TestSysConfig.test_config_vars_recalculation_after_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_sysconfig.TestSysConfig.test_paths_depend_on_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_sysconfig.TestSysConfig.test_makefile_overwrites_config_vars
-    minimum-python-version: "3.14"
-    targets:
-      - ".+-apple-darwin"
-    reason: PBS behavior differences
-
   - name: test.test_sysconfig.TestSysConfig.test_sysconfigdata_json
     minimum-python-version: "3.14"
     ignore-targets:
@@ -2119,6 +2132,22 @@ expected-failures:
     build-option: "static"
     maximum-python-version: "3.12"
     reason: missing _testcapi
+
+  - name: test.test_tarfile.TestExtractionFilters.test_modes
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.12"
+    reason: "macOS clears the setgid bit: expected ?rwsrwsrwt, got ?rwsrwxrwt"
+
+  - name: test.test_threading.EventTests.test_set_and_clear
+    targets:
+      - "x86_64-apple-darwin"
+    minimum-python-version: "3.14"
+    maximum-python-version: "3.14"
+    build-option: "freethreaded"
+    reason: "thread cleanup can exceed the 30-second timeout under load with Rosetta"
+    intermittent: true
 
   - name: test.test_threading.SubinterpThreadingTests.test_threads_join
     targets:
@@ -2243,6 +2272,14 @@ expected-failures:
       - "x86_64-apple-darwin"
     build-option: "debug"
     reason: "AssertionError: failed spawning forkserver or grandchild"
+
+  - name: test.test_multiprocessing_forkserver.test_misc.MiscTestCase.test_preload_main_large_sys_argv
+    minimum-python-version: "3.13"
+    targets:
+      - "x86_64-apple-darwin"
+    build-option: "debug"
+    reason: "fork() emits a DeprecationWarning under Rosetta, but the test expects empty stderr"
+    intermittent: true
 
   - name: test.test_multiprocessing_fork.*
     maximum-python-version: "3.10"
@@ -2629,6 +2666,45 @@ expected-failures:
     build-option: "debug"
     reason: "segfault"
 
+  # The external FTP server can reject the CI runner's data connection with
+  # "425 Security: Bad IP connecting." HTTP tests in this module still run.
+  - name: test.test_urllib2net.OtherNetworkTests.test_ftp
+    targets:
+      - ".+-apple-darwin"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
+  - name: test.test_urllib2net.OtherNetworkTests.test_ftp_no_leak
+    targets:
+      - ".+-apple-darwin"
+    minimum-python-version: "3.13"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
+  - name: test.test_urllib2net.TimeoutTest.test_ftp_basic
+    targets:
+      - ".+-apple-darwin"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
+  - name: test.test_urllib2net.TimeoutTest.test_ftp_default_timeout
+    targets:
+      - ".+-apple-darwin"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
+  - name: test.test_urllib2net.TimeoutTest.test_ftp_no_timeout
+    targets:
+      - ".+-apple-darwin"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
+  - name: test.test_urllib2net.TimeoutTest.test_ftp_timeout
+    targets:
+      - ".+-apple-darwin"
+    reason: "Almost always fails, likely due to macOS runner network setup"
+    intermittent: true
+
   - name: test.test_userstring.UserStringTest.test_formatting_c_limits
     targets:
       - ".+-unknown-linux-musl"
@@ -2636,54 +2712,27 @@ expected-failures:
     maximum-python-version: "3.10"
     reason: "missing _testcapi"
 
-  - name: test.test_venv.BasicTest.test_executable
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_macos_env
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_multiprocessing
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_multiprocessing_recursion
+  - name: test.test_venv.BasicTest.test_prefixes
     minimum-python-version: "3.11"
     targets:
       - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_prefixes
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_special_chars_bash
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.BasicTest.test_special_chars_csh
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
+    reason: "base_prefix compares /tmp with the resolved /private/tmp path"
+    intermittent: true
 
   - name: test.test_venv.BasicTest.test_sysconfig_symlinks
     targets:
       - ".+-apple-darwin"
     minimum-python-version: "3.11"
     maximum-python-version: "3.13"
-    reason: BytesWarning
+    reason: "symlinked distribution paths differ; formatting the failed assertion raises BytesWarning"
+    intermittent: true
 
   - name: test.test_venv.BasicTest.test_sysconfig
     minimum-python-version: "3.11"
     targets:
       - ".+-apple-darwin"
-    reason: crashes
+    reason: "sysconfig paths differ when the distribution path contains symlinks"
+    intermittent: true
 
   - name: test.test_venv.BasicTest.test_sysconfig
     minimum-python-version: "3.13"
@@ -2698,28 +2747,6 @@ expected-failures:
       - ".+-pc-windows-.+"
     build-option: "freethreaded"
     reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
-
-  - name: test.test_venv.BasicTest.test_zippath_from_non_installed_posix
-    minimum-python-version: "3.11"
-    targets:
-      - ".+-apple-darwin"
-    reason: crashes
-
-  - name: test.test_venv.EnsurePipTest.test_explicit_no_pip
-    targets:
-      - ".+-apple-darwin"
-    reason: PBS installs pip
-
-  - name: test.test_venv.EnsurePipTest.test_no_pip_by_default
-    targets:
-      - ".+-apple-darwin"
-    reason: PBS installs pip
-
-  - name: test.test_venv.EnsurePipTest.test_with_pip
-    targets:
-      - ".+-apple-darwin"
-    maximum-python-version: "3.10"
-    reason: logic bug?
 
   - name: test.test_venv.EnsurePipTest.test_with_pip
     targets:

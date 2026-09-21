@@ -111,6 +111,14 @@ module-excludes:
 # * dont-verify - boolean indicating to not verify the failing test actually
 #.  fails. Useful for intermittent / flaky tests.
 expected-failures:
+  - name: ctypes.test.test_win32.FunctionCallTestCase.test_SEH
+    minimum-python-version: "3.10"
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "The python.exe alias bypasses the _d.exe skip check; debug builds disable SEH and crash on the deliberately invalid pointer"
+
   - name: distutils.tests.test_archive_util.ArchiveUtilTestCase.test_tarfile_vs_tar
     minimum-python-version: "3.11"
     maximum-python-version: "3.11"
@@ -520,6 +528,13 @@ expected-failures:
       - "i686-pc-windows-msvc"
     minimum-python-version: "3.12"
     reason: "OSError: exception: access violation writing 0x00000005"
+
+  - name: test.test_ctypes.test_win32.FunctionCallTestCase.test_SEH
+    minimum-python-version: "3.12"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "The python.exe alias bypasses the _d.exe skip check; debug builds disable SEH and crash on the deliberately invalid pointer"
 
   # Looks racy on freethreaded builds.
   #- name: test.datetimetester.ExtensionModuleTests_Fast.test_concurrent_initialization_subinterpreter
@@ -1501,6 +1516,14 @@ expected-failures:
     reason: "AssertionError: 0.015625 not less than or equal to 0.0078125"
     intermittent: true
 
+  - name: test.test_int.IntSubclassStrDigitLimitsTests.test_denial_of_service_prevented_str_to_int
+    minimum-python-version: "3.10"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "The inherited timing check can also fail with 0.015625 not less than or equal to 0.0078125"
+    intermittent: true
+
   - name: test.test_int.IntSubclassStrDigitLimitsTests.test_int_max_str_digits_is_per_interpreter
     targets:
       - ".+-unknown-linux-musl"
@@ -1651,6 +1674,13 @@ expected-failures:
     minimum-python-version: "3.14"
     build-option: "static"
     reason: "AssertionError: '.' != ','"
+
+  - name: test.test_launcher.TestLauncher.test_filter_to_company
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "py.exe exceeds the test's 10 second timeout under load; passes on rerun"
+    intermittent: true
 
   - name: test.test_locale.TestEnUSCollation.test_strcoll_with_diacritic
     targets:
@@ -1856,6 +1886,13 @@ expected-failures:
     reason: "timeout due to potential deadlock or similar test bug"
     intermittent: true
 
+  - name: test.test_robotparser.NetworkTestCase.test_read_404
+    minimum-python-version: "3.10"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "External HTTP request times out with WinError 10060"
+    intermittent: true
+
   - name: test.test_smtplib.DebuggingServerTests.*
     targets:
       - ".+-unknown-linux-musl"
@@ -1946,50 +1983,6 @@ expected-failures:
     reason: ConnectionAbortedError
     intermittent: true
 
-    # These uplink/applink failures should go away once we're patching
-    # OpenSSL correctly following https://github.com/python/cpython/pull/131839.
-    # These pass on aarch64 for reasons unknown.
-
-  - name: test.test_ssl.ContextTests.test_load_dh_params
-    targets:
-      - "i686-pc-windows-.+"
-      - "x86_64-pc-windows-.+"
-    minimum-python-version: "3.12"
-    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
-  - name: test.test_ssl.SSLErrorTests.test_lib_reason
-    targets:
-      - "i686-pc-windows-.+"
-      - "x86_64-pc-windows-.+"
-    minimum-python-version: "3.12"
-    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
-  #- name: test.test_ssl.SSLErrorTests.test_dh_params
-  #  targets:
-  #    - ".+-pc-windows-.+"
-  #  maximum-python-version: "3.11"
-  #  reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
-  #- name: test.test_ssl.ThreadedTests.test_dh_params
-  #  targets:
-  #    - ".+-pc-windows-.+"
-  #  minimum-python-version: "3.12"
-  #  reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
-  - name: test.test_ssl.TestSSLDebug.test_keylog_defaults
-    targets:
-      - "i686-pc-windows-.+"
-      - "x86_64-pc-windows-.+"
-    minimum-python-version: "3.12"
-    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
-  - name: test.test_ssl.TestSSLDebug.test_keylog_filename
-    targets:
-      - "i686-pc-windows-.+"
-      - "x86_64-pc-windows-.+"
-    minimum-python-version: "3.12"
-    reason: "OPENSSL_Uplink(00007FFD9EB59C60,08): no OPENSSL_Applink"
-
   # Looks like a race condition in the test.
   - name: test.test_str.StrTest.test_raiseMemError
     targets:
@@ -2045,6 +2038,37 @@ expected-failures:
     minimum-python-version: "3.11"
     maximum-python-version: "3.11"
     reason: "RecursionError: maximum recursion depth exceeded"
+
+  - name: test.test_sysconfig.TestSysConfig.test_config_vars_depend_on_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_sysconfig.TestSysConfig.test_config_vars_recalculation_after_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_sysconfig.TestSysConfig.test_paths_depend_on_site_initialization
+    minimum-python-version: "3.12"
+    maximum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_sysconfig.TestSysConfig.test_makefile_overwrites_config_vars
+    minimum-python-version: "3.14"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
 
   - name: test.test_sysconfig.TestSysConfig.test_sysconfigdata_json
     minimum-python-version: "3.14"
@@ -2139,6 +2163,13 @@ expected-failures:
     minimum-python-version: "3.11"
     maximum-python-version: "3.12"
     reason: "macOS clears the setgid bit: expected ?rwsrwsrwt, got ?rwsrwxrwt"
+
+  - name: test.test_threading.BarrierTests.test_wait_return
+    minimum-python-version: "3.10"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "BrokenBarrierError under load; passes when rerun in isolation"
+    intermittent: true
 
   - name: test.test_threading.EventTests.test_set_and_clear
     targets:
@@ -2712,6 +2743,127 @@ expected-failures:
     maximum-python-version: "3.10"
     reason: "missing _testcapi"
 
+  - name: test.test_venv.BasicTest.test_defaults
+    minimum-python-version: "3.10"
+    maximum-python-version: "3.10"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_defaults_with_pathlib_path
+    minimum-python-version: "3.11"
+    maximum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_defaults_with_pathlike
+    minimum-python-version: "3.12"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_defaults_with_str_path
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_executable
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_executable_symlinks
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    # Temporary workaround for free-threaded debug builds until the venv
+    # executable alias is fixed. Excluding PGO selects debug in Windows CI,
+    # but also matches noopt builds outside CI.
+    build-option: "freethreaded"
+    no-build-option: "pgo"
+    reason: "Debug python.exe alias makes venv link to a free-threaded executable without _d that does not exist"
+
+  - name: test.test_venv.BasicTest.test_multiprocessing
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_multiprocessing_recursion
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_prefixes
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_special_chars_windows
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_sysconfig
+    minimum-python-version: "3.11"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_sysconfig_symlinks
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    # Temporary workaround for free-threaded debug builds until the venv
+    # executable alias is fixed. Excluding PGO selects debug in Windows CI,
+    # but also matches noopt builds outside CI.
+    build-option: "freethreaded"
+    no-build-option: "pgo"
+    reason: "Debug python.exe alias makes venv link to a free-threaded executable without _d that does not exist"
+
+  - name: test.test_venv.BasicTest.test_upgrade
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.BasicTest.test_venvwlauncher
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.EnsurePipTest.test_explicit_no_pip
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.EnsurePipTest.test_no_pip_by_default
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
+  - name: test.test_venv.EnsurePipTest.test_with_pip
+    targets:
+      - ".+-pc-windows-.+"
+    build-option: "debug"
+    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
+
   - name: test.test_venv.BasicTest.test_prefixes
     minimum-python-version: "3.11"
     targets:
@@ -2736,16 +2888,20 @@ expected-failures:
 
   - name: test.test_venv.BasicTest.test_sysconfig
     minimum-python-version: "3.13"
+    maximum-python-version: "3.14"
     targets:
       - ".+-pc-windows-.+"
     build-option: "freethreaded"
+    no-build-option: "debug"
     reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
 
   - name: test.test_venv.BasicTest.test_venvwlauncher
     minimum-python-version: "3.13"
+    maximum-python-version: "3.14"
     targets:
       - ".+-pc-windows-.+"
     build-option: "freethreaded"
+    no-build-option: "debug"
     reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
 
   - name: test.test_venv.EnsurePipTest.test_with_pip
@@ -2761,6 +2917,36 @@ expected-failures:
     build-option: "static"
     maximum-python-version: "3.12"
     reason: "missing _testcapi"
+
+  - name: test.test_wmi.WmiTests.test_wmi_query_overflow
+    minimum-python-version: "3.12"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "The CIM_DataFile query can exceed the 300 second timeout on Windows CI"
+    intermittent: true
+
+  - name: test.test_zipimport.CompressedZipImportTestCase.testZip64LargeFile
+    minimum-python-version: "3.13"
+    # Renamed to DeflateCompressedZipImportTestCase in Python 3.15.
+    maximum-python-version: "3.14"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "The large ZIP64 file test can exceed the 300 second timeout"
+    intermittent: true
+
+  - name: test.test_zipimport.DeflateCompressedZipImportTestCase.testZip64LargeFile
+    minimum-python-version: "3.15"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "The large ZIP64 file test can exceed the 300 second timeout"
+    intermittent: true
+
+  - name: test.test_zipimport.UncompressedZipImportTestCase.testZip64LargeFile
+    minimum-python-version: "3.13"
+    targets:
+      - ".+-pc-windows-.+"
+    reason: "The large ZIP64 file test can exceed the 300 second timeout"
+    intermittent: true
 
   - name: test.test__xxinterpchannels.ChannelTests.test_send_recv_different_interpreters_and_threads
     minimum-python-version: "3.12"

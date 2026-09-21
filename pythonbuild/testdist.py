@@ -417,6 +417,10 @@ def _check_stdlib_expected_failure(
     elif test_name.startswith("distutils.tests."):
         module_name = "test_distutils"
 
+    # ctypes tests lived outside the test package until Python 3.12.
+    elif test_name.startswith("ctypes.test."):
+        module_name = "test_ctypes"
+
     elif test_name.startswith("test."):
         module_name = parts[1]
 

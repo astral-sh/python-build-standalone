@@ -408,6 +408,11 @@ def add_python_build_entries_for_config(
     build_options = config["build_options"]
     arch = config["arch"]
     runner = find_runner(runners, platform, arch, False)
+    runner_arch = runners[runner]["arch"]
+    # 64-bit Windows runners can also execute 32-bit Windows builds.
+    can_run = runner_arch == arch or (
+        platform == "windows" and runner_arch == "x86_64" and arch == "x86"
+    )
 
     # Create base entry that will be used for all variants
     base_entry = {
@@ -415,11 +420,10 @@ def add_python_build_entries_for_config(
         "target_triple": target_triple,
         "platform": platform,
         "runner": runner,
-        # If `run` is in the config, use that — otherwise, default to if the
-        # runner architecture matches the build architecture
-        "run": str(config.get("run", runners[runner]["arch"] == arch)).lower(),
+        # An explicit `run` setting overrides runner compatibility.
+        "run": str(config.get("run", can_run)).lower(),
         # Use the crate artifact built for the runner's architecture
-        "crate_artifact_name": crate_artifact_name(platform, runners[runner]["arch"]),
+        "crate_artifact_name": crate_artifact_name(platform, runner_arch),
     }
 
     # Add optional fields if they exist

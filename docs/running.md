@@ -208,6 +208,11 @@ Common configurations include:
 
 : A debug build. No optimizations.
 
+    On Windows, a debug build links against the debug C runtime
+    (`ucrtbased.dll` and `vcruntime*d.dll`). That runtime ships with Visual
+    Studio and is not redistributable, so a Windows debug distribution only
+    runs on a machine with Visual Studio installed.
+
 `freethreaded`
 
 : A free-threaded build, available for CPython 3.13 and newer. This

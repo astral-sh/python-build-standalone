@@ -1401,6 +1401,19 @@ def collect_python_build_artifacts(
     return res
 
 
+def install_tcltk(tcltk_dir: pathlib.Path, install_dir: pathlib.Path):
+    """Install the selected bundle's runtime DLLs."""
+    dlls = sorted((tcltk_dir / "bin").glob("*.dll"))
+    if not dlls:
+        raise FileNotFoundError(f"No Tcl/Tk DLLs found in {tcltk_dir}")
+
+    dll_dir = install_dir / "DLLs"
+    dll_dir.mkdir(parents=True, exist_ok=True)
+    for source in dlls:
+        log(f"copying {source} to {dll_dir}")
+        shutil.copy2(source, dll_dir / source.name)
+
+
 def build_cpython(
     python_entry_name: str,
     target_triple: str,
@@ -1739,11 +1752,8 @@ def build_cpython(
             os.environ,
         )
 
-        # Package the Tcl/Tk bundle's zlib runtime alongside the extension.
-        shutil.copy2(
-            tcltk_path / build_directory / "bin" / "zlib1.dll",
-            install_dir / "DLLs" / "zlib1.dll",
-        )
+        # PC/layout omits unsuffixed Tcl/Tk DLLs in debug builds.
+        install_tcltk(tcltk_path / build_directory, install_dir)
 
         # We install pip by using pip to install itself. This leverages a feature
         # where Python can automatically recognize wheel/zip files on sys.path and

@@ -298,6 +298,28 @@ class TestPythonInterpreter(unittest.TestCase):
             "Expected multithreading to be enabled but max threads is zero"
         )
 
+    @unittest.skipUnless(os.name == "nt", "Windows Tcl/Tk packaging")
+    def test_windows_tcltk(self):
+        import tkinter
+
+        install_dir = Path(sys.executable).parent
+        self.assertTrue((install_dir / "DLLs" / "zlib1.dll").is_file())
+        if sys.version_info >= (3, 14):
+            self.assertTrue((install_dir / "DLLs" / "tcl90.dll").is_file())
+            self.assertTrue((install_dir / "DLLs" / "tcl9tk90.dll").is_file())
+            self.assertTrue((install_dir / "DLLs" / "libtommath.dll").is_file())
+            version = "9.0.4"
+        else:
+            self.assertTrue((install_dir / "DLLs" / "tcl86t.dll").is_file())
+            self.assertTrue((install_dir / "DLLs" / "tk86t.dll").is_file())
+            version = "8.6.15"
+
+        interpreter = tkinter.Tcl()
+        self.assertEqual(interpreter.call("info", "patchlevel"), version)
+        self.assertEqual(
+            interpreter.eval("zlib decompress [zlib compress test]"), "test"
+        )
+
     @unittest.skipIf("TCL_LIBRARY" not in os.environ, "TCL_LIBRARY not set")
     @unittest.skipIf("DISPLAY" not in os.environ, "DISPLAY not set")
     def test_tkinter(self):

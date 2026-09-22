@@ -1489,10 +1489,8 @@ def build_cpython(
     if freethreaded:
         (major, minor, _) = python_version.split(".")
         python_exe = f"python{major}.{minor}t{debug_suffix}.exe"
-        pythonw_exe = f"pythonw{major}.{minor}t{debug_suffix}.exe"
     else:
         python_exe = f"python{debug_suffix}.exe"
-        pythonw_exe = f"pythonw{debug_suffix}.exe"
 
     # Python 3.15 uses the default name for the executable in a suffixed directory
     instrumented_python_exe = python_exe
@@ -1743,7 +1741,9 @@ def build_cpython(
         ]
 
         if freethreaded:
-            args.append("--include-freethreaded")
+            # Creates both versioned and unversioned entry points,
+            # includes the _d suffix for debug builds.
+            args.extend(["--include-freethreaded", "--include-alias"])
 
         if debug:
             args.append("--debug")
@@ -1858,23 +1858,9 @@ def build_cpython(
             log(f"copying {source} to {dest}")
             shutil.copyfile(source, dest)
 
-        # Create a `python.exe` copy when an alternative executable is built, e.g., when
-        # free-threading is enabled the name is `python3.13t.exe`.
-        canonical_python_exe = install_dir / "python.exe"
-        if not canonical_python_exe.exists():
-            shutil.copy2(
-                install_dir / python_exe,
-                canonical_python_exe,
-            )
-
-        # Create a `pythonw.exe` copy when an alternative executable is built, e.g., when
-        # free-threading is enabled the name is `pythonw3.13t.exe`.
-        canonical_pythonw_exe = install_dir / "pythonw.exe"
-        if not canonical_pythonw_exe.exists():
-            shutil.copy2(
-                install_dir / pythonw_exe,
-                canonical_pythonw_exe,
-            )
+        # Use the unversioned entry point supplied by PC/layout. Its _d
+        # suffix lets venv and other stdlib code identify debug builds.
+        distribution_python_exe = install_dir / f"python{debug_suffix}.exe"
 
         # CPython 3.13 removed `run_tests.py`, we provide a compatibility script
         # for now.
@@ -1939,7 +1925,7 @@ def build_cpython(
         env["ROOT"] = str(out_dir / "python")
         subprocess.run(
             [
-                str(canonical_python_exe),
+                str(distribution_python_exe),
                 str(SUPPORT / "generate_metadata.py"),
                 str(metadata_path),
             ],

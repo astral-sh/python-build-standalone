@@ -111,14 +111,6 @@ module-excludes:
 # * dont-verify - boolean indicating to not verify the failing test actually
 #.  fails. Useful for intermittent / flaky tests.
 expected-failures:
-  - name: ctypes.test.test_win32.FunctionCallTestCase.test_SEH
-    minimum-python-version: "3.10"
-    maximum-python-version: "3.11"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "The python.exe alias bypasses the _d.exe skip check; debug builds disable SEH and crash on the deliberately invalid pointer"
-
   - name: distutils.tests.test_archive_util.ArchiveUtilTestCase.test_tarfile_vs_tar
     minimum-python-version: "3.11"
     maximum-python-version: "3.11"
@@ -578,13 +570,6 @@ expected-failures:
       - "i686-pc-windows-msvc"
     minimum-python-version: "3.12"
     reason: "OSError: exception: access violation writing 0x00000005"
-
-  - name: test.test_ctypes.test_win32.FunctionCallTestCase.test_SEH
-    minimum-python-version: "3.12"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "The python.exe alias bypasses the _d.exe skip check; debug builds disable SEH and crash on the deliberately invalid pointer"
 
   - name: test.datetimetester.ExtensionModuleTests_Fast.test_concurrent_initialization_subinterpreter
     targets:
@@ -2183,37 +2168,6 @@ expected-failures:
     maximum-python-version: "3.11"
     reason: "RecursionError: maximum recursion depth exceeded"
 
-  - name: test.test_sysconfig.TestSysConfig.test_config_vars_depend_on_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_sysconfig.TestSysConfig.test_config_vars_recalculation_after_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_sysconfig.TestSysConfig.test_paths_depend_on_site_initialization
-    minimum-python-version: "3.12"
-    maximum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_sysconfig.TestSysConfig.test_makefile_overwrites_config_vars
-    minimum-python-version: "3.14"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
   - name: test.test_sysconfig.TestSysConfig.test_sysconfigdata_json
     minimum-python-version: "3.14"
     ignore-targets:
@@ -2930,127 +2884,6 @@ expected-failures:
     maximum-python-version: "3.10"
     reason: "missing _testcapi"
 
-  - name: test.test_venv.BasicTest.test_defaults
-    minimum-python-version: "3.10"
-    maximum-python-version: "3.10"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_defaults_with_pathlib_path
-    minimum-python-version: "3.11"
-    maximum-python-version: "3.11"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_defaults_with_pathlike
-    minimum-python-version: "3.12"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_defaults_with_str_path
-    minimum-python-version: "3.11"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_executable
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_executable_symlinks
-    minimum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    # Temporary workaround for free-threaded debug builds until the venv
-    # executable alias is fixed. Excluding PGO selects debug in Windows CI,
-    # but also matches noopt builds outside CI.
-    build-option: "freethreaded"
-    no-build-option: "pgo"
-    reason: "Debug python.exe alias makes venv link to a free-threaded executable without _d that does not exist"
-
-  - name: test.test_venv.BasicTest.test_multiprocessing
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_multiprocessing_recursion
-    minimum-python-version: "3.11"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_prefixes
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_special_chars_windows
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_sysconfig
-    minimum-python-version: "3.11"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_sysconfig_symlinks
-    minimum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    # Temporary workaround for free-threaded debug builds until the venv
-    # executable alias is fixed. Excluding PGO selects debug in Windows CI,
-    # but also matches noopt builds outside CI.
-    build-option: "freethreaded"
-    no-build-option: "pgo"
-    reason: "Debug python.exe alias makes venv link to a free-threaded executable without _d that does not exist"
-
-  - name: test.test_venv.BasicTest.test_upgrade
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.BasicTest.test_venvwlauncher
-    minimum-python-version: "3.13"
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.EnsurePipTest.test_explicit_no_pip
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.EnsurePipTest.test_no_pip_by_default
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
-  - name: test.test_venv.EnsurePipTest.test_with_pip
-    targets:
-      - ".+-pc-windows-.+"
-    build-option: "debug"
-    reason: "Debug python.exe alias selects a venv launcher without _d that is not packaged"
-
   - name: test.test_venv.BasicTest.test_prefixes
     minimum-python-version: "3.11"
     targets:
@@ -3079,8 +2912,7 @@ expected-failures:
     targets:
       - ".+-pc-windows-.+"
     build-option: "freethreaded"
-    no-build-option: "debug"
-    reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
+    reason: "venv reports the versioned free-threaded base executable instead of its unversioned alias"
 
   - name: test.test_venv.BasicTest.test_venvwlauncher
     minimum-python-version: "3.13"
@@ -3088,8 +2920,7 @@ expected-failures:
     targets:
       - ".+-pc-windows-.+"
     build-option: "freethreaded"
-    no-build-option: "debug"
-    reason: "AssertionError: 3.14t missing suffix - likely PBS quirk"
+    reason: "venv reports the versioned free-threaded base executable instead of its unversioned alias"
 
   - name: test.test_venv.EnsurePipTest.test_with_pip
     targets:

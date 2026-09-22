@@ -44,6 +44,33 @@ if "TERMINFO_DIRS" not in os.environ:
 
 
 class TestPythonInterpreter(unittest.TestCase):
+    @unittest.skipUnless(os.name == "nt", "Windows executable names")
+    def test_windows_executables(self):
+        build_options = os.environ["BUILD_OPTIONS"].split("+")
+        install_dir = Path(sys.executable).parent
+        major, minor = sys.version_info[:2]
+
+        if "debug" in build_options:
+            self.assertTrue((install_dir / "python_d.exe").is_file())
+            self.assertTrue((install_dir / "pythonw_d.exe").is_file())
+            self.assertFalse((install_dir / "python.exe").exists())
+            self.assertFalse((install_dir / "pythonw.exe").exists())
+            if "freethreaded" in build_options:
+                self.assertTrue(
+                    (install_dir / f"python{major}.{minor}t_d.exe").is_file()
+                )
+                self.assertTrue(
+                    (install_dir / f"pythonw{major}.{minor}t_d.exe").is_file()
+                )
+        else:
+            self.assertTrue((install_dir / "python.exe").is_file())
+            self.assertTrue((install_dir / "pythonw.exe").is_file())
+            if "freethreaded" in build_options:
+                self.assertTrue((install_dir / f"python{major}.{minor}t.exe").is_file())
+                self.assertTrue(
+                    (install_dir / f"pythonw{major}.{minor}t.exe").is_file()
+                )
+
     def test_compression(self):
         import bz2
         import lzma

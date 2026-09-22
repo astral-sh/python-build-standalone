@@ -445,13 +445,6 @@
         ],
         "license_file": "LICENSE.tcl.txt"
     },
-    "tk-windows-bin-8612": {
-        "url": "https://github.com/python/cpython-bin-deps/archive/e3c3e9a2856124aa32b608632a52742d479eb7a9.tar.gz",
-        "size": 6787654,
-        "sha256": "01ad9c663659224e075d487cbc33ea2fed7a225593965b79bed92ca7f79b676f",
-        "version": "8.6.12",
-        "git_commit": "e3c3e9a2856124aa32b608632a52742d479eb7a9"
-    },
     "uuid": {
         "url": "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz",
         "size": 318256,

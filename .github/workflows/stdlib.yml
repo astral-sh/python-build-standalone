@@ -16,9 +16,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ inputs.sha }}-${{ inputs.filters }}
   cancel-in-progress: false
 
-env:
-  FORCE_COLOR: 1
-
 permissions:
   actions: read
   contents: read

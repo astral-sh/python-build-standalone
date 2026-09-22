@@ -48,8 +48,8 @@ STDLIB_SLOW_TESTS = [
     "test_pickle",
 ]
 
-# Maximum wall run time of a single test before timing it out.
-TIMEOUT_SECONDS = 300
+# Maximum wall run time of a test module (or an expected-failure check).
+TIMEOUT_SECONDS = 1200
 
 
 def run_dist_python(
@@ -209,9 +209,11 @@ def run_stdlib_tests(
                 "-w",
                 # Make order non-deterministic to help flush out failures.
                 "--randomize",
-                # Run tests in parallel using all available CPUs.
+                # Run tests with a parallization of 2.
+                # 0 would use all cores but tends to oversubscribe runners and
+                # cause timeouts.
                 "-j",
-                "0",
+                "2",
                 # Force abort tests taking too long to execute. This can prevent
                 # some runaway tests in CI.
                 "--timeout",
@@ -318,7 +320,7 @@ def _run_stdlib_expected_failures(
     results = []
     unexpected_tests: set[str] = set()
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         fs = []
 
         for test_name in sorted(expect_failures):
@@ -381,6 +383,10 @@ RE_TEST_UNCAUGHT_EXCEPTION = re.compile(
 )
 
 RE_TEST_SKIPPED = re.compile(rb"^test_.+ skipped", re.MULTILINE)
+
+RE_TEST_SETUP_SKIPPED = re.compile(
+    rb"^(?:setUpClass|setUpModule) \(([^)]+)\) \.\.\. skipped ", re.MULTILINE
+)
 
 
 def _check_stdlib_expected_failure(
@@ -467,7 +473,12 @@ def _check_stdlib_expected_failure(
     crashed = RE_TEST_CRASHED.search(res.stdout) is not None
     uncaught_exception = RE_TEST_UNCAUGHT_EXCEPTION.search(res.stdout) is not None
     load_error = b"\nERROR: setUpClass" in res.stdout
-    skipped = RE_TEST_SKIPPED.search(res.stdout) is not None
+    # A skipped fixture can prevent every selected test from running. Only
+    # accept fixtures containing this test, not an unrelated class's skip.
+    skipped = RE_TEST_SKIPPED.search(res.stdout) is not None or any(
+        test_name.encode("utf-8").startswith(m.group(1) + b".")
+        for m in RE_TEST_SETUP_SKIPPED.finditer(res.stdout)
+    )
 
     if not crashed and not uncaught_exception and not load_error and not skipped:
         # 3.13+ syntax.

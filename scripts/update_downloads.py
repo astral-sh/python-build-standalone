@@ -408,7 +408,7 @@ UNSUPPORTED: dict[str, str] = {
     "tcl-8612": "legacy compatibility version",
     "tk-8612": "legacy compatibility version",
     "tk-windows-bin-904": "commit-pinned CPython binary dependency",
-    "tk-windows-bin-8614": "commit-pinned CPython binary dependency",
+    "tk-windows-bin-8615": "commit-pinned CPython binary dependency",
     "uuid": "inactive upstream project",
     "zlib-ng": "CPython source-deps snapshot must follow the upstream release",
     "zstd": "CPython source-deps snapshot must follow the upstream release",

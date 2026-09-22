@@ -1446,7 +1446,7 @@ def build_cpython(
     if meets_python_minimum_version(python_version, "3.14"):
         tk_bin_entry = "tk-windows-bin-904"
     else:
-        tk_bin_entry = "tk-windows-bin-8614"
+        tk_bin_entry = "tk-windows-bin-8615"
     tk_bin_archive = download_entry(
         tk_bin_entry, BUILD, local_name="tk-windows-bin.tar.gz"
     )

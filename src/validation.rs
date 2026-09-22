@@ -166,7 +166,7 @@ const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
     "tcl9tk90.dll",
     "WINSPOOL.DRV",
 ];
-// Tcl/Tk's bundled zlib uses this CRT API set on ARM64.
+// Tcl/Tk 8.6.15's bundled zlib uses this CRT API set on ARM64.
 const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["api-ms-win-crt-private-l1-1-0.dll"];
 const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
     // See `PE_ALLOWED_LIBRARIES_314` for zlib-related libraries

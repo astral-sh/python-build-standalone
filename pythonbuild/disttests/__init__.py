@@ -308,10 +308,15 @@ class TestPythonInterpreter(unittest.TestCase):
             self.assertTrue((install_dir / "DLLs" / "tcl90.dll").is_file())
             self.assertTrue((install_dir / "DLLs" / "tcl9tk90.dll").is_file())
             self.assertTrue((install_dir / "DLLs" / "libtommath.dll").is_file())
+            self.assertTrue(
+                (install_dir / "tcl" / "registry1.3" / "pkgIndex.tcl").is_file()
+            )
             version = "9.0.4"
         else:
             self.assertTrue((install_dir / "DLLs" / "tcl86t.dll").is_file())
             self.assertTrue((install_dir / "DLLs" / "tk86t.dll").is_file())
+            self.assertTrue((install_dir / "tcl" / "tcl8.6" / "init.tcl").is_file())
+            self.assertTrue((install_dir / "tcl" / "tk8.6" / "tk.tcl").is_file())
             version = "8.6.15"
 
         interpreter = tkinter.Tcl()

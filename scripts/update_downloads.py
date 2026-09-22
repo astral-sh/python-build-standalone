@@ -405,8 +405,6 @@ UNSUPPORTED: dict[str, str] = {
     "sqlite": "requires SQLite's numeric-version and release-year mapping",
     "strawberryperl": "Windows toolchain update requires manual validation",
     "tix": "source dependency snapshot",
-    "tcl-8612": "legacy compatibility version",
-    "tk-8612": "legacy compatibility version",
     "tk-windows-bin-904": "commit-pinned CPython binary dependency",
     "tk-windows-bin-8615": "commit-pinned CPython binary dependency",
     "uuid": "inactive upstream project",

@@ -94,7 +94,7 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
         "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
     },
     "_tkinter": {
-        "shared_depends": ["tcl86t", "tk86t"],
+        "ignore_additional_depends": {"$(tcltkLib)"},
     },
     "_queue": {},
     "_uuid": {"ignore_missing": True},
@@ -131,7 +131,7 @@ EXTENSION_TO_LIBRARY_DOWNLOADS_ENTRY = {
     "_lzma": ["xz"],
     "_sqlite3": ["sqlite"],
     "_ssl": ["openssl"],
-    "_tkinter": ["tcl-8612", "tk-8612", "tix"],
+    "_tkinter": ["tcltk", "tix"],
     "_uuid": ["uuid"],
     "zlib": ["zlib"],
     "_zstd": ["zstd"],
@@ -1115,6 +1115,8 @@ def collect_python_build_artifacts(
     openssl_entry: str,
     zlib_entry: str,
     freethreaded: bool,
+    tk_bin_entry: str,
+    tcltk_dlls: list[str],
 ):
     """Collect build artifacts from Python.
     Copies them into an output directory and returns a data structure describing
@@ -1327,6 +1329,12 @@ def collect_python_build_artifacts(
             "variant": "default",
         }
 
+        if ext == "_tkinter":
+            entry["links"].extend(
+                {"name": name, "path_dynamic": f"install/DLLs/{name}.dll"}
+                for name in tcltk_dlls
+            )
+
         for obj in process_project(ext, dest_dir):
             entry["objs"].append(f"build/extensions/{ext}/{obj}")
 
@@ -1354,9 +1362,12 @@ def collect_python_build_artifacts(
                 if name == "zlib":
                     name = zlib_entry
 
-                # On 3.14+ and aarch64, we use the latest tcl/tk version
-                if ext == "_tkinter" and (python_majmin == "314" or arch == "arm64"):
-                    name = name.replace("-8612", "")
+                if name == "tcltk":
+                    name = tk_bin_entry
+
+                # Tix is only included in the Tcl/Tk 8.6 bundle.
+                if name == "tix" and int(python_majmin) >= 314:
+                    continue
 
                 download_entry = DOWNLOADS[name]
 
@@ -1402,7 +1413,7 @@ def collect_python_build_artifacts(
 
 
 def install_tcltk(tcltk_dir: pathlib.Path, install_dir: pathlib.Path):
-    """Install the selected bundle's runtime DLLs."""
+    """Install the selected bundle's runtime DLLs and Tcl package directories."""
     dlls = sorted((tcltk_dir / "bin").glob("*.dll"))
     if not dlls:
         raise FileNotFoundError(f"No Tcl/Tk DLLs found in {tcltk_dir}")
@@ -1412,6 +1423,16 @@ def install_tcltk(tcltk_dir: pathlib.Path, install_dir: pathlib.Path):
     for source in dlls:
         log(f"copying {source} to {dll_dir}")
         shutil.copy2(source, dll_dir / source.name)
+
+    library_paths = []
+    for source in sorted((tcltk_dir / "lib").iterdir()):
+        if source.is_dir() and source.name != "nmake":
+            dest = install_dir / "tcl" / source.name
+            log(f"copying {source} to {dest}")
+            shutil.copytree(source, dest, dirs_exist_ok=True)
+            library_paths.append(source.name)
+
+    return [path.stem for path in dlls], library_paths
 
 
 def build_cpython(
@@ -1752,8 +1773,11 @@ def build_cpython(
             os.environ,
         )
 
-        # PC/layout omits unsuffixed Tcl/Tk DLLs in debug builds.
-        install_tcltk(tcltk_path / build_directory, install_dir)
+        # PC/layout omits unsuffixed Tcl/Tk DLLs in debug builds and misses
+        # Tcl 9 package directories when its core scripts are embedded in DLLs.
+        tcltk_dlls, tcl_library_paths = install_tcltk(
+            tcltk_path / build_directory, install_dir
+        )
 
         # We install pip by using pip to install itself. This leverages a feature
         # where Python can automatically recognize wheel/zip files on sys.path and
@@ -1821,6 +1845,8 @@ def build_cpython(
             openssl_entry=openssl_entry,
             zlib_entry=zlib_entry,
             freethreaded=freethreaded,
+            tk_bin_entry=tk_bin_entry,
+            tcltk_dlls=tcltk_dlls,
         )
 
         for ext, init_fn in sorted(builtin_extensions.items()):
@@ -1934,14 +1960,7 @@ def build_cpython(
         python_info.update(metadata)
 
         python_info["tcl_library_path"] = "install/tcl"
-        python_info["tcl_library_paths"] = [
-            "dde1.4",
-            "reg1.3",
-            "tcl8.6",
-            "tk8.6",
-            "tcl8",
-            "tix8.4.3",
-        ]
+        python_info["tcl_library_paths"] = tcl_library_paths
 
         validate_python_json(python_info, extension_modules=None)
 

@@ -97,6 +97,7 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "IPHLPAPI.DLL",
     "KERNEL32.dll",
     "msi.dll",
+    "msvcrt.dll", // Bundled Tcl/Tk zlib on x86 and x64.
     "NETAPI32.dll",
     "ole32.dll",
     "OLEAUT32.dll",
@@ -154,24 +155,22 @@ const PE_ALLOWED_LIBRARIES: &[&str] = &[
     "sqlite3_d.dll",
     "tcl86t.dll",
     "tk86t.dll",
+    "zlib1.dll",
 ];
 
-// CPython 3.14 uses Tcl/Tk 9, which includes a bundled zlib and additional DLLs.
+// CPython 3.14 uses Tcl/Tk 9, which includes additional DLLs.
 const PE_ALLOWED_LIBRARIES_314: &[&str] = &[
-    "zlib1.dll",
-    "api-ms-win-crt-private-l1-1-0.dll", // zlib loads this library on arm64, 3.14+
-    "msvcrt.dll",                        // zlib loads this library
+    "api-ms-win-crt-private-l1-1-0.dll", // Tcl/Tk's zlib and libtommath on x64/arm64.
     "libtommath.dll",
     "tcl90.dll",
     "tcl9tk90.dll",
     "WINSPOOL.DRV",
 ];
-const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["msvcrt.dll", "zlib1.dll"];
+// Tcl/Tk's bundled zlib uses this CRT API set on ARM64.
+const PE_ALLOWED_LIBRARIES_ARM64: &[&str] = &["api-ms-win-crt-private-l1-1-0.dll"];
 const PE_ALLOWED_LIBRARIES_315: &[&str] = &[
     // See `PE_ALLOWED_LIBRARIES_314` for zlib-related libraries
-    "zlib1.dll",
     "api-ms-win-crt-private-l1-1-0.dll",
-    "msvcrt.dll",
     // Tcl/Tk 9 is used in CPython 3.14+
     "libtommath.dll",
     "tcl90.dll",

@@ -729,13 +729,20 @@ def hack_project_files(
             rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
         )
 
-    # Python 3.12+ uses the the pre-built tk-windows-bin 8.6.12 which doesn't
-    # have a standalone zlib DLL, so we remove references to it. For Python
-    # 3.14+, we're using tk-windows-bin 9.0.4 which includes a prebuilt zlib
-    # DLL, so we skip this patch there.
-    # On arm64, we use the new version of tk-windows-bin for all versions.
-    if meets_python_minimum_version(python_version, "3.12") and (
-        meets_python_maximum_version(python_version, "3.13") or arch == "arm64"
+        # Older project files do not copy the newer Tcl/Tk bundle's zlib DLL.
+        if arch == "arm64":
+            static_replace_in_file(
+                pcbuild_path / "_tkinter.vcxproj",
+                rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />',
+                rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />'
+                b'\r\n    <_TclTkDLL Include="$(tcltkdir)\\bin\\zlib1.dll" />',
+            )
+
+    # The 8.6.12 bundle used on x86/x64 has no standalone zlib DLL.
+    if (
+        meets_python_minimum_version(python_version, "3.12")
+        and meets_python_maximum_version(python_version, "3.13")
+        and arch != "arm64"
     ):
         try:
             static_replace_in_file(
@@ -1759,6 +1766,13 @@ def build_cpython(
             pcbuild_path,
             os.environ,
         )
+
+        # Older x86/x64 bundles do not have a separate zlib DLL.
+        if tk_bin_entry != "tk-windows-bin-8612":
+            shutil.copy2(
+                tcltk_path / build_directory / "bin" / "zlib1.dll",
+                install_dir / "DLLs" / "zlib1.dll",
+            )
 
         # We install pip by using pip to install itself. This leverages a feature
         # where Python can automatically recognize wheel/zip files on sys.path and

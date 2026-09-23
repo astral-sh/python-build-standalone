@@ -33,6 +33,7 @@ import os
 import pathlib
 import re
 import shlex
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
@@ -85,6 +86,24 @@ class CheckResult:
     current_version: str
     release: Release | None = None
     error: str | None = None
+
+
+def resolve_github_token() -> str | None:
+    """Use an explicit token or the CLI's credentials for public GitHub."""
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        return token
+    try:
+        token = subprocess.check_output(
+            ["gh", "auth", "token", "--hostname", "github.com"],
+            stdin=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return token.strip() or None
 
 
 class HttpClient:
@@ -688,7 +707,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.packages
         else sorted(downloads.keys() & POLICIES.keys())
     )
-    client = HttpClient(os.environ.get("GITHUB_TOKEN"))
+    client = HttpClient(resolve_github_token())
     results = find_updates(downloads, packages, client, args.workers)
 
     if args.json:

@@ -311,16 +311,16 @@ class TestPythonInterpreter(unittest.TestCase):
             self.assertTrue(
                 (install_dir / "tcl" / "registry1.3" / "pkgIndex.tcl").is_file()
             )
-            version = "9.0.4"
+            version = "9.0"
         else:
             self.assertTrue((install_dir / "DLLs" / "tcl86t.dll").is_file())
             self.assertTrue((install_dir / "DLLs" / "tk86t.dll").is_file())
             self.assertTrue((install_dir / "tcl" / "tcl8.6" / "init.tcl").is_file())
             self.assertTrue((install_dir / "tcl" / "tk8.6" / "tk.tcl").is_file())
-            version = "8.6.15"
+            version = "8.6"
 
         interpreter = tkinter.Tcl()
-        self.assertEqual(interpreter.call("info", "patchlevel"), version)
+        self.assertEqual(interpreter.call("info", "tclversion"), version)
         self.assertEqual(
             interpreter.eval("zlib decompress [zlib compress test]"), "test"
         )

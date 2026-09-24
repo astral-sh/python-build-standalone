@@ -1,9 +1,9 @@
-site_name: Python Standalone Builds
-site_description: Self-contained, highly portable, high-performance Python distributions.
+site_name: Python Build Standalone
+site_description: Self-contained, portable, high-performance Python distributions.
 site_author: astral-sh
 site_url: https://docs.astral.sh/python-build-standalone/
 repo_url: https://github.com/astral-sh/python-build-standalone
-repo_name: astral-sh/python-build-standalone
+repo_name: python-build-standalone
 edit_uri: edit/main/docs/
 
 # Keep the legacy Sphinx sources and build output out of the MkDocs site.
@@ -48,6 +48,9 @@ markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: !relative $config_dir
+      check_paths: true
   - pymdownx.superfences
   - toc:
       anchorlink: true
@@ -55,6 +58,9 @@ markdown_extensions:
 
 plugins:
   - search
+
+watch:
+  - README.md
 
 extra_css:
   - stylesheets/extra.css

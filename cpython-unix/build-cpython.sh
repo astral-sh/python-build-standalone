@@ -1313,6 +1313,11 @@ ln -sf \
     "$(readlink "${ROOT}/out/python/install/bin/python3")" \
     "${ROOT}/out/python/install/bin/python"
 
+# Add a matching alias for the manpage.
+ln -sf \
+    "python${PYTHON_MAJMIN_VERSION}.1" \
+    "${ROOT}/out/python/install/share/man/man1/python.1"
+
 # Fixup shebangs in Python scripts to reference the local python interpreter.
 cat > "${ROOT}/fix_shebangs.py" << EOF
 import os

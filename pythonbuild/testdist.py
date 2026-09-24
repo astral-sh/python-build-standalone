@@ -427,6 +427,10 @@ def _check_stdlib_expected_failure(
     elif test_name.startswith("ctypes.test."):
         module_name = "test_ctypes"
 
+    # ttk tests lived outside the test package until Python 3.12.
+    elif test_name.startswith("tkinter.test.test_ttk."):
+        module_name = "test_ttk_guionly"
+
     elif test_name.startswith("test."):
         module_name = parts[1]
 

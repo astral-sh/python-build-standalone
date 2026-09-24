@@ -1000,6 +1000,14 @@ expected-failures:
     minimum-python-version: "3.13"
     reason: _testsinglephase shared library expectation
 
+  - name: test.test_import.ImportTests.test_dll_dependency_import
+    targets:
+      - ".+-pc-windows-.+"
+    no-build-option: "debug"
+    # https://github.com/python/cpython/issues/158091
+    reason: "An _d in the temporary directory path makes the test look for sqlite3_d.dll in a release build"
+    intermittent: true
+
   - name: test.test_import.ImportTests.test_from_import_missing_attr_has_name_and_so_path
     targets:
       - ".+-unknown-linux-musl"
@@ -2940,7 +2948,7 @@ expected-failures:
     minimum-python-version: "3.12"
     targets:
       - ".+-pc-windows-.+"
-    reason: "The CIM_DataFile query can exceed the 300 second timeout on Windows CI"
+    reason: "The CIM_DataFile query can exceed the stdlib harness timeout on Windows CI"
     intermittent: true
 
   - name: test.test_zipimport.CompressedZipImportTestCase.testZip64LargeFile
@@ -3009,3 +3017,15 @@ expected-failures:
     reason: "segfault"
     no-build-option: "static"
     intermittent: true
+
+  - name: tkinter.test.test_ttk.test_widgets.NotebookTest.test_configure_height
+    targets:
+      - ".+-pc-windows-.+"
+    maximum-python-version: "3.11"
+    reason: "Tk 8.6.15 reports 'bad screen distance' instead of the 'expected integer' error expected by older tests"
+
+  - name: tkinter.test.test_ttk.test_widgets.NotebookTest.test_configure_width
+    targets:
+      - ".+-pc-windows-.+"
+    maximum-python-version: "3.11"
+    reason: "Tk 8.6.15 reports 'bad screen distance' instead of the 'expected integer' error expected by older tests"

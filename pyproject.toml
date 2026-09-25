@@ -48,6 +48,17 @@ include = ["pythonbuild", "check.py", "build.py"]
 [tool.ty.environment]
 python-platform = "all"
 
+[tool.ty.rules]
+dynamic-function-decorator-return = "error"
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+redundant-condition-strict = "error"
+unsound-return-statement = "error"
+
+[tool.ruff.lint]
+extend-select = ["ANN", "PYI"]
+preview = true
+
 [tool.uv]
 no-build = true
 no-binary-package = ["python-build-standalone"]

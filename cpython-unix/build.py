@@ -537,7 +537,7 @@ def python_build_info(
             if "+" in llvm_version:
                 llvm_version = llvm_version.split("+")[0]
 
-            object_file_format = f"llvm-bitcode:%{llvm_version}"
+            object_file_format = f"llvm-bitcode:{llvm_version}"
         else:
             object_file_format = "elf"
     elif platform.startswith("macos_"):

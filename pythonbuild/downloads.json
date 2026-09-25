@@ -213,22 +213,22 @@
         "version": "7.0.12-2~bpo13+1"
     },
     "llvm-aarch64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
-        "size": 237655768,
-        "sha256": "9cb4b562323a3d899fffe6393148e92447e17b69a2501d7c6e7f2a86c32cddc1",
-        "version": "22.1.3+20260410"
+        "url": "https://github.com/astral-sh/llvm-build/releases/download/20260925/llvm-23.1.2+20260925-gnu_only-aarch64-unknown-linux-gnu.tar.zst",
+        "size": 219511882,
+        "sha256": "fe4dc64a553ada62fdbd732234cc6db4bab60c8516f9ea520c4abea7b646c900",
+        "version": "23.1.2+20260925"
     },
     "llvm-x86_64-linux": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
-        "size": 281109065,
-        "sha256": "0ee8e4f89c20983d62547b1e665147ee08a7413f478e9e443fa991548da1030d",
-        "version": "22.1.3+20260410"
+        "url": "https://github.com/astral-sh/llvm-build/releases/download/20260925/llvm-23.1.2+20260925-gnu_only-x86_64-unknown-linux-gnu.tar.zst",
+        "size": 227890333,
+        "sha256": "96ea5dcf7663787984f44b3cff25259b0a8cf7cce615331102144cbdde833f9f",
+        "version": "23.1.2+20260925"
     },
     "llvm-aarch64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-aarch64-apple-darwin.tar.zst",
-        "size": 159775425,
-        "sha256": "98171836c31c04edec074e5f3fee67fcace4bf3859b68a770dd9ff2039ea127d",
-        "version": "22.1.3+20260410"
+        "url": "https://github.com/astral-sh/llvm-build/releases/download/20260925/llvm-23.1.2+20260925-aarch64-apple-darwin.tar.zst",
+        "size": 165484624,
+        "sha256": "2adaeff353a29e60f92a16c9eae603dbbdc9613c04ad6c0fac9a5c4a40dd7eb0",
+        "version": "23.1.2+20260925"
     },
     "llvm-x86_64-macos": {
         "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst",

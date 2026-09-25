@@ -10,7 +10,7 @@ import tarfile
 from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from typing import IO, Optional
+from typing import IO, Any, Optional
 
 import jsonschema
 import yaml
@@ -291,7 +291,7 @@ def link_for_target(lib: str, target_triple: str) -> str:
         return f"-l{lib}"
 
 
-def meets_python_minimum_version(got: str, wanted: str | dict) -> bool:
+def meets_python_minimum_version(got: str, wanted: str | dict[str, Any]) -> bool:
     if isinstance(wanted, dict):
         wanted_version: str = wanted.get("minimum-python-version", "1.0")
     else:
@@ -306,7 +306,7 @@ def meets_python_minimum_version(got: str, wanted: str | dict) -> bool:
     return (got_major, got_minor) >= (wanted_major, wanted_minor)
 
 
-def meets_python_maximum_version(got: str, wanted: str | dict) -> bool:
+def meets_python_maximum_version(got: str, wanted: str | dict[str, Any]) -> bool:
     if isinstance(wanted, dict):
         wanted_version: str = wanted.get("maximum-python-version", "100.0")
     else:
@@ -575,8 +575,8 @@ def configured_extension_modules(
     config_c: bytes,
     makefile: bytes,
     config_vars: dict[str, str],
-    extension_modules: dict[str, dict],
-) -> dict[str, dict]:
+    extension_modules: dict[str, dict[str, Any]],
+) -> dict[str, dict[str, object]]:
     """Derive extension metadata from built CPython artifacts."""
     built_modules = set(config_vars["MODBUILT_NAMES"].split())
     shared_modules = set(config_vars["MODSHARED_NAMES"].split())
@@ -720,7 +720,7 @@ def _parse_cpython_module_info(
 
 
 def _classify_extension_modules(
-    extension_modules: dict[str, dict],
+    extension_modules: dict[str, dict[str, Any]],
     python_version: str,
     target_triple: str,
     build_options: set[str],
@@ -782,7 +782,7 @@ def _classify_extension_modules(
 
 
 def _validate_extension_modules(
-    extension_modules: dict[str, dict],
+    extension_modules: dict[str, dict[str, Any]],
     source: CPythonModuleInfo,
     classification: ExtensionClassification,
 ) -> None:
@@ -823,7 +823,7 @@ def _validate_extension_modules(
 
 
 def _matches_extension_condition(
-    condition: dict,
+    condition: dict[str, Any],
     python_version: str,
     target_triple: str,
 ) -> bool:
@@ -840,7 +840,7 @@ def _matches_extension_condition(
 
 def _build_yaml_setup_line(
     name: str,
-    info: dict,
+    info: dict[str, Any],
     python_version: str,
     target_triple: str,
     build_mode: str,
@@ -937,7 +937,7 @@ def _build_yaml_setup_line(
     return setup_line, module_cflags
 
 
-def _determine_module_linkage(info: dict, build_options: set[str]) -> str:
+def _determine_module_linkage(info: dict[str, Any], build_options: set[str]) -> str:
     # Fully static builds override the configured per-module linkage.
     build_mode = (
         "static" if "static" in build_options else info.get("build-mode", "static")
@@ -948,8 +948,8 @@ def _determine_module_linkage(info: dict, build_options: set[str]) -> str:
 
 
 def _init_extension_metadata(
-    name: str, info: dict, module_info: CPythonModuleInfo
-) -> dict:
+    name: str, info: dict[str, Any], module_info: CPythonModuleInfo
+) -> dict[str, Any]:
     metadata = dict(info)
 
     # The initialization function is usually PyInit_{extension}. But some
@@ -969,7 +969,7 @@ def derive_setup_local(
     python_version: str,
     target_triple: str,
     build_options: set[str],
-    extension_modules: dict[str, dict],
+    extension_modules: dict[str, dict[str, Any]],
 ):
     """Derive the content of the Modules/Setup.local file."""
 

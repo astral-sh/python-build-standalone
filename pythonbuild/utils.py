@@ -399,6 +399,21 @@ def download_entry(key: str, dest_path: pathlib.Path, local_name=None) -> pathli
     local_path = dest_path / (local_name or url[url.rindex("/") + 1 :])
     download_to_path(url, local_path, size, sha256)
 
+    if key == "cpython-3.15":
+        repacked = dest_path / f"Python-{entry['version']}.tar.xz"
+        with tarfile.open(local_path) as source:
+            with tarfile.open(repacked, "w:xz", preset=0) as output:
+                for member in source:
+                    content = source.extractfile(member) if member.isfile() else None
+                    member.name = (
+                        f"Python-{entry['version']}/{member.name.partition('/')[2]}"
+                    )
+                    member.pax_headers = {}
+                    output.addfile(member, content)
+                    if content is not None:
+                        content.close()
+        local_path = repacked
+
     return local_path
 
 

@@ -117,7 +117,10 @@ class ContainerContext:
 
         with tarfile.open(fileobj=data) as tf:
             for ti in tf:
-                return tf.extractfile(ti).read()
+                extracted = tf.extractfile(ti)
+                if extracted is None:
+                    raise ValueError(f"Invalid archive member: {ti.name}")
+                return extracted.read()
 
         raise Exception("file not found")
 
@@ -296,5 +299,5 @@ def build_environment(client, image):
         if container:
             container.stop(timeout=0)
             container.remove()
-        else:
+        elif td is not None:
             td.cleanup()

@@ -28,8 +28,8 @@ module-root = ""
 
 [dependency-groups]
 check = [
-    "mypy>=1.19.1",
     "ruff>=0.15.7",
+    "ty>=0.0.84",
     "types-jinja2>=2.11.9",
     "types-jsonschema>=4.26.0.20260324",
     "types-pyyaml>=6.0.12.20250915",
@@ -41,6 +41,23 @@ docs = [
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.6.0",
 ]
+
+[tool.ty.src]
+include = ["pythonbuild", "check.py", "build.py"]
+
+[tool.ty.environment]
+python-platform = "all"
+
+[tool.ty.rules]
+dynamic-function-decorator-return = "error"
+missing-type-argument = "error"
+possibly-unresolved-reference = "warn"
+redundant-condition-strict = "error"
+unsound-return-statement = "error"
+
+[tool.ruff.lint]
+extend-select = ["ANN", "PYI"]
+preview = true
 
 [tool.uv]
 no-build = true

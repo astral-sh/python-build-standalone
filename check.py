@@ -34,7 +34,6 @@ def run():
 
     check_args = []
     format_args = []
-    mypy_args = []
 
     if args.fix:
         check_args.append("--fix")
@@ -43,9 +42,9 @@ def run():
 
     check_result = run_command(["ruff", "check"] + check_args)
     format_result = run_command(["ruff", "format"] + format_args)
-    mypy_result = run_command(["mypy"] + mypy_args)
+    ty_result = run_command(["ty", "check"])
 
-    if check_result + format_result + mypy_result:
+    if check_result + format_result + ty_result:
         print("Checks failed!")
         sys.exit(1)
     else:

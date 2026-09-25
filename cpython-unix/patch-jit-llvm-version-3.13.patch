@@ -7,7 +7,7 @@ index b68da1b6be1..cf04f83539e 100644
  import typing
  
 -_LLVM_VERSION = 18
-+_LLVM_VERSION = 22
++_LLVM_VERSION = int(os.environ.get("LLVM_VERSION", "18"))
  _LLVM_VERSION_PATTERN = re.compile(
      rf"(?<!Apple )(LLVM|clang) version\s+{_LLVM_VERSION}\.\d+\.\d+\S*\s+"
  )

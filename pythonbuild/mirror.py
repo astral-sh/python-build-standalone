@@ -71,7 +71,7 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 
 
 def infer_build_datetime(dist_dir: Path) -> str:
-    datetimes = {
+    datetimes: set[str] = {
         match.group(1)
         for path in dist_dir.iterdir()
         if path.is_file()

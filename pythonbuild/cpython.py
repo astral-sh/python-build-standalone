@@ -351,8 +351,8 @@ def _parse_setup_stdlib(
     setup_stdlib_lines: Iterable[bytes],
 ) -> tuple[dict[str, bytes], dict[str, str]]:
     extension_pattern = re.compile(rb"^@MODULE_[A-Z0-9_]+_TRUE@([a-z0-9_]+\s+.*)$")
-    module_lines = {}
-    module_linkage = {}
+    module_lines: dict[str, bytes] = {}
+    module_linkage: dict[str, str] = {}
 
     # CPython 3.12+ is configured with MODULE_BUILDTYPE=static.
     section = "static"
@@ -378,7 +378,7 @@ def _parse_setup_stdlib(
 
 def _parse_setup_bootstrap(setup_bootstrap_lines: Iterable[bytes]) -> dict[str, bytes]:
     extension_pattern = re.compile(rb"^([a-z_]+)\s.*[a-zA-Z/_-]+\.c\b")
-    module_lines = {}
+    module_lines: dict[str, bytes] = {}
 
     for line in setup_bootstrap_lines:
         if b"#" in line:
@@ -408,9 +408,9 @@ def _parse_setup(
 ) -> tuple[set[str], set[str], dict[str, bytes]]:
     variable_pattern = re.compile(rb"^[a-zA-Z_]+\s*=")
     extension_pattern = re.compile(rb"^([a-z_]+)\s.*[a-zA-Z/_-]+\.c\b")
-    modules = set()
-    enabled_modules = set()
-    enabled_lines = {}
+    modules: set[str] = set()
+    enabled_modules: set[str] = set()
+    enabled_lines: dict[str, bytes] = {}
     section = "static"
 
     for line in setup_lines:
@@ -939,7 +939,7 @@ def _build_yaml_setup_line(
 
 def _determine_module_linkage(info: dict[str, Any], build_options: set[str]) -> str:
     # Fully static builds override the configured per-module linkage.
-    build_mode = (
+    build_mode: str = (
         "static" if "static" in build_options else info.get("build-mode", "static")
     )
 

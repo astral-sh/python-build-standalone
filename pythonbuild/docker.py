@@ -11,7 +11,8 @@ import sys
 import tarfile
 import typing
 
-import docker  # type: ignore
+import docker
+import docker.errors
 import jinja2
 
 from .logging import log, log_raw

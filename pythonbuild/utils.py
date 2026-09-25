@@ -633,6 +633,7 @@ def exec_and_log(args, cwd, env):
         stderr=subprocess.STDOUT,
     )
 
+    assert p.stdout is not None
     for line in iter(p.stdout.readline, b""):
         log(line.rstrip())
 

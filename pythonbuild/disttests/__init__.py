@@ -333,7 +333,6 @@ class TestPythonInterpreter(unittest.TestCase):
         class Application(tk.Frame):
             def __init__(self, master=None):
                 super().__init__(master)
-                self.master = master
                 self.pack()
 
                 self.hi_there = tk.Button(self)
@@ -341,10 +340,10 @@ class TestPythonInterpreter(unittest.TestCase):
                 self.hi_there["command"] = self.say_hi
                 self.hi_there.pack(side="top")
 
-                self.quit = tk.Button(
+                self.quit_button = tk.Button(
                     self, text="QUIT", fg="red", command=self.master.destroy
                 )
-                self.quit.pack(side="bottom")
+                self.quit_button.pack(side="bottom")
 
             def say_hi(self):
                 print("hi there, everyone!")
@@ -400,7 +399,7 @@ class TestPythonInterpreter(unittest.TestCase):
                     assertPythonWorks(venv / "bin" / "python")
 
         with self.subTest(msg="weird argv[0]"):
-            assertPythonWorks(sys.executable, argv0="/dev/null")
+            assertPythonWorks(Path(sys.executable), argv0="/dev/null")
 
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket constant")
     # TODO(jjh) remove when musl builds use a sysroot

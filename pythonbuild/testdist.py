@@ -58,7 +58,8 @@ def run_dist_python(
     args: list[str],
     extra_env: Optional[dict[str, str]] = None,
     log_exec=False,
-    **runargs,
+    capture_output: bool = False,
+    stderr: int | None = None,
 ) -> subprocess.CompletedProcess[bytes]:
     """Runs a `python` process from an extracted PBS distribution.
 
@@ -84,7 +85,8 @@ def run_dist_python(
         all_args,
         cwd=dist_root,
         env=env,
-        **runargs,
+        capture_output=capture_output,
+        stderr=stderr,
     )
 
 
@@ -278,6 +280,8 @@ def run_stdlib_tests(
             # Concatenate all the junit test suites together.
             if result.junit is not None:
                 junit += result.junit
+                # junitparser's __iadd__ has no return annotation.
+                assert isinstance(junit, JUnitXml)
 
     if any(code != 0 for code in codes):
         return 1, junit

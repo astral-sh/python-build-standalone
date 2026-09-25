@@ -26,6 +26,13 @@ LDFLAGS="${EXTRA_TARGET_LDFLAGS}"
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include -Wno-availability"
     CFLAGS="${CFLAGS} -Wno-deprecated-declarations -Wno-unknown-attributes -Wno-typedef-redefinition"
+    # Clang 23 emits Objective-C class selector stubs that ld64.lld cannot link.
+    # Probe the flag because older macOS toolchains do not recognize it.
+    # lld from LLVM 23 does not yet support theses stubs
+    # https://github.com/llvm/llvm-project/pull/219744
+    if "${CC}" -fno-objc-msgsend-class-selector-stubs -x objective-c -fsyntax-only /dev/null >/dev/null 2>&1; then
+        CFLAGS="${CFLAGS} -fno-objc-msgsend-class-selector-stubs"
+    fi
     LDFLAGS="${LDFLAGS} -L${TOOLS_PATH}/deps/lib"
     EXTRA_CONFIGURE_FLAGS="--enable-aqua=yes --without-x"
 else

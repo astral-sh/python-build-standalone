@@ -649,6 +649,14 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" && "${TARGET_TRIPLE}" == x86_64*
     PROFILE_TASK="${PROFILE_TASK} --ignore test.test_bytes.BytesTest.test_from_format"
 fi
 
+# LLVM 23's BOLT instrumentation exhausts the stack in these recursion tests.
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && -n "${BOLT_CAPABLE}" && "${LLVM_VERSION}" = 23 && "${TARGET_TRIPLE}" == x86_64* ]]; then
+    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_json.test_recursion.TestCRecursion.test_endless_recursion"
+    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_functools.TestLRUC.test_lru_recursion"
+    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_functools.*.test_recursive_pickle"
+    PROFILE_TASK="${PROFILE_TASK} --ignore test.test_xml_etree_c.BadElementTest.test_deeply_nested_deepcopy"
+fi
+
 # We use ndbm on macOS and BerkeleyDB elsewhere.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-dbmliborder=ndbm"

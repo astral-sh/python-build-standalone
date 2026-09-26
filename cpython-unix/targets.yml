@@ -72,7 +72,6 @@
 aarch64-apple-darwin:
   host_platforms:
     - macos_arm64
-    - macos_x86_64
   pythons_supported:
     - '3.10'
     - '3.11'
@@ -636,7 +635,6 @@ s390x-unknown-linux-gnu:
 x86_64-apple-darwin:
   host_platforms:
     - macos_arm64
-    - macos_x86_64
   pythons_supported:
     - '3.10'
     - '3.11'

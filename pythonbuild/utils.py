@@ -47,7 +47,9 @@ def current_host_platform() -> str:
         if machine == "arm64":
             return "macos_arm64"
         elif machine == "x86_64":
-            return "macos_x86_64"
+            raise Exception(
+                "macOS builds require an Apple Silicon host running native arm64 Python"
+            )
         else:
             raise Exception(f"unhanded macOS machine type: {machine}")
     elif sys.platform == "win32":
@@ -75,8 +77,6 @@ def default_target_triple() -> str:
         return "aarch64-unknown-linux-gnu"
     elif host == "macos_arm64":
         return "aarch64-apple-darwin"
-    elif host == "macos_x86_64":
-        return "x86_64-apple-darwin"
     elif host == "windows_x86":
         return "i686-pc-windows-msvc"
     elif host == "windows_x86_64":
@@ -506,8 +506,6 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
         return "llvm-aarch64-linux"
     elif host_platform == "macos_arm64":
         return "llvm-aarch64-macos"
-    elif host_platform == "macos_x86_64":
-        return "llvm-x86_64-macos"
     else:
         raise Exception("unhandled host platform")
 

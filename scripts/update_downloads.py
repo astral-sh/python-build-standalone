@@ -417,7 +417,6 @@ UNSUPPORTED: dict[str, str] = {
     "llvm-aarch64-linux": "toolchain bootstrap requires coordinated updates",
     "llvm-x86_64-linux": "toolchain bootstrap requires coordinated updates",
     "llvm-aarch64-macos": "toolchain bootstrap requires coordinated updates",
-    "llvm-x86_64-macos": "toolchain bootstrap requires coordinated updates",
     "musl": "intentionally pinned build toolchain",
     "musl-static": "intentionally pinned build toolchain",
     "openssl-1.1": "end-of-life release series",

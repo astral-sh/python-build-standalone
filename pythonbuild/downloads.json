@@ -230,12 +230,6 @@
         "sha256": "2adaeff353a29e60f92a16c9eae603dbbdc9613c04ad6c0fac9a5c4a40dd7eb0",
         "version": "23.1.2+20260925"
     },
-    "llvm-x86_64-macos": {
-        "url": "https://github.com/indygreg/toolchain-tools/releases/download/toolchain-bootstrap%2F20260410/llvm-22.1.3+20260410-x86_64-apple-darwin.tar.zst",
-        "size": 167376011,
-        "sha256": "15bfda1bc8bc920658c09ef1ebb4593f0705b3314beab23989f14775f2e3f3f0",
-        "version": "22.1.3+20260410"
-    },
     "m4": {
         "upstream_url": "https://ftp.gnu.org/gnu/m4/m4-1.4.19.tar.xz",
         "url": "https://astral-sh.github.io/mirror/files/m4-1.4.19.tar.xz",

@@ -238,7 +238,7 @@ class TestPythonInterpreter(unittest.TestCase):
         if os.name == "nt" and sys.version_info[0:2] < (3, 11):
             wanted_version = (1, 1, 1, 23, 15)
         else:
-            wanted_version = (3, 5, 0, 8, 0)
+            wanted_version = (3, 5, 0, 9, 0)
 
         self.assertEqual(ssl.OPENSSL_VERSION_INFO, wanted_version)
 

@@ -267,6 +267,7 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
                 .list_runs(format!("{workflow_id}"))
                 .event("push")
                 .status("success")
+                .head_sha(commit)
                 .send()
                 .await?
                 .into_iter()

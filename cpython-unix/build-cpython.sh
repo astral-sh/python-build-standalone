@@ -194,7 +194,11 @@ fi
 # Code that runs at ctypes module import time does not work with
 # non-dynamic binaries. Patch Python to work around this.
 # See https://bugs.python.org/issue37060.
-patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
+# Merged upstream in 3.13+
+# https://github.com/python/cpython/pull/153890
+if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
+    patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
+fi
 
 # We build against libedit instead of readline in all environments.
 #

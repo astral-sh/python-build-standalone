@@ -591,6 +591,36 @@ fn llvm_strip(data: &[u8], llvm_dir: &Path) -> Result<Vec<u8>> {
     Ok(output.stdout)
 }
 
+fn has_in_bounds_certificate_table(data: &[u8]) -> bool {
+    let Ok(header) = goblin::pe::header::Header::parse(data) else {
+        return false;
+    };
+    let Some(optional_header) = header.optional_header.as_ref() else {
+        return false;
+    };
+    let Some(certificate_table) = optional_header.data_directories.get_certificate_table() else {
+        return false;
+    };
+
+    // Unlike the other PE data directories, this address is a file offset rather than an RVA.
+    let offset = certificate_table.virtual_address as usize;
+    let size = certificate_table.size as usize;
+
+    offset != 0 && size != 0 && offset <= data.len() && size <= data.len() - offset
+}
+
+fn should_strip(path: &Path, data: &[u8]) -> bool {
+    // Tcl 9 DLLs contain ZIPFS data that llvm-strip would remove.
+    let contains_zipfs = matches!(
+        path.file_name().and_then(|name| name.to_str()),
+        Some("tcl90.dll" | "tcl9tk90.dll")
+    );
+
+    // llvm-strip removes Authenticode certificate data without clearing its PE data-directory
+    // entry. The resulting entry points past EOF, and Windows refuses to sign the malformed file.
+    !contains_zipfs && !has_in_bounds_certificate_table(data)
+}
+
 /// Given an install-only .tar.gz archive, strip the underlying build.
 pub fn convert_to_stripped<W: Write>(
     reader: impl BufRead,
@@ -641,28 +671,7 @@ pub fn convert_to_stripped<W: Write>(
                 | FileKind::Pe32
                 | FileKind::Pe64)
         ) {
-            // Skip stripping MSVC runtime DLLs and Tcl/Tk DLLs containing ZIPFS data or
-            // valid signatures.
-            // Tcl 9 DLLs contain ZIPFS data. The other DLLs are signed by Microsoft or by the
-            // Tcl maintainers. `llvm-strip` removes the signature but keeps
-            // the certificate table entry in the PE header.
-            // This makes the binaries impossible to re-sign with `signtool`, which in turn
-            // means that they can never be bundled into a Microsoft Store-compatible .msix.
-            let filename = path.file_name().and_then(|n| n.to_str());
-            if !matches!(
-                filename,
-                Some(
-                    "tcl86t.dll"
-                        | "tcl90.dll"
-                        | "tcl9tk90.dll"
-                        | "tcldde14.dll"
-                        | "tclreg13.dll"
-                        | "tk86t.dll"
-                        | "vcruntime140.dll"
-                        | "vcruntime140_1.dll"
-                        | "vcruntime140_threads.dll"
-                )
-            ) {
+            if should_strip(&path, &data) {
                 data = llvm_strip(&data, llvm_dir)
                     .with_context(|| format!("failed to strip {}", path.display()))?;
             }
@@ -676,6 +685,77 @@ pub fn convert_to_stripped<W: Write>(
     }
 
     Ok(builder.into_inner()?.finish()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pe_with_certificate_table(
+        optional_header_magic: u16,
+        certificate_offset: u32,
+        certificate_size: u32,
+        file_size: usize,
+    ) -> Vec<u8> {
+        let pe_offset = 0x80;
+        let optional_header_offset = pe_offset + 24;
+        let (machine, optional_header_size, number_of_directories_offset, directories_offset) =
+            match optional_header_magic {
+                0x10b => (0x14c_u16, 224_u16, 92, 96),
+                0x20b => (0x8664_u16, 240_u16, 108, 112),
+                _ => panic!("unsupported optional header magic"),
+            };
+        let mut data = vec![0; file_size];
+
+        data[0..2].copy_from_slice(b"MZ");
+        data[0x3c..0x40].copy_from_slice(&(pe_offset as u32).to_le_bytes());
+        data[pe_offset..pe_offset + 4].copy_from_slice(b"PE\0\0");
+        data[pe_offset + 4..pe_offset + 6].copy_from_slice(&machine.to_le_bytes());
+        data[pe_offset + 20..pe_offset + 22].copy_from_slice(&optional_header_size.to_le_bytes());
+        data[optional_header_offset..optional_header_offset + 2]
+            .copy_from_slice(&optional_header_magic.to_le_bytes());
+        data[optional_header_offset + number_of_directories_offset
+            ..optional_header_offset + number_of_directories_offset + 4]
+            .copy_from_slice(&16_u32.to_le_bytes());
+
+        let security_directory = optional_header_offset + directories_offset + 4 * 8;
+        data[security_directory..security_directory + 4]
+            .copy_from_slice(&certificate_offset.to_le_bytes());
+        data[security_directory + 4..security_directory + 8]
+            .copy_from_slice(&certificate_size.to_le_bytes());
+
+        data
+    }
+
+    #[test]
+    fn preserves_signed_pe32_and_pe32_plus_files() {
+        for magic in [0x10b, 0x20b] {
+            let data = pe_with_certificate_table(magic, 0x200, 0x20, 0x220);
+
+            assert!(has_in_bounds_certificate_table(&data));
+            assert!(!should_strip(
+                Path::new("newly-signed-dependency.dll"),
+                &data
+            ));
+        }
+    }
+
+    #[test]
+    fn strips_unsigned_and_malformed_pe_files() {
+        let unsigned = pe_with_certificate_table(0x20b, 0, 0, 0x200);
+        let dangling = pe_with_certificate_table(0x20b, 0x200, 0x20, 0x200);
+
+        assert!(should_strip(Path::new("dependency.dll"), &unsigned));
+        assert!(should_strip(Path::new("dependency.dll"), &dangling));
+    }
+
+    #[test]
+    fn preserves_tcl_zipfs_without_a_certificate_table() {
+        let unsigned = pe_with_certificate_table(0x20b, 0, 0, 0x200);
+
+        assert!(!should_strip(Path::new("tcl90.dll"), &unsigned));
+        assert!(!should_strip(Path::new("tcl9tk90.dll"), &unsigned));
+    }
 }
 
 /// Create an install-only .tar.gz archive from a .tar.zst archive.

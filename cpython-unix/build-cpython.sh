@@ -199,6 +199,10 @@ fi
 if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]]; then
     patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
 fi
+# TODO(jjh) remove when 3.15.0 is released
+if [ "${PYTHON_MAJMIN_VERSION}" = 3.15 ]; then
+    patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
+fi
 
 # We build against libedit instead of readline in all environments.
 #

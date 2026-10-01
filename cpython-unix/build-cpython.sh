@@ -196,7 +196,7 @@ fi
 # See https://bugs.python.org/issue37060.
 # Merged upstream in 3.13+
 # https://github.com/python/cpython/pull/153890
-if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
+if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]]; then
     patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
 fi
 

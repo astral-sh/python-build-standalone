@@ -42,10 +42,10 @@
         "license_file": "LICENSE.bzip2.txt"
     },
     "cpython-3.10": {
-        "url": "https://www.python.org/ftp/python/3.10.21/Python-3.10.21.tar.xz",
-        "size": 19896516,
-        "sha256": "a0da1e72132e950154eca0f6f47d5db828454700de20e5113667940d81e0db04",
-        "version": "3.10.21",
+        "url": "https://www.python.org/ftp/python/3.10.22/Python-3.10.22.tar.xz",
+        "size": 19907500,
+        "sha256": "c61fe9b1a1a7ec2a0b0388e664187c378a5325a89e3606d220abf5bdfccb2543",
+        "version": "3.10.22",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"
@@ -54,10 +54,10 @@
         "python_tag": "cp310"
     },
     "cpython-3.11": {
-        "url": "https://www.python.org/ftp/python/3.11.16/Python-3.11.16.tar.xz",
-        "size": 20328716,
-        "sha256": "91bcdebfdde239a003ae93738a7fce0f9230fee5c4bc2b86f6e6e8c6f98aabe8",
-        "version": "3.11.16",
+        "url": "https://www.python.org/ftp/python/3.11.17/Python-3.11.17.tar.xz",
+        "size": 20352864,
+        "sha256": "bfb74ad39efae27cda510f134ab408e00f9992c56851cfc0b1cdb5646da11599",
+        "version": "3.11.17",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"
@@ -66,10 +66,10 @@
         "python_tag": "cp311"
     },
     "cpython-3.12": {
-        "url": "https://www.python.org/ftp/python/3.12.14/Python-3.12.14.tar.xz",
-        "size": 20820300,
-        "sha256": "5c8462af5790baf43a321a1559dbe0db06d1be4300fb85fb53c40060668e548a",
-        "version": "3.12.14",
+        "url": "https://www.python.org/ftp/python/3.12.15/Python-3.12.15.tar.xz",
+        "size": 20829824,
+        "sha256": "c2c4321961fab0fb999d66e0cecf521c2ab3994c7992873ea99e306c1094fd5a",
+        "version": "3.12.15",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"
@@ -78,10 +78,10 @@
         "python_tag": "cp312"
     },
     "cpython-3.13": {
-        "url": "https://www.python.org/ftp/python/3.13.15/Python-3.13.15.tar.xz",
-        "size": 23160540,
-        "sha256": "1e66a7945a48390ee4c2a4268a0e4185884059a13c4aab6d148aa208deea4a76",
-        "version": "3.13.15",
+        "url": "https://www.python.org/ftp/python/3.13.16/Python-3.13.16.tar.xz",
+        "size": 23225704,
+        "sha256": "f4b1bfb3c79b5bb11b8d228a12504163b4c0dab4d679828d8f5f26b6cb6ab35d",
+        "version": "3.13.16",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"
@@ -90,10 +90,10 @@
         "python_tag": "cp313"
     },
     "cpython-3.14": {
-        "url": "https://www.python.org/ftp/python/3.14.7/Python-3.14.7.tar.xz",
-        "size": 24053924,
-        "sha256": "3b48dac8fb59f62eaa67ac83c1eb12bda1b7a08406dd286e252c11a66be27f81",
-        "version": "3.14.7",
+        "url": "https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz",
+        "size": 24130644,
+        "sha256": "c2215904f02b175596dc49351585104f4bc20341e1c47378b26a2c274360ce73",
+        "version": "3.14.8",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"

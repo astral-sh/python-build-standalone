@@ -469,11 +469,6 @@ assert errors == ["main thread is not in main loop"], errors
             assertPythonWorks(Path(sys.executable), argv0="/dev/null")
 
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket constant")
-    # TODO(jjh) remove when musl builds use a sysroot
-    @unittest.skipIf(
-        os.environ["TARGET_TRIPLE"].endswith("-musl"),
-        "kernel headers not available in musl",
-    )
     def test_socket_af_vsock(self):
         import socket
 

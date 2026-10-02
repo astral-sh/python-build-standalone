@@ -94,6 +94,7 @@ def main():
             "toolchain",
             "toolchain-image-build",
             "toolchain-image-build.cross",
+            "toolchain-image-build.cross-ppc64le",
             "toolchain-image-build.cross-riscv64",
             "toolchain-image-build.cross-loongarch64",
             "toolchain-image-build.debian13",

@@ -727,9 +727,10 @@ fi
 # The patch declares sem_clockwait as a weak symbol and checks at runtime.
 if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
-        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.15.patch
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-parking-lot.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
         patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.13.patch
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-parking-lot.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.12.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then

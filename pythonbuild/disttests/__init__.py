@@ -4,6 +4,7 @@
 
 import importlib.machinery
 import os
+import shutil
 import struct
 import subprocess
 import sys
@@ -530,6 +531,98 @@ class TestPythonInterpreter(unittest.TestCase):
         t.start()
         t.join()
         self.assertEqual(a, ["Thread was here"])
+
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "sem_clockwait runtime detection is enabled for Linux GNU targets",
+    )
+    @unittest.skipIf(
+        "static" in os.environ["BUILD_OPTIONS"],
+        "LD_PRELOAD is unavailable for static builds",
+    )
+    def test_thread_timeouts_use_monotonic_clock(self):
+        import ctypes
+
+        try:
+            _sem_clockwait = ctypes.CDLL(None).sem_clockwait
+        except AttributeError:
+            self.skipTest("runtime libc does not provide sem_clockwait")
+
+        compiler = shutil.which("cc")
+        if compiler is None:
+            self.skipTest("C compiler unavailable")
+
+        probe = """
+import queue
+import sys
+import threading
+import time
+
+primitive = sys.argv[1]
+timeout = float(sys.argv[2])
+start = time.monotonic()
+cpu_start = time.process_time()
+
+if primitive == "event":
+    threading.Event().wait(timeout)
+elif primitive == "queue":
+    try:
+        queue.Queue().get(timeout=timeout)
+    except queue.Empty:
+        pass
+elif primitive in {"lock", "rlock"}:
+    lock = threading.Lock() if primitive == "lock" else threading.RLock()
+    lock.acquire()
+    thread = threading.Thread(target=lambda: lock.acquire(timeout=timeout))
+    thread.start()
+    thread.join()
+elif primitive == "join":
+    thread = threading.Thread(target=lambda: time.sleep(timeout + 2), daemon=True)
+    thread.start()
+    thread.join(timeout)
+else:
+    raise ValueError(f"unknown primitive: {primitive}")
+
+print(time.monotonic() - start, time.process_time() - cpu_start)
+"""
+
+        with tempfile.TemporaryDirectory(prefix="disttests-") as temp_dir:
+            preload = Path(temp_dir) / "realtime-offset.so"
+            subprocess.check_call(
+                [
+                    compiler,
+                    "-shared",
+                    "-fPIC",
+                    "-O2",
+                    "-Wall",
+                    "-Werror",
+                    "-o",
+                    preload,
+                    Path(__file__).with_name("realtime_offset.c"),
+                    "-ldl",
+                ]
+            )
+
+            timeout = 0.1
+            for offset in (2, -2):
+                env = dict(os.environ)
+                env["LD_PRELOAD"] = str(preload)
+                env["REALTIME_OFFSET_SECONDS"] = str(offset)
+
+                for primitive in ("lock", "rlock", "event", "queue", "join"):
+                    with self.subTest(offset=offset, primitive=primitive):
+                        output = subprocess.check_output(
+                            [sys.executable, "-c", probe, primitive, str(timeout)],
+                            env=env,
+                            text=True,
+                            timeout=4,
+                        )
+                        elapsed, cpu_elapsed = map(float, output.split())
+                        self.assertGreater(elapsed, timeout / 2)
+                        self.assertLess(elapsed, timeout + 1)
+                        # Higher-level waits retry after an early wakeup. They
+                        # must block instead of spinning until their deadline.
+                        self.assertLess(cpu_elapsed, timeout / 2)
 
 
 if __name__ == "__main__":

@@ -146,10 +146,10 @@
         "license_file": "LICENSE.libedit.txt"
     },
     "libffi": {
-        "url": "https://github.com/libffi/libffi/releases/download/v3.4.8/libffi-3.4.8.tar.gz",
-        "size": 1397992,
-        "sha256": "bc9842a18898bfacb0ed1252c4febcc7e78fa139fd27fdc7a3e30d9d9356119b",
-        "version": "3.4.8",
+        "url": "https://github.com/libffi/libffi/releases/download/v3.8.0/libffi-3.8.0.tar.gz",
+        "size": 1581626,
+        "sha256": "7da3e2d9a171eb0a038f592ecad3ff2bb2550f3496d87b3b29ad0cf4430c0db4",
+        "version": "3.8.0",
         "library_names": [
             "ffi"
         ],

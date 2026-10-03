@@ -1,0 +1,23 @@
+diff --git a/configure.ac b/configure.ac
+index a1f4a567095..f7aa69556e5 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -3489,8 +3489,16 @@ then
+ 		LDSHARED='$(CC) -shared'
+ 		LDCXXSHARED='$(CXX) -shared';;
+ 	Linux*|GNU*|QNX*|VxWorks*|Haiku*)
+-		LDSHARED='$(CC) -shared'
+-		LDCXXSHARED='$(CXX) -shared';;
++		# See https://maskray.me/blog/2021-05-16-elf-interposition-and-bsymbolic.
++		# This is related to the -fno-semantic-interposition optimization that
++		# --enable-optimizations engages automatically. It changes the linkage
++		# behavior so the runtime loader searches the current DSO first before
++		# falling back to the default search mechanism of the executable plus
++		# all its loaded DSOs. It has much the same effect as
++		# -fno-semantic-interposition but can also enable optimizations across
++		# translation units.
++		LDSHARED='$(CC) -shared -Wl,-Bsymbolic-functions'
++		LDCXXSHARED='$(CXX) -shared -Wl,-Bsymbolic-functions';;
+ 	FreeBSD*)
+ 		if [[ "`$CC -dM -E - </dev/null | grep __ELF__`" != "" ]]
+ 		then

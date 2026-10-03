@@ -329,7 +329,6 @@ POLICIES: dict[str, Policy] = {
         "libffi/libffi",
         r"v(?P<version>[0-9.]+)",
         artifact_name="libffi-{version}.tar.gz",
-        series=2,
     ),
     "libpthread-stubs": xorg_policy("lib", "libpthread-stubs"),
     "libX11": xorg_policy("lib", "libX11"),

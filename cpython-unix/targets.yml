@@ -89,6 +89,10 @@ aarch64-apple-darwin:
   target_cflags:
     - '-arch'
     - 'arm64'
+    # Keep the M1-compatible instruction baseline, but use generic scheduling
+    # so this universal target is not tuned to one Apple Silicon generation.
+    - '-mcpu=apple-m1'
+    - '-mtune=generic'
     - '-mmacosx-version-min=11.0'
     # Suppress extremely verbose warnings we see with LLVM 10.
     - '-Wno-nullability-completeness'

@@ -1,8 +1,7 @@
 diff --git a/Modules/_tkinter.c b/Modules/_tkinter.c
 --- a/Modules/_tkinter.c
 +++ b/Modules/_tkinter.c
-@@ -586,7 +586,11 @@ Tkapp_New(const char *screenName, const char *className,
- 
+@@ -587,6 +587,10 @@ Tkapp_New(const char *screenName, const char *className,
      v->interp = Tcl_CreateInterp();
      v->wantobjects = wantobjects;
 +#if TCL_MAJOR_VERSION >= 9

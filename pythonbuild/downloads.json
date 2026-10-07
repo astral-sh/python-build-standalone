@@ -114,10 +114,10 @@
         "python_tag": "cp315"
     },
     "expat": {
-        "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_5/expat-2.8.5.tar.xz",
-        "size": 528380,
-        "sha256": "1e727b8933ec51a77a9a9d9afcf8e688bce45d907c13e36ab7393fe36e703182",
-        "version": "2.8.5",
+        "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
+        "size": 534052,
+        "sha256": "1e6371862cc31999b368c3b89b49994f0677e1bab5f1b2b85ae3741f5d803051",
+        "version": "2.9.0",
         "library_names": [
             "expat"
         ],

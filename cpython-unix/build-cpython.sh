@@ -285,6 +285,12 @@ if [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
     patch -p1 -i "${ROOT}/patch-tkinter-backport-tcl-9-311.patch"
 fi
 
+# Tcl 9 is always threaded and no longer exposes tcl_platform(threaded).
+# Backport https://github.com/python/cpython/pull/128103 (merged in 3.13+).
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i "${ROOT}/patch-tkinter-tcl9-thread-detection.patch"
+fi
+
 # BOLT instrumented binaries segfault in some test_embed tests for unknown reasons.
 # On 3.12 (minimum BOLT version), the segfault causes the test harness to
 # abort and BOLT optimization uses the partial test results. On 3.13, the segfault

@@ -786,6 +786,12 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${TARGET_TRIPLE}" == x86_64*
     CFLAGS_JIT="${CFLAGS_JIT//-fPIC/}"
 fi
 
+# TODO: Remove when RISC-V cross-builds use LLVM/lld.
+# Binutils 2.31 can incorrectly relax RISC-V calls with libffi 3.8.0.
+if [[ "${TARGET_TRIPLE}" == "riscv64-unknown-linux-gnu" && "${PYTHON_MAJMIN_VERSION}" == "3.15" ]]; then
+    export LDFLAGS_NODIST="${LDFLAGS_NODIST:+${LDFLAGS_NODIST} }-Wl,--no-relax"
+fi
+
 BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:-}" \
     CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}

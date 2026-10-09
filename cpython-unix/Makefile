@@ -56,9 +56,8 @@ include $(OUTDIR)/versions/VERSION.*
 # Always write out expanded Dockerfiles.
 $(shell $(RUN_BUILD) placeholder_archive dockerfiles)
 
-# Host executables are shared only by builds using the same producer image.
+# Host interpreters are shared only by builds using the same producer image.
 # Native, non-Docker builds must not reuse executables from a container.
-BINUTILS_SUFFIX := $(HOST_PLATFORM)-$(if $(PYBUILD_NO_DOCKER),local,$(DOCKER_IMAGE_GCC))
 HOST_PYTHON_SUFFIX := $(HOST_PLATFORM)-$(if $(PYBUILD_NO_DOCKER),local,$(DOCKER_IMAGE_BUILD))
 
 BASE_TOOLCHAIN_DEPENDS := \
@@ -84,9 +83,6 @@ ifndef PYBUILD_NO_DOCKER
 $(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
-
-$(OUTDIR)/binutils-$(BINUTILS_VERSION)-$(BINUTILS_SUFFIX).tar: $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar) $(HERE)/build-binutils.sh
-	$(RUN_BUILD) --toolchain --docker-image $(DOCKER_IMAGE_GCC) binutils
 
 $(OUTDIR)/$(CLANG_FILENAME):
 	$(RUN_BUILD) --toolchain clang --target-triple $(TARGET_TRIPLE)

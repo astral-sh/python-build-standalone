@@ -315,26 +315,6 @@ def simple_build(
         build_env.get_tools_archive(dest_archive, tools_path)
 
 
-def build_binutils(client, image, dest_archive):
-    """Build binutils in the Docker image."""
-    archive = download_entry("binutils", DOWNLOADS_PATH)
-
-    with build_environment(client, image) as build_env:
-        build_env.copy_file(archive)
-        build_env.copy_file(SUPPORT / "build-binutils.sh")
-
-        env = {"BINUTILS_VERSION": DOWNLOADS["binutils"]["version"]}
-
-        add_env_common(env)
-
-        build_env.run(
-            "build-binutils.sh",
-            environment=env,
-        )
-
-        build_env.get_tools_archive(dest_archive, "host")
-
-
 def materialize_clang(host_platform: str, target_triple: str):
     entry = clang_toolchain(host_platform, target_triple)
     tar_zst = download_entry(entry, DOWNLOADS_PATH)
@@ -1161,13 +1141,6 @@ def main():
                 image_data = fh.read()
 
             build_docker_image(client, image_data, BUILD, image_name, host_platform)
-
-        elif action == "binutils":
-            build_binutils(
-                client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
-                dest_archive,
-            )
 
         elif action == "clang":
             materialize_clang(host_platform, target_triple)

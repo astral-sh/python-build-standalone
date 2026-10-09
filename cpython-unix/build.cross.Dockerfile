@@ -1,5 +1,5 @@
 # Debian Stretch.
-FROM debian@sha256:cebe6e1c30384958d471467e231f740e8f0fd92cbfd2a435a186e9bada3aee1c
+FROM docker.io/library/debian@sha256:cebe6e1c30384958d471467e231f740e8f0fd92cbfd2a435a186e9bada3aee1c
 LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
 
 RUN groupadd -g 1000 build && \

@@ -273,7 +273,14 @@ def write_target_settings(targets, dest_path: pathlib.Path):
     for triple, settings in targets.items():
         payload = {}
 
-        for key in ("host_cc", "host_cxx", "target_cc", "target_cflags"):
+        for key in (
+            "host_cc",
+            "host_cxx",
+            "host_ldflags",
+            "target_cc",
+            "target_cflags",
+            "target_ldflags",
+        ):
             payload[key] = settings.get(key)
 
         serialized_payload = json.dumps(payload, indent=4).encode("utf-8")

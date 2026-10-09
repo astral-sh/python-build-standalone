@@ -28,7 +28,7 @@ if [ "${CC}" = "clang" ]; then
     CFLAGS="${CFLAGS} -Wno-deprecated-non-prototype"
 fi
 
-CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" ../dist/configure \
+CFLAGS="${CFLAGS}" CPPFLAGS="${CFLAGS}" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ../dist/configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \

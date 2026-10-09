@@ -302,7 +302,6 @@ def xorg_policy(category: str, name: str, extension: str = "tar.gz") -> Policy:
 
 POLICIES: dict[str, Policy] = {
     "autoconf": gnu_policy("autoconf", "tar.gz"),
-    "binutils": gnu_policy("binutils", "tar.xz"),
     "bzip2": html_policy(
         "https://sourceware.org/pub/bzip2/",
         r"(?:^|/)bzip2-(?P<version>[0-9][0-9A-Za-z.+-]*)\.tar\.gz$",

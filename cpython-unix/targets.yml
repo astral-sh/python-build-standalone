@@ -27,6 +27,9 @@
 #    Path to C++ compiler to use when producing binaries targeting the
 #    current build environment.
 #
+# host_ldflags
+#    List of extra linker flags for binaries targeting the build environment.
+#
 # target_cc
 #    Path to C compiler to use for building binaries targeting the
 #    target architecture.
@@ -44,6 +47,9 @@
 #    List of extra linker flags to use when building for the target.
 #
 #    Values will be added to LDFLAGS.
+#
+#    musl-clang uses its own linker wrapper and must not be passed a
+#    -fuse-ld option; the wrapper selects the bundled linker itself.
 #
 #    Linux targets pass -Wl,--build-id=sha1 so binaries carry a GNU build ID.
 #    Debuginfod is keyed entirely on that ID, so without it debuggers cannot
@@ -138,6 +144,8 @@ aarch64-unknown-linux-gnu:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: clang
   target_cxx: clang++
   target_cflags:
@@ -161,10 +169,10 @@ aarch64-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-fuse-ld=lld'
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -223,7 +231,6 @@ armv7-unknown-linux-gnueabi:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -277,7 +284,6 @@ armv7-unknown-linux-gnueabihf:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -332,7 +338,6 @@ loongarch64-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -386,7 +391,6 @@ mips-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -440,7 +444,6 @@ mipsel-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -494,7 +497,6 @@ ppc64le-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -548,7 +550,6 @@ riscv64-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -604,7 +605,6 @@ s390x-unknown-linux-gnu:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -700,6 +700,8 @@ x86_64-unknown-linux-gnu:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: clang
   target_cxx: clang++
   target_cflags:
@@ -723,10 +725,10 @@ x86_64-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-fuse-ld=lld'
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -767,6 +769,8 @@ x86_64_v2-unknown-linux-gnu:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: clang
   target_cxx: clang++
   target_cflags:
@@ -791,10 +795,10 @@ x86_64_v2-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-fuse-ld=lld'
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -835,6 +839,8 @@ x86_64_v3-unknown-linux-gnu:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: clang
   target_cxx: clang++
   target_cflags:
@@ -859,10 +865,10 @@ x86_64_v3-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-fuse-ld=lld'
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -905,6 +911,8 @@ x86_64_v4-unknown-linux-gnu:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: clang
   target_cxx: clang++
   target_cflags:
@@ -929,10 +937,10 @@ x86_64_v4-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-fuse-ld=lld'
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -972,6 +980,8 @@ x86_64-unknown-linux-musl:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
@@ -991,7 +1001,6 @@ x86_64-unknown-linux-musl:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -1030,6 +1039,8 @@ x86_64_v2-unknown-linux-musl:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
@@ -1050,7 +1061,6 @@ x86_64_v2-unknown-linux-musl:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -1089,6 +1099,8 @@ x86_64_v3-unknown-linux-musl:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
@@ -1109,7 +1121,6 @@ x86_64_v3-unknown-linux-musl:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -1150,6 +1161,8 @@ x86_64_v4-unknown-linux-musl:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: musl-clang
   target_cxx: clang++  # TODO: Explore a musl-clang++ shim?
   target_cflags:
@@ -1170,7 +1183,6 @@ x86_64_v4-unknown-linux-musl:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit
@@ -1211,6 +1223,8 @@ aarch64-unknown-linux-musl:
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
+  host_ldflags:
+    - '-fuse-ld=lld'
   target_cc: musl-clang
   target_cxx: clang++
   target_cflags:
@@ -1230,7 +1244,6 @@ aarch64-unknown-linux-musl:
   needs:
     - autoconf
     - bdb
-    - binutils
     - bzip2
     - expat
     - libedit

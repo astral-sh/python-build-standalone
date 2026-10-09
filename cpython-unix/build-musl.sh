@@ -9,10 +9,36 @@ cd /build
 
 export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 export CC=clang
+export LDFLAGS="-fuse-ld=lld"
 
 tar -xf "musl-${MUSL_VERSION}.tar.gz"
 
 pushd "musl-${MUSL_VERSION}"
+
+# Unlike GNU ld, lld honors an explicit interpreter even with -static. Only
+# supply the musl interpreter when producing a dynamically linked executable.
+patch -p1 <<'EOF'
+diff --git a/tools/ld.musl-clang.in b/tools/ld.musl-clang.in
+--- a/tools/ld.musl-clang.in
++++ b/tools/ld.musl-clang.in
+@@ -36,9 +36,9 @@
+         -l*)
+             test "$userlink" && set -- "$@" "$x"
+             ;;
+-        -shared)
+-            shared=1
+-            set -- "$@" -shared
++        -static|-shared|-r)
++            ldso=
++            set -- "$@" "$x"
+             ;;
+         -sysroot=*|--sysroot=*)
+             ;;
+@@ -51 +51,2 @@
+-exec $($cc -print-prog-name=ld) -nostdlib "$@" -lc -dynamic-linker "$ldso"
++test -z "$ldso" || set -- "$@" -dynamic-linker "$ldso"
++exec $($cc -print-prog-name=ld) -nostdlib "$@" -lc
+EOF
 
 # Debian as of at least bullseye ships musl 1.2.1. musl 1.2.2
 # added reallocarray(), which gets used by at least OpenSSL.
@@ -104,18 +130,5 @@ CFLAGS="${CFLAGS}" CPPFLAGS="${CPPFLAGS}" ./configure \
 
 make -j "$(nproc)"
 make -j "$(nproc)" install DESTDIR=/build/out
-
-if [[ $STATIC && $(clang -dumpmachine) == aarch64-* ]]; then
-    # musl's linker wrapper appends libc after other arguments, including
-    # compiler-rt supplied through the target compiler flags. On aarch64,
-    # static libc uses compiler runtime builtins such as __multf3. GNU ld
-    # searches archives left to right and does not revisit earlier archives,
-    # so append compiler-rt again after libc to resolve those symbols.
-    # TODO(jjh): Remove this adjustment when lld is available; it can resolve
-    # references to previously encountered archives.
-    sed -i \
-        's/"$@" -lc -dynamic-linker/"$@" -lc "$($cc --rtlib=compiler-rt -print-libgcc-file-name)" -dynamic-linker/' \
-        /build/out/tools/host/bin/ld.musl-clang
-fi
 
 popd

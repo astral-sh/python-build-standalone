@@ -25,7 +25,7 @@ fi
 # xmlwf isn't needed by CPython.
 # Disable -fexceptions because we don't need it and it adds a dependency on libgcc_s, which
 # is softly undesirable.
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" ./configure \
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \

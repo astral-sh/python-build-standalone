@@ -45,6 +45,7 @@ EOF
 fi
 
 CC="${HOST_CC}" CXX="${HOST_CXX}" CFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" \
+    LDFLAGS="${EXTRA_HOST_LDFLAGS}" \
     ./configure \
         --build="${BUILD_TRIPLE}" \
         --host="${TARGET_TRIPLE}" \

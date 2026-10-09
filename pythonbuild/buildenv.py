@@ -74,24 +74,18 @@ class ContainerContext:
         build_dir,
         host_platform,
         target_triple: str,
-        binutils_image: str,
-        binutils=False,
+        linux_llvm_setup_script: pathlib.Path,
         musl=False,
         clang=False,
         static=False,
     ):
-        if binutils:
-            self.install_toolchain_archive(
-                build_dir,
-                "binutils",
-                host_platform,
-                image_name=binutils_image,
-            )
-
         if clang:
             self.install_toolchain_archive(
                 build_dir, clang_toolchain(host_platform, target_triple), host_platform
             )
+            if host_platform.startswith("linux_"):
+                self.copy_file(linux_llvm_setup_script)
+                self.run(linux_llvm_setup_script.name)
 
         if musl:
             self.install_toolchain_archive(
@@ -208,17 +202,11 @@ class TempdirContext:
         build_dir,
         platform,
         target_triple,
-        binutils_image,
-        binutils=False,
+        linux_llvm_setup_script: pathlib.Path,
         musl=False,
         clang=False,
         static=False,
     ):
-        if binutils:
-            self.install_toolchain_archive(
-                build_dir, "binutils", platform, image_name=binutils_image
-            )
-
         if clang:
             self.install_toolchain_archive(
                 build_dir, clang_toolchain(platform, target_triple), platform

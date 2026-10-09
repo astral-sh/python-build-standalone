@@ -1131,6 +1131,10 @@ if xcode_path:
 # -fdebug-default-version is Clang only. Strip so compiling works on GCC.
 replace_in_all("-fdebug-default-version=4", "")
 
+# Downstream extension builds can use their compiler's default linker and need
+# not have LLVM installed.
+replace_in_all("-fuse-ld=lld", "")
+
 # Target sysroots only exist in the build container. Keeping their paths in
 # sysconfig would make downstream extension builds search a nonexistent root.
 for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():

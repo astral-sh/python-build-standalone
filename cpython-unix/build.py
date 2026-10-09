@@ -251,10 +251,6 @@ def toolchain_archive_path(package_name, host_platform):
     return BUILD / basename
 
 
-def install_binutils(platform):
-    return not platform.startswith("macos_")
-
-
 def simple_build(
     settings,
     client,
@@ -276,11 +272,10 @@ def simple_build(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
+                linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
             )
 
         for a in extra_archives or []:
@@ -356,9 +351,7 @@ def materialize_clang(host_platform: str, target_triple: str):
             dctx.copy_stream(ifh, ofh)
 
 
-def build_musl(
-    settings, client, image, host_platform: str, target_triple: str, build_options
-):
+def build_musl(client, image, host_platform: str, target_triple: str, build_options):
     static = "static" in build_options
     musl = "musl-static" if static else "musl"
     musl_archive = download_entry(musl, DOWNLOADS_PATH)
@@ -368,10 +361,9 @@ def build_musl(
             BUILD,
             host_platform,
             target_triple,
-            binutils_image=docker_image_names(settings)["gcc"],
-            binutils=True,
             clang=True,
             static=False,
+            linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
@@ -400,11 +392,10 @@ def build_libedit(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
+                linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
             )
 
         build_env.install_artifact_archive(
@@ -453,10 +444,9 @@ def build_cpython_host(
             BUILD,
             host_platform,
             target_triple,
-            binutils_image=docker_image_names(settings)["gcc"],
-            binutils=install_binutils(host_platform),
-            clang=True,
+            clang=bool(settings.get("needs_toolchain")),
             static="static" in build_options,
+            linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
         )
 
         build_env.copy_file(archive)
@@ -799,16 +789,14 @@ def build_cpython(
                 BUILD,
                 host_platform,
                 target_triple,
-                binutils_image=docker_image_names(settings)["gcc"],
-                binutils=install_binutils(host_platform),
                 clang=True,
                 musl="musl" in target_triple,
                 static="static" in build_options,
+                linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
             )
 
         packages = target_needs(TARGETS_CONFIG, target_triple)
         # Toolchain packages are handled specially.
-        packages.discard("binutils")
         packages.discard("musl")
 
         for p in sorted(packages):
@@ -1186,7 +1174,6 @@ def main():
 
         elif action == "musl":
             build_musl(
-                settings,
                 client,
                 get_image(client, ROOT, BUILD, docker_image, host_platform),
                 host_platform,

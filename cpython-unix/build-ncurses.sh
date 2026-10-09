@@ -21,7 +21,7 @@ if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
 
   pushd ncurses-"${NCURSES_VERSION}"
 
-  CC="${HOST_CC}" ./configure \
+  CC="${HOST_CC}" CFLAGS="${EXTRA_HOST_CFLAGS}" CPPFLAGS="${EXTRA_HOST_CFLAGS}" LDFLAGS="${EXTRA_HOST_LDFLAGS}" ./configure \
     --prefix="${TOOLS_PATH}/host" \
     --without-cxx \
     --without-tests \
@@ -50,9 +50,9 @@ pushd "ncurses-${NCURSES_VERSION}"
 # database. By default hardlinks are used, which are wonky to tar up. Be sure
 # this is set on the host native `tic` build above, as it is the entity writing
 # symlinks!
-CONFIGURE_FLAGS="
-    --build=${BUILD_TRIPLE}
-    --host=${TARGET_TRIPLE}
+CONFIGURE_FLAGS=(
+    "--build=${BUILD_TRIPLE}"
+    "--host=${TARGET_TRIPLE}"
     --prefix=/tools/deps
     --without-cxx
     --without-tests
@@ -60,13 +60,18 @@ CONFIGURE_FLAGS="
     --disable-stripping
     --enable-widec
     --enable-symlinks
-    "
+)
 
 # ncurses wants --with-build-cc when cross-compiling. But it insists on CC
 # and this value not being equal, even though using the same binary with
 # different compiler flags is doable!
 if [[ -n "${CROSS_COMPILING}" && "${PYBUILD_PLATFORM}" != macos* ]]; then
-  CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-cc=$(which "${HOST_CC}")"
+  CONFIGURE_FLAGS+=(
+    "--with-build-cc=$(which "${HOST_CC}")"
+    "--with-build-cflags=${EXTRA_HOST_CFLAGS}"
+    "--with-build-cppflags=${EXTRA_HOST_CFLAGS}"
+    "--with-build-ldflags=${EXTRA_HOST_LDFLAGS}"
+  )
 fi
 
 # The terminfo database exists as a set of standalone files. The absolute
@@ -92,26 +97,26 @@ fi
 # time.
 
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
-  CONFIGURE_FLAGS="${CONFIGURE_FLAGS}
+  CONFIGURE_FLAGS+=(
     --datadir=/usr/share
     --sysconfdir=/etc
     --sharedstatedir=/usr/com
     --with-default-terminfo-dir=/usr/share/terminfo
     --with-terminfo-dirs=/usr/share/terminfo
-  "
+  )
 else
-  CONFIGURE_FLAGS="${CONFIGURE_FLAGS}
+  CONFIGURE_FLAGS+=(
     --datadir=/tools/deps/usr/share
     --sysconfdir=/tools/deps/etc
     --sharedstatedir=/tools/deps/usr/com
     --with-default-terminfo-dir=/usr/share/terminfo
     --with-terminfo-dirs=/etc/terminfo:/lib/terminfo:/usr/share/terminfo
-  "
+  )
 fi
 
 mkdir -p "${ROOT}/out/usr/lib"
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure ${CONFIGURE_FLAGS}
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure "${CONFIGURE_FLAGS[@]}"
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"
 

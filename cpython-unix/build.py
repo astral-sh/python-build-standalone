@@ -100,7 +100,7 @@ def add_target_env(env, build_platform, target_triple, build_env, build_options)
     extra_target_cflags += list(settings.get("target_cflags", []))
     extra_target_ldflags = list(settings.get("target_ldflags", []))
     extra_host_cflags = []
-    extra_host_ldflags = []
+    extra_host_ldflags = list(settings.get("host_ldflags", []))
 
     # aarch64 libgcc is built against glibc and initializes LSE atomics using
     # __getauxval, which musl does not export.

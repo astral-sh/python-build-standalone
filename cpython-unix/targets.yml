@@ -27,6 +27,9 @@
 #    Path to C++ compiler to use when producing binaries targeting the
 #    current build environment.
 #
+# host_ldflags
+#    List of extra linker flags for binaries targeting the build environment.
+#
 # target_cc
 #    Path to C compiler to use for building binaries targeting the
 #    target architecture.

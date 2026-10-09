@@ -15,7 +15,7 @@ export PKG_CONFIG_PATH=/tools/deps/share/pkgconfig
 tar -xf "libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}.tar.gz"
 pushd "libpthread-stubs-${LIBPTHREAD_STUBS_VERSION}"
 
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" ./configure \
+CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps

@@ -64,7 +64,7 @@ EXTRA_TARGET_CFLAGS=${EXTRA_TARGET_CFLAGS/\-arch x86_64/}
 
 EXTRA_FLAGS="${EXTRA_FLAGS} ${EXTRA_TARGET_CFLAGS}"
 
-/usr/bin/perl ./Configure \
+LDFLAGS="${EXTRA_TARGET_LDFLAGS}" /usr/bin/perl ./Configure \
   --prefix=/tools/deps \
   --libdir=lib \
   "${OPENSSL_TARGET}" \

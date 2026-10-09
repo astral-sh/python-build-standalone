@@ -1,0 +1,230 @@
+name: Rehearse release signing
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/rehearse-release-signing.yml
+      - scripts/rehearse-release-signing.py*
+      - scripts/smoke-test-signed-python.py
+      - scripts/cpython-entitlements.plist
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published PBS release to rehearse
+        type: string
+        default: "20260901"
+      python-version:
+        description: CPython version in that release
+        type: string
+        default: "3.14.7"
+      sign:
+        description: Use the protected release signing identity
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || '20260901' }}
+  PYTHON_VERSION: ${{ inputs.python-version || '3.14.7' }}
+
+jobs:
+  prepare:
+    name: Reassemble unsigned / ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: &targets
+        include:
+          - target: aarch64-apple-darwin
+            system: macos
+            runner: macos-15
+            signer: ubuntu-24.04
+            python: bin/python3
+            uv-checksum: 46740540b63fdee9a6cb2e19baf3f1f475b850c440a33e63455087a6871263f1
+          - target: x86_64-apple-darwin
+            system: macos
+            runner: macos-15-intel
+            signer: ubuntu-24.04
+            python: bin/python3
+            uv-checksum: 0dc8cd6c961582b0d140b5398f96b23502885277fb3464241456a2435e460dfa
+          - target: x86_64-pc-windows-msvc
+            system: windows
+            runner: windows-2025
+            signer: windows-2025
+            python: python.exe
+            uv-checksum: 3d54912924c36e862c14f427d04f2ed70a99e8001d1c30caa101f6d5711626d5
+    env:
+      TARGET: ${{ matrix.target }}
+      SYSTEM: ${{ matrix.system }}
+      PYTHON_BINARY: ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.12"
+          checksum: ${{ matrix.uv-checksum }}
+          enable-cache: false
+      - name: Download published archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: uv run --locked scripts/rehearse-release-signing.py download "$RELEASE_TAG" "$PYTHON_VERSION" "$TARGET" original
+      - name: Reassemble without signing
+        run: |
+          archive=(original/*.tar.gz)
+          uv run --locked scripts/rehearse-release-signing.py prepare "$SYSTEM" "${archive[0]}" "unsigned/$TARGET"
+          uv run --locked scripts/rehearse-release-signing.py assemble "$SYSTEM" "${archive[0]}" "unsigned/$TARGET" "assembled/$(basename "${archive[0]}")"
+          uv run --locked scripts/rehearse-release-signing.py check "$SYSTEM" "${archive[0]}" "unsigned/$TARGET" "assembled/$(basename "${archive[0]}")"
+      - name: Exercise assembled Python
+        run: |
+          mkdir installed
+          tar -xzf assembled/*.tar.gz -C installed
+          "installed/python/$PYTHON_BINARY" -I scripts/smoke-test-signed-python.py
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signing-source-${{ matrix.target }}
+          path: original/*.tar.gz
+          if-no-files-found: error
+          overwrite: true
+
+  sign:
+    name: Sign and reassemble / ${{ matrix.target }}
+    needs: prepare
+    if: >-
+      github.event_name == 'workflow_dispatch' && inputs.sign &&
+      github.repository == 'astral-sh/python-build-standalone' &&
+      github.ref == 'refs/heads/main'
+    runs-on: ${{ matrix.signer }}
+    environment: release
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix: *targets
+    env:
+      TARGET: ${{ matrix.target }}
+      SYSTEM: ${{ matrix.system }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.12"
+          checksum: ${{ runner.os == 'Linux' && 'ab9b309d4586403f024e100abaceb396616e178a553e2500c36087d180f09509' || matrix.uv-checksum }}
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: signing-source-${{ matrix.target }}
+          path: original
+      - name: Prepare native code
+        id: prepare
+        run: |
+          archive=(original/*.tar.gz)
+          uv run --locked scripts/rehearse-release-signing.py prepare "$SYSTEM" "${archive[0]}" "unsigned/$TARGET"
+      - name: Sign and notarize macOS binaries
+        if: matrix.system == 'macos'
+        uses: astral-sh/github-actions/sign-macos@8d868a52b4aaf77e89d86505026689474cbb8747
+        with:
+          unsigned-directory: unsigned
+          signed-directory: signed
+          entitlements-file: scripts/cpython-entitlements.plist
+          entitlements-binaries: ${{ steps.prepare.outputs.executables }}
+          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID_MACOS }}
+          azure-tenant-id: ${{ secrets.CODESIGN_AZURE_TENANT_ID_MACOS }}
+          azure-subscription-id: ${{ secrets.CODESIGN_AZURE_SUBSCRIPTION_ID_MACOS }}
+          storage-account: ${{ secrets.CODESIGN_STORAGE_ACCOUNT }}
+          storage-container: ${{ secrets.CODESIGN_STORAGE_CONTAINER }}
+          component-rcodesign-blob: ${{ secrets.CODESIGN_COMPONENT_RCODESIGN_BLOB }}
+          component-rcodesign-sha256: ${{ secrets.CODESIGN_COMPONENT_RCODESIGN_SHA256 }}
+          component-pkcs11-blob: ${{ secrets.CODESIGN_COMPONENT_PKCS11_BLOB }}
+          component-pkcs11-sha256: ${{ secrets.CODESIGN_COMPONENT_PKCS11_SHA256 }}
+          azure-keyvault-name: ${{ secrets.CODESIGN_AZURE_KEYVAULT_NAME }}
+          azure-keyvault-key-version: ${{ secrets.CODESIGN_AZURE_KEYVAULT_KEY_VERSION }}
+          key-name: ${{ secrets.CODESIGN_KEY_NAME }}
+          certificate-sha256: ${{ secrets.CODESIGN_CERTIFICATE_SHA256 }}
+          apple-notarization-akv-key-name: ${{ secrets.CODESIGN_APPLE_NOTARIZATION_AKV_KEY_NAME }}
+      - name: Sign Windows binaries
+        if: matrix.system == 'windows'
+        uses: astral-sh/github-actions/sign-windows@8d868a52b4aaf77e89d86505026689474cbb8747
+        with:
+          unsigned-directory: unsigned
+          signed-directory: signed
+          azure-client-id: ${{ secrets.CODESIGN_AZURE_CLIENT_ID_WINDOWS }}
+          azure-tenant-id: ${{ secrets.CODESIGN_AZURE_TENANT_ID_WINDOWS }}
+          azure-subscription-id: ${{ secrets.CODESIGN_AZURE_SUBSCRIPTION_ID_WINDOWS }}
+          endpoint: ${{ secrets.CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ secrets.CODESIGN_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.CODESIGN_CERTIFICATE_PROFILE_NAME }}
+          certificate-subject: ${{ secrets.CODESIGN_CERTIFICATE_SUBJECT }}
+      - name: Reassemble signed archive
+        run: |
+          archive=(original/*.tar.gz)
+          uv run --locked scripts/rehearse-release-signing.py assemble "$SYSTEM" "${archive[0]}" "signed/$TARGET" "assembled/$(basename "${archive[0]}")"
+          uv run --locked scripts/rehearse-release-signing.py check "$SYSTEM" "${archive[0]}" "signed/$TARGET" "assembled/$(basename "${archive[0]}")"
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: signed-rehearsal-${{ matrix.target }}
+          path: |
+            assembled/
+            signed/
+          if-no-files-found: error
+          overwrite: true
+
+  verify:
+    name: Verify signed archive / ${{ matrix.target }}
+    needs: sign
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix: *targets
+    env:
+      TARGET: ${{ matrix.target }}
+      SYSTEM: ${{ matrix.system }}
+      PYTHON_BINARY: ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.12.12"
+          checksum: ${{ matrix.uv-checksum }}
+          enable-cache: false
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: signing-source-${{ matrix.target }}
+          path: original
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: signed-rehearsal-${{ matrix.target }}
+      - name: Check complete archive contents
+        run: |
+          archive=(original/*.tar.gz)
+          uv run --locked scripts/rehearse-release-signing.py check "$SYSTEM" "${archive[0]}" "signed/$TARGET" "assembled/$(basename "${archive[0]}")"
+          uv run --locked scripts/rehearse-release-signing.py prepare "$SYSTEM" "assembled/$(basename "${archive[0]}")" packaged-binaries
+      - name: Verify packaged signatures
+        uses: astral-sh/github-actions/verify-binaries@8d868a52b4aaf77e89d86505026689474cbb8747
+        with:
+          signed-directory: signed/${{ matrix.target }}
+          binaries-directory: packaged-binaries
+      - name: Exercise signed Python
+        run: |
+          mkdir installed
+          tar -xzf assembled/*.tar.gz -C installed
+          "installed/python/$PYTHON_BINARY" -I scripts/smoke-test-signed-python.py

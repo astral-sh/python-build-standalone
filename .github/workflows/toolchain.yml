@@ -1,0 +1,99 @@
+name: toolchain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/toolchain.yml
+      - toolchain/**
+      - '!toolchain/**/*.md'
+  pull_request:
+    paths:
+      - .github/workflows/toolchain.yml
+      - toolchain/**
+      - '!toolchain/**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    name: linux-${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: depot-ubuntu-22.04-4
+          - arch: aarch64
+            runner: depot-ubuntu-22.04-arm-4
+    defaults:
+      run:
+        shell: bash
+        working-directory: toolchain
+    env:
+      ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+
+      - name: Build toolchain
+        run: PARALLEL="$(nproc)" "./build-linux-${ARCH}.sh"
+
+      - name: Validate distribution
+        run: bash validate-linux.sh "${ARCH}" "build/llvm-gnu_only-${ARCH}-unknown-linux-gnu.tar.zst"
+
+      - name: Upload validated distribution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: llvm-gnu_only-${{ matrix.arch }}-unknown-linux-gnu
+          path: toolchain/build/llvm-gnu_only-${{ matrix.arch }}-unknown-linux-gnu.tar.zst
+          if-no-files-found: error
+          compression-level: '0'
+
+  macos:
+    name: apple-aarch64
+    runs-on: namespace-profile-macos-15
+    timeout-minutes: 360
+    defaults:
+      run:
+        shell: bash
+        working-directory: toolchain
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: false
+
+      - name: Build toolchain
+        run: ./build-macos.py
+
+      - name: Validate distribution
+        run: |
+          mkdir -p build/macos-smoke
+          uv run --no-project --python 3.14 python -m tarfile \
+            --extract build/llvm-aarch64-apple-darwin.tar.zst build/macos-smoke
+          bash tests/smoke-macos.sh build/macos-smoke/llvm
+
+      - name: Upload validated distribution
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: llvm-aarch64-apple-darwin
+          path: toolchain/build/llvm-aarch64-apple-darwin.tar.zst
+          if-no-files-found: error
+          compression-level: '0'

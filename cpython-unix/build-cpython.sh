@@ -323,19 +323,25 @@ fi
 # Mark _Py_jit_entry as extern in _testiternalcapi/interpreter.c to avoid a duplicate symbols.
 # The symbol is not actually used in the module, a better solution should be found, see:
 # https://github.com/python/cpython/issues/144712
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+# The unused definition was removed in 3.16.
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.15" ]; then
     patch -p1 -i "${ROOT}/patch-testinternalcapi-interpreter-extern.patch"
 fi
 
 # CPython uses HAVE_GETRANDOM_SYSCALL to decide whether to include
 # <sys/syscall.h>, but other APIs independently depend on __NR_* definitions
 # from that header. Include it whenever configure finds the header.
-patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
+# Upstreamed in 3.16+
+# https://github.com/python/cpython/pull/155762
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i "${ROOT}/patch-posixmodule-sys-syscall-header.patch"
+fi
 
 # Older glibc headers do not define SYS_getrandom even when the modern UAPI
 # headers provide __NR_getrandom. Use the UAPI syscall number directly so
 # CPython can compile os.getrandom without raising the minimum glibc version.
-if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" ]]; then
+# CPython 3.16 falls back to __NR_getrandom itself.
+if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]]; then
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
         patch -p1 -i "${ROOT}/patch-getrandom-use-nr-3.15.patch"
     elif [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]]; then
@@ -350,8 +356,10 @@ fi
 # built against lacks them, which loses them for good in builds targeting an
 # older glibc. Call the raw syscalls when the wrappers are missing so both
 # functions keep working on any kernel that implements them.
-# Backport of https://github.com/python/cpython/pull/155520.
-patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
+# Backport of https://github.com/python/cpython/pull/155520, included in 3.16.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
+fi
 
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.

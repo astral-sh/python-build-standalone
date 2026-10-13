@@ -433,6 +433,26 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: false,
             },
             MachOAllowedDylib {
+                name: "@rpath/libpython3.16.dylib".to_string(),
+                max_compatibility_version: "3.16.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.16d.dylib".to_string(),
+                max_compatibility_version: "3.16.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.16t.dylib".to_string(),
+                max_compatibility_version: "3.16.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
+                name: "@rpath/libpython3.16td.dylib".to_string(),
+                max_compatibility_version: "3.16.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
                 name: "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit".to_string(),
                 max_compatibility_version: "45.0.0".try_into().unwrap(),
                 required: true,
@@ -1651,7 +1671,7 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
                         continue;
                     }
                 }
-                "3.15" => {
+                "3.15" | "3.16" => {
                     if PE_ALLOWED_LIBRARIES_315.contains(&lib.as_str()) {
                         continue;
                     }
@@ -1808,7 +1828,7 @@ fn validate_extension_modules(
         "3.14" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_14);
         }
-        "3.15" => {
+        "3.15" | "3.16" => {
             wanted.extend(GLOBAL_EXTENSIONS_PYTHON_3_15);
         }
         _ => {
@@ -1833,7 +1853,7 @@ fn validate_extension_modules(
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13);
         }
 
-        if matches!(python_major_minor, "3.14" | "3.15") {
+        if matches!(python_major_minor, "3.14" | "3.15" | "3.16") {
             wanted.extend(GLOBAL_EXTENSIONS_WINDOWS_3_14);
         }
 
@@ -1881,7 +1901,12 @@ fn validate_extension_modules(
         wanted.insert("_testexternalinspection");
     }
 
-    if (is_linux || is_macos) && matches!(python_major_minor, "3.12" | "3.13" | "3.14" | "3.15") {
+    if (is_linux || is_macos)
+        && matches!(
+            python_major_minor,
+            "3.12" | "3.13" | "3.14" | "3.15" | "3.16"
+        )
+    {
         wanted.insert("_testsinglephase");
     }
 
@@ -2028,6 +2053,8 @@ fn validate_distribution(
         "3.14"
     } else if dist_filename.starts_with("cpython-3.15.") {
         "3.15"
+    } else if dist_filename.starts_with("cpython-3.16.") {
+        "3.16"
     } else {
         return Err(anyhow!("could not parse Python version from filename"));
     };

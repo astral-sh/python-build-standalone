@@ -745,6 +745,7 @@ def hack_project_files(
         b"",
     )
     # The legacy launcher and shell extension are only present through Python 3.15.
+    # https://github.com/python/cpython/pull/153512
     if meets_python_maximum_version(python_version, "3.15"):
         static_replace_in_file(
             pcbuild_proj,
@@ -813,7 +814,7 @@ def run_msbuild(
     # See https://learn.microsoft.com/en-us/cpp/cpp/attributes#msvcmusttail
     # and https://github.com/python/cpython/issues/148047
     if (
-        python_version.startswith("3.15")
+        meets_python_minimum_version(python_version, "3.15")
         and platform == "x64"
         and configuration != "Debug"
     ):

@@ -4,7 +4,6 @@ darwin:
   aarch64-apple-darwin:
     arch: aarch64
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -22,7 +21,6 @@ darwin:
   x86_64-apple-darwin:
     arch: x86_64
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -43,7 +41,6 @@ linux:
     arch: aarch64
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -62,7 +59,6 @@ linux:
     arch: armv7
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -83,7 +79,6 @@ linux:
     arch: armv7
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -104,7 +99,6 @@ linux:
     arch: s390x
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -125,7 +119,6 @@ linux:
     arch: ppc64le
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -146,7 +139,6 @@ linux:
     arch: riscv64
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -167,7 +159,6 @@ linux:
     arch: x86_64
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -188,7 +179,6 @@ linux:
     arch_variant: v2
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -209,7 +199,6 @@ linux:
     arch_variant: v3
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -230,7 +219,6 @@ linux:
     arch_variant: v4
     libc: gnu
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -250,7 +238,6 @@ linux:
     arch: x86_64
     libc: musl
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -276,7 +263,6 @@ linux:
     arch_variant: v2
     libc: musl
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -302,7 +288,6 @@ linux:
     arch_variant: v3
     libc: musl
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -328,7 +313,6 @@ linux:
     arch_variant: v4
     libc: musl
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -353,7 +337,6 @@ linux:
     arch: aarch64
     libc: musl
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -378,7 +361,6 @@ windows:
   i686-pc-windows-msvc:
     arch: x86
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -399,7 +381,6 @@ windows:
   x86_64-pc-windows-msvc:
     arch: x86_64
     python_versions:
-      - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"
@@ -425,8 +406,6 @@ windows:
   aarch64-pc-windows-msvc:
     arch: aarch64
     python_versions:
-      # On 3.10, `_tkinter` is failing to be included in the build
-      # - "3.10"
       - "3.11"
       - "3.12"
       - "3.13"

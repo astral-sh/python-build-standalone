@@ -127,7 +127,7 @@ release-run token commit tag:
 
   rm -rf dist
   just release-download-distributions {{token}} {{commit}}
-  datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
+  datetime=$(ls dist/cpython-3.11.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
   just release-upload-distributions {{token}} ${datetime} {{tag}}
   just release-finalize {{tag}}
 
@@ -138,5 +138,5 @@ release-dry-run token commit tag:
 
   rm -rf dist
   just release-download-distributions {{token}} {{commit}}
-  datetime=$(ls dist/cpython-3.10.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
+  datetime=$(ls dist/cpython-3.11.*-x86_64-unknown-linux-gnu-install_only-*.tar.gz  | awk -F- '{print $8}' | awk -F. '{print $1}')
   just release-upload-distributions-dry-run {{token}} ${datetime} {{tag}}

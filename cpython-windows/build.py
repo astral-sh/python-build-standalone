@@ -744,14 +744,16 @@ def hack_project_files(
         b'<Projects2 Include="python_uwp.vcxproj;pythonw_uwp.vcxproj" Condition="$(IncludeUwp)" />',
         b"",
     )
-    static_replace_in_file(
-        pcbuild_proj,
-        b'<Projects Include="pylauncher.vcxproj;pywlauncher.vcxproj" />',
-        b"",
-    )
-    static_replace_in_file(
-        pcbuild_proj, b'<Projects Include="pyshellext.vcxproj" />', b""
-    )
+    # The legacy launcher and shell extension are only present through Python 3.15.
+    if meets_python_maximum_version(python_version, "3.15"):
+        static_replace_in_file(
+            pcbuild_proj,
+            b'<Projects Include="pylauncher.vcxproj;pywlauncher.vcxproj" />',
+            b"",
+        )
+        static_replace_in_file(
+            pcbuild_proj, b'<Projects Include="pyshellext.vcxproj" />', b""
+        )
 
     # Ditto for freeze_importlib, which isn't needed since we don't modify
     # the frozen importlib baked into the source distribution (

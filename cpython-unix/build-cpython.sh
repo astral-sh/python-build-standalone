@@ -811,12 +811,6 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${TARGET_TRIPLE}" == x86_64*
     CFLAGS_JIT="${CFLAGS_JIT//-fPIC/}"
 fi
 
-# TODO: Remove when RISC-V cross-builds use LLVM/lld.
-# Binutils 2.31 can incorrectly relax RISC-V calls with libffi 3.8.0.
-if [[ "${TARGET_TRIPLE}" == "riscv64-unknown-linux-gnu" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-    export LDFLAGS_NODIST="${LDFLAGS_NODIST:+${LDFLAGS_NODIST} }-Wl,--no-relax"
-fi
-
 BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:-}" \
     CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
@@ -1159,10 +1153,13 @@ replace_in_all("-fdebug-default-version=4", "")
 # not have LLVM installed.
 replace_in_all("-fuse-ld=lld", "")
 
-# Target sysroots only exist in the build container. Keeping their paths in
-# sysconfig would make downstream extension builds search a nonexistent root.
+# Target sysroots and GCC installations only exist in the build container.
+# Downstream native extension builds should not inherit cross-compilation flags.
 for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():
-    if flag.startswith("--sysroot="):
+    if (
+        flag.startswith(("--sysroot=", "--gcc-install-dir=", "--target="))
+        or flag in ("-fuse-ld=lld", "-Wno-unused-command-line-argument")
+    ):
         replace_in_all(flag, "")
 
 # Remove some build environment paths.

@@ -410,9 +410,10 @@ elif [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]]; then
 fi
 
 # On Python 3.14+, enable the tail calling interpreter which is more performant.
-# This is only available on Clang 19+
+# The required preserve_none calling convention is supported on x86-64 and AArch64.
 # https://docs.python.org/3.14/using/configure.html#cmdoption-with-tail-call-interp
-if [[ "${CC}" = "clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+if [[ "${CC}" = "clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" &&
+    ( "${TARGET_TRIPLE}" == x86_64* || "${TARGET_TRIPLE}" == aarch64-* ) ]]; then
     EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-tail-call-interp"
 fi
 

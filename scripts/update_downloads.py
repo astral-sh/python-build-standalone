@@ -7,6 +7,10 @@
 # dependencies = [
 #     "packaging>=24",
 # ]
+#
+# [tool.uv]
+# require-build-hashes = true
+# preview-features = ["build-dependency-hashes"]
 # ///
 
 """Find and optionally apply updates to pythonbuild/downloads.json.

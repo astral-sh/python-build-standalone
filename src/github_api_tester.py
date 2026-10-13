@@ -22,6 +22,10 @@
 #     "pytest",
 #     "pytest-trio",
 # ]
+#
+# [tool.uv]
+# require-build-hashes = true
+# preview-features = ["build-dependency-hashes"]
 # ///
 
 import dataclasses

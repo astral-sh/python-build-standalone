@@ -4,6 +4,10 @@
 #     "packaging",
 #     "pyyaml",
 # ]
+#
+# [tool.uv]
+# require-build-hashes = true
+# preview-features = ["build-dependency-hashes"]
 # ///
 
 import argparse

@@ -1,5 +1,9 @@
 # /// script
 # requires-python = ">=3.11"
+#
+# [tool.uv]
+# require-build-hashes = true
+# preview-features = ["build-dependency-hashes"]
 # ///
 """Generate versions payload for python-build-standalone releases."""
 

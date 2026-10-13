@@ -93,14 +93,27 @@ EXTRA_FLAGS="${EXTRA_FLAGS} --disable-loadable-xcursor"
 # Use a space when no host flags are needed.
 # RAWCPP is X.Org's stdin-fed preprocessor command. Use the full path to
 # the target compiler driver with "-" to read from stdin.
-CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
+# Libtool may drop cross-compilation options from its shared-library link.
+# Include them in CC so it invokes the target compiler with the same sysroot.
+# https://www.gnu.org/software/libtool/manual/html_node/Stripped-link-flags.html
+LIBTOOL_CC="${CC}"
+read -r -a TARGET_LDFLAGS <<< "${EXTRA_TARGET_LDFLAGS}"
+for flag in "${TARGET_LDFLAGS[@]}"; do
+  case "${flag}" in
+    --target=*|--sysroot=*|--gcc-install-dir=*) LIBTOOL_CC="${LIBTOOL_CC} ${flag}" ;;
+  esac
+done
+RAWCPP="$(command -v "${CC}") -E -"
+
+CC="${LIBTOOL_CC}" \
+  CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I/tools/deps/include" \
   LDFLAGS="${EXTRA_TARGET_LDFLAGS}" \
   CC_FOR_BUILD="${HOST_CC}" \
   CFLAGS_FOR_BUILD="${EXTRA_HOST_CFLAGS} -I/tools/deps/include" \
   CPPFLAGS_FOR_BUILD="${EXTRA_HOST_CFLAGS} -I/tools/deps/include" \
   LDFLAGS_FOR_BUILD="${EXTRA_HOST_LDFLAGS:- }" \
-  RAWCPP="$(command -v "${CC}") -E -"\
+  RAWCPP="${RAWCPP}" \
   ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \

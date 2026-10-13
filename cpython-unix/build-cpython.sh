@@ -314,7 +314,9 @@ fi
 
 # Ensure the new build-details.json file reports relocatable paths.
 # There is not yet a flag in ./configure for this, sadly.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
+    patch -p1 -i "${ROOT}/patch-python-relative-build-details-3.16.patch"
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
     patch -p1 -i "${ROOT}/patch-python-relative-build-details.patch"
 fi
 

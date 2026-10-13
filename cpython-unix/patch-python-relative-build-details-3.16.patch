@@ -1,0 +1,38 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -993,7 +993,7 @@ pybuilddir.txt: $(PYTHON_FOR_BUILD_DEPS)
+ 	fi
+ 
+ $(BUILD_DETAILS): pybuilddir.txt
+-	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py `cat pybuilddir.txt`/$(BUILD_DETAILS)
++	$(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/generate-build-details.py --relative-paths --config-file-path $(LIBDEST)/$(BUILD_DETAILS) `cat pybuilddir.txt`/$(BUILD_DETAILS)
+ 
+ # Build static library
+ $(LIBRARY): $(LIBRARY_OBJS)
+diff --git a/Tools/build/generate-build-details.py b/Tools/build/generate-build-details.py
+--- a/Tools/build/generate-build-details.py
++++ b/Tools/build/generate-build-details.py
+@@ -133,11 +133,12 @@ def generate_data(schema_version: str) -> collections.defaultdict[str, Any]:
+ 
+ 
+ def make_paths_relative(data: dict[str, Any], config_path: str | None = None) -> None:
++    base_prefix = data['base_prefix']
++
+     # Make base_prefix relative to the config_path directory
+     if config_path:
+         data['base_prefix'] = relative_path(data['base_prefix'],
+                                             os.path.dirname(config_path))
+-    base_prefix = data['base_prefix']
+ 
+     # Update path values to make them relative to base_prefix
+     PATH_KEYS = (
+@@ -205,6 +206,8 @@ def main() -> None:
+     if args.relative_paths:
+         make_paths_relative(data, args.config_file_path)
+ 
++    print(f"generate-build-details debug: {sysconfig=} {sysconfig.get_platform()=}", file=sys.stderr)
++
+     json_output = json.dumps(data, indent=2)
+     with open(args.location, 'w', encoding='utf-8') as f:
+         f.write(json_output)

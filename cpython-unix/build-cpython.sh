@@ -806,7 +806,7 @@ fi
 
 # TODO: Remove when RISC-V cross-builds use LLVM/lld.
 # Binutils 2.31 can incorrectly relax RISC-V calls with libffi 3.8.0.
-if [[ "${TARGET_TRIPLE}" == "riscv64-unknown-linux-gnu" && "${PYTHON_MAJMIN_VERSION}" == "3.15" ]]; then
+if [[ "${TARGET_TRIPLE}" == "riscv64-unknown-linux-gnu" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
     export LDFLAGS_NODIST="${LDFLAGS_NODIST:+${LDFLAGS_NODIST} }-Wl,--no-relax"
 fi
 

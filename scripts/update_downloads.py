@@ -314,6 +314,7 @@ POLICIES: dict[str, Policy] = {
     "cpython-3.13": cpython_policy("3.13"),
     "cpython-3.14": cpython_policy("3.14"),
     "cpython-3.15": cpython_policy("3.15", allow_prereleases=True),
+    "cpython-3.16": cpython_policy("3.16", allow_prereleases=True),
     "expat": github_policy(
         "libexpat/libexpat",
         r"R_(?P<version>[0-9_]+)",

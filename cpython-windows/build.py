@@ -2031,6 +2031,7 @@ def main() -> None:
             "cpython-3.13",
             "cpython-3.14",
             "cpython-3.15",
+            "cpython-3.16",
         },
         default="cpython-3.11",
         help="Python distribution to build",

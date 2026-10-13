@@ -113,6 +113,18 @@
         "license_file": "LICENSE.cpython.txt",
         "python_tag": "cp315"
     },
+    "cpython-3.16": {
+        "url": "https://www.python.org/ftp/python/3.16.0/Python-3.16.0a1.tar.xz",
+        "size": 35379848,
+        "sha256": "dcaa9029436b723e33412c68ca17f0130be73058e47a3a7c049cb8cdf6034ee9",
+        "version": "3.16.0a1",
+        "licenses": [
+            "Python-2.0",
+            "CNRI-Python"
+        ],
+        "license_file": "LICENSE.cpython.txt",
+        "python_tag": "cp316"
+    },
     "expat": {
         "url": "https://github.com/libexpat/libexpat/releases/download/R_2_9_0/expat-2.9.0.tar.xz",
         "size": 534052,

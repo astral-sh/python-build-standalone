@@ -12,7 +12,7 @@ Self-contained, portable, high-performance Python distributions.
   as fast or faster than other CPython distributions.
 - Portable, can be installed into any path.
 - Self-contained, extension modules and dependencies included.
-- Python 3.11-3.15.
+- Python 3.11-3.16.
 - Standard and free-threaded builds.
 - Linux, macOS, and Windows.
 - Multiple [platforms and architectures](https://docs.astral.sh/python-build-standalone/running/#obtaining-distributions)

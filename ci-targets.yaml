@@ -9,6 +9,7 @@ darwin:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -26,6 +27,7 @@ darwin:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -46,6 +48,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -64,6 +67,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - noopt
@@ -84,6 +88,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - noopt
@@ -104,6 +109,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - noopt
@@ -124,6 +130,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - noopt
@@ -144,6 +151,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - noopt
@@ -164,6 +172,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -184,6 +193,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -204,6 +214,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -224,6 +235,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug
       - pgo+lto
@@ -243,6 +255,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug+static
       - noopt+static
@@ -268,6 +281,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug+static
       - noopt+static
@@ -293,6 +307,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug+static
       - noopt+static
@@ -318,6 +333,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug+static
       - noopt+static
@@ -342,6 +358,7 @@ linux:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     build_options:
       - debug+static
       - noopt+static
@@ -366,6 +383,7 @@ windows:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     vs_version: "2022"
     platform_toolset: "v143"
     vc_tools_version: "14.4"
@@ -386,6 +404,7 @@ windows:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     vs_version: "2022"
     platform_toolset: "v143"
     vc_tools_version: "14.4"
@@ -411,6 +430,7 @@ windows:
       - "3.13"
       - "3.14"
       - "3.15"
+      - "3.16"
     vs_version: "2026"
     platform_toolset: "v143"
     vc_tools_version: "14.4"

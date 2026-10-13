@@ -70,7 +70,7 @@ LINUX_ALLOW_SYSTEM_LIBRARIES = {
     "rt",
     "util",
 }
-MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "m", "pthread"}
+MACOS_ALLOW_SYSTEM_LIBRARIES = {"dl", "iconv", "m", "pthread"}
 MACOS_ALLOW_FRAMEWORKS = {"CoreFoundation"}
 
 

@@ -530,6 +530,11 @@ static DARWIN_ALLOWED_DYLIBS: Lazy<Vec<MachOAllowedDylib>> = Lazy::new(|| {
                 required: true,
             },
             MachOAllowedDylib {
+                name: "/usr/lib/libiconv.2.dylib".to_string(),
+                max_compatibility_version: "7.0.0".try_into().unwrap(),
+                required: false,
+            },
+            MachOAllowedDylib {
                 name: "/usr/lib/libncurses.5.4.dylib".to_string(),
                 max_compatibility_version: "5.4.0".try_into().unwrap(),
                 required: true,

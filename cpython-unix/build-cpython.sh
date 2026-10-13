@@ -398,6 +398,9 @@ fi
 if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
     # Add configure flag for proper configure support for libedit.
     EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-readline=editline"
+elif [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]]; then
+    # Recent SDKs expose has_mouse, but macOS 11's libncurses does not.
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} ac_cv_lib_curses_has_mouse=no"
 fi
 
 # On Python 3.14+, enable the tail calling interpreter which is more performant.
@@ -432,9 +435,13 @@ CONFIGURE_FLAGS="
     --prefix=/install
     --with-openssl=${TOOLS_PATH}/deps
     --with-system-expat
-    --with-system-libmpdec
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
+
+# CPython 3.16 always uses the system libmpdec.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-system-libmpdec"
+fi
 
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     # Build standard-library extensions as built-ins by default. Setup.local

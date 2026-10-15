@@ -33,7 +33,7 @@ jobs:
     needs: release-gate
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    runs-on: depot-ubuntu-24.04-8
+    runs-on: github-ubuntu-24.04-x86_64-8
     environment: release
 
     permissions:

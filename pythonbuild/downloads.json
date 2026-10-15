@@ -427,10 +427,10 @@
         "license_file": "LICENSE.tcl.txt"
     },
     "uuid": {
-        "url": "https://sourceforge.net/projects/libuuid/files/libuuid-1.0.3.tar.gz",
-        "size": 318256,
-        "sha256": "46af3275291091009ad7f1b899de3d0cea0252737550e7919d17237997db5644",
-        "version": "1.0.3",
+        "url": "https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/v2.42/util-linux-2.42.4.tar.xz",
+        "size": 10729748,
+        "sha256": "fbd62a100ab7bb8746ba0661255c3c48185b1e9021507c624da01fbc696330ec",
+        "version": "2.42.4",
         "library_names": [
             "uuid"
         ],

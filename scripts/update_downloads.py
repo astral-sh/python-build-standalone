@@ -170,6 +170,31 @@ class HtmlDiscovery:
 
 
 @dataclasses.dataclass(frozen=True)
+class UtilLinuxDiscovery:
+    """Find stable util-linux tarballs in the newest release series."""
+
+    index_url: str = "https://mirrors.edge.kernel.org/pub/linux/utils/util-linux/"
+
+    def releases(self, client: HttpClient) -> Iterable[Release]:
+        series = HtmlDiscovery(
+            self.index_url, r"^v(?P<version>[0-9]+\.[0-9]+)/$"
+        ).releases(client)
+        for release in sorted(
+            series, key=lambda item: Version(item.version), reverse=True
+        ):
+            files = list(
+                HtmlDiscovery(
+                    release.url,
+                    rf"^util-linux-(?P<version>{re.escape(release.version)}"
+                    r"(?:\.[0-9]+)?)\.tar\.xz$",
+                ).releases(client)
+            )
+            if files:
+                yield from files
+                return
+
+
+@dataclasses.dataclass(frozen=True)
 class GitHubReleaseDiscovery:
     """Discover release artifacts using the GitHub releases API."""
 
@@ -394,6 +419,7 @@ POLICIES: dict[str, Policy] = {
         artifact_url="https://prdownloads.sourceforge.net/tcl/tk{version}-src.tar.gz",
         series=2,
     ),
+    "uuid": Policy(UtilLinuxDiscovery()),
     "x11-util-macros": xorg_policy("util", "util-macros"),
     "xcb-proto": html_policy(
         "https://xcb.freedesktop.org/dist/",
@@ -428,7 +454,6 @@ UNSUPPORTED: dict[str, str] = {
     "tix": "source dependency snapshot",
     "tk-windows-bin-904": "commit-pinned CPython binary dependency",
     "tk-windows-bin-8615": "commit-pinned CPython binary dependency",
-    "uuid": "inactive upstream project",
     "zlib-ng": "CPython source-deps snapshot must follow the upstream release",
     "zstd": "CPython source-deps snapshot must follow the upstream release",
 }

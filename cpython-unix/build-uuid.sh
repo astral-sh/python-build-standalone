@@ -9,19 +9,37 @@ ROOT=$(pwd)
 
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:$PATH
 
-tar -xf "libuuid-${UUID_VERSION}.tar.gz"
-pushd "libuuid-${UUID_VERSION}"
+tar -xf "util-linux-${UUID_VERSION}.tar.xz"
+pushd "util-linux-${UUID_VERSION}"
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC"
 
-# Error by default in Clang 16.
-CFLAGS="${CFLAGS} -Wno-error=implicit-function-declaration"
+UUID_CONFIGURE_FLAGS=()
+if [[ "${TARGET_TRIPLE}" == *-linux-* ]]; then
+    UUID_CONFIGURE_FLAGS+=(--enable-libuuid-force-uuidd)
+fi
 
 CFLAGS="${CFLAGS}" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \
     --prefix=/tools/deps \
-    --disable-shared
+    --localstatedir=/var \
+    --libdir=/tools/deps/lib \
+    --disable-all-programs \
+    --enable-libuuid \
+    --disable-libblkid \
+    --disable-libfdisk \
+    --disable-liblastlog2 \
+    --disable-libmount \
+    --disable-libsmartcols \
+    --disable-nls \
+    --disable-asciidoc \
+    --disable-dependency-tracking \
+    --without-python \
+    --without-systemd \
+    --disable-shared \
+    --enable-static \
+    "${UUID_CONFIGURE_FLAGS[@]}"
 
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out"

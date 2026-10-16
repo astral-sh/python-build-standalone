@@ -302,12 +302,6 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
 fi
 
-# musl aliases getdents64 to getdents, which expects a struct dirent pointer.
-# Passing the buffer as void * is compatible with both libc signatures.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" && "${TARGET_TRIPLE}" == *-linux-musl ]]; then
-    patch -p1 -i "${ROOT}/patch-posixsubprocess-musl-getdents64.patch"
-fi
-
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
 # So we need to set both.
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
@@ -385,6 +379,14 @@ CONFIGURE_FLAGS="
     --with-system-expat
     --without-ensurepip
     ${EXTRA_CONFIGURE_FLAGS}"
+
+# Older musl exposes getdents64 as a compatibility alias with a different
+# signature. Starting with musl 1.2.4, the compatibility macro is only exposed
+# with _LARGEFILE64_SOURCE and may be removed in a future release.
+# Use CPython's getdents64 syscall fallback for musl builds instead.
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" && "${TARGET_TRIPLE}" == *-linux-musl ]]; then
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} ac_cv_func_getdents64=no"
+fi
 
 # CPython 3.16 always uses the system libmpdec.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then

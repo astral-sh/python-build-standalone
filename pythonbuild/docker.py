@@ -117,7 +117,7 @@ def get_image(
 
     image_name = f"image-{name}.{host_platform}"
     image_path = image_dir / image_name
-    tar_path = image_path.with_suffix(".tar")
+    tar_path = pathlib.Path(str(image_path) + ".tar")
 
     with image_path.open("r") as fh:
         image_id = fh.read().strip()
@@ -134,8 +134,9 @@ def get_image(
             return image_id
 
         else:
+            image_data = (image_dir / f"{name}.Dockerfile").read_bytes()
             return build_docker_image(
-                client, str(source_dir).encode(), image_dir, name, host_platform
+                client, image_data, image_dir, name, host_platform
             )
 
 

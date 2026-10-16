@@ -421,7 +421,6 @@ UNSUPPORTED: dict[str, str] = {
     "llvm-aarch64-macos": "toolchain bootstrap requires coordinated updates",
     "musl": "intentionally pinned build toolchain",
     "musl-static": "intentionally pinned build toolchain",
-    "openssl-1.1": "end-of-life release series",
     "sqlite": "requires SQLite's numeric-version and release-year mapping",
     "strawberryperl": "Windows toolchain update requires manual validation",
     "tix": "source dependency snapshot",

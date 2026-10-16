@@ -376,21 +376,6 @@ def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Pa
         normalized_patch.unlink()
 
 
-OPENSSL_PROPS_REMOVE_RULES_LEGACY = rb"""
-  <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
-  </ItemGroup>
-  <Target Name="_CopySSLDLL" Inputs="@(_SSLDLL)" Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" AfterTargets="Build">
-    <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-  <Target Name="_CleanSSLDLL" BeforeTargets="Clean">
-    <Delete Files="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" TreatErrorsAsWarnings="true" />
-  </Target>
-"""
-
 OPENSSL_PROPS_REMOVE_RULES = rb"""
   <ItemGroup>
     <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
@@ -2057,15 +2042,8 @@ def main() -> None:
 
         # TODO need better dependency checking.
 
-        # CPython 3.11+ have native support for OpenSSL 3.x. We anticipate this
-        # will change in a future minor release once OpenSSL 1.1 goes out of support.
-        # But who knows.
-        if args.python == "cpython-3.10":
-            openssl_entry = "openssl-1.1"
-        else:
-            openssl_entry = "openssl-3.5"
-
-        openssl_with_uplink = args.python in ["cpython-3.10", "cpython-3.11"]
+        openssl_entry = "openssl-3.5"
+        openssl_with_uplink = args.python == "cpython-3.11"
         if openssl_with_uplink:
             openssl_build_options = f"{build_options}-uplink"
         else:

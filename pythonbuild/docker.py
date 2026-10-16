@@ -109,9 +109,7 @@ def ensure_docker_image(client, fh, image_path, platform=None):
     return image
 
 
-def get_image(
-    client, source_dir: pathlib.Path, image_dir: pathlib.Path, name, host_platform
-):
+def get_image(client, image_dir: pathlib.Path, name, host_platform):
     if client is None:
         return None
 

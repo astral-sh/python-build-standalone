@@ -49,7 +49,7 @@ class TestPythonInterpreter(unittest.TestCase):
         sys.platform in ("darwin", "linux"), "bundled libuuid is used on Unix"
     )
     def test_uuid_generate_time_safe(self):
-        import _uuid
+        import _uuid  # type: ignore
         import uuid
 
         self.assertTrue(_uuid.has_uuid_generate_time_safe)

@@ -19,6 +19,13 @@ if [[ "${TARGET_TRIPLE}" == *-linux-* ]]; then
     UUID_CONFIGURE_FLAGS+=(--enable-libuuid-force-uuidd)
 fi
 
+# The util-linux configure script requires Linux headers globally, but libuuid
+# does not use linux/version.h. Keep HAVE_LINUX_VERSION_H undefined while
+# bypassing that check for musl; recheck this when updating util-linux.
+if [[ "${TARGET_TRIPLE}" == *-linux-musl* ]]; then
+    export ac_cv_header_linux_version_h=unknown
+fi
+
 CFLAGS="${CFLAGS}" CPPFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" ./configure \
     --build="${BUILD_TRIPLE}" \
     --host="${TARGET_TRIPLE}" \

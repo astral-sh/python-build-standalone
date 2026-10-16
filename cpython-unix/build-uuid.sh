@@ -19,6 +19,14 @@ if [[ "${TARGET_TRIPLE}" == *-linux-* ]]; then
     UUID_CONFIGURE_FLAGS+=(--enable-libuuid-force-uuidd)
 fi
 
+# The ARMv7 GNU toolchains use glibc with 32-bit time_t. Keep the existing
+# compatibility baseline even though timestamps after 2038 are not supported.
+case "${TARGET_TRIPLE}" in
+    armv7-unknown-linux-gnueabi|armv7-unknown-linux-gnueabihf)
+        UUID_CONFIGURE_FLAGS+=(--disable-year2038)
+        ;;
+esac
+
 # The util-linux configure script requires Linux headers globally, but libuuid
 # does not use linux/version.h. Keep HAVE_LINUX_VERSION_H undefined while
 # bypassing that check for musl; recheck this when updating util-linux.

@@ -311,7 +311,6 @@ POLICIES: dict[str, Policy] = {
         r"(?:^|/)bzip2-(?P<version>[0-9][0-9A-Za-z.+-]*)\.tar\.gz$",
         mirrored=True,
     ),
-    "cpython-3.10": cpython_policy("3.10"),
     "cpython-3.11": cpython_policy("3.11"),
     "cpython-3.12": cpython_policy("3.12"),
     "cpython-3.13": cpython_policy("3.13"),

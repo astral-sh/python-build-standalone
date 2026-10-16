@@ -55,7 +55,6 @@ def main():
     parser.add_argument(
         "--python",
         choices={
-            "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",

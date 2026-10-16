@@ -34,18 +34,6 @@
         ],
         "license_file": "LICENSE.bzip2.txt"
     },
-    "cpython-3.10": {
-        "url": "https://www.python.org/ftp/python/3.10.22/Python-3.10.22.tar.xz",
-        "size": 19907500,
-        "sha256": "c61fe9b1a1a7ec2a0b0388e664187c378a5325a89e3606d220abf5bdfccb2543",
-        "version": "3.10.22",
-        "licenses": [
-            "Python-2.0",
-            "CNRI-Python"
-        ],
-        "license_file": "LICENSE.cpython.txt",
-        "python_tag": "cp310"
-    },
     "cpython-3.11": {
         "url": "https://www.python.org/ftp/python/3.11.17/Python-3.11.17.tar.xz",
         "size": 20352864,

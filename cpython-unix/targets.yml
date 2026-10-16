@@ -79,7 +79,6 @@ aarch64-apple-darwin:
   host_platforms:
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -135,7 +134,6 @@ aarch64-unknown-linux-gnu:
     - linux_aarch64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -208,7 +206,6 @@ armv7-unknown-linux-gnueabi:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -262,7 +259,6 @@ armv7-unknown-linux-gnueabihf:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -316,7 +312,6 @@ loongarch64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -371,7 +366,6 @@ mips-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -425,7 +419,6 @@ mipsel-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -479,7 +472,6 @@ ppc64le-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -533,7 +525,6 @@ riscv64-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -601,7 +592,6 @@ s390x-unknown-linux-gnu:
   host_platforms:
     - linux_x86_64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -660,7 +650,6 @@ x86_64-apple-darwin:
   host_platforms:
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -716,7 +705,6 @@ x86_64-unknown-linux-gnu:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -786,7 +774,6 @@ x86_64_v2-unknown-linux-gnu:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -857,7 +844,6 @@ x86_64_v3-unknown-linux-gnu:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -930,7 +916,6 @@ x86_64_v4-unknown-linux-gnu:
     # under Rosetta. But they can build correctly.
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -1000,7 +985,6 @@ x86_64-unknown-linux-musl:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -1060,7 +1044,6 @@ x86_64_v2-unknown-linux-musl:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -1121,7 +1104,6 @@ x86_64_v3-unknown-linux-musl:
     - linux_x86_64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -1184,7 +1166,6 @@ x86_64_v4-unknown-linux-musl:
     # under Rosetta. But they can build correctly.
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'
@@ -1245,7 +1226,6 @@ aarch64-unknown-linux-musl:
     - linux_aarch64
     - macos_arm64
   pythons_supported:
-    - '3.10'
     - '3.11'
     - '3.12'
     - '3.13'

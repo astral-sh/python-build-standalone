@@ -1324,7 +1324,6 @@ def main():
             )
 
         elif action in (
-            "cpython-3.10",
             "cpython-3.11",
             "cpython-3.12",
             "cpython-3.13",

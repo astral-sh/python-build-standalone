@@ -2033,6 +2033,7 @@ fn validate_distribution(
     let mut context = ValidationContext::default();
 
     let mut seen_paths = BTreeSet::new();
+    let mut seen_files = BTreeSet::new();
     let mut seen_symlink_targets = BTreeSet::new();
 
     let dist_filename = dist_path
@@ -2119,6 +2120,10 @@ fn validate_distribution(
         }
 
         seen_paths.insert(path.clone());
+        let entry_type = entry.header().entry_type();
+        if entry_type.is_file() || entry_type.is_symlink() || entry_type.is_hard_link() {
+            seen_files.insert(path.clone());
+        }
 
         if let Some(link_name) = entry.link_name()? {
             let target = path.parent().unwrap().join(link_name).normalize();
@@ -2295,9 +2300,30 @@ fn validate_distribution(
         }
     }
 
+    // Ensure license paths in PYTHON.json refer to files in the archive.
+    let check_license_path = |context: &mut ValidationContext, owner: &str, path: &str| {
+        if !seen_files.contains(&Path::new("python").join(path)) {
+            context
+                .errors
+                .push(format!("{owner} references missing license file: {path}"));
+        }
+    };
+
+    if let Some(path) = &json.as_ref().unwrap().license_path {
+        check_license_path(&mut context, "PYTHON.json", path);
+    }
+
     // Validate extension module metadata.
     for (name, variants) in json.as_ref().unwrap().build_info.extensions.iter() {
         for ext in variants {
+            for path in ext.license_paths.iter().flatten() {
+                check_license_path(
+                    &mut context,
+                    &format!("extension {name} ({})", ext.variant),
+                    path,
+                );
+            }
+
             if let Some(shared) = &ext.shared_lib {
                 if !seen_paths.contains(&PathBuf::from("python").join(shared)) {
                     context.errors.push(format!(

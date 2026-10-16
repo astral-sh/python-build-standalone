@@ -533,36 +533,11 @@ def hack_props(
     else:
         raise Exception(f"unhandled architecture: {arch}")
 
-    try:
-        # CPython 3.11+ builds with OpenSSL 3.x by default.
-        static_replace_in_file(
-            openssl_props,
-            b"<_DLLSuffix>-3</_DLLSuffix>",
-            b"<_DLLSuffix>-3%s</_DLLSuffix>" % suffix,
-        )
-    except NoSearchStringError:
-        static_replace_in_file(
-            openssl_props,
-            b"<_DLLSuffix>-1_1</_DLLSuffix>",
-            b"<_DLLSuffix>-1_1%s</_DLLSuffix>" % suffix,
-        )
-
-    libffi_props = pcbuild_path / "libffi.props"
-
-    # Always use libffi-8 / 3.4.2. (Python < 3.11 use libffi-7 by default.)
-    try:
-        static_replace_in_file(
-            libffi_props,
-            rb"""<_LIBFFIDLL Include="$(libffiOutDir)\libffi-7.dll" />""",
-            rb"""<_LIBFFIDLL Include="$(libffiOutDir)\libffi-8.dll" />""",
-        )
-        static_replace_in_file(
-            libffi_props,
-            rb"<AdditionalDependencies>libffi-7.lib;%(AdditionalDependencies)</AdditionalDependencies>",
-            rb"<AdditionalDependencies>libffi-8.lib;%(AdditionalDependencies)</AdditionalDependencies>",
-        )
-    except NoSearchStringError:
-        pass
+    static_replace_in_file(
+        openssl_props,
+        b"<_DLLSuffix>-3</_DLLSuffix>",
+        b"<_DLLSuffix>-3%s</_DLLSuffix>" % suffix,
+    )
 
 
 def hack_project_files(
@@ -701,7 +676,7 @@ def hack_project_files(
         pass
 
     # Our logic for rewriting extension projects gets confused by _sqlite.vcxproj not
-    # having a `<PreprocessorDefinitions>` line in 3.10+. So adjust that.
+    # having a `<PreprocessorDefinitions>` line. So adjust that.
     try:
         static_replace_in_file(
             pcbuild_path / "_sqlite3.vcxproj",
@@ -2141,7 +2116,7 @@ def main() -> None:
         else:
             release_tag = release_tag_from_git()
 
-        # Create, e.g., `cpython-3.10.13+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
+        # Create, e.g., `cpython-3.11.9+20240224-x86_64-pc-windows-msvc-pgo.tar.zst`.
         DIST.mkdir(exist_ok=True)
         compress_python_archive(
             tar_path,

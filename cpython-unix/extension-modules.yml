@@ -205,19 +205,6 @@ _dbm:
   sources:
     - _dbmmodule.c
   defines-conditional:
-    - define: HAVE_BERKDB_H
-      maximum-python-version: "3.10"
-      targets:
-        - .*-unknown-linux-.*
-    - define: DB_DBM_HSEARCH
-      maximum-python-version: "3.10"
-      targets:
-        - .*-unknown-linux-.*
-    - define: HAVE_NDBM_H
-      maximum-python-version: "3.10"
-      targets:
-        - .*-apple-.*
-
     # It looks like CPython commit 0a9f69539be27acf1cddf1b58d02a88d02e5008d didn't
     # fully implement BDB support in configure. So we add a missing define.
     - define: USE_BERKDB
@@ -535,8 +522,6 @@ _sqlite3:
   sources-conditional:
     - source: _sqlite/blob.c
       minimum-python-version: "3.11"
-    - source: _sqlite/cache.c
-      maximum-python-version: "3.10"
   includes-deps:
     - include
   includes:
@@ -958,9 +943,6 @@ builtins:
 cmath:
   sources:
     - cmathmodule.c
-  sources-conditional:
-    - source: _math.c
-      maximum-python-version: "3.10"
   links:
     - m
 
@@ -992,9 +974,6 @@ marshal:
 math:
   sources:
     - mathmodule.c
-  sources-conditional:
-    - source: _math.c
-      maximum-python-version: "3.10"
   links:
     - m
 

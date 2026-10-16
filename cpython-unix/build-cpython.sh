@@ -91,7 +91,7 @@ fi
 # configure doesn't support cross-compiling on LoongArch. Teach it.
 if [ "${PYBUILD_PLATFORM}" != "macos" ]; then
     case "${PYTHON_MAJMIN_VERSION}" in
-        3.10|3.11)
+        3.11)
             patch -p1 -i "${ROOT}/patch-configure-add-loongarch-triplet.patch"
             ;;
     esac
@@ -121,18 +121,13 @@ if [[ -n "${CROSS_COMPILING}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; t
         patch -p1 -i "${ROOT}/patch-dont-clear-runshared-14.patch"
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
         patch -p1 -i "${ROOT}/patch-dont-clear-runshared-13.patch"
-    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-        patch -p1 -i "${ROOT}/patch-dont-clear-runshared.patch"
     else
-        patch -p1 -i "${ROOT}/patch-dont-clear-runshared-legacy.patch"
+        patch -p1 -i "${ROOT}/patch-dont-clear-runshared.patch"
     fi
 fi
 
-# CPython <=3.10 doesn't properly detect musl. CPython <=3.12 tries, but fails
-# in our environment because of an autoconf bug. CPython >=3.13 is fine.
-if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
-    patch -p1 -i "${ROOT}/patch-cpython-configure-target-triple-musl-3.10.patch"
-elif [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
+# CPython <=3.12 fails to detect musl in our environment due to an autoconf bug.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-cpython-configure-target-triple-musl-3.12.patch"
 fi
 
@@ -140,9 +135,7 @@ fi
 # (e.g. freezing). Normally it only uses this Python during cross-compiling.
 # This patch forces always using it. See comment related to
 # `--with-build-python` for more.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-    patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
-fi
+patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can
 # invoke the host Python on our own.
@@ -150,12 +143,6 @@ if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-write-python-for-build-3.12.patch"
 else
     patch -p1 -i "${ROOT}/patch-write-python-for-build.patch"
-fi
-
-# Object files can get listed multiple times leading to duplicate symbols
-# when linking. Prevent this.
-if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
-  patch -p1 -i "${ROOT}/patch-makesetup-deduplicate-objs.patch"
 fi
 
 # The default build rule for the macOS dylib doesn't pick up libraries
@@ -170,11 +157,7 @@ fi
 # possibly inappropriate code path if a configure time check fails. This is not
 # appropriate for certain cross-compiling scenarios. See discussion at
 # https://bugs.python.org/issue44689.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-    patch -p1 -i "${ROOT}/patch-ctypes-callproc.patch"
-else
-    patch -p1 -i "${ROOT}/patch-ctypes-callproc-legacy.patch"
-fi
+patch -p1 -i "${ROOT}/patch-ctypes-callproc.patch"
 
 # On Windows, CPython looks for the Tcl/Tk libraries relative to the base prefix,
 # which we want. But on Unix, it doesn't. This patch applies similar behavior on Unix,
@@ -185,10 +168,8 @@ elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-tkinter-3.13.patch"
 elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-tkinter-3.12.patch"
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
+else
     patch -p1 -i "${ROOT}/patch-tkinter-3.11.patch"
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_10}" ]; then
-    patch -p1 -i "${ROOT}/patch-tkinter-3.10.patch"
 fi
 
 # Code that runs at ctypes module import time does not work with
@@ -203,32 +184,6 @@ fi
 # https://github.com/python/cpython/pull/158307
 if [ "${PYTHON_MAJMIN_VERSION}" = 3.15 ]; then
     patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
-fi
-
-# We build against libedit instead of readline in all environments.
-#
-# On macOS, we use the system/SDK libedit, which is likely somewhat old.
-#
-# On Linux, we use our own libedit, which should be modern.
-#
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
-    # Even though 3.10 is libedit aware, it isn't compatible with newer
-    # versions of libedit. We need to backport a 3.11 patch to teach the
-    # build system about completions.
-    # Backport of 9e9df93ffc6df5141843caf651d33d446676a414 from 3.11.
-    patch -p1 -i "${ROOT}/patch-readline-libedit-completions.patch"
-
-    # 3.11 has a patch related to completer delims that closes a feature
-    # gap. Backport it as a quality of life enhancement.
-    #
-    # Backport of 42dd2613fe4bc61e1f633078560f2d84a0a16c3f from 3.11.
-    patch -p1 -i "${ROOT}/patch-readline-libedit-completer-delims.patch"
-fi
-
-# iOS doesn't have system(). Teach posixmodule.c about that.
-# Python 3.11 makes this a configure time check, so we don't need the patch there.
-if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]]; then
-    patch -p1 -i "${ROOT}/patch-posixmodule-remove-system.patch"
 fi
 
 # CPython 3.11 does not configure every standard-library extension, so disable
@@ -264,21 +219,7 @@ else
     patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.11.patch"
 fi
 
-# CPython < 3.11 always linked against libcrypt. We backport part of
-# upstream commit be21706f3760bec8bd11f85ce02ed6792b07f51f to avoid this
-# behavior.
-if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_10}" ]; then
-    patch -p1 -i "${ROOT}/patch-configure-crypt-no-modify-libs.patch"
-fi
-
-# Backport Tcl/Tk 9.0 support from 3.12 to Python 3.10 and 3.11
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.10" ]; then
-    # git checkout v3.10.19
-    # git cherry-pick 625887e6 27cbeb08 d4680b9e ec139c8f
-    # manually change int argc/objc -> Tcl_Size argc/objc in file
-    # git diff v3.10.19 Modules/_tkinter.c > patch-tkinter-backport-tcl-9-310.patch
-    patch -p1 -i "${ROOT}/patch-tkinter-backport-tcl-9-310.patch"
-fi
+# Backport Tcl/Tk 9.0 support from 3.12 to Python 3.11.
 if [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
     # git checkout v3.11.14
     # git cherry-pick 625887e6 27cbeb08 d4680b9e ec139c8f
@@ -612,9 +553,7 @@ fi
 # Python 3.11 introduces a --with-build-python to denote the host Python.
 # It is required when cross-compiling. But we always build a host Python
 # to avoid complexity with the bootstrap Python binary.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-python=${TOOLS_PATH}/host/bin/python${PYTHON_MAJMIN_VERSION}"
-fi
+CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-python=${TOOLS_PATH}/host/bin/python${PYTHON_MAJMIN_VERSION}"
 
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     # Configure may detect libintl from non-system sources, such
@@ -764,32 +703,27 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
         patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-parking-lot.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
         patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.12.patch
-    elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
-        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.11.patch
     else
-        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.10.patch
+        patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-3.11.patch
     fi
 fi
 
 # Adjust the Python startup logic (getpath.py) to properly locate the installation, even when
 # invoked through a symlink or through an incorrect argv[0]. Because this Python is relocatable, we
 # don't get to rely on the fallback to the compiled-in installation prefix.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]]; then
-    if [ -e "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch" ]; then
-        # Sync the getpath logic in older minor releases to the current version.
-        patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
-    fi
-    patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
+if [ -e "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch" ]; then
+    # Sync the getpath logic in older minor releases to the current version.
+    patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
 fi
+patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 
 # Another, similar change to getpath: When reading inside a venv use the base_executable path to
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
 # cases the above patch doesn't. See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-# 3.10 does not use getpath.py only getpath.c, no patch is applied
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_11}" ]; then
+else
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
 fi
 

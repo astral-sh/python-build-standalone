@@ -989,7 +989,7 @@ def derive_setup_local(
     # Python 3.12+ builds extensions from Setup.stdlib using configure-derived
     # compiler and linker flags. Setup.local only disables modules or overrides
     # linkage that differs from Setup.stdlib.
-    # Python 3.10 and 3.11 use YAML-derived compilation rules for every extension.
+    # Python 3.11 uses YAML-derived compilation rules for every extension.
     section_lines: dict[str, list[bytes]] = {
         "disabled": [],
         "shared": [],
@@ -1035,7 +1035,7 @@ def derive_setup_local(
 
             log(f"extension {name} enabled through distribution's Modules/Setup file")
 
-            # Preserve the Setup line for Python 3.10/3.11 metadata generation.
+            # Preserve the Setup line for Python 3.11 metadata generation.
             # Python 3.12+ reconstructs metadata from configured build files.
             enabled_extensions[name]["setup_line"] = module_info.setup_lines[name]
             continue
@@ -1056,7 +1056,7 @@ def derive_setup_local(
 
             # Inherit the MODULE_<name>_CFLAGS/LDFLAGS produced by configure.
             section_lines[section].append(module_info.stdlib_lines[name])
-        else:  # 3.10 and 3.11
+        else:  # 3.11
             log(f"extension {name} being configured via YAML metadata")
             line, module_cflags = _build_yaml_setup_line(
                 name,

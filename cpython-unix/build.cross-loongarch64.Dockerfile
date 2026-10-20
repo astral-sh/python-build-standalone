@@ -52,14 +52,20 @@ RUN apt-get install \
     zip \
     zlib1g-dev
 
+# Clang and lld use the Debian glibc sysroot and GCC startup/runtime objects.
 RUN apt-get install \
-    g++-loongarch64-linux-gnu \
-    gcc-loongarch64-linux-gnu \
-    libc6-dev-loong64-cross
+    libc6-dev-loong64-cross \
+    libgcc-14-dev-loong64-cross \
+    linux-libc-dev-loong64-cross
 
 RUN cd /tmp && \
     curl -LO https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/pool-loong64/main/libx/libxcrypt/libcrypt-dev_4.4.36-4_loong64.deb && \
     curl -LO https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/pool-loong64/main/libx/libxcrypt/libcrypt1_4.4.36-4_loong64.deb && \
-    dpkg -x libcrypt-dev_4.4.36-4_loong64.deb / && \
-    dpkg -x libcrypt1_4.4.36-4_loong64.deb / && \
-    rm -f /tmp/*.deb
+    dpkg -x libcrypt-dev_4.4.36-4_loong64.deb /tmp/crypt && \
+    dpkg -x libcrypt1_4.4.36-4_loong64.deb /tmp/crypt && \
+    cp -a /tmp/crypt/usr/lib/loongarch64-linux-gnu/. /usr/loongarch64-linux-gnu/lib/ && \
+    cp -a /tmp/crypt/usr/include/. /usr/loongarch64-linux-gnu/include/ && \
+    rm -rf /tmp/crypt /tmp/*.deb
+
+# Rewrite libc's lib and lib64 paths to be relative to the sysroot for LLD.
+RUN sed -i 's@/usr/loongarch64-linux-gnu/@/@g' /usr/loongarch64-linux-gnu/lib/libc.so

@@ -77,6 +77,11 @@ mv Setup.local "Python-${PYTHON_VERSION}/Modules/Setup.local"
 
 pushd "Python-${PYTHON_VERSION}"
 
+# Keep ensurepip's bundled pip in sync with the pip installed below.
+rm Lib/ensurepip/_bundled/pip-*.whl
+cp "${PIP_WHEEL}" Lib/ensurepip/_bundled/
+sed "${sed_args[@]}" "s/^_PIP_VERSION = .*/_PIP_VERSION = \"${PIP_VERSION}\"/" Lib/ensurepip/__init__.py
+
 # configure doesn't support cross-compiling on Apple. Teach it.
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
     if [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then

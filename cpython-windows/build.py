@@ -1566,6 +1566,22 @@ def build_cpython(
         ).unlink()
 
         cpython_source_path = td / f"Python-{python_version}"
+
+        # Keep ensurepip's bundled pip in sync with the pip installed below.
+        ensurepip = cpython_source_path / "Lib" / "ensurepip"
+        bundled = ensurepip / "_bundled"
+        for wheel in bundled.glob("pip-*.whl"):
+            wheel.unlink()
+        shutil.copyfile(pip_wheel, bundled / pip_wheel.name)
+        ensurepip_init = ensurepip / "__init__.py"
+        ensurepip_init.write_bytes(
+            re.sub(
+                rb"(?m)^_PIP_VERSION = [^\r\n]+(?=\r?$)",
+                f'_PIP_VERSION = "{DOWNLOADS["pip"]["version"]}"'.encode("ascii"),
+                ensurepip_init.read_bytes(),
+            )
+        )
+
         pcbuild_path = cpython_source_path / "PCbuild"
 
         out_dir = td / "out"

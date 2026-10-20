@@ -358,13 +358,6 @@ if [[ "${CC}" = "clang" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" &&
     EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-tail-call-interp"
 fi
 
-# On PPC we need to prevent the glibc 2.22 __tls_get_addr_opt symbol
-# from being introduced to preserve runtime compatibility with older
-# glibc.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && "${TARGET_TRIPLE}" = "ppc64le-unknown-linux-gnu" ]]; then
-    LDFLAGS="${LDFLAGS} -Wl,--no-tls-get-addr-optimize"
-fi
-
 # We're calling install_name_tool -add_rpath on extension modules, which
 # eats up 0x20 bytes of space in the Mach-O header, and we need to make
 # sure there's still enough room to add a code signature (0x10 bytes) on
@@ -758,14 +751,6 @@ if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}
     printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
 fi
 
-# Debian's PPC64LE GCC 6 defaults to PIE but selects the non-PIE startup object unless -pie is
-# passed explicitly. Add it only to LINKFORSHARED, which CPython uses when linking executables.
-# See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81170.
-# TODO(jjh)Remove when the ppc64le toolchain changes
-if [[ "${TARGET_TRIPLE}" = "ppc64le-unknown-linux-gnu" ]]; then
-    printf '\nLINKFORSHARED += -pie\n' >> Makefile
-fi
-
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" sharedinstall DESTDIR="${ROOT}/out/python"
 make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
@@ -1094,6 +1079,10 @@ for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():
         flag.startswith(("--sysroot=", "--gcc-install-dir=", "--target="))
         or flag in ("-fuse-ld=lld", "-Wno-unused-command-line-argument")
     ):
+        replace_in_all(flag, "")
+
+for flag in os.environ.get("EXTRA_TARGET_LDFLAGS", "").split():
+    if flag == "-static-libgcc":
         replace_in_all(flag, "")
 
 # Remove some build environment paths.

@@ -1,6 +1,6 @@
-# Debian Stretch.
-FROM debian@sha256:cebe6e1c30384958d471467e231f740e8f0fd92cbfd2a435a186e9bada3aee1c
-LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
+# Debian Trixie
+FROM debian@sha256:3352c2e13876c8a5c5873ef20870e1939e73cb9a3c1aeba5e3e72172a85ce9ed
+LABEL org.opencontainers.image.authors="Jonathan J. Helmus <jjhelmus@gmail.com>"
 
 RUN groupadd -g 1000 build && \
     useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
@@ -17,20 +17,27 @@ ENV HOME=/build \
 CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
-# Stretch stopped publishing snapshots in April 2023. Last snapshot
-# is 20230423T032533Z. But there are package authentication issues
-# with this snapshot.
-RUN for s in debian_stretch debian_stretch-updates debian-security_stretch/updates; do \
-      echo "deb http://snapshot.debian.org/archive/${s%_*}/20221105T150728Z/ ${s#*_} main"; \
-    done > /etc/apt/sources.list && \
+# Use the same authenticated Stretch snapshot as the native AArch64 sysroot.
+# Its signing key has expired, so verify it with mmdebstrap's gpgv wrapper and
+# pin the signed Release metadata before installing any cross packages.
+RUN apt-get update && apt-get install --yes ca-certificates mmdebstrap gpgv
+RUN echo 'deb [signed-by=/usr/share/keyrings/debian-archive-removed-keys.gpg] https://snapshot.debian.org/archive/debian/20230423T032736Z/ stretch main' \
+        > /etc/apt/sources.list.d/stretch.list && \
     ( echo 'quiet "true";'; \
       echo 'APT::Get::Assume-Yes "true";'; \
       echo 'APT::Install-Recommends "false";'; \
       echo 'Acquire::Check-Valid-Until "false";'; \
       echo 'Acquire::Retries "5";'; \
+      echo 'APT::Update::Error-Mode "any";'; \
     ) > /etc/apt/apt.conf.d/99cpython-portable
 
-RUN apt-get update
+RUN printf 'Package: *-cross\nPin: release n=stretch\nPin-Priority: 900\n' \
+        > /etc/apt/preferences.d/stretch-cross
+
+# This is the authenticated Release hash used by build.debian13.Dockerfile.
+RUN apt-get -o 'Apt::Key::gpgvcommand=/usr/libexec/mmdebstrap/gpgvnoexpkeysig' update && \
+    echo 'fe55c42941dd43102b9490af1678e7962ea1e257ccb8f942b43770475c336eb3  /var/lib/apt/lists/snapshot.debian.org_archive_debian_20230423T032736Z_dists_stretch_Release' \
+        | sha256sum --check --strict
 
 # Host building.
 RUN apt-get install \
@@ -49,20 +56,19 @@ RUN apt-get install \
     zip \
     zlib1g-dev
 
-# Cross-building.
+# The cross packages provide glibc, kernel headers, and GCC runtime/startup
+# objects; compilation and linking use the separately supplied LLVM toolchain.
 RUN apt-get install \
-    g++-aarch64-linux-gnu \
-    g++-arm-linux-gnueabi \
-    g++-arm-linux-gnueabihf \
-    g++-powerpc64le-linux-gnu \
-    g++-s390x-linux-gnu \
-    gcc-aarch64-linux-gnu \
-    gcc-arm-linux-gnueabi \
-    gcc-arm-linux-gnueabihf \
-    gcc-powerpc64le-linux-gnu \
-    gcc-s390x-linux-gnu \
-    libc6-dev-arm64-cross \
-    libc6-dev-armel-cross \
-    libc6-dev-armhf-cross \
-    libc6-dev-ppc64el-cross \
-    libc6-dev-s390x-cross
+    libc6-dev-armel-cross libgcc-6-dev-armel-cross \
+    libc6-dev-armhf-cross libgcc-6-dev-armhf-cross \
+    libc6-dev-ppc64el-cross libgcc-6-dev-ppc64el-cross \
+    libc6-dev-s390x-cross libgcc-6-dev-s390x-cross
+
+# Debian's linker scripts contain absolute cross-prefix paths. Make those
+# relative to the sysroot so LLD does not prepend the sysroot twice.
+RUN for target in arm-linux-gnueabi arm-linux-gnueabihf \
+              powerpc64le-linux-gnu s390x-linux-gnu; do \
+      for script in libc.so libpthread.so; do \
+        sed -i "s@/usr/${target}/@/@g" "/usr/${target}/lib/${script}"; \
+      done; \
+    done

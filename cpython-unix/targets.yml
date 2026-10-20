@@ -213,16 +213,26 @@ armv7-unknown-linux-gnueabi:
     - '3.15'
     - '3.16'
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/arm-linux-gnueabi-gcc
-  target_cxx: /usr/bin/arm-linux-gnueabi-g++
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
   target_cflags:
+    - '--target=armv7-unknown-linux-gnueabi'
+    - '--sysroot=/usr/arm-linux-gnueabi'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabi/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
+    - '--target=armv7-unknown-linux-gnueabi'
+    - '--sysroot=/usr/arm-linux-gnueabi'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabi/6'
+    - '-fuse-ld=lld'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -266,16 +276,26 @@ armv7-unknown-linux-gnueabihf:
     - '3.15'
     - '3.16'
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/arm-linux-gnueabihf-gcc
-  target_cxx: /usr/bin/arm-linux-gnueabihf-g++
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
   target_cflags:
+    - '--target=armv7-unknown-linux-gnueabihf'
+    - '--sysroot=/usr/arm-linux-gnueabihf'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabihf/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
+    - '--target=armv7-unknown-linux-gnueabihf'
+    - '--sysroot=/usr/arm-linux-gnueabihf'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabihf/6'
+    - '-fuse-ld=lld'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -373,16 +393,28 @@ ppc64le-unknown-linux-gnu:
     - '3.15'
     - '3.16'
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/powerpc64le-linux-gnu-gcc
-  target_cxx: /usr/bin/powerpc64le-linux-gnu-g++
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
   target_cflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
     - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
+    - '--target=ppc64le-unknown-linux-gnu'
+    - '--sysroot=/usr/powerpc64le-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/powerpc64le-linux-gnu/6'
+    - '-fuse-ld=lld'
+    # Avoid a shared libgcc dependency for long-double operations.
+    - '-static-libgcc'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -493,11 +525,17 @@ s390x-unknown-linux-gnu:
     - '3.15'
     - '3.16'
   docker_image_suffix: .cross
-  host_cc: /usr/bin/x86_64-linux-gnu-gcc
-  host_cxx: /usr/bin/x86_64-linux-gnu-g++
-  target_cc: /usr/bin/s390x-linux-gnu-gcc
-  target_cxx: /usr/bin/s390x-linux-gnu-g++
+  needs_toolchain: true
+  host_cc: clang
+  host_cxx: clang++
+  target_cc: clang
+  target_cxx: clang++
   target_cflags:
+    - '--target=s390x-unknown-linux-gnu'
+    - '--sysroot=/usr/s390x-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/s390x-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-U_FORTIFY_SOURCE'
@@ -505,6 +543,11 @@ s390x-unknown-linux-gnu:
     # set the minimum compatibility level to z10 (released 2008)
     - '-march=z10'
   target_ldflags:
+    - '--target=s390x-unknown-linux-gnu'
+    - '--sysroot=/usr/s390x-linux-gnu'
+    - '--gcc-install-dir=/usr/lib/gcc-cross/s390x-linux-gnu/6'
+    - '-fuse-ld=lld'
+    - '-static-libgcc'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'

@@ -1,7 +1,6 @@
-{% include 'base.debian13.Dockerfile' %}
+{% include 'base.debian13-with-ca-certificates.jinja' %}
 
-RUN apt-get install ca-certificates mmdebstrap gpgv
-{% include 'update-ca-certificates.jinja' %}
+RUN apt-get install mmdebstrap gpgv
 
 # mmdebstrap's APT hooks can redirect file descriptors above 9, which dash
 # rejects. Use bash only in this preparation stage, not in the final image.
@@ -54,12 +53,11 @@ RUN mmdebstrap --variant=extract --mode=root \
 RUN chroot /sysroot /usr/bin/symlinks -cr /
 
 # Build tools and host programs run against current Debian Trixie libraries.
-{% include 'base.debian13.Dockerfile' %}
+{% include 'base.debian13-with-ca-certificates.jinja' %}
 
 # libffi and zlib are used by host Python, independently of the target sysroot.
 RUN apt-get install \
     bzip2 \
-    ca-certificates \
     curl \
     file \
     libc6-dev \
@@ -73,7 +71,6 @@ RUN apt-get install \
     unzip \
     zip \
     zlib1g-dev
-{% include 'update-ca-certificates.jinja' %}
 
 # Copy the native multiarch layout, without mmdebstrap's APT state or packages.
 COPY --from=0 /sysroot/lib/ /usr/x86_64-linux-gnu/lib/

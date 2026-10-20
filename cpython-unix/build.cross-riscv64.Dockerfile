@@ -17,8 +17,8 @@ ENV HOME=/build \
 CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
-RUN apt-get update && apt-get install --yes ca-certificates
-{% include 'update-ca-certificates.jinja' %}
+RUN apt-get update && apt-get install --yes ca-certificates && \
+    {% include 'distrust-emsign-g3.jinja' %}
 
 # Add buster as a source for riscv sysroot packages
 RUN for s in debian_buster debian_buster-updates debian-security_buster/updates; do \

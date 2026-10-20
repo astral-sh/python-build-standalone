@@ -33,15 +33,6 @@ if [ -n "${CROSS_COMPILING}" ]; then
     loongarch64-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
-    mips-unknown-linux-gnu)
-      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
-      ;;
-    mipsel-unknown-linux-gnu)
-      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
-      ;;
-    mips64el-unknown-linux-gnuabi64)
-      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
-      ;;
     ppc64le-unknown-linux-gnu)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
@@ -58,12 +49,6 @@ if [ -n "${CROSS_COMPILING}" ]; then
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     loongarch64-unknown-linux-musl)
-      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
-      ;;
-    mips-unknown-linux-musl)
-      EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
-      ;;
-    mipsel-unknown-linux-musl)
       EXTRA_FLAGS="${EXTRA_FLAGS} --enable-malloc0returnsnull"
       ;;
     ppc64le-unknown-linux-musl)

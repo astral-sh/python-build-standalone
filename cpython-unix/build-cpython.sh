@@ -1244,15 +1244,6 @@ armv7-unknown-linux-gnueabihf)
 loongarch64-unknown-linux-gnu)
     PYTHON_ARCH="loongarch64-linux-gnu"
     ;;
-mips-unknown-linux-gnu)
-    PYTHON_ARCH="mips-linux-gnu"
-    ;;
-mipsel-unknown-linux-gnu)
-    PYTHON_ARCH="mipsel-linux-gnu"
-    ;;
-mips64el-unknown-linux-gnuabi64)
-    PYTHON_ARCH="mips64el-linux-gnuabi64"
-    ;;
 ppc64le-unknown-linux-gnu)
     PYTHON_ARCH="powerpc64le-linux-gnu"
     ;;

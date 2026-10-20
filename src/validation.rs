@@ -41,11 +41,6 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "armv7-unknown-linux-gnueabihf",
     "i686-pc-windows-msvc",
     "i686-unknown-linux-gnu",
-    // Note there's build support for mips* targets but they are not tested
-    // See https://github.com/astral-sh/python-build-standalone/issues/412
-    "mips-unknown-linux-gnu",
-    "mipsel-unknown-linux-gnu",
-    "mips64el-unknown-linux-gnuabi64",
     "ppc64le-unknown-linux-gnu",
     "riscv64-unknown-linux-gnu",
     "s390x-unknown-linux-gnu",
@@ -206,18 +201,6 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
-            "mips-unknown-linux-gnu",
-            version_compare::Version::from("2.19").unwrap(),
-        );
-        versions.insert(
-            "mipsel-unknown-linux-gnu",
-            version_compare::Version::from("2.19").unwrap(),
-        );
-        versions.insert(
-            "mips64el-unknown-linux-gnuabi64",
-            version_compare::Version::from("2.19").unwrap(),
-        );
-        versions.insert(
             "ppc64le-unknown-linux-gnu",
             version_compare::Version::from("2.17").unwrap(),
         );
@@ -287,12 +270,6 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
                 vec!["ld-linux-aarch64.so.1", "libgcc_s.so.1"],
             ),
             ("i686-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
-            ("mips-unknown-linux-gnu", vec!["ld.so.1", "libatomic.so.1"]),
-            (
-                "mipsel-unknown-linux-gnu",
-                vec!["ld.so.1", "libatomic.so.1"],
-            ),
-            ("mips64el-unknown-linux-gnuabi64", vec![]),
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
             (
                 "riscv64-unknown-linux-gnu",
@@ -600,9 +577,6 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),
         ("i686-pc-windows-msvc", "win32"),
         ("i686-unknown-linux-gnu", "linux-i686"),
-        ("mips-unknown-linux-gnu", "linux-mips"),
-        ("mipsel-unknown-linux-gnu", "linux-mipsel"),
-        ("mips64el-unknown-linux-gnuabi64", "todo"),
         ("ppc64le-unknown-linux-gnu", "linux-powerpc64le"),
         ("riscv64-unknown-linux-gnu", "linux-riscv64"),
         ("s390x-unknown-linux-gnu", "linux-s390x"),
@@ -1012,9 +986,6 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "armv7-unknown-linux-gnueabi" => object::elf::EM_ARM,
         "armv7-unknown-linux-gnueabihf" => object::elf::EM_ARM,
         "i686-unknown-linux-gnu" => object::elf::EM_386,
-        "mips-unknown-linux-gnu" => object::elf::EM_MIPS,
-        "mipsel-unknown-linux-gnu" => object::elf::EM_MIPS,
-        "mips64el-unknown-linux-gnuabi64" => 0,
         "ppc64le-unknown-linux-gnu" => object::elf::EM_PPC64,
         "riscv64-unknown-linux-gnu" => object::elf::EM_RISCV,
         "s390x-unknown-linux-gnu" => object::elf::EM_S390,

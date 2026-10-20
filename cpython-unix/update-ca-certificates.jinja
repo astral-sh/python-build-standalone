@@ -1,0 +1,3 @@
+# Frozen Debian snapshots can retain roots that are no longer trusted.
+RUN sed -i 's|^mozilla/emSign_ECC_Root_CA_-_G3\.crt$|!&|' /etc/ca-certificates.conf && \
+    update-ca-certificates

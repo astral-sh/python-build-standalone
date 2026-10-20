@@ -51,6 +51,7 @@ RUN apt-get install \
     unzip \
     zip \
     zlib1g-dev
+{% include 'update-ca-certificates.jinja' %}
 
 RUN apt-get install \
     g++-loongarch64-linux-gnu \

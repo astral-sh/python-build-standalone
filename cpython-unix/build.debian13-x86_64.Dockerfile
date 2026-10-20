@@ -1,6 +1,7 @@
 {% include 'base.debian13.Dockerfile' %}
 
 RUN apt-get install ca-certificates mmdebstrap gpgv
+{% include 'update-ca-certificates.jinja' %}
 
 # mmdebstrap's APT hooks can redirect file descriptors above 9, which dash
 # rejects. Use bash only in this preparation stage, not in the final image.
@@ -72,6 +73,7 @@ RUN apt-get install \
     unzip \
     zip \
     zlib1g-dev
+{% include 'update-ca-certificates.jinja' %}
 
 # Copy the native multiarch layout, without mmdebstrap's APT state or packages.
 COPY --from=0 /sysroot/lib/ /usr/x86_64-linux-gnu/lib/

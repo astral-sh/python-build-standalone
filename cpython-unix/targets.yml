@@ -164,6 +164,7 @@ aarch64-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/aarch64-linux-gnu'
+    # Work around Cortex-A53 erratum 843419 in linked code.
     - '-Wl,--fix-cortex-a53-843419'
     # Hardening
     - '-Wl,-z,noexecstack'

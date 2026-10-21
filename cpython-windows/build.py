@@ -1740,13 +1740,28 @@ def build_cpython(
                 / instrumented_python_exe
             )
 
-            tests = subprocess.run(
+            discovery = subprocess.run(
                 [str(instrumented_python), "-m", "test", "--list-tests"],
                 cwd=cpython_source_path,
                 env=env,
                 check=False,
                 stdout=subprocess.PIPE,
-            ).stdout
+            )
+            if discovery.returncode or not discovery.stdout.strip():
+                log(
+                    f"PGO test discovery exited 0x{discovery.returncode & 0xFFFFFFFF:08X}"
+                )
+                if arch == "arm64ec":
+                    subprocess.run(
+                        [
+                            sys.executable,
+                            str(SUPPORT / "diagnose-arm64ec.py"),
+                            str(instrumented_python),
+                        ],
+                        check=True,
+                    )
+            discovery.check_returncode()
+            tests = discovery.stdout
 
             tests = [l.strip() for l in tests.decode("utf-8").splitlines() if l.strip()]
 

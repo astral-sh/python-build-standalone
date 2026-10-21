@@ -1740,6 +1740,9 @@ def build_cpython(
         if debug:
             args.append("--debug")
 
+        if meets_python_minimum_version(python_version, "3.15"):
+            args.append("--include-builddetails-json")
+
         # CPython 3.12 removed distutils.
         if not meets_python_minimum_version(python_version, "3.12"):
             args.append("--include-distutils")

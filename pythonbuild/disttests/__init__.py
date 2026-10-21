@@ -72,6 +72,37 @@ class TestPythonInterpreter(unittest.TestCase):
                     (install_dir / f"pythonw{major}.{minor}t.exe").is_file()
                 )
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux perf support")
+    def test_perf_trampoline(self):
+        import sysconfig
+
+        if not sysconfig.get_config_var("PY_HAVE_PERF_TRAMPOLINE"):
+            self.skipTest("perf trampolines are not supported")
+
+        modes = ["perf"]
+        if sys.version_info >= (3, 13):
+            modes.append("perf_jit")
+
+        with tempfile.TemporaryDirectory(prefix="disttests-perf-") as temp_dir:
+            for mode in modes:
+                with self.subTest(mode=mode):
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            "-I",
+                            "-X",
+                            mode,
+                            "-c",
+                            "import sys; assert sys.is_stack_trampoline_active()",
+                        ],
+                        cwd=temp_dir,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.STDOUT,
+                        text=True,
+                        timeout=10,
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout)
+
     def test_compression(self):
         import bz2
         import lzma

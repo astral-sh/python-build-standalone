@@ -487,6 +487,14 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
 
+        # Prevent the perf trampoline end marker from sharing the following
+        # function's address; BOLT can otherwise move it with that function.
+        if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
+            patch -p1 -i "${ROOT}/patch-perf-trampoline-bolt.patch" Python/asm_trampoline_x86_64.S
+        else
+            patch -p1 -i "${ROOT}/patch-perf-trampoline-bolt.patch"
+        fi
+
         # CPython allows overriding the default BOLT flags via configure
         # environment variables. Use our toolchain-specific skip list, add
         # additional optimizations, use safe identical code folding, and omit
@@ -499,7 +507,9 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         # the HACL hash compressors, leaving frame-pointer-relative accesses
         # below the x86-64 red zone. Match BOLT's `/N` suffix for local symbols.
         # https://github.com/astral-sh/uv/issues/20618
-        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=RC4_options/1,sha256_update/.*,sha512_update/.*,PyBlake2_blake2b_compress/.*,PyBlake2_blake2s_compress/.*,update_block.*"
+        # The perf trampoline's code is copied at runtime using its start and
+        # end markers, so exclude it from BOLT's function optimizations.
+        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=_Py_trampoline_func_.*,RC4_options/1,sha256_update/.*,sha512_update/.*,PyBlake2_blake2b_compress/.*,PyBlake2_blake2s_compress/.*,update_block.*"
         BOLT_APPLY_FLAGS="${BOLT_COMMON_FLAGS} \
 -reorder-blocks=ext-tsp \
 -reorder-functions=cdsort \

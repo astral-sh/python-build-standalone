@@ -2030,6 +2030,13 @@ def main() -> None:
         help="Windows SDK version to build with",
     )
 
+    parser.add_argument(
+        "--compression",
+        choices=("small", "fast"),
+        default="small",
+        help="Compression profile for the full distribution archive",
+    )
+
     args = parser.parse_args()
     build_options = args.options
     target_triple = args.target_triple or default_target_triple()
@@ -2116,6 +2123,7 @@ def main() -> None:
             tar_path,
             DIST,
             f"{tar_path.stem}-{release_tag}",
+            compression=args.compression,
         )
 
 

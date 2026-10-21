@@ -729,6 +729,8 @@ x86_64-unknown-linux-gnu:
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Supply compiler helpers missing from the sysroot's older libgcc.
     - '--rtlib=compiler-rt'
+    # The runtime flag is unused during compile-only checks with -Werror.
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -803,6 +805,8 @@ x86_64_v2-unknown-linux-gnu:
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Supply compiler helpers missing from the sysroot's older libgcc.
     - '--rtlib=compiler-rt'
+    # The runtime flag is unused during compile-only checks with -Werror.
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -878,6 +882,8 @@ x86_64_v3-unknown-linux-gnu:
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Supply compiler helpers missing from the sysroot's older libgcc.
     - '--rtlib=compiler-rt'
+    # The runtime flag is unused during compile-only checks with -Werror.
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -955,6 +961,8 @@ x86_64_v4-unknown-linux-gnu:
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Supply compiler helpers missing from the sysroot's older libgcc.
     - '--rtlib=compiler-rt'
+    # The runtime flag is unused during compile-only checks with -Werror.
+    - '-Wno-unused-command-line-argument'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'

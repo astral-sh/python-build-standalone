@@ -15,7 +15,7 @@ use {
             PT_GNU_RELRO, PT_GNU_STACK, PT_LOAD, PT_NOTE, SHN_UNDEF, STB_GLOBAL, STB_WEAK,
             STV_DEFAULT, STV_HIDDEN,
         },
-        macho::{LC_CODE_SIGNATURE, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
+        macho::{LC_CODE_SIGNATURE, MH_DSYM, MH_OBJECT, MH_TWOLEVEL, MachHeader32, MachHeader64},
         read::{
             elf::{Dyn, FileHeader, ProgramHeader, SectionHeader, Sym},
             macho::{LoadCommandVariant, MachHeader, Nlist, Section, Segment},
@@ -1416,6 +1416,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     let advertised_sdk_version = semver::Version::parse(&format!("{advertised_sdk_version}.0"))?;
 
     let endian = header.endian()?;
+    let is_linked_binary = !matches!(header.filetype(endian), MH_OBJECT | MH_DSYM);
 
     let wanted_cpu_type = match target_triple {
         "aarch64-apple-darwin" => object::macho::CPU_TYPE_ARM64,
@@ -1432,7 +1433,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
         ));
     }
 
-    if header.filetype(endian) != MH_OBJECT && header.flags(endian) & MH_TWOLEVEL == 0 {
+    if is_linked_binary && header.flags(endian) & MH_TWOLEVEL == 0 {
         context.errors.push(format!(
             "{} does not use two-level symbol lookup",
             path.display()
@@ -1525,7 +1526,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
                     // Ensure specific symbols in dynamic binaries have proper visibility.
                     // Read: we don't want to export symbols from dependencies.
-                    if header.filetype(endian) != MH_OBJECT {
+                    if is_linked_binary {
                         let n_type = symbol.n_type();
 
                         let scope = if n_type & object::macho::N_TYPE == object::macho::N_UNDF {
@@ -1592,7 +1593,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
     let end_of_load_commands =
         std::mem::size_of_val(header) as u64 + header.sizeofcmds(endian) as u64;
-    if header.filetype(endian) != MH_OBJECT
+    if is_linked_binary
         && end_of_load_commands + if has_code_signature { 0 } else { 16 } > lowest_file_offset
     {
         context.errors.push(format!(
@@ -1623,9 +1624,9 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
         }
     }
 
-    // Don't perform undefined symbol analysis for object files because the object file
-    // in isolation lacks context.
-    if header.filetype(endian) != MH_OBJECT {
+    // Object files and `.dSYM` files lack the linked-library context needed
+    // for undefined-symbol analysis.
+    if is_linked_binary {
         for symbol in undefined_symbols {
             // Assume undefined symbols provided by current library will resolve.
             if symbol.library_ordinal == object::macho::SELF_LIBRARY_ORDINAL {
@@ -2431,6 +2432,59 @@ fn validate_distribution(
     }
 
     Ok(context.errors)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn validate_macho_header(filetype: u32, cputype: u32) -> Result<Vec<String>> {
+        let words = [
+            object::macho::MH_MAGIC_64,
+            cputype,
+            object::macho::CPU_SUBTYPE_X86_64_ALL,
+            filetype,
+            0,
+            0,
+            0,
+            0,
+        ];
+        let data: Vec<u8> = words.into_iter().flat_map(u32::to_le_bytes).collect();
+        let header = MachHeader64::parse(data.as_slice(), 0)?;
+        let mut context = ValidationContext::default();
+        validate_macho(
+            &mut context,
+            "x86_64-apple-darwin",
+            "10.15",
+            "11.0",
+            Path::new("python/install/bin/python3.15.dSYM/Contents/Resources/DWARF/python3.15"),
+            header,
+            &data,
+        )?;
+        Ok(context.errors)
+    }
+
+    #[test]
+    fn dsym_files_do_not_require_runtime_linker_flags() -> Result<()> {
+        let errors = validate_macho_header(MH_DSYM, object::macho::CPU_TYPE_X86_64)?;
+        assert!(errors.is_empty(), "{errors:?}");
+
+        let errors =
+            validate_macho_header(object::macho::MH_DYLIB, object::macho::CPU_TYPE_X86_64)?;
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("two-level symbol lookup"))
+        );
+
+        let errors = validate_macho_header(MH_DSYM, object::macho::CPU_TYPE_ARM64)?;
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.contains("incorrect CPU type"))
+        );
+        Ok(())
+    }
 }
 
 pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {

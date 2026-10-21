@@ -271,6 +271,27 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
         versions
     });
 
+static GCC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::Version<'static>>> =
+    Lazy::new(|| {
+        // Runtime ABI ceilings for the manylinux2014 targets, as recorded by
+        // https://github.com/pypa/auditwheel/blob/main/src/auditwheel/policy/manylinux-policy.json
+        // RISC-V uses the GCC 8 runtime from the Buster sysroot, whose newest
+        // symbol version is `GCC_7.0.0`.
+        [
+            ("aarch64-unknown-linux-gnu", "4.7.0"),
+            ("armv7-unknown-linux-gnueabi", "4.7.0"),
+            ("armv7-unknown-linux-gnueabihf", "4.7.0"),
+            ("riscv64-unknown-linux-gnu", "7.0.0"),
+            ("x86_64-unknown-linux-gnu", "4.8.0"),
+            ("x86_64_v2-unknown-linux-gnu", "4.8.0"),
+            ("x86_64_v3-unknown-linux-gnu", "4.8.0"),
+            ("x86_64_v4-unknown-linux-gnu", "4.8.0"),
+        ]
+        .into_iter()
+        .map(|(triple, version)| (triple, version_compare::Version::from(version).unwrap()))
+        .collect()
+    });
+
 static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static str>>> =
     Lazy::new(|| {
         [
@@ -969,6 +990,33 @@ impl ValidationContext {
     }
 }
 
+fn validate_elf_symbol_version(
+    target_triple: &str,
+    path: &Path,
+    name: &str,
+    version: &str,
+) -> Option<String> {
+    let (namespace, version) = version.split_once('_')?;
+    let (library, max_version) = match namespace {
+        "GLIBC" => (
+            "glibc",
+            GLIBC_MAX_VERSION_BY_TRIPLE
+                .get(target_triple)
+                .expect("max glibc version not defined for target triple"),
+        ),
+        "GCC" => ("libgcc", GCC_MAX_VERSION_BY_TRIPLE.get(target_triple)?),
+        _ => return None,
+    };
+    let version = version_compare::Version::from(version).expect("unable to parse version");
+
+    (&version > max_version).then(|| {
+        format!(
+            "{} references too new {library} symbol {name:?} ({version} > {max_version})",
+            path.display(),
+        )
+    })
+}
+
 fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     context: &mut ValidationContext,
     json: &PythonJsonMain,
@@ -1086,10 +1134,6 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
             }
         }
     }
-
-    let wanted_glibc_max_version = GLIBC_MAX_VERSION_BY_TRIPLE
-        .get(target_triple)
-        .expect("max glibc version not defined for target triple");
 
     let sections = elf.sections(endian, data)?;
 
@@ -1226,21 +1270,10 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     }
 
                     if let Some(version) = version_version {
-                        let parts: Vec<&str> = version.splitn(2, '_').collect();
-
-                        if parts.len() == 2 && parts[0] == "GLIBC" {
-                            let v = version_compare::Version::from(parts[1])
-                                .expect("unable to parse version");
-
-                            if &v > wanted_glibc_max_version {
-                                context.errors.push(format!(
-                                    "{} references too new glibc symbol {:?} ({} > {})",
-                                    path.display(),
-                                    name,
-                                    v,
-                                    wanted_glibc_max_version,
-                                ));
-                            }
+                        if let Some(error) =
+                            validate_elf_symbol_version(target_triple, path, &name, &version)
+                        {
+                            context.errors.push(error);
                         }
                     }
                 }
@@ -2461,5 +2494,79 @@ pub fn command_validate_distribution(args: &ArgMatches) -> Result<()> {
         Ok(())
     } else {
         Err(anyhow!("errors found"))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn symbol_error(target: &str, symbol: &str, version: &str) -> Option<String> {
+        validate_elf_symbol_version(
+            target,
+            Path::new("python/install/lib/libpython3.16.so.1.0"),
+            symbol,
+            version,
+        )
+    }
+
+    #[test]
+    fn libgcc_symbols_respect_target_runtime_limits() {
+        for (target, allowed, rejected) in [
+            ("aarch64-unknown-linux-gnu", "GCC_4.7.0", "GCC_4.8.0"),
+            ("armv7-unknown-linux-gnueabi", "GCC_4.7.0", "GCC_4.8.0"),
+            ("armv7-unknown-linux-gnueabihf", "GCC_4.7.0", "GCC_4.8.0"),
+            ("x86_64-unknown-linux-gnu", "GCC_4.8.0", "GCC_7.0.0"),
+            ("x86_64_v2-unknown-linux-gnu", "GCC_4.8.0", "GCC_7.0.0"),
+            ("x86_64_v3-unknown-linux-gnu", "GCC_4.8.0", "GCC_7.0.0"),
+            ("x86_64_v4-unknown-linux-gnu", "GCC_4.8.0", "GCC_7.0.0"),
+            ("riscv64-unknown-linux-gnu", "GCC_7.0.0", "GCC_11.0"),
+        ] {
+            assert!(symbol_error(target, "runtime_symbol", "GCC_3.0").is_none());
+            assert!(symbol_error(target, "runtime_symbol", allowed).is_none());
+            assert!(symbol_error(target, "runtime_symbol", rejected).is_some());
+        }
+    }
+
+    #[test]
+    fn rejects_native_half_float_runtime_symbols() {
+        for symbol in ["__extendhfsf2", "__extendhfxf2", "__truncdfhf2"] {
+            assert_eq!(
+                symbol_error("x86_64-unknown-linux-gnu", symbol, "GCC_12.0.0").unwrap(),
+                format!(
+                    "python/install/lib/libpython3.16.so.1.0 references too new libgcc symbol \
+                     {symbol:?} (12.0.0 > 4.8.0)"
+                )
+            );
+        }
+        assert_eq!(
+            symbol_error("aarch64-unknown-linux-gnu", "__extendhftf2", "GCC_11.0").unwrap(),
+            "python/install/lib/libpython3.16.so.1.0 references too new libgcc symbol \
+             \"__extendhftf2\" (11.0 > 4.7.0)"
+        );
+    }
+
+    #[test]
+    fn glibc_symbols_respect_target_runtime_limits() {
+        assert!(symbol_error("x86_64-unknown-linux-gnu", "runtime_symbol", "GLIBC_2.17").is_none());
+        assert!(symbol_error("x86_64-unknown-linux-gnu", "runtime_symbol", "GLIBC_2.18").is_some());
+        assert!(
+            symbol_error("riscv64-unknown-linux-gnu", "runtime_symbol", "GLIBC_2.28").is_none()
+        );
+        assert!(
+            symbol_error("riscv64-unknown-linux-gnu", "runtime_symbol", "GLIBC_2.29").is_some()
+        );
+        assert!(
+            symbol_error("x86_64-unknown-linux-musl", "runtime_symbol", "GLIBC_2.2.5").is_some()
+        );
+    }
+
+    #[test]
+    fn every_target_allowing_libgcc_has_a_runtime_limit() {
+        for (target, libraries) in ELF_ALLOWED_LIBRARIES_BY_TRIPLE.iter() {
+            if libraries.contains(&"libgcc_s.so.1") {
+                assert!(GCC_MAX_VERSION_BY_TRIPLE.contains_key(target), "{target}");
+            }
+        }
     }
 }

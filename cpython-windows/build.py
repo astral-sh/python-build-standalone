@@ -819,6 +819,13 @@ def prepare_arm64ec(cpython_source_path: pathlib.Path) -> None:
         ).replace(b"defined(_M_ARM64)", b"(defined(_M_ARM64) || defined(_M_ARM64EC))")
         path.write_bytes(data)
 
+    # The Windows SDK defines `uint128_t` for ARM64EC, conflicting with HACL's definition.
+    for path in (cpython_source_path / "Modules" / "_hacl" / "include").rglob("*.h"):
+        data = path.read_bytes()
+        patched = re.sub(rb"\buint128_t\b", b"Hacl_uint128_t", data)
+        if patched != data:
+            path.write_bytes(patched)
+
 
 def run_msbuild(
     msbuild: pathlib.Path,

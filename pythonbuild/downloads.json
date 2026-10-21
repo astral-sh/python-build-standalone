@@ -71,10 +71,10 @@
         "python_tag": "cp313"
     },
     "cpython-3.14": {
-        "url": "https://www.python.org/ftp/python/3.14.8/Python-3.14.8.tar.xz",
-        "size": 24130644,
-        "sha256": "c2215904f02b175596dc49351585104f4bc20341e1c47378b26a2c274360ce73",
-        "version": "3.14.8",
+        "url": "https://www.python.org/ftp/python/3.14.9/Python-3.14.9.tar.xz",
+        "size": 24176992,
+        "sha256": "e02d9ac21cebda6e46435369744a92c65cc7cd8669697694122cf97ffacd1e53",
+        "version": "3.14.9",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"

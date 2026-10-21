@@ -201,3 +201,13 @@ jobs:
           sleep 10
           # Use admin to bypass required review
           gh pr merge --squash --admin "$BRANCH_NAME"
+
+  publish-docs:
+    needs: release
+    if: ${{ github.event.inputs.dry-run == 'false' }}
+    uses: $/.github/workflows/publish-docs.yml
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      ref: ${{ inputs.sha }}

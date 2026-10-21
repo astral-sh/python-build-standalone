@@ -2,7 +2,7 @@
 name: Publish docs
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       ref:
         description: "The commit SHA, tag, or branch to publish. Defaults to the selected workflow ref."

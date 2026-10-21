@@ -1092,6 +1092,9 @@ replace_in_all("-fdebug-default-version=4", "")
 # not have LLVM installed.
 replace_in_all("-fuse-ld=lld", "")
 
+# This is a build-time policy for our binaries, not for downstream extensions.
+replace_in_all("-static-libgcc", "")
+
 # Target sysroots and GCC installations only exist in the build container.
 # Downstream native extension builds should not inherit cross-compilation flags.
 for flag in os.environ.get("EXTRA_TARGET_CFLAGS", "").split():

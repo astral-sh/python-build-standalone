@@ -47,6 +47,7 @@
 #    List of extra linker flags to use when building for the target.
 #
 #    Values will be added to LDFLAGS.
+#    GNU/Linux targets link libgcc statically to avoid a libgcc_s dependency.
 #
 #    musl-clang uses its own linker wrapper and must not be passed a
 #    -fuse-ld option; the wrapper selects the bundled linker itself.
@@ -170,6 +171,7 @@ aarch64-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-fuse-ld=lld'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -228,6 +230,7 @@ armv7-unknown-linux-gnueabi:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -281,6 +284,7 @@ armv7-unknown-linux-gnueabihf:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -335,6 +339,7 @@ loongarch64-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-Wl,-z,max-page-size=0x10000'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -388,6 +393,7 @@ mips-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -441,6 +447,7 @@ mipsel-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -494,6 +501,7 @@ ppc64le-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -561,6 +569,7 @@ riscv64-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -616,6 +625,7 @@ s390x-unknown-linux-gnu:
     - '-Wl,-z,relro'
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -740,6 +750,7 @@ x86_64-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-fuse-ld=lld'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -810,6 +821,7 @@ x86_64_v2-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-fuse-ld=lld'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -880,6 +892,7 @@ x86_64_v3-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-fuse-ld=lld'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb
@@ -952,6 +965,7 @@ x86_64_v4-unknown-linux-gnu:
     - '-Wl,-z,now'
     - '-Wl,--build-id=sha1'
     - '-fuse-ld=lld'
+    - '-static-libgcc'
   needs:
     - autoconf
     - bdb

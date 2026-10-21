@@ -789,13 +789,12 @@ def prepare_arm64ec(cpython_source_path: pathlib.Path) -> None:
         )
     decimal.write_bytes(data)
 
-    # The x64 PGO runtime can be loaded by an ARM64EC executable.
-    python_project = pcbuild_path / "python.vcxproj"
-    data = python_project.read_bytes().replace(
-        b"$(Platform) == 'x64'",
-        b"($(Platform) == 'x64' or $(Platform) == 'ARM64EC')",
+    # Use the PGO runtime from the `arm64` directory for ARM64EC.
+    static_replace_in_file(
+        pcbuild_path / "python.vcxproj",
+        b"$(Platform) == 'ARM64'",
+        b"($(Platform) == 'ARM64' or $(Platform) == 'ARM64EC')",
     )
-    python_project.write_bytes(data)
 
     projects = pcbuild_path / "pcbuild.proj"
     data = re.sub(
@@ -1741,28 +1740,13 @@ def build_cpython(
                 / instrumented_python_exe
             )
 
-            discovery = subprocess.run(
+            tests = subprocess.run(
                 [str(instrumented_python), "-m", "test", "--list-tests"],
                 cwd=cpython_source_path,
                 env=env,
-                check=False,
+                check=True,
                 stdout=subprocess.PIPE,
-            )
-            if discovery.returncode or not discovery.stdout.strip():
-                log(
-                    f"PGO test discovery exited 0x{discovery.returncode & 0xFFFFFFFF:08X}"
-                )
-                if arch == "arm64ec":
-                    subprocess.run(
-                        [
-                            sys.executable,
-                            str(SUPPORT / "diagnose-arm64ec.py"),
-                            str(instrumented_python),
-                        ],
-                        check=True,
-                    )
-            discovery.check_returncode()
-            tests = discovery.stdout
+            ).stdout
 
             tests = [l.strip() for l in tests.decode("utf-8").splitlines() if l.strip()]
 

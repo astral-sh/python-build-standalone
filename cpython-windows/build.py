@@ -772,11 +772,12 @@ def prepare_arm64ec(cpython_source_path: pathlib.Path) -> None:
         b"<TargetMachine Condition=\"'$(Platform)'=='ARM64'\">MachineARM64</TargetMachine>\n"
         b"      <TargetMachine Condition=\"'$(Platform)'=='ARM64EC'\">MachineARM64EC</TargetMachine>",
     )
+    # Use the ARM64 redistributable for its ARM64X `vcruntime140.dll`.
     static_replace_in_file(
         pcbuild_path / "pyproject.props",
         b"<VCRedistDir Condition=\"$(Platform) != 'Win32'\">$(VCRedistDir)$(Platform)\\</VCRedistDir>",
         b"<VCRedistDir Condition=\"$(Platform) != 'Win32' and $(Platform) != 'ARM64EC'\">$(VCRedistDir)$(Platform)\\</VCRedistDir>\n"
-        b"      <VCRedistDir Condition=\"$(Platform) == 'ARM64EC'\">$(VCRedistDir)x64\\</VCRedistDir>",
+        b"      <VCRedistDir Condition=\"$(Platform) == 'ARM64EC'\">$(VCRedistDir)arm64\\</VCRedistDir>",
     )
 
     # Use portable decimal arithmetic instead of x64 assembly.

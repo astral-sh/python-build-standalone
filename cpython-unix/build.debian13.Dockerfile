@@ -22,9 +22,9 @@ RUN printf '%s\n' \
     'cb3eb154bf0311d53c98eab79692e55aae49a4bcf13c23bd12943a4fb5a0b05f  snapshot.debian.org_archive_debian-security_20230423T032736Z_dists_stretch_updates_InRelease' \
     > /stretch-metadata.sha256
 
-# Create a sysroot with glibc, kernel headers and their dependencies from
-# a Stretch snapshop. Do not run maintainer scripts. The expired Stretch signing
-# key is verified against the RSA key from a keyring with known removed keys.
+# Create a sysroot with glibc, GCC runtime files, kernel headers and their
+# dependencies from a Stretch snapshot. Do not run maintainer scripts. The expired
+# Stretch signing key is verified against a keyring with known removed keys.
 # Run APT hooks outside the unpopulated sysroot using Trixie's shell and tools.
 # Skip APT list cleanup: it runs another update with empty sources, which
 # would remove the pinned metadata and cause the checksum hook to fail.
@@ -39,7 +39,7 @@ RUN mmdebstrap --variant=extract --mode=root \
     --aptopt='DPkg::Chroot-Directory ""' \
     --aptopt='Apt::Key::gpgvcommand "/usr/libexec/mmdebstrap/gpgvnoexpkeysig"' \
     --aptopt='APT::Update::Post-Invoke { "cd /sysroot/var/lib/apt/lists && sha256sum --check --strict /stretch-metadata.sha256"; }' \
-    --include=libc6,libc6-dev,linux-libc-dev,symlinks \
+    --include=libc6,libc6-dev,libgcc-6-dev,linux-libc-dev,symlinks \
     stretch /sysroot \
     'deb [signed-by=16E90B3FDF65EDE3AA7F323C04EE7237B7D453EC!] https://snapshot.debian.org/archive/debian/20230423T032736Z/ stretch main' \
     'deb [signed-by=379483D8B60160B155B372DDAA8E81B4331F7F50!] https://snapshot.debian.org/archive/debian-security/20230423T032736Z/ stretch/updates main'

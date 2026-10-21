@@ -24,9 +24,9 @@ RUN printf '%s\n' \
     '4ed764a6a2317c27e644b6502ac0f3a4d3eb25a859c5199e29071b11f332ac75  snapshot.debian.org_archive_debian-security_20230322T152120Z_dists_jessie_updates_InRelease' \
     > /jessie-metadata.sha256
 
-# Create a sysroot with glibc, kernel headers and their dependencies from a
-# Jessie snapshot. Do not run maintainer scripts. The expired Jessie signing
-# key is verified against the RSA key from a keyring with known removed keys.
+# Create a sysroot with glibc, GCC runtime files, kernel headers and their
+# dependencies from a Jessie snapshot. Do not run maintainer scripts. The expired
+# Jessie signing key is verified against a keyring with known removed keys.
 # Run APT hooks outside the unpopulated sysroot so the checksum check uses
 # Trixie's shell and sha256sum.
 # Skip APT list cleanup: it runs another update with empty sources, which
@@ -42,7 +42,7 @@ RUN mmdebstrap --variant=extract --mode=root \
     --aptopt='DPkg::Chroot-Directory ""' \
     --aptopt='Apt::Key::gpgvcommand "/usr/libexec/mmdebstrap/gpgvnoexpkeysig"' \
     --aptopt='APT::Update::Post-Invoke { "cd /sysroot/var/lib/apt/lists && sha256sum --check --strict /jessie-metadata.sha256"; }' \
-    --include=libc6,libc6-dev,linux-libc-dev,symlinks \
+    --include=libc6,libc6-dev,libgcc-4.9-dev,linux-libc-dev,symlinks \
     jessie /sysroot \
     'deb [signed-by=126C0D24BD8A2942CC7DF8AC7638D0442B90D010!] https://snapshot.debian.org/archive/debian/20230322T152120Z/ jessie main' \
     'deb [signed-by=D21169141CECD440F2EB8DDA9D6D8F6BC857C906!] https://snapshot.debian.org/archive/debian-security/20230322T152120Z/ jessie/updates main'

@@ -154,9 +154,9 @@ jobs:
 
       - name: Build
         if: ${{ ! matrix.dry-run }}
-        shell: cmd
+        shell: pwsh
         run: |
-          uv run --no-dev build.py --target-triple %MATRIX_TARGET_TRIPLE% --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION% --platform-toolset %MATRIX_PLATFORM_TOOLSET% --vc-tools-version %MATRIX_VC_TOOLS_VERSION% --compression %ARCHIVE_COMPRESSION%
+          uv run --no-dev build.py --target-triple "$env:MATRIX_TARGET_TRIPLE" --python "cpython-$env:MATRIX_PYTHON" --sh c:\cygwin\bin\sh.exe --options "$env:MATRIX_BUILD_OPTIONS" --vs "$env:MATRIX_VS_VERSION" --platform-toolset "$env:MATRIX_PLATFORM_TOOLSET" --vc-tools-version "$env:MATRIX_VC_TOOLS_VERSION" --compression "$env:ARCHIVE_COMPRESSION"
         env:
           MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
           MATRIX_PYTHON: ${{ matrix.python }}

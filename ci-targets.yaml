@@ -422,6 +422,27 @@ windows:
           - freethreaded+pgo
         minimum-python-version: "3.13"
 
+  arm64ec-pc-windows-msvc:
+    arch: arm64ec
+    python_versions:
+      - "3.11"
+      - "3.12"
+      - "3.13"
+      - "3.14"
+      - "3.15"
+      - "3.16"
+    vs_version: "2026"
+    platform_toolset: "v143"
+    vc_tools_version: "14.4"
+    build_options:
+      - debug
+      - pgo
+    build_options_conditional:
+      - options:
+          - freethreaded+debug
+          - freethreaded+pgo
+        minimum-python-version: "3.13"
+
   aarch64-pc-windows-msvc:
     arch: aarch64
     python_versions:

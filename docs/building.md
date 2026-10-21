@@ -174,3 +174,16 @@ so a debug distribution only runs on a machine with Visual Studio installed.
 
 To build a 32-bit x86 binary, simply use an
 `x86 Native Tools Command Prompt` instead of `x64`.
+
+To build ARM64EC, use a Windows 11 on ARM host with the Visual Studio
+ARM64/ARM64EC and x64 build tools installed:
+
+```
+$ uv run --no-dev build.py --target-triple arm64ec-pc-windows-msvc --sh c:\cygwin\bin\sh.exe
+```
+
+The build runs the generated interpreter to assemble the distribution, so
+an x64 Windows host cannot build this target. CPython and its bundled
+extensions compile as ARM64EC. The stable-ABI forwarding DLLs and the bundled
+OpenSSL, libffi, and Tcl/Tk libraries are built for x64. ARM64EC distributions use the
+x64-compatible extension ABI and `win_amd64` wheel platform tag.

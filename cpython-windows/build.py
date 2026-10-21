@@ -47,6 +47,7 @@ TARGET_ARCHITECTURES = {
     "i686-pc-windows-msvc": "x86",
     "x86_64-pc-windows-msvc": "amd64",
     "aarch64-pc-windows-msvc": "arm64",
+    "arm64ec-pc-windows-msvc": "arm64ec",
 }
 
 LOG_PREFIX = [None]
@@ -732,6 +733,91 @@ def hack_project_files(
         )
     except NoSearchStringError:
         pass
+
+
+def prepare_arm64ec(cpython_source_path: pathlib.Path) -> None:
+    """Add ARM64EC configurations while retaining the x64 extension ABI."""
+    pcbuild_path = cpython_source_path / "PCbuild"
+
+    configurations = re.compile(
+        rb'    <ProjectConfiguration Include="[^"]+\|ARM64">.*?</ProjectConfiguration>',
+        re.DOTALL,
+    )
+    for project in pcbuild_path.glob("*.vcxproj"):
+        data = project.read_bytes()
+        newline = b"\r\n" if b"\r\n" in data else b"\n"
+        data = configurations.sub(
+            lambda match, newline=newline: (
+                match[0] + newline + match[0].replace(b"ARM64", b"ARM64EC")
+            ),
+            data,
+        )
+        # The stable-ABI DLLs export only forwarders and can be built for x64.
+        data = re.sub(
+            rb'(<ProjectReference Include="python3t?dll.vcxproj"[^>]*>)',
+            rb"\1\n      <SetPlatform>Platform=x64</SetPlatform>",
+            data,
+        )
+        project.write_bytes(data)
+
+    # Use the x64 layout, dependency bundles, and extension suffixes.
+    static_replace_in_file(
+        pcbuild_path / "python.props",
+        b"and $(Platform) == 'x64'\">amd64</ArchName>",
+        b"and ($(Platform) == 'x64' or $(Platform) == 'ARM64EC')\">amd64</ArchName>",
+    )
+    static_replace_in_file(
+        pcbuild_path / "pyproject.props",
+        b"<TargetMachine Condition=\"'$(Platform)'=='ARM64'\">MachineARM64</TargetMachine>",
+        b"<TargetMachine Condition=\"'$(Platform)'=='ARM64'\">MachineARM64</TargetMachine>\n"
+        b"      <TargetMachine Condition=\"'$(Platform)'=='ARM64EC'\">MachineARM64EC</TargetMachine>",
+    )
+    static_replace_in_file(
+        pcbuild_path / "pyproject.props",
+        b"<VCRedistDir Condition=\"$(Platform) != 'Win32'\">$(VCRedistDir)$(Platform)\\</VCRedistDir>",
+        b"<VCRedistDir Condition=\"$(Platform) != 'Win32' and $(Platform) != 'ARM64EC'\">$(VCRedistDir)$(Platform)\\</VCRedistDir>\n"
+        b"      <VCRedistDir Condition=\"$(Platform) == 'ARM64EC'\">$(VCRedistDir)x64\\</VCRedistDir>",
+    )
+
+    # Use portable decimal arithmetic instead of x64 assembly.
+    decimal = pcbuild_path / "_decimal.vcxproj"
+    data = decimal.read_bytes()
+    for condition in (b"'$(Platform)'=='ARM64'", b"'$(Platform)' == 'ARM64'"):
+        data = data.replace(
+            condition, b"(" + condition + b" or '$(Platform)' == 'ARM64EC')"
+        )
+    decimal.write_bytes(data)
+
+    # The x64 PGO runtime can be loaded by an ARM64EC executable.
+    python_project = pcbuild_path / "python.vcxproj"
+    data = python_project.read_bytes().replace(
+        b"$(Platform) == 'x64'",
+        b"($(Platform) == 'x64' or $(Platform) == 'ARM64EC')",
+    )
+    python_project.write_bytes(data)
+
+    projects = pcbuild_path / "pcbuild.proj"
+    data = re.sub(
+        rb'<Projects Include="(python3t?dll.vcxproj)" />',
+        rb'<Projects Include="\1"><Platform>x64</Platform></Projects>',
+        projects.read_bytes(),
+    )
+    projects.write_bytes(data)
+
+    # ARM64EC defines _M_X64 for ABI compatibility, but needs ARM memory barriers.
+    for relative_path in (
+        "Include/internal/pycore_atomic.h",
+        "Include/cpython/pyatomic_msc.h",
+        "Include/internal/mimalloc/mimalloc/atomic.h",
+    ):
+        path = cpython_source_path / relative_path
+        if not path.exists():
+            continue
+        data = path.read_bytes()
+        data = data.replace(
+            b"defined(_M_X64)", b"(defined(_M_X64) && !defined(_M_ARM64EC))"
+        ).replace(b"defined(_M_ARM64)", b"(defined(_M_ARM64) || defined(_M_ARM64EC))")
+        path.write_bytes(data)
 
 
 def run_msbuild(
@@ -1483,6 +1569,9 @@ def build_cpython(
     elif arch == "arm64":
         build_platform = "arm64"
         build_directory = "arm64"
+    elif arch == "arm64ec":
+        build_platform = "ARM64EC"
+        build_directory = "amd64"
     else:
         raise Exception(f"unhandled architecture: {arch}")
 
@@ -1540,7 +1629,7 @@ def build_cpython(
 
         # We need all the OpenSSL library files in the same directory to appease
         # install rules.
-        openssl_arch = {"amd64": "amd64", "x86": "win32", "arm64": "arm64"}[arch]
+        openssl_arch = build_directory
         openssl_root = td / "openssl" / openssl_arch
         openssl_bin_path = openssl_root / "bin"
         openssl_lib_path = openssl_root / "lib"
@@ -1605,6 +1694,8 @@ def build_cpython(
             zlib_entry=zlib_entry,
             tk_bin_entry=tk_bin_entry,
         )
+        if arch == "arm64ec":
+            prepare_arm64ec(cpython_source_path)
 
         if pgo:
             run_msbuild(
@@ -2044,6 +2135,8 @@ def main() -> None:
     build_options = args.options
     target_triple = args.target_triple or default_target_triple()
     arch = TARGET_ARCHITECTURES[target_triple]
+    # OpenSSL, libffi, and Tcl/Tk use the x64 ABI in ARM64EC distributions.
+    dependency_arch = "amd64" if arch == "arm64ec" else arch
     platform_toolset = args.platform_toolset or (
         "v145"
         if arch == "amd64"
@@ -2061,7 +2154,9 @@ def main() -> None:
 
         log(f"building for {target_triple}")
         log(f"using {platform_toolset} with MSVC {vc_tools_version}")
-        build_env = get_visual_studio_environment(args.vs, arch, vc_tools_version)
+        build_env = get_visual_studio_environment(
+            args.vs, dependency_arch, vc_tools_version
+        )
         os.environ.update(build_env)
 
         compiler_cache_key = f"{platform_toolset}-{vc_tools_version}"
@@ -2084,7 +2179,7 @@ def main() -> None:
             build_openssl(
                 openssl_entry,
                 perl_path,
-                arch,
+                dependency_arch,
                 dest_archive=openssl_archive,
                 with_uplink=openssl_with_uplink,
             )
@@ -2095,7 +2190,7 @@ def main() -> None:
         if not libffi_archive.exists():
             build_libffi(
                 args.python,
-                arch,
+                dependency_arch,
                 pathlib.Path(args.sh),
                 args.vs,
                 vc_tools_version,

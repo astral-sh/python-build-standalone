@@ -141,6 +141,19 @@ pub static RELEASE_TRIPLES: Lazy<BTreeMap<&'static str, TripleRelease>> = Lazy::
         },
     );
     h.insert(
+        "arm64ec-pc-windows-msvc",
+        TripleRelease {
+            suffixes: windows_suffixes.clone(),
+            install_only_suffix: "pgo",
+            freethreaded_install_only_suffix: "freethreaded+pgo",
+            python_version_requirement: Some(VersionSpecifier::from_str(">=3.11").unwrap()),
+            conditional_suffixes: vec![ConditionalSuffixes {
+                python_version_requirement: VersionSpecifier::from_str(">=3.13").unwrap(),
+                suffixes: windows_suffixes_313.clone(),
+            }],
+        },
+    );
+    h.insert(
         "aarch64-pc-windows-msvc",
         TripleRelease {
             suffixes: windows_suffixes,

@@ -1,0 +1,118 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 7dcfc45..93bc9bf 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -61,6 +61,10 @@ DSYMUTIL_PATH=  @DSYMUTIL_PATH@
+ 
+ GNULD=		@GNULD@
+ RELOCATABLE=	@RELOCATABLE@
++RELOCATABLE_PYTHON_LDFLAGS=@RELOCATABLE_PYTHON_LDFLAGS@
++RELOCATABLE_LIBPYTHON_LDFLAGS=@RELOCATABLE_LIBPYTHON_LDFLAGS@
++RELOCATABLE_EXTENSION_LDFLAGS=@RELOCATABLE_EXTENSION_LDFLAGS@
++LIBPYTHON_INSTALL_NAME=@LIBPYTHON_INSTALL_NAME@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+ SHELL=		/bin/sh -e
+@@ -286,7 +290,7 @@ DIST=		$(DISTFILES) $(DISTDIRS)
+ LIBRARY=	@LIBRARY@
+ LDLIBRARY=      @LDLIBRARY@
+ BLDLIBRARY=     @BLDLIBRARY@
+-MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY))
++MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY)) $(RELOCATABLE_EXTENSION_LDFLAGS)
+ PY3LIBRARY=     @PY3LIBRARY@
+ DLLLIBRARY=	@DLLLIBRARY@
+ LDLIBRARYDIR=   @LDLIBRARYDIR@
+@@ -972,7 +976,7 @@ clinic-tests: check-clean-src $(srcdir)/Lib/test/clinic.test.c
+ 
+ # Build the interpreter
+ $(BUILDPYTHON):	Programs/python.o $(LINK_PYTHON_DEPS)
+-	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
++	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) $(RELOCATABLE_PYTHON_LDFLAGS) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
+ 
+ platform: $(PYTHON_FOR_BUILD_DEPS) pybuilddir.txt
+ 	$(RUNSHARED) $(PYTHON_FOR_BUILD) -c 'import sys ; from sysconfig import get_platform ; print("%s-%d.%d" % (get_platform(), *sys.version_info[:2]))' >platform
+@@ -1004,7 +1008,7 @@ $(LIBRARY): $(LIBRARY_OBJS)
+ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+ 	# AIX Linker don't support "-h" option
+ 	if test "$(MACHDEP)" != "aix"; then \
+-		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
++		$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 	else \
+ 		$(BLDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 	fi
+@@ -1013,10 +1017,10 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
+ 	fi
+ 
+ libpython3.so:	libpython$(LDVERSION).so
+-	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
++	$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
+ 
+ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+-	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
++	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(LIBPYTHON_INSTALL_NAME) -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 
+ 
+ libpython$(VERSION).sl: $(LIBRARY_OBJS)
+@@ -1617,7 +1621,7 @@ regen-re: $(BUILDPYTHON)
+ 	$(RUNSHARED) ./$(BUILDPYTHON) $(srcdir)/Tools/build/generate_re_casefix.py $(srcdir)/Lib/re/_casefix.py
+ 
+ Programs/_testembed: Programs/_testembed.o $(LINK_PYTHON_DEPS)
+-	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/_testembed.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
++	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) $(RELOCATABLE_PYTHON_LDFLAGS) -o $@ Programs/_testembed.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
+ 
+ ############################################################################
+ # "Bootstrap Python" used to run Programs/_freeze_module.py
+diff --git a/configure.ac b/configure.ac
+index be7ad9c..785a41d 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -6879,6 +6879,49 @@ AC_SUBST([BINLIBDEST])
+ LIBDEST='${prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
+ BINLIBDEST='${exec_prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
+ 
++# Runtime paths are specific to the installed location of each kind of binary.
++# Do not add them to LDSHARED: third-party extensions may be installed elsewhere.
++RELOCATABLE_PYTHON_LDFLAGS=
++RELOCATABLE_LIBPYTHON_LDFLAGS=
++RELOCATABLE_EXTENSION_LDFLAGS=
++LIBPYTHON_INSTALL_NAME='$(prefix)/lib/libpython$(LDVERSION).dylib'
++AS_VAR_IF([enable_relocatable], [yes], [
++  AS_VAR_IF([prefix], [NONE], [relocatable_prefix=$ac_default_prefix],
++    [relocatable_prefix=$prefix])
++  AS_IF([test "$exec_prefix" != NONE && test "$exec_prefix" != '${prefix}' && test "$exec_prefix" != "$relocatable_prefix"],
++    [AC_MSG_ERROR([--enable-relocatable requires a common prefix and exec-prefix])])
++  AS_IF([test "$bindir" != '${exec_prefix}/bin' && test "$bindir" != '${prefix}/bin' && test "$bindir" != "$relocatable_prefix/bin"],
++    [AC_MSG_ERROR([--enable-relocatable requires the default bin directory])])
++  AS_IF([test "$libdir" != '${exec_prefix}/lib' && test "$libdir" != '${prefix}/lib' && test "$libdir" != "$relocatable_prefix/lib"],
++    [AC_MSG_ERROR([--enable-relocatable requires the default lib directory])])
++  AS_CASE([$PLATLIBDIR], [*/*|.|..],
++    [AC_MSG_ERROR([--enable-relocatable requires a single directory name for --with-platlibdir])])
++  AS_CASE([$ac_sys_system],
++    [Linux], [
++      # Keep the dollar sign through configure, make, and the shell. DT_RPATH
++      # takes precedence over LD_LIBRARY_PATH on glibc and covers indirect
++      # dependencies.
++      RELOCATABLE_PYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../lib'"
++      RELOCATABLE_LIBPYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN'"
++      RELOCATABLE_EXTENSION_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../../../lib'"
++      save_LDFLAGS=$LDFLAGS
++      LDFLAGS="$LDFLAGS -Wl,--disable-new-dtags"
++      AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [],
++        [AC_MSG_ERROR([--enable-relocatable requires linker support for --disable-new-dtags])])
++      LDFLAGS=$save_LDFLAGS
++    ],
++    [Darwin], [
++      LIBPYTHON_INSTALL_NAME='@rpath/libpython$(LDVERSION).dylib'
++      RELOCATABLE_PYTHON_LDFLAGS='-Wl,-rpath,@executable_path/../lib'
++      RELOCATABLE_LIBPYTHON_LDFLAGS='-Wl,-rpath,@loader_path'
++      RELOCATABLE_EXTENSION_LDFLAGS='-Wl,-rpath,@loader_path/../../../lib'
++    ])
++])
++AC_SUBST([RELOCATABLE_PYTHON_LDFLAGS])
++AC_SUBST([RELOCATABLE_LIBPYTHON_LDFLAGS])
++AC_SUBST([RELOCATABLE_EXTENSION_LDFLAGS])
++AC_SUBST([LIBPYTHON_INSTALL_NAME])
++
+ dnl define LIBPL after ABIFLAGS and LDVERSION is defined.
+ AC_SUBST([PY_ENABLE_SHARED])
+ if test x$PLATFORM_TRIPLET = x; then

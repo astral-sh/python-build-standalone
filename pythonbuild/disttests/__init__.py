@@ -129,6 +129,32 @@ class TestPythonInterpreter(unittest.TestCase):
         def error_handler(fif, message):
             pass
 
+    @unittest.skipUnless(
+        os.environ["TARGET_TRIPLE"] == "arm64ec-pc-windows-msvc",
+        "Requires an ARM64EC distribution",
+    )
+    def test_arm64ec_x64_abi(self):
+        import ctypes
+        import sysconfig
+
+        self.assertEqual(sysconfig.get_platform(), "win-amd64")
+
+        @ctypes.CFUNCTYPE(ctypes.c_double, ctypes.c_int, ctypes.c_double)
+        def callback(integer, floating):
+            return integer + floating
+
+        self.assertEqual(callback(40, 2.5), 42.5)
+
+        build_options = os.environ["BUILD_OPTIONS"].split("+")
+        suffix = "t" if "freethreaded" in build_options else ""
+        if "debug" in build_options:
+            suffix += "_d"
+        stable_abi = ctypes.PyDLL(
+            str(Path(sys.executable).parent / f"python3{suffix}.dll")
+        )
+        stable_abi.Py_GetVersion.restype = ctypes.c_char_p
+        self.assertEqual(stable_abi.Py_GetVersion().decode("utf-8"), sys.version)
+
     @unittest.skipIf(os.name == "nt", "curses not available on Windows")
     def test_curses_import(self):
         import curses

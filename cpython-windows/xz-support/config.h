@@ -31,7 +31,7 @@ This is used by CPython, and is not part of the regular xz release.
 #define HAVE_ENCODER_SPARC 1
 #define HAVE_ENCODER_X86 1
 
-#if defined(_M_ARM64)
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
 
 #undef HAVE_IMMINTRIN_H
 #undef HAVE_USABLE_CLMUL

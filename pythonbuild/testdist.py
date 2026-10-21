@@ -12,6 +12,7 @@ import re
 import shlex
 import subprocess
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -651,4 +652,13 @@ def main(pbs_source_dir: Path, raw_args: list[str]) -> int:
 
     finally:
         if td:
-            td.cleanup()
+            # DLLs can remain locked briefly after the test process exits on Windows.
+            for attempt in range(11):
+                try:
+                    td.cleanup()
+                except PermissionError:
+                    if os.name != "nt" or attempt == 10:
+                        raise
+                    time.sleep(1)
+                else:
+                    break

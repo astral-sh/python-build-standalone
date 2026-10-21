@@ -411,10 +411,11 @@ def add_python_build_entries_for_config(
     python_versions = config["python_versions"]
     build_options = config["build_options"]
     arch = config["arch"]
-    runner = find_runner(runners, platform, arch, False)
+    host_arch = "aarch64" if platform == "windows" and arch == "arm64ec" else arch
+    runner = find_runner(runners, platform, host_arch, False)
     runner_arch = runners[runner]["arch"]
     # 64-bit Windows runners can also execute 32-bit Windows builds.
-    can_run = runner_arch == arch or (
+    can_run = runner_arch == host_arch or (
         platform == "windows" and runner_arch == "x86_64" and arch == "x86"
     )
 

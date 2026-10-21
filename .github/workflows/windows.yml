@@ -137,6 +137,23 @@ jobs:
         shell: pwsh
         run: ./scripts/install-cygwin.ps1 -Packages autoconf,automake,libtool
 
+      - name: Install x64 MSVC v143 tools for ARM64EC dependencies
+        if: ${{ matrix.arch == 'arm64ec' }}
+        shell: pwsh
+        run: |
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer"
+          $installation = & "$installer\vswhere.exe" -latest -products '*' -version '[18,19)' -property installationPath
+          $arguments = @(
+            'modify', '--installPath', "`"$installation`"",
+            '--add', 'Microsoft.VisualStudio.Component.VC.14.44.17.14.x86.x64',
+            '--quiet', '--norestart', '--nocache'
+          )
+          $process = Start-Process "$installer\setup.exe" -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010)) {
+            throw "Visual Studio setup failed with exit code $($process.ExitCode)"
+          }
+          Get-ChildItem "$installation\VC\Tools\MSVC\14.4*\lib\x64\msvcrt.lib" -ErrorAction Stop
+
       - name: Set up uv
         uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
         with:

@@ -77,6 +77,12 @@ Distributions are produced for the following target triples:
 
 : Windows 64-bit ARM CPUs. Available for CPython 3.11 and newer.
 
+`arm64ec-pc-windows-msvc`
+
+: Windows 11 on ARM, with support for x64 extension modules and
+    `win_amd64` wheels. Available for CPython 3.11 and newer. These builds
+    cannot run on x64 Windows or load native ARM64 extension modules.
+
 `x86_64-unknown-linux-gnu`
 
 : Linux 64-bit Intel/AMD CPUs linking against GNU libc.

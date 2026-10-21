@@ -37,6 +37,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "aarch64-pc-windows-msvc",
     "aarch64-unknown-linux-gnu",
     "aarch64-unknown-linux-musl",
+    "arm64ec-pc-windows-msvc",
     "armv7-unknown-linux-gnueabi",
     "armv7-unknown-linux-gnueabihf",
     "i686-pc-windows-msvc",
@@ -594,6 +595,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
     [
         ("aarch64-apple-darwin", "macosx-11.0-arm64"),
         ("aarch64-pc-windows-msvc", "win-arm64"),
+        ("arm64ec-pc-windows-msvc", "win-amd64"),
         ("aarch64-unknown-linux-gnu", "linux-aarch64"),
         ("aarch64-unknown-linux-musl", "linux-aarch64"),
         ("armv7-unknown-linux-gnueabi", "linux-arm"),

@@ -149,8 +149,9 @@ aarch64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Keep target headers and glibc independent of the modern build container.
+    # Use the sysroot for target headers, libc, and GCC runtime libraries.
     - '--sysroot=/usr/aarch64-linux-gnu'
+    - '--gcc-install-dir=/usr/aarch64-linux-gnu/usr/lib/gcc/aarch64-linux-gnu/6'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -164,6 +165,7 @@ aarch64-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/aarch64-linux-gnu'
+    - '--gcc-install-dir=/usr/aarch64-linux-gnu/usr/lib/gcc/aarch64-linux-gnu/6'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -719,8 +721,9 @@ x86_64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Keep target libc independent of the modern build container.
+    # Use the sysroot for target libc and GCC runtime libraries.
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -734,6 +737,7 @@ x86_64-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -788,8 +792,9 @@ x86_64_v2-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Keep target libc independent of the modern build container.
+    # Use the sysroot for target libc and GCC runtime libraries.
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -804,6 +809,7 @@ x86_64_v2-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -858,8 +864,9 @@ x86_64_v3-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Keep target libc independent of the modern build container.
+    # Use the sysroot for target libc and GCC runtime libraries.
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -874,6 +881,7 @@ x86_64_v3-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -930,8 +938,9 @@ x86_64_v4-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Keep target libc independent of the modern build container.
+    # Use the sysroot for target libc and GCC runtime libraries.
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -946,6 +955,7 @@ x86_64_v4-unknown-linux-gnu:
     - '-fdebug-default-version=4'
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
+    - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'

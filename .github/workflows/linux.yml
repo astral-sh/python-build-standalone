@@ -16,6 +16,7 @@ permissions: { }
 
 jobs:
   crate-build:
+    if: ${{ needs.generate-matrix.outputs.has_crate_builds == 'true' }}
     needs:
       - generate-matrix
     runs-on: ${{ matrix.runner }}
@@ -139,6 +140,8 @@ jobs:
       docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       any_builds: ${{ steps.set-matrix.outputs.any_builds }}
+      has_builds_1: ${{ steps.set-matrix.outputs.has_builds_1 }}
+      has_crate_builds: ${{ steps.set-matrix.outputs.has_crate_builds }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -186,6 +189,8 @@ jobs:
           echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
           echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "has_builds_1=$(jq '."python-build"["1"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
+          echo "has_crate_builds=$(jq '."crate-build".include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
           cat matrix.json | jq
@@ -201,6 +206,7 @@ jobs:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
   build-0:
+    if: ${{ needs.generate-matrix.outputs.any_builds == 'true' }}
     needs:
       - generate-matrix
       - crate-build
@@ -337,6 +343,7 @@ jobs:
           MATRIX_LIBC: ${{ matrix.libc }}
 
   build-1:
+    if: ${{ needs.generate-matrix.outputs.has_builds_1 == 'true' }}
     needs:
       - generate-matrix
       - crate-build

@@ -618,7 +618,9 @@ def main() -> None:
     if args.matrix_type in ["python-build", "all"]:
         if args.max_shards:
             python_build_matrix = {}
-            shards = (len(python_entries) // CI_MATRIX_SIZE_LIMIT) + 1
+            shards = (
+                len(python_entries) + CI_MATRIX_SIZE_LIMIT - 1
+            ) // CI_MATRIX_SIZE_LIMIT
             if shards > args.max_shards:
                 print(
                     f"error: python-build matrix of size {len(python_entries)} requires {shards} shards, but the maximum is {args.max_shards}; consider increasing `--max-shards`",

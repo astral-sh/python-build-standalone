@@ -86,7 +86,6 @@ sed "${sed_args[@]}" "s/^_PIP_VERSION = .*/_PIP_VERSION = \"${PIP_VERSION}\"/" L
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-relocatable-flag.patch"
     patch -p1 -i "${ROOT}/patch-relocatable-link.patch"
-    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --enable-relocatable"
 fi
 
 # configure doesn't support cross-compiling on Apple. Teach it.
@@ -341,6 +340,10 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
 fi
 
 EXTRA_CONFIGURE_FLAGS=
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --enable-relocatable"
+fi
 
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include/uuid"

@@ -759,8 +759,12 @@ if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" && "${TARGET_TRIPLE}" == x86_64*
     CFLAGS_JIT="${CFLAGS_JIT//-fPIC/}"
 fi
 
+# Configure checks may override optimization in `CFLAGS`; `-O0` through
+# `-O3` in `CPPFLAGS` would take precedence.
+CPPFLAGS="${CFLAGS//-O[0-3]/}"
+
 BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:-}" \
-    CFLAGS=$CFLAGS CPPFLAGS=$CFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
+    CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS CFLAGS_JIT=$CFLAGS_JIT LDFLAGS=$LDFLAGS \
     ./configure ${CONFIGURE_FLAGS}
 
 # Supplement produced Makefile with our modifications.
@@ -774,8 +778,9 @@ fi
 
 if [[ "${TARGET_TRIPLE}" = "aarch64-unknown-linux-gnu" ]]; then
     # LLVM's profiling runtime needs atomic helpers absent from the sysroot's `libgcc`.
-    # Use `compiler-rt` builtins for profile generation.
-    printf '\nPGO_PROF_GEN_FLAG += --rtlib=compiler-rt\n' >> Makefile
+    # Use `compiler-rt` builtins for profile generation, retaining `libgcc`
+    # unwinding for JIT frame registration.
+    printf '\nPGO_PROF_GEN_FLAG += --rtlib=compiler-rt --unwindlib=libgcc\n' >> Makefile
 fi
 
 # Debian's PPC64LE GCC 6 defaults to PIE but selects the non-PIE startup object unless -pie is

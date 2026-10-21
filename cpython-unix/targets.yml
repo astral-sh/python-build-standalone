@@ -149,9 +149,11 @@ aarch64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Use the target sysroot for libc and GCC runtime files.
+    # Use the target sysroot for libc and GCC installation files.
     - '--sysroot=/usr/aarch64-linux-gnu'
     - '--gcc-install-dir=/usr/aarch64-linux-gnu/usr/lib/gcc/aarch64-linux-gnu/6'
+    # Supply compiler helpers missing from the sysroot's older libgcc.
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -166,6 +168,7 @@ aarch64-unknown-linux-gnu:
   target_ldflags:
     - '--sysroot=/usr/aarch64-linux-gnu'
     - '--gcc-install-dir=/usr/aarch64-linux-gnu/usr/lib/gcc/aarch64-linux-gnu/6'
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -721,9 +724,11 @@ x86_64-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Use the target sysroot for libc and GCC runtime files.
+    # Use the target sysroot for libc and GCC installation files.
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    # Supply compiler helpers missing from the sysroot's older libgcc.
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -738,6 +743,7 @@ x86_64-unknown-linux-gnu:
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -792,9 +798,11 @@ x86_64_v2-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Use the target sysroot for libc and GCC runtime files.
+    # Use the target sysroot for libc and GCC installation files.
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    # Supply compiler helpers missing from the sysroot's older libgcc.
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -810,6 +818,7 @@ x86_64_v2-unknown-linux-gnu:
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -864,9 +873,11 @@ x86_64_v3-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Use the target sysroot for libc and GCC runtime files.
+    # Use the target sysroot for libc and GCC installation files.
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    # Supply compiler helpers missing from the sysroot's older libgcc.
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -882,6 +893,7 @@ x86_64_v3-unknown-linux-gnu:
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'
@@ -938,9 +950,11 @@ x86_64_v4-unknown-linux-gnu:
   target_cc: clang
   target_cxx: clang++
   target_cflags:
-    # Use the target sysroot for libc and GCC runtime files.
+    # Use the target sysroot for libc and GCC installation files.
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    # Supply compiler helpers missing from the sysroot's older libgcc.
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-fstack-protector'
     - '-fstack-clash-protection'
@@ -956,6 +970,7 @@ x86_64_v4-unknown-linux-gnu:
   target_ldflags:
     - '--sysroot=/usr/x86_64-linux-gnu'
     - '--gcc-install-dir=/usr/x86_64-linux-gnu/usr/lib/gcc/x86_64-linux-gnu/4.9'
+    - '--rtlib=compiler-rt'
     # Hardening
     - '-Wl,-z,noexecstack'
     - '-Wl,-z,relro'

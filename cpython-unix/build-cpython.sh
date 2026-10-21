@@ -1094,8 +1094,9 @@ xcode_path = os.getenv("APPLE_SDK_PATH")
 if xcode_path:
     replace_in_all("-isysroot %s" % xcode_path, "")
 
-# -fdebug-default-version is Clang only. Strip so compiling works on GCC.
+# These flags are Clang only. Strip so compiling works on GCC.
 replace_in_all("-fdebug-default-version=4", "")
+replace_in_all("--rtlib=compiler-rt", "")
 
 # Downstream extension builds can use their compiler's default linker and need
 # not have LLVM installed.

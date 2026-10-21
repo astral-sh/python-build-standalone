@@ -83,10 +83,10 @@
         "python_tag": "cp314"
     },
     "cpython-3.15": {
-        "url": "https://www.python.org/ftp/python/3.15.0/Python-3.15.0.tar.xz",
-        "size": 35688820,
-        "sha256": "ba4bed1ba346b916890b76d9e320451420aa69f6408997d33c66482eeae3d575",
-        "version": "3.15.0",
+        "url": "https://www.python.org/ftp/python/3.15.1/Python-3.15.1.tar.xz",
+        "size": 35789408,
+        "sha256": "673ae7232d84c894729882c8257d300ef2d26523911bfd3917ec8ce7f526f99b",
+        "version": "3.15.1",
         "licenses": [
             "Python-2.0",
             "CNRI-Python"

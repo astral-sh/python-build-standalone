@@ -180,14 +180,9 @@ fi
 # Code that runs at ctypes module import time does not work with
 # non-dynamic binaries. Patch Python to work around this.
 # See https://bugs.python.org/issue37060.
-# Merged upstream in 3.13 and 3.14.
+# Merged upstream in 3.13+
 # https://github.com/python/cpython/pull/153890
 if [[ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]]; then
-    patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
-fi
-# TODO(jjh) remove once the backport to 3.15 is merged,
-# https://github.com/python/cpython/pull/158307
-if [ "${PYTHON_MAJMIN_VERSION}" = 3.15 ]; then
     patch -p1 -i "${ROOT}/patch-ctypes-static-binary.patch"
 fi
 
@@ -726,10 +721,14 @@ patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
 # cases the above patch doesn't. See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
-else
+# Python 3.14 and 3.15 include the fix.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+fi
+
+# TODO: Remove this block when updating to Python 3.16.0a2.
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
+    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
 fi
 
 # We patched configure.ac above. Reflect those changes.

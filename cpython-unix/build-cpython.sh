@@ -333,6 +333,12 @@ fi
 
 EXTRA_CONFIGURE_FLAGS=
 
+# Native `_Float16` conversions can require `libgcc_s` symbols unavailable on
+# older target systems. Use CPython's portable half-float implementation.
+if [[ "${TARGET_TRIPLE}" == *-linux-gnu* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} ac_cv_float16_supported=no"
+fi
+
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include/uuid"
 

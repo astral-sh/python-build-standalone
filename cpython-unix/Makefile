@@ -79,6 +79,9 @@ HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYT
 
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
+.PHONY: host-python
+host-python: $(HOST_PYTHON_DEPENDS)
+
 ifndef PYBUILD_NO_DOCKER
 $(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
@@ -281,8 +284,16 @@ ALL_PYTHON_DEPENDS_$(1) = \
     $$(PYTHON_DEPENDS_$(1)) \
     $$(NULL)
 
+ifdef PYBUILD_USE_PREBUILT_HOST_PYTHON
+# CI supplies this archive from a producer in the same workflow. Ignore
+# runner-local prerequisite timestamps, which can trigger unnecessary rebuilds.
+$$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar:
+	@echo "Missing prebuilt host interpreter: $$@" >&2
+	@exit 1
+else
 $$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar: $$(PYTHON_HOST_DEPENDS)
 	$$(RUN_BUILD) --docker-image $$(DOCKER_IMAGE_BUILD) cpython-$(1)-host
+endif
 
 $$(OUTDIR)/cpython-$$(CPYTHON_$(1)_VERSION)-$$(PACKAGE_SUFFIX).tar: $$(ALL_PYTHON_DEPENDS_$(1))
 	$$(RUN_BUILD) --docker-image $$(DOCKER_IMAGE_BUILD) cpython-$(1)

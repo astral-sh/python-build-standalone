@@ -34,6 +34,7 @@ jobs:
       - name: "Run unit tests"
         run: |
           uv run python -m unittest tests/test_mirror.py
+          uv run --with packaging python -m unittest tests/test_ci_matrix.py
 
       - name: "Run mirror integration test"
         run: |

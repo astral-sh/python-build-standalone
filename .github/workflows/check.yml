@@ -33,7 +33,7 @@ jobs:
 
       - name: "Run unit tests"
         run: |
-          uv run python -m unittest tests/test_mirror.py tests/test_makefile.py
+          uv run python -m unittest tests/test_mirror.py tests/test_archive.py tests/test_makefile.py
           uv run --with packaging python -m unittest tests/test_ci_matrix.py
 
       - name: "Run mirror integration test"

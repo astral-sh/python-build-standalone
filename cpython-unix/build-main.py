@@ -116,6 +116,13 @@ def main():
         help="Use the host interpreter archive in build/, failing if it is absent",
     )
 
+    parser.add_argument(
+        "--compression",
+        choices=("small", "fast"),
+        default="small",
+        help="Compression profile for the full distribution archive",
+    )
+
     args = parser.parse_args()
 
     target_triple = args.target_triple
@@ -230,7 +237,9 @@ def main():
     DIST.mkdir(exist_ok=True)
 
     if args.make_target == "default":
-        compress_python_archive(BUILD / build_basename, DIST, dist_basename)
+        compress_python_archive(
+            BUILD / build_basename, DIST, dist_basename, compression=args.compression
+        )
 
 
 if __name__ == "__main__":

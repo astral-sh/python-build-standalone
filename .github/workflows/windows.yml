@@ -156,11 +156,12 @@ jobs:
         if: ${{ ! matrix.dry-run }}
         shell: cmd
         run: |
-          uv run --no-dev build.py --target-triple %MATRIX_TARGET_TRIPLE% --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION% --platform-toolset %MATRIX_PLATFORM_TOOLSET% --vc-tools-version %MATRIX_VC_TOOLS_VERSION%
+          uv run --no-dev build.py --target-triple %MATRIX_TARGET_TRIPLE% --python cpython-%MATRIX_PYTHON% --sh c:\cygwin\bin\sh.exe --options %MATRIX_BUILD_OPTIONS% --vs %MATRIX_VS_VERSION% --platform-toolset %MATRIX_PLATFORM_TOOLSET% --vc-tools-version %MATRIX_VC_TOOLS_VERSION% --compression %ARCHIVE_COMPRESSION%
         env:
           MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
           MATRIX_PYTHON: ${{ matrix.python }}
           MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+          ARCHIVE_COMPRESSION: ${{ github.event_name == 'pull_request' && 'fast' || 'small' }}
           MATRIX_VS_VERSION: ${{ matrix.vs_version }}
           MATRIX_PLATFORM_TOOLSET: ${{ matrix.platform_toolset }}
           MATRIX_VC_TOOLS_VERSION: ${{ matrix.vc_tools_version }}

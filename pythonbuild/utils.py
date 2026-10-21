@@ -518,8 +518,23 @@ def clang_toolchain(host_platform: str, target_triple: str) -> str:
 
 
 def compress_python_archive(
-    source_path: pathlib.Path, dist_path: pathlib.Path, basename: str
-):
+    source_path: pathlib.Path,
+    dist_path: pathlib.Path,
+    basename: str,
+    *,
+    compression: str = "small",
+) -> pathlib.Path:
+    if compression == "fast":
+        params = zstandard.ZstdCompressionParameters.from_level(
+            3, window_log=27, enable_ldm=True
+        )
+    elif compression == "small":
+        params = zstandard.ZstdCompressionParameters.from_level(
+            22, strategy=zstandard.STRATEGY_BTULTRA2
+        )
+    else:
+        raise ValueError(f"unknown archive compression profile: {compression}")
+
     dest_path = dist_path / ("%s.tar.zst" % basename)
     temp_path = dist_path / ("%s.tar.zst.tmp" % basename)
 
@@ -527,9 +542,6 @@ def compress_python_archive(
 
     try:
         with source_path.open("rb") as ifh, temp_path.open("wb") as ofh:
-            params = zstandard.ZstdCompressionParameters.from_level(
-                22, strategy=zstandard.STRATEGY_BTULTRA2
-            )
             cctx = zstandard.ZstdCompressor(compression_params=params)
             cctx.copy_stream(ifh, ofh, source_path.stat().st_size)
 

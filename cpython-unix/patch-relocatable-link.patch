@@ -63,10 +63,10 @@ index 7dcfc45..93bc9bf 100644
  ############################################################################
  # "Bootstrap Python" used to run Programs/_freeze_module.py
 diff --git a/configure.ac b/configure.ac
-index be7ad9c..785a41d 100644
+index be7ad9c..8588436 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -6879,6 +6879,49 @@ AC_SUBST([BINLIBDEST])
+@@ -6879,6 +6879,51 @@ AC_SUBST([BINLIBDEST])
  LIBDEST='${prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
  BINLIBDEST='${exec_prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
  
@@ -87,12 +87,14 @@ index be7ad9c..785a41d 100644
 +    [AC_MSG_ERROR([--enable-relocatable requires the default lib directory])])
 +  AS_CASE([$PLATLIBDIR], [*/*|.|..],
 +    [AC_MSG_ERROR([--enable-relocatable requires a single directory name for --with-platlibdir])])
++  # Copied virtual-environment interpreters use a link from lib/python-base to
++  # the base installation's library directory.
 +  AS_CASE([$ac_sys_system],
 +    [Linux], [
 +      # Keep the dollar sign through configure, make, and the shell. DT_RPATH
 +      # takes precedence over LD_LIBRARY_PATH on glibc and covers indirect
 +      # dependencies.
-+      RELOCATABLE_PYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../lib'"
++      RELOCATABLE_PYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../lib:\$\$ORIGIN/../lib/python-base'"
 +      RELOCATABLE_LIBPYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN'"
 +      RELOCATABLE_EXTENSION_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../../../lib'"
 +      save_LDFLAGS=$LDFLAGS
@@ -103,7 +105,7 @@ index be7ad9c..785a41d 100644
 +    ],
 +    [Darwin], [
 +      LIBPYTHON_INSTALL_NAME='@rpath/libpython$(LDVERSION).dylib'
-+      RELOCATABLE_PYTHON_LDFLAGS='-Wl,-rpath,@executable_path/../lib'
++      RELOCATABLE_PYTHON_LDFLAGS='-Wl,-rpath,@executable_path/../lib -Wl,-rpath,@executable_path/../lib/python-base'
 +      RELOCATABLE_LIBPYTHON_LDFLAGS='-Wl,-rpath,@loader_path'
 +      RELOCATABLE_EXTENSION_LDFLAGS='-Wl,-rpath,@loader_path/../../../lib'
 +    ])
@@ -116,3 +118,54 @@ index be7ad9c..785a41d 100644
  dnl define LIBPL after ABIFLAGS and LDVERSION is defined.
  AC_SUBST([PY_ENABLE_SHARED])
  if test x$PLATFORM_TRIPLET = x; then
+diff --git a/Lib/test/test_venv.py b/Lib/test/test_venv.py
+index 2f30d31..5af4856 100644
+--- a/Lib/test/test_venv.py
++++ b/Lib/test/test_venv.py
+@@ -1136,6 +1136,8 @@ def test_zippath_from_non_installed_posix(self):
+         # LD_LIBRARY_PATH so the non-installed python can find and link
+         # libpython.so
+         ld_library_path = sysconfig.get_config_var("LIBDIR")
++        if sysconfig.get_config_var("RELOCATABLE") == "yes":
++            ld_library_path = os.path.join(sys.base_exec_prefix, "lib")
+         if not ld_library_path or sysconfig.is_python_build():
+             ld_library_path = os.path.abspath(os.path.dirname(sys.executable))
+         if sys.platform == 'darwin':
+@@ -1154,7 +1156,11 @@ def test_zippath_from_non_installed_posix(self):
+         # correct zip path in pythonpath.
+         target_python = os.path.join(self.env_dir, self.bindir, python_exe)
+         cmd = [target_python, '-S', '-c', 'import sys; print(sys.path)']
+-        out, err = check_output(cmd)
++        # This interpreter also depends on libraries outside the incomplete
++        # installation used by this test.
++        with EnvironmentVarGuard() as env:
++            env[ld_library_path_env] = ld_library_path
++            out, err = check_output(cmd)
+         self.assertTrue(zip_landmark.encode() in out)
+
+     @requireVenvCreate
+diff --git a/Lib/venv/__init__.py b/Lib/venv/__init__.py
+index 38e1bfe..16b5f8b 100644
+--- a/Lib/venv/__init__.py
++++ b/Lib/venv/__init__.py
+@@ -310,6 +310,20 @@ def setup_python(self, context):
+             copier(context.executable, path)
+             if not os.path.islink(path):
+                 os.chmod(path, 0o755)
++                if (sysconfig.get_config_var('RELOCATABLE') == 'yes'
++                        and sysconfig.get_config_var('Py_ENABLE_SHARED')):
++                    # The copied executable searches relative to this environment.
++                    # Link the base library directory to keep libpython and its
++                    # relative dependencies reachable.
++                    if sysconfig.is_python_build():
++                        library_dir = context.python_dir
++                    else:
++                        library_dir = os.path.join(sys.base_exec_prefix, 'lib')
++                    library_link = os.path.join(
++                        context.env_dir, 'lib', 'python-base')
++                    if os.path.islink(library_link):
++                        os.unlink(library_link)
++                    os.symlink(library_dir, library_link, target_is_directory=True)
+             for suffix in ('python', 'python3',
+                            f'python3.{sys.version_info[1]}'):
+                 path = os.path.join(binpath, suffix)

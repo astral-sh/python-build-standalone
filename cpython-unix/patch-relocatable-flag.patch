@@ -42,10 +42,10 @@ index a8760c9..be7ad9c 100644
  
  # Apple framework builds need more magic. LDLIBRARY is the dynamic
 diff --git a/Doc/using/configure.rst b/Doc/using/configure.rst
-index 0d420d8..e033256 100644
+index 0d420d8..41de2f8 100644
 --- a/Doc/using/configure.rst
 +++ b/Doc/using/configure.rst
-@@ -1073,6 +1073,28 @@ Linker options
+@@ -1073,6 +1073,34 @@ Linker options
  
     Enable building a shared Python library: ``libpython`` (default is no).
  
@@ -66,6 +66,12 @@ index 0d420d8..e033256 100644
 +   modules. Applications embedding Python must ensure that the dynamic loader
 +   can find ``libpython`` and that Python can find its standard library; this
 +   option does not configure those paths for them.
++
++   When :mod:`venv` copies an interpreter from a shared build, it creates a
++   directory symlink to the base installation's libraries. Consequently,
++   ``--copies`` requires filesystem support for symbolic links in this mode.
++   Virtual environments still depend on the base installation and must be
++   recreated if it moves.
 +
 +   This option does not bundle third-party libraries or relocate their data
 +   files. It does not rewrite installed script shebangs or build-time paths in

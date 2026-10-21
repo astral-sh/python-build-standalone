@@ -274,18 +274,9 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
 static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static str>>> =
     Lazy::new(|| {
         [
-            (
-                "armv7-unknown-linux-gnueabi",
-                vec!["ld-linux.so.3", "libgcc_s.so.1"],
-            ),
-            (
-                "armv7-unknown-linux-gnueabihf",
-                vec!["ld-linux-armhf.so.3", "libgcc_s.so.1"],
-            ),
-            (
-                "aarch64-unknown-linux-gnu",
-                vec!["ld-linux-aarch64.so.1", "libgcc_s.so.1"],
-            ),
+            ("armv7-unknown-linux-gnueabi", vec!["ld-linux.so.3"]),
+            ("armv7-unknown-linux-gnueabihf", vec!["ld-linux-armhf.so.3"]),
+            ("aarch64-unknown-linux-gnu", vec!["ld-linux-aarch64.so.1"]),
             ("i686-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
             ("mips-unknown-linux-gnu", vec!["ld.so.1", "libatomic.so.1"]),
             (
@@ -296,29 +287,13 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
             (
                 "riscv64-unknown-linux-gnu",
-                vec![
-                    "ld-linux-riscv64-lp64d.so.1",
-                    "libatomic.so.1",
-                    "libgcc_s.so.1",
-                ],
+                vec!["ld-linux-riscv64-lp64d.so.1", "libatomic.so.1"],
             ),
             ("s390x-unknown-linux-gnu", vec!["ld64.so.1"]),
-            (
-                "x86_64-unknown-linux-gnu",
-                vec!["ld-linux-x86-64.so.2", "libgcc_s.so.1"],
-            ),
-            (
-                "x86_64_v2-unknown-linux-gnu",
-                vec!["ld-linux-x86-64.so.2", "libgcc_s.so.1"],
-            ),
-            (
-                "x86_64_v3-unknown-linux-gnu",
-                vec!["ld-linux-x86-64.so.2", "libgcc_s.so.1"],
-            ),
-            (
-                "x86_64_v4-unknown-linux-gnu",
-                vec!["ld-linux-x86-64.so.2", "libgcc_s.so.1"],
-            ),
+            ("x86_64-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
+            ("x86_64_v2-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
+            ("x86_64_v3-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
+            ("x86_64_v4-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
         ]
         .iter()
         .cloned()
@@ -1123,8 +1098,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                         && !lib.starts_with("ld-linux")
                         && !lib.starts_with("ld64.so")
                         && !lib.starts_with("ld.so")
-                        && !lib.starts_with("libc.so")
-                        && !lib.starts_with("libgcc_s.so");
+                        && !lib.starts_with("libc.so");
 
                     if requires_annotation {
                         if lib.starts_with("lib") {
@@ -1996,9 +1970,9 @@ fn validate_json(json: &PythonJsonMain, triple: &str, is_debug: bool) -> Result<
 
         match json.python_config_vars.get(key) {
             Some(value) if value.contains(marker) => {}
-            Some(value) => {
-                errors.push(format!("{key} is {value:?}, expected to contain {marker:?}"))
-            }
+            Some(value) => errors.push(format!(
+                "{key} is {value:?}, expected to contain {marker:?}"
+            )),
             None => errors.push(format!("{key} is not set")),
         }
     }

@@ -274,6 +274,12 @@ if [ "${PYTHON_MAJMIN_VERSION}" = "3.15" ]; then
     patch -p1 -i "${ROOT}/patch-testinternalcapi-interpreter-extern.patch"
 fi
 
+# libgcc is linked statically, but glibc's backtrace uses the shared unwinder
+# when present. Register JIT frames with that unwinder for complete traces.
+if [[ "${TARGET_TRIPLE}" == *-linux-gnu* && -z "${CPYTHON_STATIC}" && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+    patch -p1 -i "${ROOT}/patch-jit-shared-unwinder.patch"
+fi
+
 # CPython uses HAVE_GETRANDOM_SYSCALL to decide whether to include
 # <sys/syscall.h>, but other APIs independently depend on __NR_* definitions
 # from that header. Include it whenever configure finds the header.

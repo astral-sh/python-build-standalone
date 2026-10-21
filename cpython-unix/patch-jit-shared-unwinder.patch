@@ -1,0 +1,61 @@
+--- a/Python/jit_unwind.c
++++ b/Python/jit_unwind.c
+@@ -24,6 +24,8 @@
+ #  include <elf.h>
+ #endif
+ #if defined(PY_HAVE_JIT_GNU_BACKTRACE_UNWIND)
++#  include <dlfcn.h>
++#  include <pthread.h>
+ /*
+  * libgcc exposes frame registration entry points, but GCC's public headers
+  * on some distributions do not declare them even though the symbols are
+@@ -31,6 +33,30 @@
+  */
+ void __register_frame(const void *);
+ void __deregister_frame(const void *);
++
++static pthread_once_t jit_unwinder_once = PTHREAD_ONCE_INIT;
++static void (*jit_register_frame)(const void *) = __register_frame;
++static void (*jit_deregister_frame)(const void *) = __deregister_frame;
++
++static void
++init_jit_unwinder(void)
++{
++    /* glibc's backtrace loads libgcc_s independently. Register with that
++       unwinder when available, so it can unwind across JIT frames. */
++    void *libgcc = dlopen("libgcc_s.so.1", RTLD_LAZY | RTLD_LOCAL);
++    if (libgcc == NULL) {
++        return;
++    }
++    void (*register_frame)(const void *) = dlsym(libgcc, "__register_frame");
++    void (*deregister_frame)(const void *) = dlsym(libgcc, "__deregister_frame");
++    if (register_frame == NULL || deregister_frame == NULL) {
++        dlclose(libgcc);
++        return;
++    }
++    /* Keep the library loaded while JIT frames may still be registered. */
++    jit_register_frame = register_frame;
++    jit_deregister_frame = deregister_frame;
++}
+ #endif
+ #include <stdio.h>
+ #include <string.h>
+@@ -1044,7 +1070,8 @@
+         return NULL;
+     }
+
+-    __register_frame(eh_frame);
++    pthread_once(&jit_unwinder_once, init_jit_unwinder);
++    jit_register_frame(eh_frame);
+     return eh_frame;
+ }
+
+@@ -1054,7 +1081,7 @@
+     if (handle == NULL) {
+         return;
+     }
+-    __deregister_frame(handle);
++    jit_deregister_frame(handle);
+     PyMem_RawFree(handle);
+ }
+ #endif  // defined(PY_HAVE_JIT_GNU_BACKTRACE_UNWIND)

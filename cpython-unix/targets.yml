@@ -220,6 +220,8 @@ armv7-unknown-linux-gnueabi:
   target_cxx: clang++
   target_cflags:
     - '--target=armv7-unknown-linux-gnueabi'
+    # Debian armel ABI, with ARMv7 instructions and software floating point.
+    - '-mfloat-abi=soft'
     - '--sysroot=/usr/arm-linux-gnueabi'
     - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabi/6'
     - '-fuse-ld=lld'
@@ -230,6 +232,7 @@ armv7-unknown-linux-gnueabi:
     - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     - '--target=armv7-unknown-linux-gnueabi'
+    - '-mfloat-abi=soft'
     - '--sysroot=/usr/arm-linux-gnueabi'
     - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabi/6'
     - '-fuse-ld=lld'
@@ -283,6 +286,9 @@ armv7-unknown-linux-gnueabihf:
   target_cxx: clang++
   target_cflags:
     - '--target=armv7-unknown-linux-gnueabihf'
+    # Debian armhf requires VFPv3-D16; NEON and D32 are optional.
+    - '-mfloat-abi=hard'
+    - '-mfpu=vfpv3-d16'
     - '--sysroot=/usr/arm-linux-gnueabihf'
     - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabihf/6'
     - '-fuse-ld=lld'
@@ -293,6 +299,8 @@ armv7-unknown-linux-gnueabihf:
     - '-D_FORTIFY_SOURCE=2'
   target_ldflags:
     - '--target=armv7-unknown-linux-gnueabihf'
+    - '-mfloat-abi=hard'
+    - '-mfpu=vfpv3-d16'
     - '--sysroot=/usr/arm-linux-gnueabihf'
     - '--gcc-install-dir=/usr/lib/gcc-cross/arm-linux-gnueabihf/6'
     - '-fuse-ld=lld'

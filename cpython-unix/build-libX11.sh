@@ -85,7 +85,7 @@ LIBTOOL_CC="${CC}"
 read -r -a TARGET_LDFLAGS <<< "${EXTRA_TARGET_LDFLAGS}"
 for flag in "${TARGET_LDFLAGS[@]}"; do
   case "${flag}" in
-    --target=*|--sysroot=*|--gcc-install-dir=*) LIBTOOL_CC="${LIBTOOL_CC} ${flag}" ;;
+    --target=*|--sysroot=*|--gcc-install-dir=*|-mfloat-abi=*|-mfpu=*) LIBTOOL_CC="${LIBTOOL_CC} ${flag}" ;;
   esac
 done
 RAWCPP="$(command -v "${CC}") -E -"

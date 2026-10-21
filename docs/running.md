@@ -238,6 +238,12 @@ equivalent to `install_only`, but without debug symbols, which results
 in a smaller download and on-disk footprint. For CPython 3.13 and newer,
 free-threaded archives are identified by `freethreaded` in the filename.
 
+For macOS CPython 3.12 and newer, `full` and `install_only` archives include
+generated `.dSYM` bundles alongside CPython’s interpreter, `libpython`, and
+extension modules. Keep these bundles with their matching binaries for
+source-level debugging and profiling.
+The `install_only_stripped` archives omit these bundles.
+
 Fully static musl builds are only available as `full` archives with
 `+static` in their build options. The `install_only` and
 `install_only_stripped` musl archives use dynamically linked builds.

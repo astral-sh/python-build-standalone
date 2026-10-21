@@ -726,9 +726,12 @@ patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
 # cases the above patch doesn't. See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+# 3.14 includes this fix upstream.
+# 3.15 and 3.16 still need the patch.
+# https://github.com/python/cpython/pull/160003
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
-else
+elif [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
 fi
 

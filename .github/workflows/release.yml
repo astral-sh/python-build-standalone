@@ -22,15 +22,24 @@ permissions: {}
 
 jobs:
   release-gate:
-    name: Release gate
+    name: release-gate
     runs-on: ubuntu-latest
-    environment: release
+    environment: release-gate
     steps:
       - run: echo "Release approved"
 
+  # Tags require a successful release deployment before the release job creates them.
+  release-deployment:
+    name: Record release deployment
+    needs: release-gate
+    runs-on: ubuntu-latest
+    environment: release
+    steps:
+      - run: echo "Release deployment approved"
+
   release:
     name: Release
-    needs: release-gate
+    needs: release-deployment
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: depot-ubuntu-24.04-8

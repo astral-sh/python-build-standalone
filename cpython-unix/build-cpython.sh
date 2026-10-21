@@ -772,6 +772,12 @@ if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}
     printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
 fi
 
+if [[ "${TARGET_TRIPLE}" = "aarch64-unknown-linux-gnu" ]]; then
+    # LLVM's profiling runtime needs atomic helpers absent from the sysroot's `libgcc`.
+    # Use `compiler-rt` builtins for profile generation.
+    printf '\nPGO_PROF_GEN_FLAG += --rtlib=compiler-rt\n' >> Makefile
+fi
+
 # Debian's PPC64LE GCC 6 defaults to PIE but selects the non-PIE startup object unless -pie is
 # passed explicitly. Add it only to LINKFORSHARED, which CPython uses when linking executables.
 # See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=81170.

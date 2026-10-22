@@ -862,7 +862,7 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
                 "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
         fi
 
-        # CPython 3.15+ supplies extension search paths at link time.
+        # The relocatable backport supplies extension search paths for CPython 3.15+.
         if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
             for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
                 install_name_tool -add_rpath @loader_path/../.. "$module"
@@ -959,8 +959,8 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # libpython3.x.so.1.0 that they want (and it's fine to use
         # DT_RUNPATH instead of DT_RPATH).
         if [ "${CC}" == "musl-clang" ]; then
-            # CPython 3.15+ supplies this path at link time. libpython3.so
-            # is absent from debug builds.
+            # The relocatable backport supplies this path for CPython 3.15+.
+            # libpython3.so is absent from debug builds.
             if [[ -z "${CPYTHON_DEBUG}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
                 patchelf --set-rpath "\$ORIGIN/../lib" \
                     "${ROOT}/out/python/install/lib/libpython3.so"

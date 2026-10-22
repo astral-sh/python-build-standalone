@@ -1,5 +1,86 @@
+diff --git a/Doc/using/configure.rst b/Doc/using/configure.rst
+index 2cc8e94..203b04e 100644
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1076,12 +1076,31 @@ Linker options
+ .. option:: --enable-relocatable
+ 
+    Enable experimental support for relocatable builds (default is no).
+-   This option currently has no effect on the build.
+ 
+    .. warning::
+ 
+       This feature is under active development. Do not use it in production.
+ 
++   Currently, this sets relative runtime library paths on Linux and for
++   non-framework macOS builds. Framework relocation is not implemented yet.
++   Combining this option with :option:`--enable-framework` is an error.
++
++   Move the installation as a unit. It must use the default ``bin`` and ``lib``
++   directories under a common prefix. :option:`--with-platlibdir` may select
++   a different directory name for the standard library, but not a nested path.
++   On Linux, these paths use ``DT_RPATH``.
++
++   Copied virtual environments from non-framework shared builds require
++   directory symlinks to the base installation's libraries. Virtual environments
++   depend on their base installation and must be recreated if it moves.
++
++   Dependencies stored in other directories, such as ``lib/tcltk``, may
++   need additional loader search paths.
++
++   This option does not bundle dependencies, adjust data-file lookup for
++   libraries such as Tcl/Tk, or rewrite script shebangs and build-time
++   paths in :mod:`sysconfig`.
++
+    .. versionadded:: 3.16
+ 
+ .. option:: --without-static-libpython
+diff --git a/Lib/test/test_sys.py b/Lib/test/test_sys.py
+index c74ca05..791dc53 100644
+--- a/Lib/test/test_sys.py
++++ b/Lib/test/test_sys.py
+@@ -2372,9 +2372,11 @@ def test_remote_exec_deleted_libpython(self):
+                 os.symlink(instsoname, os.path.join(lib_dir, ldlibrary))
+ 
+             env = os.environ.copy()
+-            ld_library_path = env.get('LD_LIBRARY_PATH')
+-            env['LD_LIBRARY_PATH'] = lib_dir if not ld_library_path else (
+-                lib_dir + os.pathsep + ld_library_path)
++            # Preload the copy even when the interpreter's RPATH takes
++            # precedence over LD_LIBRARY_PATH.
++            ld_preload = env.get('LD_PRELOAD')
++            env['LD_PRELOAD'] = copied_libpython if not ld_preload else (
++                copied_libpython + os.pathsep + ld_preload)
+ 
+             self._run_remote_exec_with_deleted_mapping(copied_libpython,
+                                                        env=env)
+diff --git a/Lib/venv/__init__.py b/Lib/venv/__init__.py
+index 38e1bfe..b4f1cbd 100644
+--- a/Lib/venv/__init__.py
++++ b/Lib/venv/__init__.py
+@@ -310,6 +310,20 @@ def setup_python(self, context):
+             copier(context.executable, path)
+             if not os.path.islink(path):
+                 os.chmod(path, 0o755)
++                if (sysconfig.get_config_var('RELOCATABLE') == 'yes'
++                        and sysconfig.get_config_var('Py_ENABLE_SHARED')
++                        and not sysconfig.get_config_var('PYTHONFRAMEWORK')):
++                    # The copied executable searches relative to this environment.
++                    # Link the base library directory so it can find libpython.
++                    if sysconfig.is_python_build():
++                        library_dir = context.python_dir
++                    else:
++                        library_dir = os.path.join(sys.base_exec_prefix, 'lib')
++                    library_link = os.path.join(
++                        context.env_dir, 'lib', 'python-base')
++                    if os.path.islink(library_link):
++                        os.unlink(library_link)
++                    os.symlink(library_dir, library_link, target_is_directory=True)
+             for suffix in ('python', 'python3',
+                            f'python3.{sys.version_info[1]}'):
+                 path = os.path.join(binpath, suffix)
 diff --git a/Makefile.pre.in b/Makefile.pre.in
-index 7dcfc45..93bc9bf 100644
+index 7dcfc45..a090b9c 100644
 --- a/Makefile.pre.in
 +++ b/Makefile.pre.in
 @@ -61,6 +61,10 @@ DSYMUTIL_PATH=  @DSYMUTIL_PATH@
@@ -9,64 +90,171 @@ index 7dcfc45..93bc9bf 100644
 +RELOCATABLE_PYTHON_LDFLAGS=@RELOCATABLE_PYTHON_LDFLAGS@
 +RELOCATABLE_LIBPYTHON_LDFLAGS=@RELOCATABLE_LIBPYTHON_LDFLAGS@
 +RELOCATABLE_EXTENSION_LDFLAGS=@RELOCATABLE_EXTENSION_LDFLAGS@
-+LIBPYTHON_INSTALL_NAME=@LIBPYTHON_INSTALL_NAME@
++RELOCATABLE_LIBPYTHON_INSTALL_NAME=@RELOCATABLE_LIBPYTHON_INSTALL_NAME@
  
  # Shell used by make (some versions default to the login shell, which is bad)
  SHELL=		/bin/sh -e
-@@ -286,7 +290,7 @@ DIST=		$(DISTFILES) $(DISTDIRS)
- LIBRARY=	@LIBRARY@
- LDLIBRARY=      @LDLIBRARY@
- BLDLIBRARY=     @BLDLIBRARY@
--MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY))
-+MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY)) $(RELOCATABLE_EXTENSION_LDFLAGS)
- PY3LIBRARY=     @PY3LIBRARY@
- DLLLIBRARY=	@DLLLIBRARY@
- LDLIBRARYDIR=   @LDLIBRARYDIR@
-@@ -972,7 +976,7 @@ clinic-tests: check-clean-src $(srcdir)/Lib/test/clinic.test.c
+@@ -313,6 +317,22 @@ LIBOBJS=	@LIBOBJS@
+ PYTHON=		python$(EXE)
+ BUILDPYTHON=	python$(BUILDEXE)
  
- # Build the interpreter
++# Build-tree programs run with RUNSHARED where needed. Install variants need
++# runtime paths relative to their installed locations.
++RELOCATABLE_DIR=build/relocatable
++INSTALL_PYTHON=$(BUILDPYTHON)
++INSTALL_LDLIBRARY=$(LDLIBRARY)
++INSTALL_PY3LIBRARY=$(PY3LIBRARY)
++INSTALL_SHAREDMODS=$(SHAREDMODS)
++ifeq ($(RELOCATABLE),yes)
++INSTALL_PYTHON=$(RELOCATABLE_DIR)/$(BUILDPYTHON)
++INSTALL_SHAREDMODS=$(addprefix $(RELOCATABLE_DIR)/,$(SHAREDMODS))
++ifeq ($(PY_ENABLE_SHARED),1)
++INSTALL_LDLIBRARY=$(RELOCATABLE_DIR)/$(LDLIBRARY)
++INSTALL_PY3LIBRARY=$(addprefix $(RELOCATABLE_DIR)/,$(PY3LIBRARY))
++endif
++endif
++
+ HOSTRUNNER= @HOSTRUNNER@
+ 
+ PYTHON_FOR_REGEN?=@PYTHON_FOR_REGEN@
+@@ -809,2 +829,3 @@ list-targets:
+ .PHONY: build_all
++build_all: $(INSTALL_PYTHON) $(INSTALL_LDLIBRARY) $(INSTALL_PY3LIBRARY) $(INSTALL_SHAREDMODS)
+ build_all:	check-clean-src check-app-store-compliance $(BUILDPYTHON) platform sharedmods \
+@@ -866,6 +887,10 @@ profile-opt: profile-run-stamp
+ 
+ # List of binaries that BOLT runs on.
+ BOLT_BINARIES := @BOLT_BINARIES@
++ifeq ($(RELOCATABLE),yes)
++# Optimize libraries before the interpreter, which depends on their timestamps.
++RELOCATABLE_BOLT_BINARIES = $(addprefix $(RELOCATABLE_DIR)/,$(filter-out $(BUILDPYTHON),$(BOLT_BINARIES)) $(BUILDPYTHON))
++endif
+ 
+ BOLT_INSTRUMENT_FLAGS := @BOLT_INSTRUMENT_FLAGS@
+ BOLT_APPLY_FLAGS := @BOLT_APPLY_FLAGS@
+@@ -875,13 +900,13 @@ clean-bolt:
+ 	# Profile data.
+ 	rm -f *.fdata
+ 	# Pristine binaries before BOLT optimization.
+-	rm -f *.prebolt
++	rm -f *.prebolt $(RELOCATABLE_DIR)/*.prebolt
+ 	# BOLT instrumented binaries.
+ 	rm -f *.bolt_inst
+ 
+ profile-bolt-stamp: $(BUILDPYTHON)
+ 	# Ensure a pristine, pre-BOLT copy of the binary and no profile data from last run.
+-	for bin in $(BOLT_BINARIES); do \
++	for bin in $(BOLT_BINARIES) $(RELOCATABLE_BOLT_BINARIES); do \
+ 	  prebolt="$${bin}.prebolt"; \
+ 	  if [ -e "$${prebolt}" ]; then \
+ 	    echo "Restoring pre-BOLT binary $${prebolt}"; \
+@@ -907,6 +932,14 @@ profile-bolt-stamp: $(BUILDPYTHON)
+ 	  @LLVM_BOLT@ "$${bin}.prebolt" -o "$${bin}.bolt" -data="$${bin}.fdata" $(BOLT_APPLY_FLAGS); \
+ 	  mv "$${bin}.bolt" "$${bin}"; \
+ 	done
++	# Install variants are linked from the same objects, so reuse the function profiles.
++	for bin in $(RELOCATABLE_BOLT_BINARIES); do \
++	  @LLVM_BOLT@ "$${bin}.prebolt" -o "$${bin}.bolt" -data="$${bin##*/}.fdata" $(BOLT_APPLY_FLAGS); \
++	  mv "$${bin}.bolt" "$${bin}"; \
++	done
++	if test "$(RELOCATABLE)" = yes && test -n "$(filter $(INSTSONAME),$(BOLT_BINARIES))"; then \
++	  $(LN) -f $(RELOCATABLE_DIR)/$(INSTSONAME) $(INSTALL_LDLIBRARY); \
++	fi
+ 	touch $@
+ 
+ .PHONY: bolt-opt
+@@ -974,6 +1007,10 @@ clinic-tests: check-clean-src $(srcdir)/Lib/test/clinic.test.c
  $(BUILDPYTHON):	Programs/python.o $(LINK_PYTHON_DEPS)
--	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
-+	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) $(RELOCATABLE_PYTHON_LDFLAGS) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
+ 	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
  
++$(RELOCATABLE_DIR)/$(BUILDPYTHON): Programs/python.o $(LINK_PYTHON_DEPS) $(INSTALL_LDLIBRARY)
++	@mkdir -p $(@D)
++	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) $(RELOCATABLE_PYTHON_LDFLAGS) -L$(RELOCATABLE_DIR) -o $@ Programs/python.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
++
  platform: $(PYTHON_FOR_BUILD_DEPS) pybuilddir.txt
  	$(RUNSHARED) $(PYTHON_FOR_BUILD) -c 'import sys ; from sysconfig import get_platform ; print("%s-%d.%d" % (get_platform(), *sys.version_info[:2]))' >platform
-@@ -1004,7 +1008,7 @@ $(LIBRARY): $(LIBRARY_OBJS)
- libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
- 	# AIX Linker don't support "-h" option
- 	if test "$(MACHDEP)" != "aix"; then \
--		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
-+		$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
- 	else \
- 		$(BLDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
- 	fi
-@@ -1013,10 +1017,10 @@ libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
- 	fi
  
- libpython3.so:	libpython$(LDVERSION).so
--	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
-+	$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
- 
- libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
--	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
-+	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(LIBPYTHON_INSTALL_NAME) -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
+@@ -1019,6 +1056,18 @@ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+ 	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM); \
  
  
++$(RELOCATABLE_DIR)/libpython$(LDVERSION).so: $(LIBRARY_OBJS) $(DTRACE_OBJS)
++	@mkdir -p $(@D)
++	$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -Wl,-h$(INSTSONAME) -o $(RELOCATABLE_DIR)/$(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM)
++	$(LN) -f $(RELOCATABLE_DIR)/$(INSTSONAME) $@
++
++$(RELOCATABLE_DIR)/libpython3.so: $(RELOCATABLE_DIR)/libpython$(LDVERSION).so
++	$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) $(NO_AS_NEEDED) -o $@ -Wl,-hlibpython3.so $^
++
++$(RELOCATABLE_DIR)/libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
++	@mkdir -p $(@D)
++	$(CC) -dynamiclib $(PY_CORE_LDFLAGS) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(RELOCATABLE_LIBPYTHON_INSTALL_NAME) -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(SHLIBS) $(LIBC) $(LIBM)
++
  libpython$(VERSION).sl: $(LIBRARY_OBJS)
-@@ -1617,7 +1621,7 @@ regen-re: $(BUILDPYTHON)
- 	$(RUNSHARED) ./$(BUILDPYTHON) $(srcdir)/Tools/build/generate_re_casefix.py $(srcdir)/Lib/re/_casefix.py
+ 	$(LDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM)
  
- Programs/_testembed: Programs/_testembed.o $(LINK_PYTHON_DEPS)
--	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) -o $@ Programs/_testembed.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
-+	$(LINKCC) $(PY_CORE_EXE_LDFLAGS) $(LINKFORSHARED) $(RELOCATABLE_PYTHON_LDFLAGS) -o $@ Programs/_testembed.o $(LINK_PYTHON_OBJS) $(LIBS) $(MODLIBS) $(SYSLIBS)
+@@ -2394,7 +2443,7 @@ sharedinstall: all
+ 			else    true; \
+ 			fi; \
+ 		done
+-		@for i in X $(SHAREDMODS); do \
++		@for i in X $(INSTALL_SHAREDMODS); do \
+ 		  if test $$i != X; then \
+ 		    echo $(INSTALL_SHARED) $$i $(DESTSHARED)/`basename $$i`; \
+ 		    $(INSTALL_SHARED) $$i $(DESTDIR)$(DESTSHARED)/`basename $$i`; \
+@@ -2408,7 +2457,7 @@ sharedinstall: all
+ # Install the interpreter with $(VERSION) affixed
+ # This goes into $(exec_prefix)
+ .PHONY: altbininstall
+-altbininstall: $(BUILDPYTHON) @FRAMEWORKPYTHONW@
++altbininstall: all @FRAMEWORKPYTHONW@
+ 	@for i in $(BINDIR) $(LIBDIR); \
+ 	do \
+ 		if test ! -d $(DESTDIR)$$i; then \
+@@ -2418,7 +2467,7 @@ altbininstall: $(BUILDPYTHON) @FRAMEWORKPYTHONW@
+ 		fi; \
+ 	done
+ 	if test "$(PYTHONFRAMEWORKDIR)" = "no-framework" ; then \
+-		$(INSTALL_PROGRAM) $(BUILDPYTHON) $(DESTDIR)$(BINDIR)/python$(LDVERSION)$(EXE); \
++		$(INSTALL_PROGRAM) $(INSTALL_PYTHON) $(DESTDIR)$(BINDIR)/python$(LDVERSION)$(EXE); \
+ 	else \
+ 		$(INSTALL_PROGRAM) $(STRIPFLAG) Mac/pythonw $(DESTDIR)$(BINDIR)/python$(LDVERSION)$(EXE); \
+ 	fi
+@@ -2433,13 +2482,13 @@ altbininstall: $(BUILDPYTHON) @FRAMEWORKPYTHONW@
+ 			if test -n "$(DLLLIBRARY)" ; then \
+ 				$(INSTALL_SHARED) $(DLLLIBRARY) $(DESTDIR)$(BINDIR); \
+ 			else \
+-				$(INSTALL_SHARED) $(LDLIBRARY) $(DESTDIR)$(LIBDIR)/$(INSTSONAME); \
++				$(INSTALL_SHARED) $(INSTALL_LDLIBRARY) $(DESTDIR)$(LIBDIR)/$(INSTSONAME); \
+ 				if test $(LDLIBRARY) != $(INSTSONAME); then \
+ 					(cd $(DESTDIR)$(LIBDIR); $(LN) -sf $(INSTSONAME) $(LDLIBRARY)) \
+ 				fi \
+ 			fi; \
+ 			if test -n "$(PY3LIBRARY)"; then \
+-				$(INSTALL_SHARED) $(PY3LIBRARY) $(DESTDIR)$(LIBDIR)/$(PY3LIBRARY); \
++				$(INSTALL_SHARED) $(INSTALL_PY3LIBRARY) $(DESTDIR)$(LIBDIR)/$(PY3LIBRARY); \
+ 			fi; \
+ 		else	true; \
+ 		fi; \
+diff --git a/Modules/makesetup b/Modules/makesetup
+index 8b28946..88c01c6 100755
+--- a/Modules/makesetup
++++ b/Modules/makesetup
+@@ -279,6 +279,9 @@ sed -e 's/[ 	]*#.*//' -e '/^[ 	]*$/d' |
+ 			rule="$file: $objs \$(MODULE_${mods_upper}_LDEPS)"
+ 			rule="$rule; \$(BLDSHARED) $objs $libs \$(MODULE_LDFLAGS_SHARED) -o $file"
+ 			echo "$rule" >>$rulesf
++			rule="\$(RELOCATABLE_DIR)/$file: $objs \$(MODULE_${mods_upper}_LDEPS)"
++			rule="$rule; @mkdir -p \$(@D); \$(BLDSHARED) $objs $libs \$(MODULE_LDFLAGS_SHARED) \$(RELOCATABLE_EXTENSION_LDFLAGS) -o \$@"
++			echo "$rule" >>$rulesf
+ 		done
+ 	done
  
- ############################################################################
- # "Bootstrap Python" used to run Programs/_freeze_module.py
 diff --git a/configure.ac b/configure.ac
-index be7ad9c..8588436 100644
+index 1afbeba..47741e6 100644
 --- a/configure.ac
 +++ b/configure.ac
-@@ -6879,6 +6879,51 @@ AC_SUBST([BINLIBDEST])
+@@ -6874,6 +6874,54 @@ AC_SUBST([BINLIBDEST])
  LIBDEST='${prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
  BINLIBDEST='${exec_prefix}/${PLATLIBDIR}/python$(VERSION)$(ABI_THREAD)'
  
@@ -75,8 +263,14 @@ index be7ad9c..8588436 100644
 +RELOCATABLE_PYTHON_LDFLAGS=
 +RELOCATABLE_LIBPYTHON_LDFLAGS=
 +RELOCATABLE_EXTENSION_LDFLAGS=
-+LIBPYTHON_INSTALL_NAME='$(prefix)/lib/libpython$(LDVERSION).dylib'
-+AS_VAR_IF([enable_relocatable], [yes], [
++RELOCATABLE_LIBPYTHON_INSTALL_NAME=
++AS_IF([test "$enable_relocatable" = yes && test -n "$enable_framework"], [
++  AC_MSG_ERROR([--enable-relocatable does not support framework builds yet])
++])
++AS_IF([test "$enable_relocatable" = yes && test -z "$enable_framework"], [
++  AS_CASE([$ac_sys_system],
++    [Linux|Darwin], [],
++    [AC_MSG_ERROR([relocatable builds are not implemented on $ac_sys_system yet])])
 +  AS_VAR_IF([prefix], [NONE], [relocatable_prefix=$ac_default_prefix],
 +    [relocatable_prefix=$prefix])
 +  AS_IF([test "$exec_prefix" != NONE && test "$exec_prefix" != '${prefix}' && test "$exec_prefix" != "$relocatable_prefix"],
@@ -87,13 +281,10 @@ index be7ad9c..8588436 100644
 +    [AC_MSG_ERROR([--enable-relocatable requires the default lib directory])])
 +  AS_CASE([$PLATLIBDIR], [*/*|.|..],
 +    [AC_MSG_ERROR([--enable-relocatable requires a single directory name for --with-platlibdir])])
-+  # Copied virtual-environment interpreters use a link from lib/python-base to
-+  # the base installation's library directory.
 +  AS_CASE([$ac_sys_system],
 +    [Linux], [
-+      # Keep the dollar sign through configure, make, and the shell. DT_RPATH
-+      # takes precedence over LD_LIBRARY_PATH on glibc and covers indirect
-+      # dependencies.
++      # Keep the dollar sign through configure, make, and the shell.
++      # DT_RPATH entries can also resolve indirect dependencies.
 +      RELOCATABLE_PYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../lib:\$\$ORIGIN/../lib/python-base'"
 +      RELOCATABLE_LIBPYTHON_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN'"
 +      RELOCATABLE_EXTENSION_LDFLAGS="-Wl,--disable-new-dtags,-rpath,'\$\$ORIGIN/../../../lib'"
@@ -104,7 +295,7 @@ index be7ad9c..8588436 100644
 +      LDFLAGS=$save_LDFLAGS
 +    ],
 +    [Darwin], [
-+      LIBPYTHON_INSTALL_NAME='@rpath/libpython$(LDVERSION).dylib'
++      RELOCATABLE_LIBPYTHON_INSTALL_NAME='@rpath/libpython$(LDVERSION).dylib'
 +      RELOCATABLE_PYTHON_LDFLAGS='-Wl,-rpath,@executable_path/../lib -Wl,-rpath,@executable_path/../lib/python-base'
 +      RELOCATABLE_LIBPYTHON_LDFLAGS='-Wl,-rpath,@loader_path'
 +      RELOCATABLE_EXTENSION_LDFLAGS='-Wl,-rpath,@loader_path/../../../lib'
@@ -113,7 +304,7 @@ index be7ad9c..8588436 100644
 +AC_SUBST([RELOCATABLE_PYTHON_LDFLAGS])
 +AC_SUBST([RELOCATABLE_LIBPYTHON_LDFLAGS])
 +AC_SUBST([RELOCATABLE_EXTENSION_LDFLAGS])
-+AC_SUBST([LIBPYTHON_INSTALL_NAME])
++AC_SUBST([RELOCATABLE_LIBPYTHON_INSTALL_NAME])
 +
  dnl define LIBPL after ABIFLAGS and LDVERSION is defined.
  AC_SUBST([PY_ENABLE_SHARED])
@@ -144,28 +335,3 @@ index 2f30d31..5af4856 100644
          self.assertTrue(zip_landmark.encode() in out)
 
      @requireVenvCreate
-diff --git a/Lib/venv/__init__.py b/Lib/venv/__init__.py
-index 38e1bfe..16b5f8b 100644
---- a/Lib/venv/__init__.py
-+++ b/Lib/venv/__init__.py
-@@ -310,6 +310,20 @@ def setup_python(self, context):
-             copier(context.executable, path)
-             if not os.path.islink(path):
-                 os.chmod(path, 0o755)
-+                if (sysconfig.get_config_var('RELOCATABLE') == 'yes'
-+                        and sysconfig.get_config_var('Py_ENABLE_SHARED')):
-+                    # The copied executable searches relative to this environment.
-+                    # Link the base library directory to keep libpython and its
-+                    # relative dependencies reachable.
-+                    if sysconfig.is_python_build():
-+                        library_dir = context.python_dir
-+                    else:
-+                        library_dir = os.path.join(sys.base_exec_prefix, 'lib')
-+                    library_link = os.path.join(
-+                        context.env_dir, 'lib', 'python-base')
-+                    if os.path.islink(library_link):
-+                        os.unlink(library_link)
-+                    os.symlink(library_dir, library_link, target_is_directory=True)
-             for suffix in ('python', 'python3',
-                            f'python3.{sys.version_info[1]}'):
-                 path = os.path.join(binpath, suffix)

@@ -139,7 +139,7 @@ targets, use Visual Studio 2026 when building CPython 3.15 or newer. The
 `i686-pc-windows-msvc` and `aarch64-pc-windows-msvc` targets continue
 to use Visual Studio 2022.
 A compatible Windows SDK is required (10.0.26100.0 as of CPython 3.10).
-A `git.exe` must be on `PATH` (to clone `libffi` from source).
+A `git.exe` must be on `PATH` to apply source patches and clone `libffi`.
 Cygwin must be installed with the `autoconf`, `automake`, `libtool`,
 and `make` packages, which are required to build `libffi`.
 

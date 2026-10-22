@@ -1,0 +1,11 @@
+diff --git a/PCbuild/pcbuild.proj b/PCbuild/pcbuild.proj
+--- a/PCbuild/pcbuild.proj
++++ b/PCbuild/pcbuild.proj
+@@ -89,7 +89,6 @@
+     <FreezeProjects Include="_freeze_module.vcxproj" />
+     <!-- python[w].exe -->
+     <Projects2 Include="python.vcxproj;pythonw.vcxproj" />
+-    <Projects2 Include="python_uwp.vcxproj;pythonw_uwp.vcxproj" Condition="$(IncludeUwp)" />
+     <!-- venv[w]launcher.exe -->
+     <Projects2 Include="venvlauncher.vcxproj;venvwlauncher.vcxproj" />
+   </ItemGroup>

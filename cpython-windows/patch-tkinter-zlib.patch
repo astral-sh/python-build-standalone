@@ -1,0 +1,11 @@
+diff --git a/PCbuild/_tkinter.vcxproj b/PCbuild/_tkinter.vcxproj
+--- a/PCbuild/_tkinter.vcxproj
++++ b/PCbuild/_tkinter.vcxproj
+@@ -111,6 +111,7 @@
+   <ItemGroup>
+     <_TclTkDLL Include="$(tcltkdir)\bin\$(tclDllName)" />
+     <_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />
++    <_TclTkDLL Include="$(tcltkdir)\bin\zlib1.dll" />
+   </ItemGroup>
+   <ItemGroup>
+     <ProjectReference Include="pythoncore.vcxproj">

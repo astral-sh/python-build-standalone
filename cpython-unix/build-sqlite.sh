@@ -21,7 +21,7 @@ CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --prefix=/tools/deps --disable-shared"
 # it's not looked for.
 unset CXX
 
-# Please try to keep the build flags in sync with cpython-windows/build.py
+# Keep the build flags in sync with `cpython-windows/patch-sqlite-build-flags*.patch`.
 CC_FOR_BUILD="${HOST_CC}" \
 CFLAGS="${EXTRA_TARGET_CFLAGS} \
     -DSQLITE_ENABLE_DBSTAT_VTAB \

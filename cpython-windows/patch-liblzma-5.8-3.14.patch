@@ -1,0 +1,23 @@
+diff --git a/PCbuild/liblzma.vcxproj b/PCbuild/liblzma.vcxproj
+--- a/PCbuild/liblzma.vcxproj
++++ b/PCbuild/liblzma.vcxproj
+@@ -94,3 +94,3 @@
+       <PreprocessorDefinitions>WIN32;HAVE_CONFIG_H;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+-      <AdditionalIncludeDirectories>$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;$(lzmaDir)src/common;$(lzmaDir)src/liblzma/api;$(lzmaDir)src/liblzma/check;$(lzmaDir)src/liblzma/delta;$(lzmaDir)src/liblzma/lz;$(lzmaDir)src/liblzma/lzma;$(lzmaDir)src/liblzma/rangecoder;$(lzmaDir)src/liblzma/simple;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
++      <AdditionalIncludeDirectories>$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;$(lzmaDir)src/common;$(lzmaDir)src/liblzma/api;$(lzmaDir)src/liblzma/check;$(lzmaDir)src/liblzma/delta;$(lzmaDir)src/liblzma/lz;$(lzmaDir)src/liblzma/lzma;$(lzmaDir)src/liblzma/rangecoder;$(lzmaDir)src/liblzma/simple;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+       <DisableSpecificWarnings>4244;4267;4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+@@ -103,5 +103,3 @@
+     <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_fast.c" />
+-    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc32_table.c" />
+     <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_fast.c" />
+-    <ClCompile Include="$(lzmaDir)src\liblzma\check\crc64_table.c" />
+     <ClCompile Include="$(lzmaDir)src\liblzma\check\sha256.c" />
+@@ -164,2 +162,3 @@
+     <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm.c" />
++    <ClCompile Include="$(lzmaDir)src\liblzma\simple\arm64.c" />
+     <ClCompile Include="$(lzmaDir)src\liblzma\simple\armthumb.c" />
+@@ -240,3 +239,3 @@
+     <ClInclude Include="$(lzmaDir)src\liblzma\simple\simple_private.h" />
+-    <ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />
++    <ClInclude Include="$(lzmaDir)windows\config.h" />
+   </ItemGroup>

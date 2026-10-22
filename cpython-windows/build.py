@@ -352,28 +352,66 @@ def static_replace_in_file(p: pathlib.Path, search, replace):
         fh.write(data)
 
 
-def apply_source_patch(cpython_source_path: pathlib.Path, patch_path: pathlib.Path):
+def apply_source_patch(source_path: pathlib.Path, patch_path: pathlib.Path):
+    log(f"applying {patch_path.name} to {source_path}")
     with patch_path.open("rb") as fh:
         patch = fh.read().replace(b"\r\n", b"\n")
 
-    with tempfile.NamedTemporaryFile("wb", delete=False) as fh:
-        fh.write(patch)
-        normalized_patch = pathlib.Path(fh.name)
+    # Release archives contain CRLF project files. Normalize them for matching
+    # LF patches and write CRLF output without ignoring whitespace differences.
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "core.autocrlf=true",
+            "-C",
+            str(source_path),
+            "apply",
+            "--whitespace=nowarn",
+            "-",
+        ],
+        input=patch,
+        check=True,
+    )
 
-    try:
-        subprocess.run(
-            [
-                "git.exe",
-                "-C",
-                str(cpython_source_path),
-                "apply",
-                "--whitespace=nowarn",
-                str(normalized_patch),
-            ],
-            check=True,
-        )
-    finally:
-        normalized_patch.unlink()
+
+def apply_cpython_patches(cpython_source_path: pathlib.Path, python_version: str):
+    # Omit UWP executables, the legacy launcher, and the shell extension to
+    # reduce build time and keep them out of the distribution artifacts.
+    patches = ["patch-disable-uwp.patch"]
+
+    # The legacy launcher and shell extension are present through Python 3.15.
+    # https://github.com/python/cpython/pull/153512
+    if meets_python_maximum_version(python_version, "3.15"):
+        patches.append("patch-disable-launchers.patch")
+
+    # Keep the SQLite features in sync with `cpython-unix/build-sqlite.sh`.
+    if meets_python_minimum_version(python_version, "3.15"):
+        patches.append("patch-sqlite-build-flags-3.15.patch")
+    else:
+        patches.append("patch-sqlite-build-flags.patch")
+
+    # Our xz sources need the project changes included in Python 3.15 for xz 5.8.1.
+    # https://github.com/python/cpython/pull/141022
+    if meets_python_maximum_version(python_version, "3.13"):
+        patches.append("patch-liblzma-5.8.patch")
+    elif meets_python_maximum_version(python_version, "3.14"):
+        patches.append("patch-liblzma-5.8-3.14.patch")
+
+    # Older layout scripts disable Tcl/Tk on ARM64.
+    # https://github.com/python/cpython/pull/132650
+    if meets_python_maximum_version(python_version, "3.12"):
+        patches.append("patch-layout-tcltk-arm64.patch")
+
+    if meets_python_maximum_version(python_version, "3.11"):
+        # Our OpenSSL build installs `applink.c` under `include/openssl`, while
+        # these CPython projects expect it directly under `include`.
+        patches.append("patch-openssl-applink.patch")
+        # The Tcl/Tk bundle also needs its zlib DLL copied into the build.
+        patches.append("patch-tkinter-zlib.patch")
+
+    for patch in patches:
+        apply_source_patch(cpython_source_path, SUPPORT / patch)
 
 
 OPENSSL_PROPS_REMOVE_RULES = rb"""
@@ -537,6 +575,8 @@ def hack_project_files(
 
     pcbuild_path = cpython_source_path / "PCbuild"
 
+    apply_cpython_patches(cpython_source_path, python_version)
+
     hack_props(
         td,
         pcbuild_path,
@@ -544,17 +584,6 @@ def hack_project_files(
         zlib_entry,
         tk_bin_entry,
     )
-
-    # `--include-tcltk` is forced off on arm64, undo that
-    # See https://github.com/python/cpython/pull/132650
-    try:
-        static_replace_in_file(
-            cpython_source_path / "PC" / "layout" / "main.py",
-            rb'if ns.arch in ("arm32", "arm64"):',
-            rb'if ns.arch == "arm32":',
-        )
-    except NoSearchStringError:
-        pass
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -591,147 +620,6 @@ def hack_project_files(
         rb"<SqlitePatchVersion>$(_SqliteVersion.Split(`;`)[5])</SqlitePatchVersion>",
         rb"<SqlitePatchVersion>%s</SqlitePatchVersion>" % sqlite3_version_parts[3],
     )
-
-    # Please try to keep these in sync with cpython-unix/build-sqlite.sh
-    sqlite_build_flags = {
-        b"SQLITE_ENABLE_DBSTAT_VTAB",
-        b"SQLITE_ENABLE_FTS3",
-        b"SQLITE_ENABLE_FTS3_PARENTHESIS",
-        b"SQLITE_ENABLE_FTS4",
-        b"SQLITE_ENABLE_FTS5",
-        b"SQLITE_ENABLE_GEOPOLY",
-        b"SQLITE_ENABLE_RTREE",
-    }
-    with sqlite3_path.open("rb") as fh:
-        data = fh.read()
-    sqlite_preprocessor_regex = (
-        rb"<PreprocessorDefinitions>(SQLITE_ENABLE.*)</PreprocessorDefinitions>"
-    )
-    m = re.search(sqlite_preprocessor_regex, data)
-    if m is None:
-        raise NoSearchStringError(
-            f"search string ({sqlite_preprocessor_regex}) not in {sqlite3_path}"
-        )
-    current_flags = set(m.group(1).split(b";"))
-    data = (
-        data[: m.start(1)]
-        + b";".join(sqlite_build_flags - current_flags)
-        + b";"
-        + data[m.start(1) :]
-    )
-    with sqlite3_path.open("wb") as fh:
-        fh.write(data)
-
-    # Our version of the xz sources may be newer than what's in cpython-source-deps.
-    # The source files and locations may have changed. Hack the project file
-    # accordingly.
-    #
-    # CPython updates xz occasionally. When these changes make it into a release
-    # these modification to the project file are not needed.
-    # The most recent change was an update to version 5.8.1:
-    # https://github.com/python/cpython/pull/141022
-    try:
-        liblzma_path = pcbuild_path / "liblzma.vcxproj"
-        static_replace_in_file(
-            liblzma_path,
-            rb"$(lzmaDir)windows/vs2019;$(lzmaDir)src/liblzma/common;",
-            rb"$(lzmaDir)windows;$(lzmaDir)src/liblzma/common;",
-        )
-        static_replace_in_file(
-            liblzma_path,
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_table.c" />\r\n',
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc32_fast.c" />\r\n ',
-        )
-        static_replace_in_file(
-            liblzma_path,
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_table.c" />\r\n',
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\check\\crc64_fast.c" />\r\n ',
-        )
-        static_replace_in_file(
-            liblzma_path,
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />',
-            b'<ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm.c" />\r\n    <ClCompile Include="$(lzmaDir)src\\liblzma\\simple\\arm64.c" />',
-        )
-        static_replace_in_file(
-            liblzma_path,
-            rb'<ClInclude Include="$(lzmaDir)windows\vs2019\config.h" />',
-            rb'<ClInclude Include="$(lzmaDir)windows\config.h" />',
-        )
-    except NoSearchStringError:
-        pass
-
-    # Our logic for rewriting extension projects gets confused by _sqlite.vcxproj not
-    # having a `<PreprocessorDefinitions>` line. So adjust that.
-    try:
-        static_replace_in_file(
-            pcbuild_path / "_sqlite3.vcxproj",
-            rb"<AdditionalIncludeDirectories>$(sqlite3Dir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>",
-            b"<AdditionalIncludeDirectories>$(sqlite3Dir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>\r\n      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>",
-        )
-    except NoSearchStringError:
-        pass
-
-    # Our custom OpenSSL build has applink.c in a different location from the
-    # binary OpenSSL distribution.
-    # Starting with 3.12 CPython on Windows is built without uplink support
-    # so this modification is not needed.
-    # https://github.com/python/cpython/pull/131839
-    if meets_python_maximum_version(python_version, "3.11"):
-        ssl_proj = pcbuild_path / "_ssl.vcxproj"
-        static_replace_in_file(
-            ssl_proj,
-            rb'<ClCompile Include="$(opensslIncludeDir)\applink.c">',
-            rb'<ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">',
-        )
-
-        # Older project files do not copy the newer Tcl/Tk bundle's zlib DLL.
-        static_replace_in_file(
-            pcbuild_path / "_tkinter.vcxproj",
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />',
-            rb'<_TclTkDLL Include="$(tcltkdir)\bin\$(tkDllName)" />'
-            b'\r\n    <_TclTkDLL Include="$(tcltkdir)\\bin\\zlib1.dll" />',
-        )
-
-    # We don't need to produce python_uwp.exe and its *w variant. Or the
-    # python3.dll, pyshellext, or pylauncher.
-    # Cut them from the build to save time and so their presence doesn't
-    # interfere with packaging up the build artifacts.
-
-    pcbuild_proj = pcbuild_path / "pcbuild.proj"
-
-    static_replace_in_file(
-        pcbuild_proj,
-        b'<Projects2 Include="python_uwp.vcxproj;pythonw_uwp.vcxproj" Condition="$(IncludeUwp)" />',
-        b"",
-    )
-    # The legacy launcher and shell extension are only present through Python 3.15.
-    # https://github.com/python/cpython/pull/153512
-    if meets_python_maximum_version(python_version, "3.15"):
-        static_replace_in_file(
-            pcbuild_proj,
-            b'<Projects Include="pylauncher.vcxproj;pywlauncher.vcxproj" />',
-            b"",
-        )
-        static_replace_in_file(
-            pcbuild_proj, b'<Projects Include="pyshellext.vcxproj" />', b""
-        )
-
-    # Ditto for freeze_importlib, which isn't needed since we don't modify
-    # the frozen importlib baked into the source distribution (
-    # Python/importlib.h and Python/importlib_external.h).
-    #
-    # But Python 3.11 refactored the frozen module project handling and if
-    # we attempt to disable this project there we get a build failure due to
-    # a missing /Python/frozen_modules/getpath.h file. So we skip this on
-    # newer Python.
-    try:
-        static_replace_in_file(
-            pcbuild_proj,
-            b"""<Projects2 Condition="$(Platform) != 'ARM' and $(Platform) != 'ARM64'" Include="_freeze_importlib.vcxproj" />""",
-            b"",
-        )
-    except NoSearchStringError:
-        pass
 
 
 def run_msbuild(
@@ -816,11 +704,7 @@ def build_openssl_for_arch(
         # uplink.c tries to find the OPENSSL_Applink function exported from the
         # current executable. However, it is exported from _ssl[_d].pyd in shared
         # builds. So update its source to look for it from there.
-        static_replace_in_file(
-            source_root / "ms" / "uplink.c",
-            b"((h = GetModuleHandle(NULL)) == NULL)",
-            b'((h = GetModuleHandleA("_ssl.pyd")) == NULL) if ((h = GetModuleHandleA("_ssl_d.pyd")) == NULL) if ((h = GetModuleHandle(NULL)) == NULL)',
-        )
+        apply_source_patch(source_root, SUPPORT / "patch-openssl-uplink.patch")
 
     if arch == "x86":
         configure = "VC-WIN32"

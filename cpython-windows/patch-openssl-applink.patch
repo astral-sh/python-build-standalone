@@ -1,0 +1,12 @@
+diff --git a/PCbuild/_ssl.vcxproj b/PCbuild/_ssl.vcxproj
+--- a/PCbuild/_ssl.vcxproj
++++ b/PCbuild/_ssl.vcxproj
+@@ -99,7 +99,7 @@
+   </ItemDefinitionGroup>
+   <ItemGroup>
+     <ClCompile Include="..\Modules\_ssl.c" />
+-    <ClCompile Include="$(opensslIncludeDir)\applink.c">
++    <ClCompile Include="$(opensslIncludeDir)\openssl\applink.c">
+       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;$(PreprocessorDefinitions)</PreprocessorDefinitions>
+     </ClCompile>
+   </ItemGroup>

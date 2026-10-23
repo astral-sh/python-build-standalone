@@ -82,6 +82,12 @@ rm Lib/ensurepip/_bundled/pip-*.whl
 cp "${PIP_WHEEL}" Lib/ensurepip/_bundled/
 sed "${sed_args[@]}" "s/^_PIP_VERSION = .*/_PIP_VERSION = \"${PIP_VERSION}\"/" Lib/ensurepip/__init__.py
 
+# Build relative runtime library paths into CPython 3.15+.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i "${ROOT}/patch-relocatable-flag.patch"
+    patch -p1 -i "${ROOT}/patch-relocatable-link.patch"
+fi
+
 # configure doesn't support cross-compiling on Apple. Teach it.
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]]; then
     if [ "${PYTHON_MAJMIN_VERSION}" = "3.12" ]; then
@@ -152,7 +158,9 @@ fi
 
 # The default build rule for the macOS dylib doesn't pick up libraries
 # from modules / makesetup. So patch it accordingly.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    patch -p1 -i "${ROOT}/patch-macos-link-extension-modules-15.patch"
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules-13.patch"
 else
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules.patch"
@@ -332,6 +340,10 @@ if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
 fi
 
 EXTRA_CONFIGURE_FLAGS=
+
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
+    EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --enable-relocatable"
+fi
 
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
     CFLAGS="${CFLAGS} -I${TOOLS_PATH}/deps/include/uuid"
@@ -803,18 +815,22 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
 
         # Fix the Python binary to reference libpython via @rpath and add
         # an rpath entry so it can find the library.
-        install_name_tool \
-            -change "/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" "@rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-            -add_rpath @executable_path/../lib \
-            "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
+        if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+            install_name_tool \
+                -change "/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" "@rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
+                -add_rpath @executable_path/../lib \
+                "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
+        fi
 
         # Python's build system doesn't make this file writable.
         chmod 755 "${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}"
         # Set libpython's install name to @rpath so binaries linking against it
         # can locate it via their own rpath entries.
-        install_name_tool \
-            -id "@rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
-            "${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}"
+        if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+            install_name_tool \
+                -id "@rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
+                "${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}"
+        fi
 
         # We also normalize /tools/deps/lib/libz.1.dylib to the system location.
         install_name_tool \
@@ -824,19 +840,19 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
             -change /tools/deps/lib/libz.1.dylib /usr/lib/libz.1.dylib \
             "${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}"
 
-        if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+        if [[ -n "${PYTHON_BINARY_SUFFIX}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
             install_name_tool \
                 -change "/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" "@rpath/${LIBPYTHON_SHARED_LIBRARY_BASENAME}" \
                 -add_rpath @executable_path/../lib \
                 "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
         fi
 
-        # At the moment, python3 and libpython don't have shared-library
-        # dependencies, but at some point we will want to run this for
-        # them too.
-        for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
-            install_name_tool -add_rpath @loader_path/../.. "$module"
-        done
+        # The relocatable backport supplies extension search paths for CPython 3.15+.
+        if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+            for module in ${ROOT}/out/python/install/lib/python*/lib-dynload/*.so; do
+                install_name_tool -add_rpath @loader_path/../.. "$module"
+            done
+        fi
     else # (not macos)
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
         LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
@@ -902,12 +918,14 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # empty dummy libpython.so, which allows the link to succeed but
         # ensures they do not use any unwanted symbols. That might be
         # worth doing at some point.)
-        patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
-            "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
-
-        if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+        if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
             patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
-                "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
+                "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
+
+            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+                patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
+                    "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
+            fi
         fi
 
         # For libpython3.so (the ABI3 library for embedders), we do
@@ -926,8 +944,9 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # libpython3.x.so.1.0 that they want (and it's fine to use
         # DT_RUNPATH instead of DT_RPATH).
         if [ "${CC}" == "musl-clang" ]; then
-            # libpython3.so isn't present in debug builds.
-            if [ -z "${CPYTHON_DEBUG}" ]; then
+            # The relocatable backport supplies this path for CPython 3.15+.
+            # libpython3.so is absent from debug builds.
+            if [[ -z "${CPYTHON_DEBUG}" && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]]; then
                 patchelf --set-rpath "\$ORIGIN/../lib" \
                     "${ROOT}/out/python/install/lib/libpython3.so"
             fi
@@ -941,9 +960,11 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
 
         # Let _tkinter locate bundled Tcl/Tk libraries independently of the
         # interpreter.
-        for module in "${ROOT}"/out/python/install/lib/python*/lib-dynload/_tkinter*.so; do
-            patchelf --force-rpath --set-rpath "\$ORIGIN/../.." "$module"
-        done
+        if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_14}" ]; then
+            for module in "${ROOT}"/out/python/install/lib/python*/lib-dynload/_tkinter*.so; do
+                patchelf --force-rpath --set-rpath "\$ORIGIN/../.." "$module"
+            done
+        fi
     fi
 fi
 

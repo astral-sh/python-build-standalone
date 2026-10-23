@@ -45,6 +45,69 @@ if "TERMINFO_DIRS" not in os.environ:
 
 
 class TestPythonInterpreter(unittest.TestCase):
+    @unittest.skipUnless(
+        sys.platform in {"linux", "darwin"} and sys.version_info >= (3, 15),
+        "Relocatable build mode is enabled on Unix in Python 3.15+",
+    )
+    def test_relocatable_build_mode(self):
+        import sysconfig
+
+        self.assertEqual(sysconfig.get_config_var("RELOCATABLE"), "yes")
+        self.assertEqual(sysconfig.get_config_var("Py_ENABLE_RELOCATABLE"), 1)
+
+    @unittest.skipUnless(
+        sys.platform in {"linux", "darwin"}, "Unix shared-library search paths"
+    )
+    @unittest.skipIf(
+        "static" in os.environ["BUILD_OPTIONS"],
+        "Static builds have no shared libraries",
+    )
+    def test_extension_libraries_without_executable_rpath(self):
+        # PBS links libpython statically into the interpreter. A copy outside the
+        # installation cannot supply the extension's library path through its rpath.
+        with tempfile.TemporaryDirectory(prefix="disttests-relocatable-") as temp_dir:
+            root = Path(temp_dir)
+            executable = root / "bin" / Path(sys.executable).name
+            executable.parent.mkdir()
+            shutil.copy2(sys.executable, executable)
+            env = {
+                key: value
+                for key, value in os.environ.items()
+                if not key.startswith(("PYTHON", "LD_", "DYLD_"))
+            }
+            env["PYTHONHOME"] = sys.base_prefix
+
+            if "-linux-gnu" in os.environ["TARGET_TRIPLE"]:
+                # An incompatible ambient library must not override a bundled one.
+                poison = root / "poison"
+                poison.mkdir()
+                for pattern in ("libpython*.so*", "libtcl*.so*", "libtk*.so*"):
+                    for library in (Path(sys.base_prefix) / "lib").glob(pattern):
+                        (poison / library.name).write_bytes(b"not an ELF library")
+                env["LD_LIBRARY_PATH"] = str(poison)
+
+            probe = """
+import ctypes
+import pathlib
+import sys
+import _tkinter
+
+assert _tkinter.__file__
+abi3 = pathlib.Path(sys.base_prefix) / "lib" / "libpython3.so"
+if abi3.exists():
+    ctypes.CDLL(str(abi3))
+"""
+            result = subprocess.run(
+                [str(executable), "-S", "-c", probe],
+                cwd=root,
+                env=env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                timeout=30,
+            )
+            self.assertEqual(result.returncode, 0, result.stdout)
+
     @unittest.skipUnless(os.name == "nt", "Windows executable names")
     def test_windows_executables(self):
         build_options = os.environ["BUILD_OPTIONS"].split("+")

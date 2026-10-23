@@ -468,6 +468,21 @@ assert errors == ["main thread is not in main loop"], errors
         with self.subTest(msg="weird argv[0]"):
             assertPythonWorks(Path(sys.executable), argv0="/dev/null")
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket family")
+    def test_socket_af_netlink(self):
+        import socket
+
+        try:
+            sock = socket.socket(
+                socket.AF_NETLINK, socket.SOCK_RAW, socket.NETLINK_ROUTE
+            )
+        except PermissionError:
+            self.skipTest("netlink sockets are restricted in this environment")
+
+        with sock:
+            # A new netlink socket has no assigned port ID or multicast groups.
+            self.assertEqual(sock.getsockname(), (0, 0))
+
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket constant")
     def test_socket_af_vsock(self):
         import socket

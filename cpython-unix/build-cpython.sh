@@ -136,11 +136,15 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-cpython-configure-target-triple-musl-3.12.patch"
 fi
 
-# Python 3.11 supports using a provided Python to use during bootstrapping
-# (e.g. freezing). Normally it only uses this Python during cross-compiling.
-# This patch forces always using it. See comment related to
-# `--with-build-python` for more.
-patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
+# Link the native build helpers with only the modules from `Modules/Setup.bootstrap`
+# so other built-in modules can depend on the helpers' output.
+# https://github.com/python/cpython/pull/160537
+patch -p1 -i "${ROOT}/patch-bootstrap-helpers.patch"
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.11" ]; then
+    patch -p1 -i "${ROOT}/patch-bootstrap-helpers-configure-3.11.patch"
+else
+    patch -p1 -i "${ROOT}/patch-bootstrap-helpers-configure.patch"
+fi
 
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can
 # invoke the host Python on our own.
@@ -567,9 +571,7 @@ if [ -n "${CPYTHON_LTO}" ]; then
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-lto=full"
 fi
 
-# Python 3.11 introduces a --with-build-python to denote the host Python.
-# It is required when cross-compiling. But we always build a host Python
-# to avoid complexity with the bootstrap Python binary.
+# Supply the matching host interpreter to CPython's build configuration.
 CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --with-build-python=${TOOLS_PATH}/host/bin/python${PYTHON_MAJMIN_VERSION}"
 
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
@@ -1384,6 +1386,11 @@ for d in ${OBJECT_DIRS}; do
         cp -av "$d"/*.o "${ROOT}/out/python/build/$d"/
     fi
 done
+
+# Exclude helper-specific objects that conflict with interpreter objects
+# when downstream consumers relink them.
+rm -f "${ROOT}/out/python/build/Modules"/{config_bootstrap,getbuildinfo_bootstrap,getpath_noop}.o
+rm -f "${ROOT}/out/python/build/Programs"/{_bootstrap_python,_freeze_module}.o
 
 # The object files need to be linked against library dependencies. So copy
 # library files as well.

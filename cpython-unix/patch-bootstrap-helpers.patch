@@ -1,0 +1,332 @@
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -25,6 +25,13 @@
+ MODDISABLED_NAMES= _MODDISABLED_NAMES_
+ MODOBJS=           _MODOBJS_
+ MODLIBS=           _MODLIBS_
++# Objects and libraries of the bootstrap modules (Modules/Setup.bootstrap)
++# only. These are the only static modules linked into the build helper
++# programs (Programs/_freeze_module, _bootstrap_python), so that other
++# builtin modules (Modules/Setup.local, MODULE_BUILDTYPE=static) may depend
++# on products of those helpers (frozen modules, getpath).
++BOOTSTRAP_MODOBJS= _BOOTSTRAP_MODOBJS_
++BOOTSTRAP_MODLIBS= _BOOTSTRAP_MODLIBS_
+ 
+ # === Variables set by configure
+ VERSION=	@VERSION@
+@@ -320,10 +327,13 @@
+ 
+ ##########################################################################
+ # Modules
++MODULE_OBJS_COMMON=	\
++		Modules/main.o \
++		Modules/gcmodule.o
++
+ MODULE_OBJS=	\
+ 		Modules/config.o \
+-		Modules/main.o \
+-		Modules/gcmodule.o
++		$(MODULE_OBJS_COMMON)
+ 
+ IO_H=		Modules/_io/_iomodule.h
+ 
+@@ -506,4 +516,17 @@
+ 		Modules/getpath.o \
+ 		Python/frozen.o
++
++# objects that get linked into the build helper programs
++# (Programs/_freeze_module, _bootstrap_python): the core, plus the bootstrap
++# modules only (see BOOTSTRAP_MODOBJS). Does not include frozen modules nor
++# getpath, which the helpers are used to build.
++BOOTSTRAP_LIBRARY_OBJS=	\
++		Modules/getbuildinfo_bootstrap.o \
++		$(PARSER_OBJS) \
++		$(OBJECT_OBJS) \
++		$(PYTHON_OBJS) \
++		Modules/config_bootstrap.o \
++		$(MODULE_OBJS_COMMON) \
++		$(BOOTSTRAP_MODOBJS)
+ 
+ LINK_PYTHON_OBJS=@LINK_PYTHON_OBJS@
+@@ -1028,7 +1051,7 @@
+ Modules/Setup.stdlib: $(srcdir)/Modules/Setup.stdlib.in config.status
+ 	./config.status $@
+ 
+-Makefile Modules/config.c: Makefile.pre \
++Makefile Modules/config.c Modules/config_bootstrap.c: Makefile.pre \
+ 				$(srcdir)/Modules/config.c.in \
+ 				$(MAKESETUP) \
+ 				$(srcdir)/Modules/Setup \
+@@ -1075,9 +1098,9 @@
+ 
+ Programs/_bootstrap_python.o: Programs/_bootstrap_python.c $(BOOTSTRAP_HEADERS) $(PYTHON_HEADERS)
+ 
+-_bootstrap_python: $(LIBRARY_OBJS_OMIT_FROZEN) Programs/_bootstrap_python.o Modules/getpath.o Modules/Setup.local
+-	$(LINKCC) $(PY_LDFLAGS_NOLTO) -o $@ $(LIBRARY_OBJS_OMIT_FROZEN) \
+-		Programs/_bootstrap_python.o Modules/getpath.o $(LIBS) $(MODLIBS) $(SYSLIBS)
++_bootstrap_python: $(BOOTSTRAP_LIBRARY_OBJS) Programs/_bootstrap_python.o Modules/getpath.o Modules/Setup.local
++	$(LINKCC) $(PY_LDFLAGS_NOLTO) -o $@ $(BOOTSTRAP_LIBRARY_OBJS) \
++		Programs/_bootstrap_python.o Modules/getpath.o $(LIBS) $(BOOTSTRAP_MODLIBS) $(SYSLIBS)
+ 	# Dummy pybuilddir.txt  is needed for _bootstrap_python to be runnable
+ 	@echo "none" > ./pybuilddir.txt
+ 
+@@ -1095,6 +1118,9 @@
+ #
+ # Standard build process:
+ # 1) compile minimal core objects for Py_Compile*() and PyMarshal_Write*().
++#    Only the bootstrap modules (Modules/Setup.bootstrap) are part of these
++#    objects (see BOOTSTRAP_LIBRARY_OBJS), so other builtin modules may
++#    depend on the output of the following steps.
+ # 2) build Programs/_freeze_module binary.
+ # 3) create frozen module headers for importlib and getpath.
+ # 4) build _bootstrap_python binary.
+@@ -1165,8 +1191,8 @@
+ 
+ Modules/getpath_noop.o: $(srcdir)/Modules/getpath_noop.c Makefile
+ 
+-Programs/_freeze_module: Programs/_freeze_module.o Modules/getpath_noop.o $(LIBRARY_OBJS_OMIT_FROZEN)
+-	$(LINKCC) $(PY_CORE_LDFLAGS) -o $@ Programs/_freeze_module.o Modules/getpath_noop.o $(LIBRARY_OBJS_OMIT_FROZEN) $(LIBS) $(MODLIBS) $(SYSLIBS)
++Programs/_freeze_module: Programs/_freeze_module.o Modules/getpath_noop.o $(BOOTSTRAP_LIBRARY_OBJS)
++	$(LINKCC) $(PY_CORE_LDFLAGS) -o $@ Programs/_freeze_module.o Modules/getpath_noop.o $(BOOTSTRAP_LIBRARY_OBJS) $(LIBS) $(BOOTSTRAP_MODLIBS) $(SYSLIBS)
+ 
+ # We manually freeze getpath.py rather than through freeze_modules
+ Python/frozen_modules/getpath.h: Modules/getpath.py $(FREEZE_MODULE_BOOTSTRAP_DEPS)
+@@ -1342,11 +1368,24 @@
+ 		$(MODOBJS) \
+ 		$(DTRACE_OBJS) \
+ 		$(srcdir)/Modules/getbuildinfo.c
+-	$(CC) -c $(PY_CORE_CFLAGS) \
++	$(CC) -c $(PY_CORE_CFLAGS) $(GETBUILDINFO_CFLAGS) \
++	      -o $@ $(srcdir)/Modules/getbuildinfo.c
++
++# Separate object for the build helper programs: it must not depend on
++# $(MODOBJS), which may in turn depend on the helpers' output.
++Modules/getbuildinfo_bootstrap.o: $(PARSER_OBJS) \
++		$(OBJECT_OBJS) \
++		$(PYTHON_OBJS) \
++		$(MODULE_OBJS_COMMON) \
++		$(BOOTSTRAP_MODOBJS) \
++		$(srcdir)/Modules/getbuildinfo.c
++	$(CC) -c $(PY_CORE_CFLAGS) $(GETBUILDINFO_CFLAGS) \
++	      -o $@ $(srcdir)/Modules/getbuildinfo.c
++
++GETBUILDINFO_CFLAGS= \
+ 	      -DGITVERSION="\"`LC_ALL=C $(GITVERSION)`\"" \
+ 	      -DGITTAG="\"`LC_ALL=C $(GITTAG)`\"" \
+-	      -DGITBRANCH="\"`LC_ALL=C $(GITBRANCH)`\"" \
+-	      -o $@ $(srcdir)/Modules/getbuildinfo.c
++	      -DGITBRANCH="\"`LC_ALL=C $(GITBRANCH)`\""
+ 
+ Modules/getpath.o: $(srcdir)/Modules/getpath.c Python/frozen_modules/getpath.h Makefile $(PYTHON_HEADERS)
+ 	$(CC) -c $(PY_CORE_CFLAGS) -DPYTHONPATH='"$(PYTHONPATH)"' \
+@@ -1816,3 +1855,3 @@
+ 
+-$(LIBRARY_OBJS) $(MODOBJS) Programs/python.o: $(PYTHON_HEADERS)
++$(LIBRARY_OBJS) $(MODOBJS) Modules/config_bootstrap.o Programs/python.o: $(PYTHON_HEADERS)
+ 
+@@ -2715,5 +2754,5 @@
+ 	-rm -f $(BUILDPYTHON) $(LIBRARY) $(LDLIBRARY) $(DLLLIBRARY) \
+ 		tags TAGS \
+-		config.cache config.log pyconfig.h Modules/config.c
++		config.cache config.log pyconfig.h Modules/config.c Modules/config_bootstrap.c
+ 	-rm -rf build platform
+ 	-rm -rf $(PYTHONFRAMEWORKDIR)
+diff --git a/Modules/makesetup b/Modules/makesetup
+--- a/Modules/makesetup
++++ b/Modules/makesetup
+@@ -4,17 +4,22 @@
+ # Convert templates into Makefile and config.c, based on the module
+ # definitions found in the file Setup.
+ #
+-# Usage: makesetup [-s dir] [-c file] [-m file] [Setup] ... [-n [Setup] ...]
++# Usage: makesetup [-s dir] [-c file] [-m file] [Setup] ... [-b Setup] ...
++#                  [-n [Setup] ...]
+ #
+ # Options:
+ # -s directory: alternative source directory (default .)
+ # -l directory: library source directory (default derived from $0)
+ # -c file:      alternative config.c template (default $libdir/config.c.in)
+-# -c -:         don't write config.c
++# -c -:         don't write config.c (nor config_bootstrap.c)
+ # -m file:      alternative Makefile template (default ./Makefile.pre)
+ # -m -:         don't write Makefile
+ #
+ # Remaining arguments are one or more Setup files (default ./Setup).
++# The Setup file following a -b option holds the *bootstrap* modules:
++# the static modules that the build helper programs (_freeze_module,
++# _bootstrap_python) are linked with. They are also regular modules of
++# the final build.
+ # Setup files after a -n option are used for their variables, modules
+ # and libraries but not for their .o files.
+ #
+@@ -28,6 +33,9 @@
+ #   + insert 'extern PyObject* PyInit_<module>(void);' before MARKER 1
+ #   + insert '{"<module>", PyInit_<module>},' before MARKER 2
+ #
++# Copying config.c.in to config_bootstrap.c (only with a -b Setup file):
++# - same as config.c, but only for the modules of the -b Setup file
++#
+ # Copying Makefile.pre to Makefile:
+ # - insert an identifying comment at the start
+ # - replace _MODBUILT_NAMES_ by the list of *static* and *shared* modules
+@@ -37,6 +45,8 @@
+ # - replace _MODOBJS_ by the list of objects from Setup (except for
+ #   Setup files after a -n option)
+ # - replace _MODLIBS_ by the list of libraries from Setup
++# - replace _BOOTSTRAP_MODOBJS_ and _BOOTSTRAP_MODLIBS_ by the objects and
++#   libraries of the -b Setup file
+ # - for each object file mentioned in Setup, append a rule
+ #   '<file>.o: <file>.c; <build commands>' to the end of the Makefile
+ # - for each module mentioned in Setup, append a rule
+@@ -47,13 +57,14 @@
+ # Loop over command line options
+ usage='
+ usage: makesetup [-s srcdir] [-l libdir] [-c config.c.in] [-m Makefile.pre]
+-                 [Setup] ... [-n [Setup] ...]'
++                 [Setup] ... [-b Setup] ... [-n [Setup] ...]'
+ srcdir='.'
+ libdir=''
+ config=''
+ makepre=''
+ noobjects=''
+ doconfig=yes
++bootstrap=
+ while :
+ do
+ 	case $1 in
+@@ -105,5 +116,6 @@
+ 	case $i in
+ 	-n)	echo '*noobjects*';;
+-	*)	echo '*doconfig*'; cat "$i";;
++	-b)	echo '*bootstrap*';;
++	*)	echo '*doconfig*'; cat "$i"; echo ''; echo '*nobootstrap*';;
+ 	esac
+ done |
+@@ -125,6 +137,10 @@
+ 	LIBS=
+ 	LOCALLIBS=
+ 	BASELIBS=
++	BOOTMODS=
++	BOOTOBJS=
++	BOOTLIBS=
++	havebootstrap=
+ 	while read line
+ 	do
+ 		# to handle backslashes for sh's that don't automatically
+@@ -147,6 +163,8 @@
+ 			noobjects=yes;
+ 			continue;;
+ 		'*doconfig*')	doconfig=yes; continue;;
++		'*bootstrap*')	bootstrap=yes; havebootstrap=yes; continue;;
++		'*nobootstrap*')	bootstrap=; continue;;
+ 		'*static*')	doconfig=yes; continue;;
+ 		'*noconfig*')	doconfig=no; continue;;
+ 		'*shared*')	doconfig=no; continue;;
+@@ -215,6 +233,16 @@
+ 				# Detected multiple rules for a module, first rule wins. This
+ 				# allows users to disable modules in Setup.local.
+ 				echo 1>&2 "maksetup: '$mod' was handled by previous rule."
++				case $bootstrap in
++				yes)
++					# A bootstrap module overridden by an earlier rule
++					# (e.g. in Setup.local): the build helpers get the
++					# overriding static module, if any.
++					eval "BOOTMODS=\"\$BOOTMODS \${STATICMOD_$mod}\""
++					eval "BOOTOBJS=\"\$BOOTOBJS \${STATICOBJS_$mod}\""
++					eval "BOOTLIBS=\"\$BOOTLIBS \${STATICLIBS_$mod}\""
++					;;
++				esac
+ 				continue 2;;
+ 			esac
+ 			CONFIGURED="$CONFIGURED,${mod},"
+@@ -224,6 +252,12 @@
+ 			LIBS="$LIBS $libs"
+ 			MODS="$MODS $mods"
+ 			BUILT="$BUILT $mods"
++			case $bootstrap in
++			yes)
++				BOOTLIBS="$BOOTLIBS $libs"
++				BOOTMODS="$BOOTMODS $mods"
++				;;
++			esac
+ 			;;
+ 		no)
+ 			BUILT="$BUILT $mods"
+@@ -274,7 +308,20 @@
+ 			echo "$rule" >>$rulesf
+ 		done
+ 		case $doconfig in
+-		yes)	OBJS="$OBJS $objs";;
++		yes)
++			OBJS="$OBJS $objs"
++			case $bootstrap in
++			yes)	BOOTOBJS="$BOOTOBJS $objs";;
++			esac
++			# Remember static modules so that a later bootstrap rule
++			# for the same module can pick them up (see above).
++			for mod in $mods
++			do
++				eval "STATICMOD_$mod='$mod'"
++				eval "STATICOBJS_$mod='$objs'"
++				eval "STATICLIBS_$mod='$libs'"
++			done
++			;;
+ 		esac
+ 		for mod in $mods
+ 		do
+@@ -304,24 +351,31 @@
+ 	DEFS="BASEMODLIBS=$BASELIBS$NL$DEFS"
+ 	DEFS="LOCALMODLIBS=$LOCALLIBS$NL$DEFS"
+ 
+-	EXTDECLS=
+-	INITBITS=
+-	for mod in $MODS
+-	do
+-		EXTDECLS="${EXTDECLS}extern PyObject* PyInit_$mod(void);$NL"
+-		INITBITS="${INITBITS}    {\"$mod\", PyInit_$mod},$NL"
+-	done
+-
+-
+-	case $config in
+-	-)  ;;
+-	*)  sed -e "
++	# Generate a config.c from the template for the given modules
++	genconfig() {
++		out=$1; shift
++		EXTDECLS=
++		INITBITS=
++		for mod
++		do
++			EXTDECLS="${EXTDECLS}extern PyObject* PyInit_$mod(void);$NL"
++			INITBITS="${INITBITS}    {\"$mod\", PyInit_$mod},$NL"
++		done
++		sed -e "
+ 		1i$NL/* Generated automatically from $config by makesetup. */
+ 		/MARKER 1/i$NL$EXTDECLS
+ 
+ 		/MARKER 2/i$NL$INITBITS
+ 
+-		" $config >config.c
++		" $config >$out
++	}
++
++	case $config in
++	-)  ;;
++	*)  genconfig config.c $MODS
++	    case $havebootstrap in
++	    yes)  genconfig config_bootstrap.c $BOOTMODS;;
++	    esac
+ 	    ;;
+ 	esac
+ 
+@@ -340,6 +394,9 @@
+ 		echo "s%_MODBUILT_NAMES_%$BUILT%" >>$sedf
+ 		echo "s%_MODSHARED_NAMES_%$BUILT_SHARED%" >>$sedf
+ 		echo "s%_MODDISABLED_NAMES_%$DISABLED%" >>$sedf
++		# _BOOTSTRAP_* first: _MODOBJS_ is a substring of _BOOTSTRAP_MODOBJS_
++		echo "s%_BOOTSTRAP_MODOBJS_%$BOOTOBJS%" >>$sedf
++		echo "s%_BOOTSTRAP_MODLIBS_%$BOOTLIBS%" >>$sedf
+ 		echo "s%_MODOBJS_%$OBJS%" >>$sedf
+ 		echo "s%_MODLIBS_%$LIBS%" >>$sedf
+ 		echo "/Definitions added by makesetup/r $sedr" >>$sedf

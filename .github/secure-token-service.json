@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "repositories": {
+    "python-build-standalone": {
+      "name": "astral-sh/python-build-standalone",
+      "id": 162334160,
+      "oidc_subject": "legacy"
+    }
+  },
+  "rules": [
+    {
+      "caller": "python-build-standalone",
+      "environment": "automations",
+      "caller_workflow": "ai-policy.yml",
+      "on": ["workflow_dispatch"],
+      "permissions": { "issues": "write", "pull_requests": "write" },
+      "target": "python-build-standalone"
+    }
+  ]
+}

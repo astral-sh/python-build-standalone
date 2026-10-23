@@ -1,0 +1,46 @@
+{
+  "version": 2,
+  "repositories": {
+    "python-build-standalone": {
+      "name": "astral-sh/python-build-standalone",
+      "id": 162334160
+    }
+  },
+  "rules": [
+    {
+      "repository": "python-build-standalone",
+      "on": {
+        "pull_request": ["labeled"]
+      },
+      "conditions": {
+        "/label/name": {
+          "one_of": ["bot:ai-policy-comment", "bot:ai-policy-close"]
+        }
+      },
+      "allow_draft": true,
+      "allow_forks": true,
+      "allow_stale_head": true,
+      "workflow": "ai-policy.yml",
+      "inputs": {
+        "label": "/label/name"
+      }
+    },
+    {
+      "repository": "python-build-standalone",
+      "on": {
+        "issues": ["labeled"]
+      },
+      "conditions": {
+        "/label/name": {
+          "one_of": ["bot:ai-policy-comment", "bot:ai-policy-close"]
+        },
+        "/issue/state": "open"
+      },
+      "workflow": "ai-policy.yml",
+      "inputs": {
+        "issue": "/issue/number",
+        "label": "/label/name"
+      }
+    }
+  ]
+}

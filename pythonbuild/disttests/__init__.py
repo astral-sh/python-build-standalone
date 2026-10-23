@@ -482,10 +482,7 @@ assert errors == ["main thread is not in main loop"], errors
     def test_os_pidfd_open(self):
         self.assertTrue(hasattr(os, "pidfd_open"))
 
-    @unittest.skipUnless(
-        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
-        "modern kernel UAPI headers are currently enabled for Linux GNU targets",
-    )
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific syscall")
     def test_os_getrandom(self):
         import errno
 

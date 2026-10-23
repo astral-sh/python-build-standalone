@@ -313,6 +313,24 @@ fi
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"
 LDFLAGS="${EXTRA_TARGET_LDFLAGS} -L${TOOLS_PATH}/deps/lib"
 
+# LTO can introduce these helpers after the static libgcc archive is scanned.
+# Force them from libgcc.a to avoid newer libgcc_s symbol versions on old systems.
+CPYTHON_RUNTIME_LDFLAGS=""
+if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]]; then
+    case "${TARGET_TRIPLE}" in
+        aarch64-unknown-linux-gnu)
+            CPYTHON_RUNTIME_LDFLAGS="-Wl,-u,__extendhftf2"
+            ;;
+        x86_64-unknown-linux-gnu)
+            CPYTHON_RUNTIME_LDFLAGS="-Wl,-u,__extendhfsf2 -Wl,-u,__extendhfxf2 -Wl,-u,__truncdfhf2"
+            ;;
+    esac
+fi
+export CPYTHON_RUNTIME_LDFLAGS
+if [[ -n "${CPYTHON_RUNTIME_LDFLAGS}" ]]; then
+    LDFLAGS+=" ${CPYTHON_RUNTIME_LDFLAGS}"
+fi
+
 if [[ -n "${LINUX_UAPI_INCLUDE_ARCH:-}" ]]; then
     if [[ ! -d "${TOOLS_PATH}/deps/linux-uapi/usr/include/${LINUX_UAPI_INCLUDE_ARCH}" ]]; then
         echo "missing linux-uapi package for ${LINUX_UAPI_INCLUDE_ARCH}"
@@ -1100,6 +1118,10 @@ replace_in_all("-fdebug-default-version=4", "")
 # Downstream extension builds can use their compiler's default linker and need
 # not have LLVM installed.
 replace_in_all("-fuse-ld=lld", "")
+
+# These flags are only needed when linking CPython itself.
+for flag in os.environ.get("CPYTHON_RUNTIME_LDFLAGS", "").split():
+    replace_in_all(flag, "")
 
 # Target sysroots and GCC installations only exist in the build container.
 # Downstream native extension builds should not inherit cross-compilation flags.

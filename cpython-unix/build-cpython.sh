@@ -483,6 +483,12 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
             patch -p1 -i "${ROOT}/patch-perf-trampoline-bolt.patch"
         fi
 
+        if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+            patch -p1 -i "${ROOT}/patch-test-perf-profiler-bolt.patch"
+        elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+            patch -p1 -i "${ROOT}/patch-test-perf-profiler-bolt-3.13.patch"
+        fi
+
         # CPython allows overriding the default BOLT flags via configure
         # environment variables. Use our toolchain-specific skip list, add
         # additional optimizations, use safe identical code folding, and omit

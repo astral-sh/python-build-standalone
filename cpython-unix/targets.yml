@@ -928,6 +928,7 @@ x86_64_v4-unknown-linux-gnu:
 
 x86_64-unknown-linux-musl:
   docker_image_suffix: .debian13-x86_64
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -969,6 +970,7 @@ x86_64-unknown-linux-musl:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - musl
@@ -987,6 +989,7 @@ x86_64-unknown-linux-musl:
 
 x86_64_v2-unknown-linux-musl:
   docker_image_suffix: .debian13-x86_64
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -1029,6 +1032,7 @@ x86_64_v2-unknown-linux-musl:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - musl
@@ -1047,6 +1051,7 @@ x86_64_v2-unknown-linux-musl:
 
 x86_64_v3-unknown-linux-musl:
   docker_image_suffix: .debian13-x86_64
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
     - macos_arm64
@@ -1089,6 +1094,7 @@ x86_64_v3-unknown-linux-musl:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - musl
@@ -1107,6 +1113,7 @@ x86_64_v3-unknown-linux-musl:
 
 x86_64_v4-unknown-linux-musl:
   docker_image_suffix: .debian13-x86_64
+  linux_uapi_include_arch: x86_64-linux-gnu
   host_platforms:
     - linux_x86_64
     # Rosetta doesn't support AVX-512. So we cannot run x86-64-v4 binaries
@@ -1151,6 +1158,7 @@ x86_64_v4-unknown-linux-musl:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - musl
@@ -1181,6 +1189,7 @@ aarch64-unknown-linux-musl:
     - '3.16'
   needs_toolchain: true
   docker_image_suffix: .debian13
+  linux_uapi_include_arch: aarch64-linux-gnu
   needs_toolchain: true
   host_cc: clang
   host_cxx: clang++
@@ -1212,6 +1221,7 @@ aarch64-unknown-linux-musl:
     - libX11
     - libXau
     - libxcb
+    - linux-uapi
     - m4
     - mpdecimal
     - musl

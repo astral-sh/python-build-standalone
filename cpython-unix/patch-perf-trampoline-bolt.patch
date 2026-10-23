@@ -1,7 +1,6 @@
 diff --git a/Python/asm_trampoline.S b/Python/asm_trampoline.S
 --- a/Python/asm_trampoline.S
 +++ b/Python/asm_trampoline.S
-@@ -43,2 +43,3 @@
- _Py_trampoline_func_end:
-+    .byte 0
-     .section        .note.GNU-stack,"",@progbits
+@@ -3 +3 @@
+-    .text
++    .section .rodata

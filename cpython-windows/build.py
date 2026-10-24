@@ -440,109 +440,7 @@ LIBFFI_PROPS_REMOVE_RULES = b"""
 """
 
 
-def hack_props(
-    td: pathlib.Path,
-    pcbuild_path: pathlib.Path,
-    arch: str,
-    zlib_entry: str,
-    tk_bin_entry: str,
-):
-    # TODO can we pass props into msbuild.exe?
-
-    # Our dependencies are in different directories from what CPython's
-    # build system expects. Modify the config file appropriately.
-
-    bzip2_version = DOWNLOADS["bzip2"]["version"]
-    sqlite_version = DOWNLOADS["sqlite"]["version"]
-    xz_version = DOWNLOADS["xz"]["version"]
-    zlib_version = DOWNLOADS[zlib_entry]["version"]
-    zstd_version = DOWNLOADS["zstd"]["version"]
-
-    mpdecimal_version = DOWNLOADS["mpdecimal"]["version"]
-
-    tcltk_commit = DOWNLOADS[tk_bin_entry]["git_commit"]
-
-    sqlite_path = td / f"sqlite-autoconf-{sqlite_version}"
-    bzip2_path = td / f"bzip2-{bzip2_version}"
-    libffi_path = td / "libffi"
-    tcltk_path = td / f"cpython-bin-deps-{tcltk_commit}"
-    xz_path = td / f"xz-{xz_version}"
-    zlib_prefix = "cpython-source-deps-" if zlib_entry == "zlib-ng" else ""
-    zlib_path = td / f"{zlib_prefix}{zlib_entry}-{zlib_version}"
-    zstd_path = td / f"cpython-source-deps-zstd-{zstd_version}"
-    mpdecimal_path = td / f"mpdecimal-{mpdecimal_version}"
-
-    openssl_root = td / "openssl" / arch
-    openssl_libs_path = openssl_root / "lib"
-    openssl_include_path = openssl_root / "include"
-
-    python_props_path = pcbuild_path / "python.props"
-    lines = []
-
-    with python_props_path.open("rb") as fh:
-        for line in fh:
-            line = line.rstrip()
-
-            # The syntax of these lines changed in 3.10+. 3.10 backport commit
-            # 3139ea33ed84190e079d6ff4859baccdad778dae. Once we drop support for
-            # Python 3.9 we can pass these via properties instead of editing the
-            # properties file.
-            if b"<bz2Dir" in line:
-                line = b"<bz2Dir>%s\\</bz2Dir>" % bzip2_path
-
-            elif b"<libffiOutDir" in line:
-                line = b"<libffiOutDir>%s\\</libffiOutDir>" % libffi_path
-
-            elif b"<lzmaDir" in line:
-                line = b"<lzmaDir>%s\\</lzmaDir>" % xz_path
-
-            elif b"<opensslIncludeDir" in line:
-                line = (
-                    b"<opensslIncludeDir>%s</opensslIncludeDir>" % openssl_include_path
-                )
-
-            elif b"<opensslOutDir" in line:
-                line = b"<opensslOutDir>%s\\</opensslOutDir>" % openssl_libs_path
-
-            elif b"<sqlite3Dir" in line:
-                line = b"<sqlite3Dir>%s\\</sqlite3Dir>" % sqlite_path
-
-            elif b"<zlibDir" in line:
-                line = b"<zlibDir>%s\\</zlibDir>" % zlib_path
-
-            # On 3.14+, it's zlib-ng and the name changed
-            elif b"<zlibNgDir" in line:
-                line = b"<zlibNgDir>%s\\</zlibNgDir>" % zlib_path
-
-            elif b"<zstdDir" in line:
-                line = b"<zstdDir>%s\\</zstdDir>" % zstd_path
-
-            elif b"<mpdecimalDir" in line:
-                line = b"<mpdecimalDir>%s\\</mpdecimalDir>" % mpdecimal_path
-
-            lines.append(line)
-
-    with python_props_path.open("wb") as fh:
-        fh.write(b"\n".join(lines))
-
-    tcltkprops_path = pcbuild_path / "tcltk.props"
-
-    # Later versions of 3.10 and 3.11 enabled support for defining paths via properties.
-    # See CPython commit 3139ea33ed84190e079d6ff4859baccdad778dae.
-    # Once we drop support for CPython 3.9 we can replace this with passing properties.
-    try:
-        static_replace_in_file(
-            tcltkprops_path,
-            rb"""<tcltkDir Condition="$(tcltkDir) == ''">$(ExternalsDir)tcltk-$(TclVersion)\$(ArchName)\</tcltkDir>""",
-            rb"<tcltkDir>%s\$(ArchName)\</tcltkDir>" % tcltk_path,
-        )
-    except NoSearchStringError:
-        static_replace_in_file(
-            tcltkprops_path,
-            rb"<tcltkDir>$(ExternalsDir)tcltk-$(TclMajorVersion).$(TclMinorVersion).$(TclPatchLevel).$(TclRevision)\$(ArchName)\</tcltkDir>",
-            rb"<tcltkDir>%s\$(ArchName)\</tcltkDir>" % tcltk_path,
-        )
-
+def hack_openssl_props(pcbuild_path: pathlib.Path, arch: str):
     # We want to statically link against OpenSSL. This requires using our own
     # OpenSSL build. This requires some hacking of various files.
     openssl_props = pcbuild_path / "openssl.props"
@@ -564,26 +462,16 @@ def hack_props(
 
 
 def hack_project_files(
-    td: pathlib.Path,
     cpython_source_path: pathlib.Path,
     build_directory: str,
     python_version: str,
-    zlib_entry: str,
-    tk_bin_entry: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
 
     pcbuild_path = cpython_source_path / "PCbuild"
 
     apply_cpython_patches(cpython_source_path, python_version)
-
-    hack_props(
-        td,
-        pcbuild_path,
-        build_directory,
-        zlib_entry,
-        tk_bin_entry,
-    )
+    hack_openssl_props(pcbuild_path, build_directory)
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -625,6 +513,7 @@ def hack_project_files(
 def run_msbuild(
     msbuild: pathlib.Path,
     pcbuild_path: pathlib.Path,
+    dependency_paths: dict[str, pathlib.Path],
     configuration: str,
     platform: str,
     python_version: str,
@@ -653,6 +542,14 @@ def run_msbuild(
         # SDK as of at least CPython 3.9.7.
         f"/property:DefaultWindowsSDKVersion={windows_sdk_version}",
     ]
+
+    # CPython expects directory properties to end in a separator, except for
+    # opensslIncludeDir, where project files add it themselves.
+    for name, path in dependency_paths.items():
+        value = str(path)
+        if name != "opensslIncludeDir":
+            value += "\\"
+        args.append(f"/property:{name}={value}")
 
     if freethreaded:
         args.append("/property:DisableGil=true")
@@ -1438,9 +1335,33 @@ def build_cpython(
             log(f"copying {source} to {dest}")
             shutil.copyfile(source, dest)
 
-        # Delete the tk nmake helper, it's not needed and links msvc
+        bzip2_path = td / f"bzip2-{DOWNLOADS['bzip2']['version']}"
         tcltk_commit = DOWNLOADS[tk_bin_entry]["git_commit"]
         tcltk_path = td / f"cpython-bin-deps-{tcltk_commit}"
+        zlib_prefix = "cpython-source-deps-" if zlib_entry == "zlib-ng" else ""
+        zlib_path = td / f"{zlib_prefix}{zlib_entry}-{DOWNLOADS[zlib_entry]['version']}"
+        dependency_paths = {
+            "bz2Dir": bzip2_path,
+            "tcltkDir": tcltk_path / build_directory,
+            "sqlite3Dir": td / f"sqlite-autoconf-{DOWNLOADS['sqlite']['version']}",
+            "libffiOutDir": td / "libffi",
+            "lzmaDir": xz_path,
+            "opensslIncludeDir": openssl_root / "include",
+            "opensslOutDir": openssl_lib_path,
+            "zlibDir": zlib_path,
+        }
+        if zlib_entry == "zlib-ng":
+            dependency_paths["zlibNgDir"] = zlib_path
+        if zstd_archive is not None:
+            dependency_paths["zstdDir"] = (
+                td / f"cpython-source-deps-zstd-{DOWNLOADS['zstd']['version']}"
+            )
+        if mpdecimal_archive is not None:
+            dependency_paths["mpdecimalDir"] = (
+                td / f"mpdecimal-{DOWNLOADS['mpdecimal']['version']}"
+            )
+
+        # Delete the tk nmake helper, it's not needed and links msvc
         (
             tcltk_path
             / build_directory
@@ -1482,18 +1403,16 @@ def build_cpython(
         builtin_extensions = parse_config_c(config_c)
 
         hack_project_files(
-            td,
             cpython_source_path,
             build_directory,
             python_version=python_version,
-            zlib_entry=zlib_entry,
-            tk_bin_entry=tk_bin_entry,
         )
 
         if pgo:
             run_msbuild(
                 msbuild,
                 pcbuild_path,
+                dependency_paths,
                 configuration="PGInstrument",
                 platform=build_platform,
                 python_version=python_version,
@@ -1565,6 +1484,7 @@ def build_cpython(
             run_msbuild(
                 msbuild,
                 pcbuild_path,
+                dependency_paths,
                 configuration="PGUpdate",
                 platform=build_platform,
                 python_version=python_version,
@@ -1578,6 +1498,7 @@ def build_cpython(
             run_msbuild(
                 msbuild,
                 pcbuild_path,
+                dependency_paths,
                 configuration="Debug" if debug else "Release",
                 platform=build_platform,
                 python_version=python_version,

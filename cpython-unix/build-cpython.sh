@@ -378,7 +378,7 @@ fi
 # non-arm64 where there's no automatic ad-hoc signature. We are somehow
 # on a toolchain that doesn't make sure there's enough space by default
 # so give it plenty of space.
-if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* && -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     LDFLAGS="${LDFLAGS} -Wl,-headerpad,40"
 fi
 
@@ -748,6 +748,12 @@ if [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
 fi
 
+# Build relative loader paths into CPython and install relocatable scripts and metadata.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    patch -p1 -i "${ROOT}/patch-relocatable-loader-paths.patch"
+    patch -p1 -i "${ROOT}/patch-relocatable-install.patch"
+fi
+
 # We patched configure.ac above. Reflect those changes.
 autoconf
 
@@ -782,7 +788,11 @@ fi
 
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" sharedinstall DESTDIR="${ROOT}/out/python"
-make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    make -j "${NUM_CPUS}" install-relocatable DESTDIR="${ROOT}/out/python"
+else
+    make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
+fi
 
 
 if [ -n "${CPYTHON_FREETHREADED}" ]; then
@@ -810,11 +820,10 @@ fi
 # If we're building a shared library hack some binaries so rpath is set.
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
-if [ "${PYBUILD_SHARED}" = "1" ]; then
+if [[ "${PYBUILD_SHARED}" = "1" && -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
     if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
-        LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
         # Fix the Python binary to reference libpython via @rpath and add
         # an rpath entry so it can find the library.
@@ -854,7 +863,6 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         done
     else # (not macos)
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0
-        LIBPYTHON_SHARED_LIBRARY=${ROOT}/out/python/install/lib/${LIBPYTHON_SHARED_LIBRARY_BASENAME}
 
         # Although we are statically linking libpython, some extension
         # modules link against libpython.so even though they are not
@@ -985,6 +993,7 @@ fi
 # that a) it works on as many machines as possible b) doesn't leak details
 # about the build environment, which is non-portable.
 cat > "${ROOT}/hack_sysconfig.py" << 'EOF'
+import importlib
 import json
 import os
 import sys
@@ -996,7 +1005,8 @@ FREETHREADED = sysconfig.get_config_var("Py_GIL_DISABLED")
 MAJMIN = ".".join([str(sys.version_info[0]), str(sys.version_info[1])])
 LIB_SUFFIX = "t" if FREETHREADED else ""
 PYTHON_CONFIG = os.path.join(ROOT, "install", "bin", "python%s-config" % MAJMIN)
-PLATFORM_CONFIG = os.path.join(ROOT, sysconfig.get_config_var("LIBPL").lstrip("/"))
+build_vars = importlib.import_module(sysconfig._get_sysconfigdata_name()).build_time_vars
+PLATFORM_CONFIG = os.path.join(ROOT, build_vars["LIBPL"].lstrip("/"))
 MAKEFILE = os.path.join(PLATFORM_CONFIG, "Makefile")
 SYSCONFIGDATA = os.path.join(
     ROOT,
@@ -1170,6 +1180,12 @@ extension_suffixes.append(".abi3.so")
 
 extension_suffixes.append(".so")
 
+# Archive paths refer to the configured installation inside the staging tree.
+build_vars = importlib.import_module(sysconfig._get_sysconfigdata_name()).build_time_vars
+config_vars = sysconfig.get_config_vars().copy()
+for key in ("BINDIR", "LIBDIR", "LIBPL"):
+    config_vars[key] = build_vars[key]
+
 metadata = {
     "python_abi_tag": sys.abiflags,
     "python_implementation_cache_tag": sys.implementation.cache_tag,
@@ -1189,8 +1205,8 @@ metadata = {
     "python_paths_abstract": sysconfig.get_paths(expand=False),
     "python_exe": "install/bin/python%s%s" % (sysconfig.get_python_version(), sys.abiflags),
     "python_major_minor_version": sysconfig.get_python_version(),
-    "python_stdlib_platform_config": sysconfig.get_config_var("LIBPL").lstrip("/"),
-    "python_config_vars": {k: str(v) for k, v in sysconfig.get_config_vars().items()},
+    "python_stdlib_platform_config": build_vars["LIBPL"].lstrip("/"),
+    "python_config_vars": {k: str(v) for k, v in config_vars.items()},
 }
 
 # When cross-compiling, we use a host Python to run this script. There are
@@ -1225,7 +1241,7 @@ cat "${ROOT}/metadata.json"
 
 if [[ "${PYBUILD_PLATFORM}" = linux* && "${CC}" != "musl-clang" && -z "${CPYTHON_STATIC}" ]]; then
     # GNU and LLVM objdump use different columns for symbol versions.
-    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
+    objdump -T "${ROOT}/out/python/install/lib/libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.so.1.0" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
     cat "${ROOT}/glibc_version.txt"
 fi
 
@@ -1309,7 +1325,14 @@ ln -sf \
     "python${PYTHON_MAJMIN_VERSION}.1" \
     "${ROOT}/out/python/install/share/man/man1/python.1"
 
-# Fixup shebangs in Python scripts to reference the local python interpreter.
+# pip comes from a separately installed wheel, after CPython has installed its scripts.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    bindir="${ROOT}/out/python/install/bin"
+    for script in "${bindir}"/pip*; do
+        ${BUILD_PYTHON} Tools/build/install-relocatable-script.py \
+            "${bindir}/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}" "${script}" "${script}"
+    done
+else
 cat > "${ROOT}/fix_shebangs.py" << EOF
 import os
 import sys
@@ -1367,6 +1390,7 @@ for root, dirs, files in os.walk(ROOT):
 EOF
 
 ${BUILD_PYTHON} "${ROOT}/fix_shebangs.py" "${ROOT}/out/python/install"
+fi
 
 # Also copy object files so they can be linked in a custom manner by
 # downstream consumers.
@@ -1459,8 +1483,10 @@ cp -av "${ROOT}/stdlib-test-annotations.json" "${ROOT}/out/python/build/stdlib-t
 
 # Don't hard-code the build-time prefix into the pkg-config files. See
 # the description of `pcfiledir` in `man pkg-config`.
-find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
-    sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
+if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+    find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
+        sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
+fi
 
 mkdir "${ROOT}/out/python/licenses"
 cp "${ROOT}"/LICENSE.*.txt "${ROOT}/out/python/licenses/"

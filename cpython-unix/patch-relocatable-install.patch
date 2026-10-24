@@ -1,0 +1,176 @@
+--- a/Misc/python-embed.pc.in
++++ b/Misc/python-embed.pc.in
+@@ -1,4 +1,4 @@
+ # See: man pkg-config
+-prefix=@prefix@
++prefix=@PBS_PC_PREFIX@
+ exec_prefix=@exec_prefix@
+ libdir=@libdir@
+@@ -10,4 +10,4 @@
+ Version: @VERSION@
+ Libs.private: @LIBS@
+-Libs: -L${libdir} -lpython@VERSION@@ABIFLAGS@
++Libs: -L${libdir} -lpython@VERSION@@ABIFLAGS@ @PBS_EMBED_RPATH@
+ Cflags: -I${includedir}/python@VERSION@@ABIFLAGS@
+--- a/Misc/python.pc.in
++++ b/Misc/python.pc.in
+@@ -1,4 +1,4 @@
+ # See: man pkg-config
+-prefix=@prefix@
++prefix=@PBS_PC_PREFIX@
+ exec_prefix=@exec_prefix@
+ libdir=@libdir@
+--- a/Misc/python-config.sh.in
++++ b/Misc/python-config.sh.in
+@@ -22,5 +22,5 @@
+ installed_prefix ()
+ {
+-    RESULT=$(dirname $(cd $(dirname "$1") && pwd -P))
++    RESULT=$(dirname "$(cd "$(dirname "$1")" && pwd -P)")
+     if which readlink >/dev/null 2>&1 ; then
+         if readlink -f "$RESULT" >/dev/null 2>&1; then
+@@ -28,5 +28,10 @@
+         fi
+     fi
+-    echo $RESULT
++    printf '%s\n' "$RESULT"
++}
++
++# Escape paths for consumers that parse the compiler flags as shell words.
++quote_flag () {
++    printf '%s' "$1" | sed 's/[^a-zA-Z0-9_.,/:=+-]/\\&/g'
+ }
+ 
+@@ -59,6 +64,6 @@
+ SO="@EXT_SUFFIX@"
+ PYTHONFRAMEWORK="@PYTHONFRAMEWORK@"
+-INCDIR="-I$includedir/python${VERSION}${ABIFLAGS}"
+-PLATINCDIR="-I$includedir/python${VERSION}${ABIFLAGS}"
++INCDIR=$(quote_flag "-I$includedir/python${VERSION}${ABIFLAGS}")
++PLATINCDIR=$INCDIR
+ PY_EMBED=0
+ 
+@@ -95,8 +100,8 @@
+         ;;
+         --includes)
+-            echo "$INCDIR $PLATINCDIR"
++            printf '%s\n' "$INCDIR $PLATINCDIR"
+         ;;
+         --cflags)
+-            echo "$INCDIR $PLATINCDIR $BASECFLAGS $CFLAGS $OPT"
++            printf '%s\n' "$INCDIR $PLATINCDIR $BASECFLAGS $CFLAGS $OPT"
+         ;;
+         --libs)
+@@ -106,7 +111,11 @@
+             LIBPLUSED=
+             if [ "$PY_ENABLE_SHARED" = "0" ] ; then
+-                LIBPLUSED="-L$LIBPL"
++                LIBPLUSED=$(quote_flag "-L$LIBPL")
+             fi
+-            echo "$LIBPLUSED -L$libdir $LIBS"
++            EMBED_RPATH="@PBS_EMBED_RPATH@"
++            if [ "$PY_EMBED" = 1 ] && [ -n "$EMBED_RPATH" ]; then
++                LIBS="$LIBS $(quote_flag "$EMBED_RPATH")"
++            fi
++            printf '%s\n' "$LIBPLUSED $(quote_flag "-L$libdir") $LIBS"
+         ;;
+         --extension-suffix)
+--- a/Misc/python-config.in
++++ b/Misc/python-config.in
+@@ -5,4 +5,5 @@
+ 
+ import getopt
++import shlex
+ import sys
+ import sysconfig
+@@ -46,5 +47,5 @@
+         if opt == '--cflags':
+             flags.extend(getvar('CFLAGS').split())
+-        print(' '.join(flags))
++        print(shlex.join(flags))
+ 
+     elif opt in ('--libs', '--ldflags'):
+@@ -61,7 +62,12 @@
+         # shared library in prefix/lib/.
+         if opt == '--ldflags':
++            if '--embed' in opt_flags and getvar('Py_ENABLE_SHARED'):
++                libdir = getvar('LIBDIR')
++                libs.insert(0, '-L' + libdir)
++                if sys.platform == 'darwin':
++                    libs.append('-Wl,-rpath,' + libdir)
+             if not getvar('Py_ENABLE_SHARED'):
+                 libs.insert(0, '-L' + getvar('LIBPL'))
+-        print(' '.join(libs))
++        print(shlex.join(libs))
+ 
+     elif opt == '--extension-suffix':
+--- a/Lib/sysconfig/__init__.py
++++ b/Lib/sysconfig/__init__.py
+@@ -529,4 +529,10 @@
+             base_exec_prefix = _CONFIG_VARS['host_exec_prefix']
+             abiflags = _CONFIG_VARS['ABIFLAGS']
++        elif not _PYTHON_BUILD:
++            configured = _CONFIG_VARS['host_exec_prefix']
++            for key in ('BINDIR', 'LIBDIR', 'LIBPL'):
++                path = _CONFIG_VARS[key]
++                if os.path.isabs(path) and os.path.commonpath((configured, path)) == configured:
++                    _CONFIG_VARS[key] = os.path.join(base_exec_prefix, os.path.relpath(path, configured))
+ 
+     # Normalized versions of prefix and exec_prefix are handy to have;
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -2932,4 +2932,9 @@
+ 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages
+ 
++INSTALL_BIN_SCRIPT = $(INSTALL_SCRIPT)
++.PHONY: install-relocatable
++install-relocatable: INSTALL_BIN_SCRIPT = $(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/install-relocatable-script.py "$(DESTDIR)$(BINDIR)/python$(LDVERSION)$(EXE)"
++install-relocatable: install
++
+ # bpo-21536: Misc/python-config.sh is generated in the build directory
+ # from $(srcdir)Misc/python-config.sh.in.
+@@ -3064,8 +3069,8 @@
+ 	$(INSTALL_SCRIPT) $(srcdir)/Modules/makesetup $(DESTDIR)$(LIBPL)/makesetup
+ 	$(INSTALL_SCRIPT) $(srcdir)/install-sh $(DESTDIR)$(LIBPL)/install-sh
+-	$(INSTALL_SCRIPT) python-config.py $(DESTDIR)$(LIBPL)/python-config.py
+-	$(INSTALL_SCRIPT) python-config $(DESTDIR)$(BINDIR)/python$(LDVERSION)-config
+-	$(INSTALL_SCRIPT) $(SCRIPT_IDLE) $(DESTDIR)$(BINDIR)/idle$(VERSION)
+-	$(INSTALL_SCRIPT) $(SCRIPT_PYDOC) $(DESTDIR)$(BINDIR)/pydoc$(VERSION)
++	$(INSTALL_BIN_SCRIPT) python-config.py "$(DESTDIR)$(LIBPL)/python-config.py"
++	$(INSTALL_BIN_SCRIPT) python-config "$(DESTDIR)$(BINDIR)/python$(LDVERSION)-config"
++	$(INSTALL_BIN_SCRIPT) $(SCRIPT_IDLE) "$(DESTDIR)$(BINDIR)/idle$(VERSION)"
++	$(INSTALL_BIN_SCRIPT) $(SCRIPT_PYDOC) "$(DESTDIR)$(BINDIR)/pydoc$(VERSION)"
+ 	@if [ -s Modules/python.exp -a \
+ 		"`echo $(MACHDEP) | sed 's/^\(...\).*/\1/'`" = "aix" ]; then \
+--- /dev/null
++++ b/Tools/build/install-relocatable-script.py
+@@ -0,0 +1,29 @@
++"""Install a Unix entry point that runs the interpreter shipped alongside it."""
++
++import os
++from pathlib import Path
++import sys
++
++
++def install_script(interpreter, source, destination):
++    data = source.read_bytes()
++    shebang, _, body = data.partition(b"\n")
++    if shebang == b"#!/bin/sh" and body.startswith(b"'''exec' "):
++        # pip uses a shell trampoline when the interpreter path is long or contains spaces.
++        command, _, rest = body.partition(b"\n")
++        end, _, script = rest.partition(b"\n")
++        if b"python" in command and end == b"' '''":
++            shebang, body = b"#!python", script
++    if shebang.startswith(b"#!") and b"python" in shebang:
++        relative = os.path.relpath(interpreter, destination.parent)
++        header = f"""#!/bin/sh
++'''exec' "$(dirname -- "$(realpath -- "$0")")/{relative}" "$0" "$@"
++' '''
++"""
++        data = os.fsencode(header) + body
++    destination.write_bytes(data)
++    destination.chmod(0o755)
++
++
++if __name__ == "__main__":
++    install_script(*map(Path, sys.argv[1:]))

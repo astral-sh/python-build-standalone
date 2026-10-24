@@ -1,0 +1,183 @@
+--- a/configure.ac
++++ b/configure.ac
+@@ -6737,4 +6737,61 @@
+ AC_SUBST([LIBPL])
+ 
++# Compute installed loader paths on the build host, including for cross builds.
++pbs_relpath () (
++  test "$prefix" != NONE || prefix=$ac_default_prefix
++  test "$exec_prefix" != NONE || exec_prefix=$prefix
++  "$PYTHON_FOR_REGEN" -c '
++import os.path as p, sys
++from string import Template
++_, prefix, root, src, dst = sys.argv
++root = Template(root).safe_substitute(prefix=prefix)
++src, dst = (p.normpath(Template(path).safe_substitute(prefix=prefix, exec_prefix=root))
++            for path in (src, dst))
++if p.commonpath((root, src, dst)) == root:
++    print(p.relpath(dst, src))
++' "$prefix" "$exec_prefix" "[$]1" "[$]2"
++)
++PBS_LIB_SUBDIR=
++pbs_pc_to_prefix=$(pbs_relpath "$libdir/pkgconfig" '${prefix}') || exit 1
++PBS_PC_PREFIX=$prefix
++test "$PBS_PC_PREFIX" != NONE || PBS_PC_PREFIX=$ac_default_prefix
++AS_IF([test -n "$pbs_pc_to_prefix"], [PBS_PC_PREFIX='${pcfiledir}/'"$pbs_pc_to_prefix"])
++pbs_bindir_to_lib=$(pbs_relpath "$bindir" "$libdir") || exit 1
++pbs_ext_to_lib=$(pbs_relpath '${exec_prefix}/'"$PLATLIBDIR/python$VERSION$ABI_THREAD/lib-dynload" "$libdir") || exit 1
++PBS_LIBPYTHON_RPATH=
++PBS_EXTENSION_RPATH=
++PBS_PYTHON_RPATH=
++PBS_DYLIB_ID='$(prefix)/lib/libpython$(LDVERSION).dylib'
++PBS_EMBED_RPATH=
++AS_IF([test "$PY_ENABLE_SHARED" = 1], [
++PBS_LIB_SUBDIR=$(pbs_relpath '${exec_prefix}' "$libdir") || exit 1
++AS_CASE([$ac_sys_system],
++  [Linux], [
++    pbs_origin='$$ORIGIN'
++    pbs_rpath=-Wl,--enable-new-dtags,-rpath
++    # On musl a library opened by pathname has no short name for later lookup.
++    AS_CASE([$host], [*-musl*], [
++      AS_IF([test -n "$pbs_bindir_to_lib"], [PBS_PYTHON_RPATH="$pbs_rpath,'$pbs_origin/$pbs_bindir_to_lib'"])
++    ])
++  ],
++  [Darwin], [
++    pbs_origin=@loader_path
++    pbs_rpath=-Wl,-rpath
++    PBS_DYLIB_ID='@rpath/libpython$(LDVERSION).dylib'
++    PBS_EMBED_RPATH='-Wl,-rpath,${libdir}'
++  ])
++])
++AS_IF([test -n "$pbs_origin"], [
++  PBS_LIBPYTHON_RPATH="$pbs_rpath,'$pbs_origin'"
++  AS_IF([test -n "$pbs_ext_to_lib"], [PBS_EXTENSION_RPATH="$pbs_rpath,'$pbs_origin/$pbs_ext_to_lib'"])
++])
++AC_SUBST([PBS_LIB_SUBDIR])
++AC_SUBST([PBS_PC_PREFIX])
++AC_SUBST([PBS_LIBPYTHON_RPATH])
++AC_SUBST([PBS_EXTENSION_RPATH])
++AC_SUBST([PBS_PYTHON_RPATH])
++AC_SUBST([PBS_DYLIB_ID])
++AC_SUBST([PBS_EMBED_RPATH])
++
+ # Check for --with-wheel-pkg-dir=PATH
+ AC_SUBST([WHEEL_PKG_DIR])
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -285,5 +285,5 @@
+ LDLIBRARY=      @LDLIBRARY@
+ BLDLIBRARY=     @BLDLIBRARY@
+-MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY))
++MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY)) @PBS_EXTENSION_RPATH@
+ PY3LIBRARY=     @PY3LIBRARY@
+ DLLLIBRARY=	@DLLLIBRARY@
+@@ -1004,4 +1004,6 @@
+ 	$(PYTHON_FOR_REGEN) $(srcdir)/Tools/clinic/clinic.py -f $(srcdir)/Lib/test/clinic.test.c
+ 
++$(BUILDPYTHON) Programs/_testembed: LINKFORSHARED += @PBS_PYTHON_RPATH@
++
+ # Build the interpreter
+ $(BUILDPYTHON):	Programs/python.o $(LINK_PYTHON_DEPS)
+@@ -1038,5 +1040,5 @@
+ 	# AIX Linker don't support "-h" option
+ 	if test "$(MACHDEP)" != "aix"; then \
+-		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
++		$(BLDSHARED) @PBS_LIBPYTHON_RPATH@ -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 	else \
+ 		$(BLDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+@@ -1047,8 +1049,8 @@
+ 
+ libpython3.so:	libpython$(LDVERSION).so
+-	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
++	$(BLDSHARED) @PBS_LIBPYTHON_RPATH@ $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
+ 
+ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+-	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
++	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,@PBS_DYLIB_ID@ @PBS_LIBPYTHON_RPATH@ -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 
+ 
+@@ -1970,4 +1972,5 @@
+ 		-DVPATH='"$(VPATH)"' \
+ 		-DPLATLIBDIR='"$(PLATLIBDIR)"' \
++		$(if @PBS_LIB_SUBDIR@,-DPBS_LIBPYTHON='L"@PBS_LIB_SUBDIR@/$(INSTSONAME)"') \
+ 		-DPYTHONFRAMEWORK='"$(PYTHONFRAMEWORK)"' \
+ 		-o $@ $(srcdir)/Modules/getpath.c
+--- a/Include/internal/pycore_pathconfig.h
++++ b/Include/internal/pycore_pathconfig.h
+@@ -21,4 +21,8 @@
+ 
+ 
++#ifdef __GLIBC__
++extern int _Py_pbs_preload_libpython;
++#endif
++
+ #ifdef __cplusplus
+ }
+--- a/Programs/python.c
++++ b/Programs/python.c
+@@ -2,4 +2,7 @@
+ 
+ #include "Python.h"
++#ifdef __GLIBC__
++#  include "pycore_pathconfig.h"
++#endif
+ 
+ #ifdef MS_WINDOWS
+@@ -13,4 +16,7 @@
+ main(int argc, char **argv)
+ {
++#ifdef __GLIBC__
++    _Py_pbs_preload_libpython = 1;
++#endif
+     return Py_BytesMain(argc, argv);
+ }
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -889,4 +889,37 @@
+ }
+ 
++
++#ifdef __GLIBC__
++int _Py_pbs_preload_libpython;
++
++static PyStatus
++preload_libpython(const PyConfig *config)
++{
++    if (!_Py_pbs_preload_libpython) {
++        return _PyStatus_OK();
++    }
++    _Py_pbs_preload_libpython = 0;
++#ifdef PBS_LIBPYTHON
++    if (!config->_is_python_build && config->base_exec_prefix != NULL &&
++        _Py_isabs(config->base_exec_prefix)) {
++        wchar_t *path = _Py_join_relfile(config->base_exec_prefix, PBS_LIBPYTHON);
++        if (path == NULL) {
++            return PyStatus_NoMemory();
++        }
++        char *filename = Py_EncodeLocale(path, NULL);
++        PyMem_RawFree(path);
++        if (filename == NULL) {
++            return PyStatus_NoMemory();
++        }
++        /* Load this installation's libpython so extensions that need its soname
++           can find it even when their RUNPATH points elsewhere. A distribution
++           may omit the shared library. */
++        (void)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
++        PyMem_Free(filename);
++    }
++#endif
++    return _PyStatus_OK();
++}
++#endif
+ 
+ /* Perform the actual path calculation.
+@@ -1030,4 +1063,8 @@
+     Py_DECREF(dict);
+ 
++#ifdef __GLIBC__
++    return preload_libpython(config);
++#else
+     return _PyStatus_OK();
+-}
++#endif
++}

@@ -18,9 +18,9 @@ CMD ["/bin/bash", "--login"]
 WORKDIR '/build'
 
 RUN for suite in trixie trixie-updates; do \
-      echo "deb http://snapshot.debian.org/archive/debian/20260624T024300Z/ ${suite} main"; \
+      echo "deb http://snapshot.debian.org/archive/debian/20261023T000000Z/ ${suite} main"; \
     done > /etc/apt/sources.list && \
-    echo "deb http://snapshot.debian.org/archive/debian-security/20260624T024300Z/ trixie-security main" >> /etc/apt/sources.list && \
+    echo "deb http://snapshot.debian.org/archive/debian-security/20261023T000000Z/ trixie-security main" >> /etc/apt/sources.list && \
     rm -f /etc/apt/sources.list.d/* && \
     ( echo 'quiet "true";'; \
       echo 'APT::Get::Assume-Yes "true";'; \

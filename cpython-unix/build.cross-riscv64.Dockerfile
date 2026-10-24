@@ -1,34 +1,11 @@
-# Debian Trixie
-FROM debian@sha256:3352c2e13876c8a5c5873ef20870e1939e73cb9a3c1aeba5e3e72172a85ce9ed
-LABEL org.opencontainers.image.authors="Jonathan J. Helmus <jjhelmus@gmail.com>"
+{% include 'base.debian13.Dockerfile' %}
 
-RUN groupadd -g 1000 build && \
-    useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
-    mkdir /tools && \
-    chown -R build:build /build /tools
-
-ENV HOME=/build \
-    SHELL=/bin/bash \
-    USER=build \
-    LOGNAME=build \
-    HOSTNAME=builder \
-    DEBIAN_FRONTEND=noninteractive
-
-CMD ["/bin/bash", "--login"]
-WORKDIR '/build'
-
-RUN apt-get update && apt-get install --yes ca-certificates
+RUN apt-get install --yes ca-certificates
 
 # Add buster as a source for riscv sysroot packages
 RUN for s in debian_buster debian_buster-updates debian-security_buster/updates; do \
       echo "deb https://snapshot.debian.org/archive/${s%_*}/20250109T084424Z/ ${s#*_} main"; \
-    done > /etc/apt/sources.list.d/buster.list && \
-    ( echo 'quiet "true";'; \
-      echo 'APT::Get::Assume-Yes "true";'; \
-      echo 'APT::Install-Recommends "false";'; \
-      echo 'Acquire::Check-Valid-Until "false";'; \
-      echo 'Acquire::Retries "5";'; \
-    ) > /etc/apt/apt.conf.d/99cpython-portable
+    done > /etc/apt/sources.list.d/buster.list
 
 # Pin the riscv sysroot packages to buster
 RUN printf 'Package: *-riscv64-cross\nPin: release n=buster\nPin-Priority: 900\n' \

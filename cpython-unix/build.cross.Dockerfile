@@ -1,35 +1,12 @@
-# Debian Trixie
-FROM debian@sha256:3352c2e13876c8a5c5873ef20870e1939e73cb9a3c1aeba5e3e72172a85ce9ed
-LABEL org.opencontainers.image.authors="Jonathan J. Helmus <jjhelmus@gmail.com>"
-
-RUN groupadd -g 1000 build && \
-    useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
-    mkdir /tools && \
-    chown -R build:build /build /tools
-
-ENV HOME=/build \
-    SHELL=/bin/bash \
-    USER=build \
-    LOGNAME=build \
-    HOSTNAME=builder \
-    DEBIAN_FRONTEND=noninteractive
-
-CMD ["/bin/bash", "--login"]
-WORKDIR '/build'
+{% include 'base.debian13.Dockerfile' %}
 
 # Use the same authenticated Stretch snapshot as the native AArch64 sysroot.
 # Its signing key has expired, so verify it with mmdebstrap's gpgv wrapper and
 # pin the signed Release metadata before installing any cross packages.
-RUN apt-get update && apt-get install --yes ca-certificates mmdebstrap gpgv
+RUN apt-get install --yes ca-certificates mmdebstrap gpgv
 RUN echo 'deb [signed-by=/usr/share/keyrings/debian-archive-removed-keys.gpg] https://snapshot.debian.org/archive/debian/20230423T032736Z/ stretch main' \
         > /etc/apt/sources.list.d/stretch.list && \
-    ( echo 'quiet "true";'; \
-      echo 'APT::Get::Assume-Yes "true";'; \
-      echo 'APT::Install-Recommends "false";'; \
-      echo 'Acquire::Check-Valid-Until "false";'; \
-      echo 'Acquire::Retries "5";'; \
-      echo 'APT::Update::Error-Mode "any";'; \
-    ) > /etc/apt/apt.conf.d/99cpython-portable
+    echo 'APT::Update::Error-Mode "any";' >> /etc/apt/apt.conf.d/99cpython-portable
 
 RUN printf 'Package: *-cross\nPin: release n=stretch\nPin-Priority: 900\n' \
         > /etc/apt/preferences.d/stretch-cross

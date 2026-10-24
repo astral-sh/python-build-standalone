@@ -11,6 +11,7 @@
 # ///
 
 import argparse
+import hashlib
 import json
 import sys
 from typing import Any
@@ -399,6 +400,51 @@ def create_python_build_entry(
     return entry
 
 
+def generate_host_python_matrix_entries(
+    python_entries: list[dict[str, Any]],
+    runners: dict[str, Any],
+    targets: dict[str, Any],
+) -> list[dict[str, Any]]:
+    producers = {}
+    for entry in python_entries:
+        if entry["platform"] != "linux":
+            continue
+        settings = targets[entry["target_triple"]]
+        host_platform = f"linux_{runners[entry['runner']]['arch']}"
+        if host_platform not in settings["host_platforms"]:
+            raise ValueError(
+                f"{entry['target_triple']} cannot build on {host_platform}"
+            )
+        image = f"build{settings.get('docker_image_suffix', '')}"
+        # Host builds use host compiler settings. Retain the producer image to
+        # keep its build environment separate.
+        identity = {
+            "python": entry["python"],
+            "host_platform": host_platform,
+            "image": image,
+            "host_cc": settings["host_cc"],
+            "host_cxx": settings["host_cxx"],
+            "host_ldflags": settings.get("host_ldflags", []),
+            "needs_toolchain": settings.get("needs_toolchain", False),
+        }
+        key = json.dumps(identity, sort_keys=True)
+        digest = hashlib.sha256(key.encode()).hexdigest()[:12]
+        artifact = f"host-python-{entry['python']}-{host_platform}-{image}-{digest}"
+        entry["host_python_artifact"] = artifact
+        if key not in producers:
+            producers[key] = {
+                "runner": entry["runner"],
+                "python": entry["python"],
+                "target_triple": entry["target_triple"],
+                "host_platform": host_platform,
+                "image": image,
+                "host_python_artifact": artifact,
+            }
+            if "dry-run" in entry:
+                producers[key]["dry-run"] = entry["dry-run"]
+    return list(producers.values())
+
+
 def add_python_build_entries_for_config(
     matrix_entries: list[dict[str, str]],
     target_triple: str,
@@ -544,7 +590,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "crate-build", "all"],
+        choices=[
+            "python-build",
+            "host-python-build",
+            "docker-build",
+            "crate-build",
+            "all",
+        ],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -585,6 +637,8 @@ def main() -> None:
                 result["python-build"] = {"include": []}
         if args.matrix_type in ["docker-build", "all"]:
             result["docker-build"] = {"include": []}
+        if args.matrix_type in ["host-python-build", "all"]:
+            result["host-python-build"] = {"include": []}
         if args.matrix_type in ["crate-build", "all"]:
             result["crate-build"] = {"include": []}
         print(json.dumps(result))
@@ -613,6 +667,14 @@ def main() -> None:
         for entry in python_entries
         if should_include_entry(entry, labels, event_defaults, allowed_triples)
     ]
+
+    with open("cpython-unix/targets.yml") as f:
+        targets = yaml.safe_load(f)
+    host_python_entries = generate_host_python_matrix_entries(
+        python_entries, runners, targets
+    )
+    if args.matrix_type in ["host-python-build", "all"]:
+        result["host-python-build"] = {"include": host_python_entries}
 
     # Output python-build matrix if requested
     if args.matrix_type in ["python-build", "all"]:

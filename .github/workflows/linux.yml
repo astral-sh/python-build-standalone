@@ -138,6 +138,7 @@ jobs:
       python-build-matrix-0: ${{ steps.set-matrix.outputs.python-build-matrix-0 }}
       python-build-matrix-1: ${{ steps.set-matrix.outputs.python-build-matrix-1 }}
       docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
+      host-python-build-matrix: ${{ steps.set-matrix.outputs.host-python-build-matrix }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       has-builds-0: ${{ steps.set-matrix.outputs.has-builds-0 }}
       has-builds-1: ${{ steps.set-matrix.outputs.has-builds-1 }}
@@ -188,6 +189,7 @@ jobs:
           echo "python-build-matrix-0=$(jq -c '."python-build"["0"]' matrix.json)" >> $GITHUB_OUTPUT
           echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
           echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
+          echo "host-python-build-matrix=$(jq -c '."host-python-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "has-builds-0=$(jq '."python-build"["0"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
           echo "has-builds-1=$(jq '."python-build"["1"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
@@ -198,25 +200,19 @@ jobs:
         env:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
-  build-0:
+  host-python:
     if: ${{ needs.generate-matrix.outputs.has-builds-0 == 'true' }}
     needs:
       - generate-matrix
-      - crate-build
       - image
-    # Permissions used for actions/attest-build-provenance
-    permissions:
-      id-token: write
-      attestations: write
-    runs-on: ${{ matrix.runner }}
     strategy:
-      matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-0) }}
       fail-fast: false
-    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
-    steps: &build_steps
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.host-python-build-matrix) }}
+    name: host Python / ${{ matrix.python }} / ${{ matrix.host_platform }} / ${{ matrix.image }}
+    runs-on: ${{ matrix.runner }}
+    steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
 
       - name: Set up uv
@@ -224,29 +220,15 @@ jobs:
         with:
           enable-cache: false
 
-      - name: Download pythonbuild
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ${{ matrix.crate_artifact_name }}
-          path: build
-
       - name: Download images
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          pattern: image-*
+          pattern: image-*-${{ matrix.host_platform }}
           path: build
           merge-multiple: true
 
-      - name: Cache downloads
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: build/downloads
-          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.json')}}
-          restore-keys: |
-            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.json')}}
-            ${{ matrix.target_triple }}-
-
-      - name: Load Docker Images
+      - &load_docker_images
+        name: Load Docker Images
         run: |
           set -euo pipefail
           
@@ -284,6 +266,83 @@ jobs:
           
           wait
 
+      - name: Build host interpreter
+        if: ${{ ! matrix.dry-run }}
+        run: |
+          ./build.py --make-target empty
+          touch build/image-*
+          ./build.py --target-triple "${MATRIX_TARGET_TRIPLE}" --python "cpython-${MATRIX_PYTHON}" --make-target host-python
+        env:
+          MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
+          MATRIX_PYTHON: ${{ matrix.python }}
+
+      - name: Upload host interpreter
+        if: ${{ ! matrix.dry-run }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.host_python_artifact }}
+          path: build/cpython-${{ matrix.python }}-*-${{ matrix.host_platform }}-${{ matrix.image }}.tar
+          if-no-files-found: error
+          compression-level: '0'
+
+  build-0:
+    if: ${{ needs.generate-matrix.outputs.has-builds-0 == 'true' }}
+    needs:
+      - generate-matrix
+      - crate-build
+      - image
+      - host-python
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-0) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps: &build_steps
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: false
+
+      - name: Download pythonbuild
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.crate_artifact_name }}
+          path: build
+
+      - name: Download images
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: image-*
+          path: build
+          merge-multiple: true
+
+      - name: Download host interpreter
+        if: ${{ ! matrix.dry-run }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.host_python_artifact }}
+          path: build
+
+      - name: Cache downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/downloads
+          key: ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.json')}}
+          restore-keys: |
+            ${{ matrix.target_triple }}-${{ hashFiles('pythonbuild/downloads.json')}}
+            ${{ matrix.target_triple }}-
+
+      - *load_docker_images
+
       - name: Build
         if: ${{ ! matrix.dry-run }}
         run: |
@@ -293,7 +352,7 @@ jobs:
           # Touch mtimes of all images so they are newer than autogenerated files above.
           touch build/image-*
 
-          ./build.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS} --compression ${ARCHIVE_COMPRESSION}
+          ./build.py --target-triple ${MATRIX_TARGET_TRIPLE} --python cpython-${MATRIX_PYTHON} --options ${MATRIX_BUILD_OPTIONS} --compression ${ARCHIVE_COMPRESSION} --use-prebuilt-host-python
         env:
           MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
           MATRIX_PYTHON: ${{ matrix.python }}
@@ -342,6 +401,7 @@ jobs:
       - generate-matrix
       - crate-build
       - image
+      - host-python
     # Permissions used for actions/attest-build-provenance
     permissions:
       id-token: write

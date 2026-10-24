@@ -91,6 +91,7 @@ def main():
         choices={
             "default",
             "empty",
+            "host-python",
             "toolchain",
             "toolchain-image-build",
             "toolchain-image-build.cross",
@@ -107,6 +108,12 @@ def main():
         },
         default="default",
         help="The make target to evaluate",
+    )
+
+    parser.add_argument(
+        "--use-prebuilt-host-python",
+        action="store_true",
+        help="Use the host interpreter archive in build/, failing if it is absent",
     )
 
     parser.add_argument(
@@ -169,6 +176,8 @@ def main():
     env["PYBUILD_TARGET_TRIPLE"] = target_triple
     env["PYBUILD_BUILD_OPTIONS"] = args.options
     env["PYBUILD_PYTHON_SOURCE"] = python_source
+    if args.use_prebuilt_host_python:
+        env["PYBUILD_USE_PREBUILT_HOST_PYTHON"] = "1"
     if musl:
         env["PYBUILD_MUSL"] = "1"
     if args.break_on_failure:

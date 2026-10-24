@@ -79,6 +79,9 @@ HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYT
 
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
+.PHONY: host-python
+host-python: $(HOST_PYTHON_DEPENDS)
+
 ifndef PYBUILD_NO_DOCKER
 $(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
@@ -253,14 +256,14 @@ PYTHON_DEPENDS_$(1) := \
     $$(OUTDIR)/versions/VERSION.pip \
     $$(OUTDIR)/versions/VERSION.setuptools \
     $$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar \
-    $$(if$$(NEED_AUTOCONF),$$(OUTDIR)/autoconf-$$(AUTOCONF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_AUTOCONF),$$(OUTDIR)/autoconf-$$(AUTOCONF_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BDB),$$(OUTDIR)/bdb-$$(BDB_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_BZIP2),$$(OUTDIR)/bzip2-$$(BZIP2_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_EXPAT),$$(OUTDIR)/expat-$$(EXPAT_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBEDIT),$$(OUTDIR)/libedit-$$(LIBEDIT_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LIBFFI),$$(OUTDIR)/libffi-$$(LIBFFI_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_LINUX_UAPI),$$(OUTDIR)/linux-uapi-$$(LINUX_UAPI_VERSION)-$$(PACKAGE_SUFFIX).tar) \
-    $$(if $$(NEED_m4),$$(OUTDIR)/m4-$$(M4_VERSION)-$$(PACKAGE_SUFFIX).tar) \
+    $$(if $$(NEED_M4),$$(OUTDIR)/m4-$$(M4_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_MPDECIMAL),$$(OUTDIR)/mpdecimal-$$(MPDECIMAL_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_NCURSES),$$(OUTDIR)/ncurses-$$(NCURSES_VERSION)-$$(PACKAGE_SUFFIX).tar) \
     $$(if $$(NEED_OPENSSL_3_5),$$(OUTDIR)/openssl-3.5-$$(OPENSSL_3.5_VERSION)-$$(PACKAGE_SUFFIX).tar) \
@@ -281,8 +284,16 @@ ALL_PYTHON_DEPENDS_$(1) = \
     $$(PYTHON_DEPENDS_$(1)) \
     $$(NULL)
 
+ifdef PYBUILD_USE_PREBUILT_HOST_PYTHON
+# CI supplies this archive from a producer in the same workflow. Ignore
+# runner-local prerequisite timestamps, which can trigger unnecessary rebuilds.
+$$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar:
+	@echo "Missing prebuilt host interpreter: $$@" >&2
+	@exit 1
+else
 $$(OUTDIR)/cpython-$(1)-$$(CPYTHON_$(1)_VERSION)-$$(HOST_PYTHON_SUFFIX).tar: $$(PYTHON_HOST_DEPENDS)
 	$$(RUN_BUILD) --docker-image $$(DOCKER_IMAGE_BUILD) cpython-$(1)-host
+endif
 
 $$(OUTDIR)/cpython-$$(CPYTHON_$(1)_VERSION)-$$(PACKAGE_SUFFIX).tar: $$(ALL_PYTHON_DEPENDS_$(1))
 	$$(RUN_BUILD) --docker-image $$(DOCKER_IMAGE_BUILD) cpython-$(1)

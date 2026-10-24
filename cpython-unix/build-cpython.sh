@@ -258,14 +258,6 @@ if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
 
-# Ensure the new build-details.json file reports relocatable paths.
-# There is not yet a flag in ./configure for this, sadly.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
-    patch -p1 -i "${ROOT}/patch-python-relative-build-details-3.16.patch"
-elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-    patch -p1 -i "${ROOT}/patch-python-relative-build-details.patch"
-fi
-
 # Mark _Py_jit_entry as extern in _testiternalcapi/interpreter.c to avoid a duplicate symbols.
 # The symbol is not actually used in the module, a better solution should be found, see:
 # https://github.com/python/cpython/issues/144712
@@ -758,7 +750,15 @@ if [ "${relocatable}" = yes ]; then
     patch -p1 -i "${ROOT}/patch-enable-relocatable.patch"
     patch -p1 -i "${ROOT}/patch-relocatable-loader-paths.patch"
     patch -p1 -i "${ROOT}/patch-relocatable-libpython.patch"
+    if [ "${PYTHON_MAJMIN_VERSION}" = "3.14" ]; then
+        patch -p1 -i "${ROOT}/patch-python-3.14-build-details-interpreter.patch"
+    fi
     patch -p1 -i "${ROOT}/patch-relocatable-install.patch"
+    if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
+        patch -p1 -i "${ROOT}/patch-python-relative-build-details-3.16.patch"
+    else
+        patch -p1 -i "${ROOT}/patch-python-relative-build-details.patch"
+    fi
     CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-relocatable"
 fi
 

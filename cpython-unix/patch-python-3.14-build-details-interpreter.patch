@@ -1,0 +1,15 @@
+Backport the ABI-aware interpreter name used by the Python 3.15 build details generator.
+
+--- a/Tools/build/generate-build-details.py
++++ b/Tools/build/generate-build-details.py
+@@ -48,7 +48,9 @@
+     #data['base_interpreter'] = sys._base_executable
+     data['base_interpreter'] = os.path.join(
+         sysconfig.get_path('scripts'),
+-        'python' + sysconfig.get_config_var('VERSION'),
++        "python"
++        + sysconfig.get_config_var('LDVERSION')
++        + sysconfig.get_config_var('EXE'),
+     )
+     data['platform'] = sysconfig.get_platform()
+ 

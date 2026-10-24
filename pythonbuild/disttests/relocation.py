@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import json
 import os
 import platform
 import shlex
@@ -22,7 +23,7 @@ class TestRelocation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.tmp = Path(cls.enterClassContext(tempfile.TemporaryDirectory())).resolve()
-        cls.prefix = cls.tmp / "moved Python"
+        cls.prefix = cls.tmp / "moved Python & #libs"
         shutil.copytree(
             sys.base_prefix,
             cls.prefix,
@@ -71,18 +72,32 @@ class TestRelocation(unittest.TestCase):
         self.assertEqual(Path(libdir), self.lib)
         self.assertTrue(Path(libpl).is_relative_to(self.lib))
         self.assertTrue((Path(libpl) / "Makefile").is_file())
+        stdlib = self.prefix / Path(sysconfig.get_path("stdlib")).relative_to(
+            sys.base_prefix
+        )
+        details = json.loads((stdlib / "build-details.json").read_text())
+        self.assertEqual((stdlib / details["base_prefix"]).resolve(), self.prefix)
+        self.assertEqual(
+            self.run_command(
+                self.prefix / details["base_interpreter"],
+                "-I",
+                "-c",
+                "import sys; print(sys.base_prefix, sys.abiflags)",
+            ).strip(),
+            f"{self.prefix} {sys.abiflags}".strip(),
+        )
         self.assertNotIn("-rpath", ldshared)
         self.assertEqual(
             self.run_command(self.python.parent / "python3-config", "--prefix").strip(),
             prefix,
         )
-        pc_libdir = self.run_command(
-            "pkg-config", "--variable=libdir", "python3-embed"
-        ).strip()
-        self.assertEqual(Path(pc_libdir.replace(r"\ ", " ")).resolve(), self.lib)
-        self.assertIn(
-            "module errno", self.run_command(self.python.parent / "pydoc3", "errno")
+        (lib_flag,) = shlex.split(
+            self.run_command("pkg-config", "--libs-only-L", "python3-embed")
         )
+        self.assertEqual(Path(lib_flag.removeprefix("-L")).resolve(), self.lib)
+        pydoc = self.tmp / "linked pydoc"
+        pydoc.symlink_to(self.python.parent / "pydoc3")
+        self.assertIn("module errno", self.run_command(pydoc, "errno"))
         self.assertIn(
             prefix, self.run_command(self.python.parent / "pip3", "--version")
         )
@@ -108,6 +123,10 @@ class TestRelocation(unittest.TestCase):
             for name in ("libtcl9.0", "libtcl9tk9.0"):
                 self.assertIn(f"@rpath/{name}.dylib", dependencies)
         else:
+            startup_maps = self.run_command(
+                self.python, "-I", "-S", "-c", "print(open('/proc/self/maps').read())"
+            )
+            self.assertEqual(str(library) in startup_maps, not self.musl)
             maps = self.run_command(
                 self.python,
                 "-I",

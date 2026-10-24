@@ -22,16 +22,18 @@ Resolve a wheel's libpython dependency from a relocated static launcher on glibc
 +RELOCATABLE_LIBPYTHON=@RELOCATABLE_LIBPYTHON@
  
  # Shell used by make (some versions default to the login shell, which is bad)
-@@ -1977,7 +1978,9 @@
+@@ -1977,9 +1978,10 @@
  		-DVPATH='"$(VPATH)"' \
  		-DPLATLIBDIR='"$(PLATLIBDIR)"' \
 +		$(if $(RELOCATABLE_LIBPYTHON),-DRELOCATABLE_LIBPYTHON='L"$(RELOCATABLE_LIBPYTHON)"') \
  		-DPYTHONFRAMEWORK='"$(PYTHONFRAMEWORK)"' \
  		-o $@ $(srcdir)/Modules/getpath.c
  
-+Programs/python.o: CFLAGS_NODIST += $(if $(RELOCATABLE_LIBPYTHON),-DPRELOAD_LIBPYTHON)
  Programs/python.o: $(srcdir)/Programs/python.c
- 	$(CC) -c $(PY_CORE_CFLAGS) -o $@ $(srcdir)/Programs/python.c
+-	$(CC) -c $(PY_CORE_CFLAGS) -o $@ $(srcdir)/Programs/python.c
++	$(CC) -c $(PY_CORE_CFLAGS) $(if $(RELOCATABLE_LIBPYTHON),-DPRELOAD_LIBPYTHON) -o $@ $(srcdir)/Programs/python.c
+ 
+ Programs/_testembed.o: $(srcdir)/Programs/_testembed.c Programs/test_frozenmain.h $(PYTHON_HEADERS)
 --- a/Programs/python.c
 +++ b/Programs/python.c
 @@ -2,4 +2,7 @@

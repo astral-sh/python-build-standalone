@@ -323,7 +323,7 @@ jobs:
           
           if [ "${MATRIX_RUN}" == "true" ]; then
             if [ "${MATRIX_LIBC}" == "musl" ]; then
-              sudo apt install musl-dev
+              sudo apt install musl-tools
           
               # GitHub's setup-python action sets `LD_LIBRARY_PATH` which overrides `RPATH`
               # as used in the musl builds.

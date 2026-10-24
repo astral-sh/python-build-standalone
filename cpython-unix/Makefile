@@ -80,7 +80,7 @@ HOST_PYTHON_DEPENDS := $(OUTDIR)/cpython-$(PYTHON_MAJOR_VERSION)-$(CPYTHON_$(PYT
 default: $(OUTDIR)/cpython-$(CPYTHON_$(PYTHON_MAJOR_VERSION)_VERSION)-$(PACKAGE_SUFFIX).tar
 
 ifndef PYBUILD_NO_DOCKER
-$(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile
+$(OUTDIR)/image-%.$(HOST_PLATFORM).tar: $(OUTDIR)/%.Dockerfile $(HERE)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 endif
 
@@ -102,7 +102,7 @@ empty:
 
 toolchain: $(TOOLCHAIN_TARGET)
 
-toolchain-image-%: $(OUTDIR)/%.Dockerfile
+toolchain-image-%: $(OUTDIR)/%.Dockerfile $(HERE)/%.Dockerfile
 	$(RUN_BUILD) --toolchain image-$*
 
 AUTOCONF_DEPENDS = \

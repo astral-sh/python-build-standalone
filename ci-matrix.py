@@ -31,7 +31,6 @@ DOCKER_BUILD_IMAGES = [
     {"name": "build.cross", "arch": "x86_64"},
     {"name": "build.cross-riscv64", "arch": "x86_64"},
     {"name": "build.debian13", "arch": "aarch64"},
-    {"name": "gcc", "arch": "x86_64"},
     {"name": "gcc.debian13-x86_64", "arch": "x86_64"},
     {"name": "gcc.debian13", "arch": "aarch64"},
 ]

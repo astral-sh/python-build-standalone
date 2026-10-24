@@ -1068,8 +1068,14 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
     }
 
     if json.libpython_link_mode == "shared" {
-        if target_triple.contains("-musl") {
-            // On musl, we link to `libpython` and rely on `RUN PATH`
+        if matches!(python_major_minor, "3.14" | "3.15" | "3.16") {
+            // The stable-ABI library finds the versioned soname through its own RUNPATH.
+            if path.ends_with("libpython3.so") {
+                if let Some(soname) = json.python_config_vars.get("INSTSONAME") {
+                    allowed_libraries.push(soname.clone());
+                }
+            }
+        } else if target_triple.contains("-musl") {
             allowed_libraries.push(format!("libpython{python_major_minor}.so.1.0"));
             allowed_libraries.push(format!("libpython{python_major_minor}d.so.1.0"));
             allowed_libraries.push(format!("libpython{python_major_minor}t.so.1.0"));

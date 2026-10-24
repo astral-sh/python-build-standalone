@@ -1,0 +1,403 @@
+Generate entry points and embedding metadata for a relocatable installation.
+
+--- a/configure.ac
++++ b/configure.ac
+@@ -6802,4 +6802,28 @@
+ AC_SUBST([RELOCATABLE_EXTENSION_LDFLAGS])
+ AC_SUBST([LIBPYTHON_INSTALL_NAME])
++
++AS_VAR_IF([prefix], [NONE], [PC_PREFIX=$ac_default_prefix], [PC_PREFIX=$prefix])
++AS_VAR_IF([exec_prefix], [NONE], [PC_EXEC_PREFIX='${prefix}'], [PC_EXEC_PREFIX=$exec_prefix])
++PC_LIBDIR=$libdir
++PC_INCLUDEDIR=$includedir
++EMBED_RPATH=
++BINDIR_TO_PREFIX=..
++AS_IF([test "$enable_relocatable" = yes], [
++  BINDIR_TO_PREFIX=$(relative_dir "$bindir" '${prefix}')
++  pc_to_prefix=$(relative_dir "$libdir/pkgconfig" '${prefix}')
++  PC_PREFIX='${pcfiledir}/'"$pc_to_prefix"
++  PC_EXEC_PREFIX='${prefix}'
++  PC_LIBDIR='${pcfiledir}/..'
++  AS_IF([includedir_from_prefix=$(relative_dir '${prefix}' "$includedir")],
++    [PC_INCLUDEDIR='${prefix}/'"$includedir_from_prefix"])
++  AS_IF([test "$ac_sys_system" = Darwin && test "$PY_ENABLE_SHARED" = 1],
++    [EMBED_RPATH='-Wl,-rpath,${libdir}'])
++])
++AC_SUBST([PC_PREFIX])
++AC_SUBST([PC_EXEC_PREFIX])
++AC_SUBST([PC_LIBDIR])
++AC_SUBST([PC_INCLUDEDIR])
++AC_SUBST([EMBED_RPATH])
++AC_SUBST([BINDIR_TO_PREFIX])
+ RELOCATABLE_LIBPYTHON=
+ AS_IF([test "$enable_relocatable" = yes && test "$ac_sys_system" = Linux &&
+--- a/Misc/python.pc.in
++++ b/Misc/python.pc.in
+@@ -1,7 +1,7 @@
+ # See: man pkg-config
+-prefix=@prefix@
+-exec_prefix=@exec_prefix@
+-libdir=@libdir@
+-includedir=@includedir@
++prefix=@PC_PREFIX@
++exec_prefix=@PC_EXEC_PREFIX@
++libdir=@PC_LIBDIR@
++includedir=@PC_INCLUDEDIR@
+ 
+ Name: Python
+--- a/Misc/python-embed.pc.in
++++ b/Misc/python-embed.pc.in
+@@ -1,7 +1,7 @@
+ # See: man pkg-config
+-prefix=@prefix@
+-exec_prefix=@exec_prefix@
+-libdir=@libdir@
+-includedir=@includedir@
++prefix=@PC_PREFIX@
++exec_prefix=@PC_EXEC_PREFIX@
++libdir=@PC_LIBDIR@
++includedir=@PC_INCLUDEDIR@
+ 
+ Name: Python
+@@ -10,4 +10,4 @@
+ Version: @VERSION@
+ Libs.private: @LIBS@
+-Libs: -L${libdir} -lpython@VERSION@@ABIFLAGS@
++Libs: -L${libdir} -lpython@VERSION@@ABIFLAGS@ @EMBED_RPATH@
+ Cflags: -I${includedir}/python@VERSION@@ABIFLAGS@
+--- a/Misc/python-config.sh.in
++++ b/Misc/python-config.sh.in
+@@ -22,5 +22,5 @@
+ installed_prefix ()
+ {
+-    RESULT=$(dirname $(cd $(dirname "$1") && pwd -P))
++    RESULT=$(cd "$(dirname "$1")/@BINDIR_TO_PREFIX@" && pwd -P)
+     if which readlink >/dev/null 2>&1 ; then
+         if readlink -f "$RESULT" >/dev/null 2>&1; then
+@@ -28,11 +28,23 @@
+         fi
+     fi
+-    echo $RESULT
++    printf '%s\n' "$RESULT"
++}
++
++# Quote installation paths for consumers that parse the output as shell words.
++quote_flag () {
++    printf '%s' "$1" | sed 's/[^a-zA-Z0-9_.,/:=+-]/\\&/g'
+ }
+ 
+ prefix_real=$(installed_prefix "$0")
+ 
+-# Use sed to fix paths from their built-to locations to their installed-to
+-# locations. Keep prefix & exec_prefix using their original values in case
++# Replace the configured prefix literally, including in compiler flags.
++relocate_prefix () {
++    case $1 in
++        *"$prefix"*) printf '%s\n' "${1%%"$prefix"*}$prefix_real${1#*"$prefix"}" ;;
++        *) printf '%s\n' "$1" ;;
++    esac
++}
++
++# Keep prefix & exec_prefix using their original values in case
+ # they are referenced in other configure variables, to prevent double
+ # substitution, issue #22140.
+@@ -40,7 +52,7 @@
+ exec_prefix="@exec_prefix@"
+ exec_prefix_real=${prefix_real}
+-includedir=$(echo "@includedir@" | sed "s#$prefix#$prefix_real#")
+-libdir=$(echo "@libdir@" | sed "s#$prefix#$prefix_real#")
+-CFLAGS=$(echo "@CFLAGS@" | sed "s#$prefix#$prefix_real#")
++includedir=$(relocate_prefix "@includedir@")
++libdir=$(relocate_prefix "@libdir@")
++CFLAGS=$(relocate_prefix "@CFLAGS@")
+ VERSION="@VERSION@"
+ LIBM="@LIBM@"
+@@ -56,9 +68,12 @@
+ LDVERSION="@LDVERSION@"
+ LIBDEST=${prefix_real}/lib/python${VERSION}
+-LIBPL=$(echo "@LIBPL@" | sed "s#$prefix#$prefix_real#")
++LIBPL=$(relocate_prefix "@LIBPL@")
+ SO="@EXT_SUFFIX@"
+ PYTHONFRAMEWORK="@PYTHONFRAMEWORK@"
+ INCDIR="-I$includedir/python${VERSION}${ABIFLAGS}"
+-PLATINCDIR="-I$includedir/python${VERSION}${ABIFLAGS}"
++if [ "@RELOCATABLE@" = yes ]; then
++    INCDIR=$(quote_flag "$INCDIR")
++fi
++PLATINCDIR=$INCDIR
+ PY_EMBED=0
+ 
+@@ -95,8 +110,8 @@
+         ;;
+         --includes)
+-            echo "$INCDIR $PLATINCDIR"
++            printf '%s\n' "$INCDIR $PLATINCDIR"
+         ;;
+         --cflags)
+-            echo "$INCDIR $PLATINCDIR $BASECFLAGS $CFLAGS $OPT"
++            printf '%s\n' "$INCDIR $PLATINCDIR $BASECFLAGS $CFLAGS $OPT"
+         ;;
+         --libs)
+@@ -108,5 +123,18 @@
+                 LIBPLUSED="-L$LIBPL"
+             fi
+-            echo "$LIBPLUSED -L$libdir $LIBS"
++            if [ "@RELOCATABLE@" = yes ]; then
++                if [ -n "$LIBPLUSED" ]; then
++                    LIBPLUSED=$(quote_flag "$LIBPLUSED")
++                fi
++                EMBED_RPATH="@EMBED_RPATH@"
++                if [ "$PY_EMBED" = 1 ] && [ -n "$EMBED_RPATH" ]; then
++                    EMBED_RPATH=$(quote_flag "$EMBED_RPATH")
++                else
++                    EMBED_RPATH=
++                fi
++                printf '%s\n' "$LIBPLUSED $(quote_flag "-L$libdir") $LIBS${EMBED_RPATH:+ $EMBED_RPATH}"
++            else
++                echo "$LIBPLUSED -L$libdir $LIBS"
++            fi
+         ;;
+         --extension-suffix)
+--- a/Misc/python-config.in
++++ b/Misc/python-config.in
+@@ -5,4 +5,5 @@
+ 
+ import getopt
++import shlex
+ import sys
+ import sysconfig
+@@ -28,4 +29,5 @@
+ getvar = sysconfig.get_config_var
+ pyver = getvar('VERSION')
++join_flags = shlex.join if getvar('Py_ENABLE_RELOCATABLE') else ' '.join
+ 
+ opt_flags = [flag for (flag, val) in opts]
+@@ -46,5 +48,5 @@
+         if opt == '--cflags':
+             flags.extend(getvar('CFLAGS').split())
+-        print(' '.join(flags))
++        print(join_flags(flags))
+ 
+     elif opt in ('--libs', '--ldflags'):
+@@ -61,7 +63,13 @@
+         # shared library in prefix/lib/.
+         if opt == '--ldflags':
++            if ('--embed' in opt_flags and getvar('Py_ENABLE_RELOCATABLE')
++                    and getvar('Py_ENABLE_SHARED')):
++                libdir = getvar('LIBDIR')
++                libs.insert(0, '-L' + libdir)
++                if sys.platform == 'darwin':
++                    libs.append('-Wl,-rpath,' + libdir)
+             if not getvar('Py_ENABLE_SHARED'):
+                 libs.insert(0, '-L' + getvar('LIBPL'))
+-        print(' '.join(libs))
++        print(join_flags(libs))
+ 
+     elif opt == '--extension-suffix':
+--- a/Lib/sysconfig/__init__.py
++++ b/Lib/sysconfig/__init__.py
+@@ -529,4 +529,10 @@
+             base_exec_prefix = _CONFIG_VARS['host_exec_prefix']
+             abiflags = _CONFIG_VARS['ABIFLAGS']
++        elif _CONFIG_VARS.get('Py_ENABLE_RELOCATABLE') and not _PYTHON_BUILD:
++            configured = _CONFIG_VARS['host_exec_prefix']
++            for key in ('BINDIR', 'LIBDIR', 'LIBPL'):
++                path = _CONFIG_VARS[key]
++                if os.path.isabs(path) and os.path.commonpath((configured, path)) == configured:
++                    _CONFIG_VARS[key] = os.path.join(base_exec_prefix, os.path.relpath(path, configured))
+ 
+     # Normalized versions of prefix and exec_prefix are handy to have;
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -2938,4 +2938,11 @@
+ 		-x badsyntax $(DESTDIR)$(LIBDEST)/site-packages
+ 
++ifeq ($(RELOCATABLE),yes)
++BUILD_DETAILS_FLAGS = --relative-paths --config-file-path "$(LIBDEST)/$@"
++write-python-script = $(RUNSHARED) $(PYTHON_FOR_BUILD) $(srcdir)/Tools/build/write-python-script.py "$(EXENAME)" "$(1)"
++else
++write-python-script = sed -e '1s|/usr/bin/env python3|$(EXENAME)|' -e '1s|@EXENAME@|$(EXENAME)|'
++endif
++
+ # bpo-21536: Misc/python-config.sh is generated in the build directory
+ # from $(srcdir)Misc/python-config.sh.in.
+@@ -2943,5 +2950,5 @@
+ 	@ # Substitution happens here, as the completely-expanded BINDIR
+ 	@ # is not available in configure
+-	sed -e "s,@EXENAME@,$(EXENAME)," < $(srcdir)/Misc/python-config.in >python-config.py
++	$(call write-python-script,$(LIBPL)) < $(srcdir)/Misc/python-config.in >python-config.py
+ 	@ # Replace makefile compat. variable references with shell script compat. ones; $(VAR) -> ${VAR}
+ 	LC_ALL=C sed -e 's,\$$(\([A-Za-z0-9_]*\)),\$$\{\1\},g' < Misc/python-config.sh >python-config
+@@ -2950,5 +2957,5 @@
+ 	@ # in python (_osx_support.py).
+ 	@if test `uname -s` = Darwin; then \
+-		cp python-config.py python-config; \
++		$(call write-python-script,$(BINDIR)) < $(srcdir)/Misc/python-config.in >python-config; \
+ 	fi
+ 
+@@ -2959,12 +2966,16 @@
+ SCRIPT_PYDOC=$(BUILD_SCRIPTS_DIR)/pydoc$(VERSION)
+ 
++ifeq ($(RELOCATABLE),yes)
++$(SCRIPT_IDLE) $(SCRIPT_PYDOC) python-config: $(PYTHON_FOR_BUILD_DEPS) $(srcdir)/Tools/build/write-python-script.py
++endif
++
+ $(SCRIPT_IDLE): $(srcdir)/Tools/scripts/idle3
+ 	@$(MKDIR_P) $(BUILD_SCRIPTS_DIR)
+-	sed -e "s,/usr/bin/env python3,$(EXENAME)," < $(srcdir)/Tools/scripts/idle3 > $@
++	$(call write-python-script,$(BINDIR)) < $(srcdir)/Tools/scripts/idle3 > $@
+ 	@chmod +x $@
+ 
+ $(SCRIPT_PYDOC): $(srcdir)/Tools/scripts/pydoc3
+ 	@$(MKDIR_P) $(BUILD_SCRIPTS_DIR)
+-	sed -e "s,/usr/bin/env python3,$(EXENAME)," < $(srcdir)/Tools/scripts/pydoc3 > $@
++	$(call write-python-script,$(BINDIR)) < $(srcdir)/Tools/scripts/pydoc3 > $@
+ 	@chmod +x $@
+ 
+--- /dev/null
++++ b/Tools/build/write-python-script.py
+@@ -0,0 +1,21 @@
++"""Write a Python entry point that locates its installed interpreter relative to itself."""
++
++import os
++import shlex
++import sys
++
++interpreter, script_dir = sys.argv[1:]
++relative = shlex.quote(os.path.relpath(interpreter, script_dir))
++header = f"""#!/bin/sh
++''':'
++script=$0
++while test -L "$script"; do
++    link=$(readlink "$script") || exit 1
++    case $link in /*) script=$link ;; *) script=$(dirname "$script")/$link ;; esac
++done
++exec "$(dirname "$script")"/{relative} "$0" "$@"
++':'''
++"""
++sys.stdin.buffer.readline()
++sys.stdout.buffer.write(os.fsencode(header))
++sys.stdout.buffer.write(sys.stdin.buffer.read())
+--- a/Tools/build/generate-build-details.py
++++ b/Tools/build/generate-build-details.py
+@@ -47,6 +47,10 @@
+     data['base_prefix'] = sysconfig.get_config_var('installed_base')
+     #data['base_interpreter'] = sys._base_executable
++    if sysconfig.get_config_var('Py_ENABLE_RELOCATABLE'):
++        bindir = sysconfig.get_config_var('BINDIR')
++    else:
++        bindir = sysconfig.get_path('scripts')
+     data['base_interpreter'] = os.path.join(
+-        sysconfig.get_path('scripts'),
++        bindir,
+         "python"
+         + sysconfig.get_config_var('LDVERSION')
+@@ -143,9 +147,9 @@
+ 
+ def make_paths_relative(data: dict[str, Any], config_path: str | None = None) -> None:
++    base_prefix = data['base_prefix']
++
+     # Make base_prefix relative to the config_path directory
+     if config_path:
+-        data['base_prefix'] = relative_path(data['base_prefix'],
+-                                            os.path.dirname(config_path))
+-    base_prefix = data['base_prefix']
++        data['base_prefix'] = relative_path(base_prefix, os.path.dirname(config_path))
+ 
+     # Update path values to make them relative to base_prefix
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -1013,4 +1013,9 @@
+ #else
+         !int_to_dict(dict, "WITH_NEXT_FRAMEWORK", 0) ||
++#endif
++#ifdef Py_ENABLE_RELOCATABLE
++        !int_to_dict(dict, "RELOCATABLE", 1) ||
++#else
++        !int_to_dict(dict, "RELOCATABLE", 0) ||
+ #endif
+         !decode_to_dict(dict, "PREFIX", PREFIX) ||
+--- a/Modules/getpath.py
++++ b/Modules/getpath.py
+@@ -30,4 +30,5 @@
+ 
+ # ** Values known at compile time **
++# RELOCATABLE        -- [in] built with --enable-relocatable
+ # os_name           -- [in] one of 'nt', 'posix', 'darwin'
+ # PREFIX            -- [in] sysconfig.get_config_var(...)
+@@ -580,6 +581,9 @@
+             if any(isfile(joinpath(library_dir, f)) for f in STDLIB_LANDMARKS):
+                 prefix = library_dir
+-                if not stdlib_dir_was_set_in_config:
+-                    stdlib_dir = joinpath(prefix, STDLIB_SUBDIR)
++            elif RELOCATABLE and isabs(library):
++                # An embedder may load libpython from a multiarch directory.
++                prefix = search_up(dirname(library), *STDLIB_LANDMARKS)
++            if prefix and not stdlib_dir_was_set_in_config:
++                stdlib_dir = joinpath(prefix, STDLIB_SUBDIR)
+ 
+ 
+--- a/Lib/test/test_getpath.py
++++ b/Lib/test/test_getpath.py
+@@ -540,4 +540,18 @@
+         self.assertEqual(expected, actual)
+ 
++    def test_relocatable_embedder_multiarch(self):
++        for relocatable, prefix in ((0, "/usr"), (1, "/moved")):
++            with self.subTest(relocatable=relocatable):
++                ns = MockPosixNamespace(
++                    argv0="/app/embed", PREFIX="/usr", RELOCATABLE=relocatable,
++                    library="/moved/lib/multiarch/libpython9.8.so",
++                )
++                ns.add_known_xfile("/app/embed")
++                for root in ("/usr", "/moved"):
++                    ns.add_known_file(root + "/lib/python9.8/os.py")
++                    ns.add_known_dir(root + "/lib/python9.8/lib-dynload")
++                expected = dict(prefix=prefix, exec_prefix=prefix)
++                self.assertEqual(getpath(ns, expected), expected)
++
+     def test_symlink_normal_posix(self):
+         "Test a 'standard' install layout via symlink on *nix"
+@@ -957,4 +971,5 @@
+ 
+ DEFAULT_NAMESPACE = dict(
++    RELOCATABLE=0,
+     PREFIX="",
+     EXEC_PREFIX="",
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1058,4 +1058,12 @@
+    shared library.
+ 
++   The installed :program:`pydoc` and :program:`idle` scripts locate the
++   interpreter relative to the script. :program:`python-config` and the
++   embedding metadata use the moved installation. :mod:`sysconfig` updates
++   ``BINDIR``, ``LIBDIR``, and ``LIBPL`` when their configured paths are
++   under the installation prefix. :file:`build-details.json` records paths
++   relative to the installation. Third-party libraries and their data files
++   may have additional installation requirements.
++
+    .. warning::
+ 
+--- a/Lib/test/test_sysconfig.py
++++ b/Lib/test/test_sysconfig.py
+@@ -237,4 +237,19 @@
+                 sysconfig.get_path('purelib', scheme='posix_venv')
+             )
++
++    @unittest.skipUnless(os.name == 'posix', 'configure options are POSIX-specific')
++    def test_relocatable_config_vars(self):
++        build_vars = import_module(sysconfig._get_sysconfigdata_name()).build_time_vars
++        self.assertEqual(get_config_var('RELOCATABLE'), 'yes' if
++                         get_config_var('Py_ENABLE_RELOCATABLE') else 'no')
++        for name in ('BINDIR', 'LIBDIR', 'LIBPL'):
++            with self.subTest(name=name):
++                path = build_vars[name]
++                prefix = build_vars['host_exec_prefix']
++                if (get_config_var('Py_ENABLE_RELOCATABLE') and not is_python_build()
++                        and '_PYTHON_PROJECT_BASE' not in os.environ
++                        and os.path.commonpath((prefix, path)) == prefix):
++                    path = os.path.join(sys.base_exec_prefix, os.path.relpath(path, prefix))
++                self.assertEqual(get_config_var(name), path)
+ 
+     def test_get_config_vars(self):

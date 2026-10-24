@@ -733,6 +733,7 @@ if [ -e "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch" ]
     patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
 fi
 patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
+patch -p1 -i "${ROOT}/patch-getpath-stdlib-fallback.patch"
 
 # Another, similar change to getpath: When reading inside a venv use the base_executable path to
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some

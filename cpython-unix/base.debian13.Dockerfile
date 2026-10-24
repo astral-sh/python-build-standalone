@@ -19,7 +19,8 @@ WORKDIR '/build'
 
 # The base image has no CA bundle. Download Debian's certificate package over
 # HTTPS with BuildKit and verify it against the hash from the snapshot's signed
-# package index. Use its certificates to bootstrap APT over HTTPS.
+# package index. Use its certificates to bootstrap APT over HTTPS, then install
+# the same fixed version so a missing security update cannot select an older one.
 ADD --checksum=sha256:c10585ac22c7f617a73d394eea29ba71d0356f350ae973b19043d1b017f80f54 \
     https://snapshot.debian.org/archive/debian-security/20261023T000000Z/pool/updates/main/c/ca-certificates/ca-certificates_20250419+deb13u1_all.deb \
     /tmp/bootstrap-ca-certificates.deb
@@ -38,6 +39,6 @@ RUN dpkg-deb -x /tmp/bootstrap-ca-certificates.deb /tmp/bootstrap-ca && \
       echo 'Acquire::Check-Valid-Until "false";'; \
       echo 'Acquire::Retries "5";'; \
     ) > /etc/apt/apt.conf.d/99cpython-portable && \
-    apt-get -o Acquire::https::CAInfo=/tmp/bootstrap-ca.pem update && \
-    apt-get -o Acquire::https::CAInfo=/tmp/bootstrap-ca.pem install ca-certificates && \
+    apt-get -o APT::Update::Error-Mode=any -o Acquire::https::CAInfo=/tmp/bootstrap-ca.pem update && \
+    apt-get -o Acquire::https::CAInfo=/tmp/bootstrap-ca.pem install ca-certificates=20250419+deb13u1 && \
     rm /tmp/bootstrap-ca.pem

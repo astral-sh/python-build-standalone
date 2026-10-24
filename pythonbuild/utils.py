@@ -99,10 +99,10 @@ def get_target_settings(yaml_path: pathlib.Path, target: str):
 
 
 def docker_image_names(settings) -> dict[str, str]:
-    """Select the images used to build dependencies and GCC-hosted tools."""
+    """Select the images used to build dependencies and host toolchains."""
     suffix = settings.get("docker_image_suffix", "")
-    # Cross builds share the bare GCC image for their host tools.
-    gcc_suffix = "" if suffix.startswith(".cross") else suffix
+    # Cross builds run on x86-64 and use its native image for host tools.
+    gcc_suffix = ".debian13-x86_64" if suffix.startswith(".cross") else suffix
     return {"build": f"build{suffix}", "gcc": f"gcc{gcc_suffix}"}
 
 

@@ -7,6 +7,11 @@ set -ex
 
 export ROOT=$(pwd)
 
+case "${PYTHON_MAJMIN_VERSION}" in
+    3.14|3.15|3.16) relocatable=yes ;;
+    *) relocatable=no ;;
+esac
+
 export PATH=${TOOLS_PATH}/${TOOLCHAIN}/bin:${TOOLS_PATH}/host/bin:${TOOLS_PATH}/deps/bin:$PATH
 
 # Ensure that `pkg-config` (run by CPython's configure script) can find our dependencies
@@ -378,7 +383,7 @@ fi
 # non-arm64 where there's no automatic ad-hoc signature. We are somehow
 # on a toolchain that doesn't make sure there's enough space by default
 # so give it plenty of space.
-if [[ "${PYBUILD_PLATFORM}" = macos* && -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+if [[ "${PYBUILD_PLATFORM}" = macos* && "${relocatable}" = no ]]; then
     LDFLAGS="${LDFLAGS} -Wl,-headerpad,40"
 fi
 
@@ -749,9 +754,12 @@ if [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
 fi
 
 # Build relative loader paths into CPython and install relocatable scripts and metadata.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+if [ "${relocatable}" = yes ]; then
+    patch -p1 -i "${ROOT}/patch-enable-relocatable.patch"
     patch -p1 -i "${ROOT}/patch-relocatable-loader-paths.patch"
+    patch -p1 -i "${ROOT}/patch-relocatable-libpython.patch"
     patch -p1 -i "${ROOT}/patch-relocatable-install.patch"
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-relocatable"
 fi
 
 # We patched configure.ac above. Reflect those changes.
@@ -788,11 +796,7 @@ fi
 
 make -j "${NUM_CPUS}"
 make -j "${NUM_CPUS}" sharedinstall DESTDIR="${ROOT}/out/python"
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
-    make -j "${NUM_CPUS}" install-relocatable DESTDIR="${ROOT}/out/python"
-else
-    make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
-fi
+make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
 
 
 if [ -n "${CPYTHON_FREETHREADED}" ]; then
@@ -820,7 +824,7 @@ fi
 # If we're building a shared library hack some binaries so rpath is set.
 # This ensures we can run the binary in any location without
 # LD_LIBRARY_PATH pointing to the directory containing libpython.
-if [[ "${PYBUILD_SHARED}" = "1" && -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]]; then
+if [[ "${PYBUILD_SHARED}" = "1" && "${relocatable}" = no ]]; then
     if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
         # There's only 1 dylib produced on macOS and it has the binary suffix.
         LIBPYTHON_SHARED_LIBRARY_BASENAME=libpython${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}.dylib
@@ -1326,11 +1330,18 @@ ln -sf \
     "${ROOT}/out/python/install/share/man/man1/python.1"
 
 # pip comes from a separately installed wheel, after CPython has installed its scripts.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+if [ "${relocatable}" = yes ]; then
     bindir="${ROOT}/out/python/install/bin"
     for script in "${bindir}"/pip*; do
-        ${BUILD_PYTHON} Tools/build/install-relocatable-script.py \
-            "${bindir}/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}" "${script}" "${script}"
+        # pip uses a three-line shell launcher for long interpreter paths.
+        if [[ "$(head -n 1 "${script}")" = '#!/bin/sh' ]]; then
+            tail -n +3 "${script}" > "${ROOT}/pip-entry-point.py"
+        else
+            cp "${script}" "${ROOT}/pip-entry-point.py"
+        fi
+        ${BUILD_PYTHON} Tools/build/write-python-script.py \
+            "${bindir}/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}" "${bindir}" \
+            < "${ROOT}/pip-entry-point.py" > "${script}"
     done
 else
 cat > "${ROOT}/fix_shebangs.py" << EOF
@@ -1483,7 +1494,7 @@ cp -av "${ROOT}/stdlib-test-annotations.json" "${ROOT}/out/python/build/stdlib-t
 
 # Don't hard-code the build-time prefix into the pkg-config files. See
 # the description of `pcfiledir` in `man pkg-config`.
-if [ -z "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+if [ "${relocatable}" = no ]; then
     find "${ROOT}/out/python/install/lib/pkgconfig" -name \*.pc -type f -exec \
         sed "${sed_args[@]}" 's|^prefix=/install|prefix=${pcfiledir}/../..|' {} +
 fi

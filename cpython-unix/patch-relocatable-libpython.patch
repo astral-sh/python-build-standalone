@@ -1,0 +1,129 @@
+Resolve a wheel's libpython dependency from a relocated static launcher on glibc.
+
+--- a/configure.ac
++++ b/configure.ac
+@@ -6802,4 +6802,11 @@
+ AC_SUBST([RELOCATABLE_EXTENSION_LDFLAGS])
+ AC_SUBST([LIBPYTHON_INSTALL_NAME])
++RELOCATABLE_LIBPYTHON=
++AS_IF([test "$enable_relocatable" = yes && test "$ac_sys_system" = Linux &&
++       test "$PY_ENABLE_SHARED" = 1 && test "$enable_static_libpython_for_interpreter" = yes], [
++  libdir_from_prefix=$(relative_dir '${exec_prefix}' "$libdir")
++  RELOCATABLE_LIBPYTHON="$libdir_from_prefix/"'$(INSTSONAME)'
++])
++AC_SUBST([RELOCATABLE_LIBPYTHON])
+ 
+ # Check for --with-wheel-pkg-dir=PATH
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -66,4 +66,5 @@
+ RELOCATABLE_EXTENSION_LDFLAGS=@RELOCATABLE_EXTENSION_LDFLAGS@
+ LIBPYTHON_INSTALL_NAME=@LIBPYTHON_INSTALL_NAME@
++RELOCATABLE_LIBPYTHON=@RELOCATABLE_LIBPYTHON@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+@@ -1977,7 +1978,9 @@
+ 		-DVPATH='"$(VPATH)"' \
+ 		-DPLATLIBDIR='"$(PLATLIBDIR)"' \
++		$(if $(RELOCATABLE_LIBPYTHON),-DRELOCATABLE_LIBPYTHON='L"$(RELOCATABLE_LIBPYTHON)"') \
+ 		-DPYTHONFRAMEWORK='"$(PYTHONFRAMEWORK)"' \
+ 		-o $@ $(srcdir)/Modules/getpath.c
+ 
++Programs/python.o: CFLAGS_NODIST += $(if $(RELOCATABLE_LIBPYTHON),-DPRELOAD_LIBPYTHON)
+ Programs/python.o: $(srcdir)/Programs/python.c
+ 	$(CC) -c $(PY_CORE_CFLAGS) -o $@ $(srcdir)/Programs/python.c
+--- a/Programs/python.c
++++ b/Programs/python.c
+@@ -2,4 +2,7 @@
+ 
+ #include "Python.h"
++#if defined(PRELOAD_LIBPYTHON) && defined(__GLIBC__)
++#  include "pycore_pathconfig.h"
++#endif
+ 
+ #ifdef MS_WINDOWS
+@@ -13,4 +16,7 @@
+ main(int argc, char **argv)
+ {
++#if defined(PRELOAD_LIBPYTHON) && defined(__GLIBC__)
++    _PyPathConfig_RequestLibpython();
++#endif
+     return Py_BytesMain(argc, argv);
+ }
+--- a/Include/internal/pycore_pathconfig.h
++++ b/Include/internal/pycore_pathconfig.h
+@@ -13,4 +13,7 @@
+ 
+ extern PyStatus _PyPathConfig_ReadGlobal(PyConfig *config);
++#if defined(Py_ENABLE_RELOCATABLE) && defined(__GLIBC__)
++extern void _PyPathConfig_RequestLibpython(void);
++#endif
+ extern PyStatus _PyPathConfig_UpdateGlobal(const PyConfig *config);
+ extern const wchar_t * _PyPathConfig_GetGlobalModuleSearchPath(void);
+--- a/Modules/getpath.c
++++ b/Modules/getpath.c
+@@ -889,4 +889,41 @@
+ }
+ 
++
++#if defined(RELOCATABLE_LIBPYTHON) && defined(__GLIBC__)
++static bool preload_requested;
++
++void
++_PyPathConfig_RequestLibpython(void)
++{
++    preload_requested = true;
++}
++
++static PyStatus
++preload_libpython(const PyConfig *config)
++{
++    if (!preload_requested) {
++        return _PyStatus_OK();
++    }
++    preload_requested = false;
++    if (config->_is_python_build || config->base_exec_prefix == NULL ||
++        !_Py_isabs(config->base_exec_prefix)) {
++        return _PyStatus_OK();
++    }
++    wchar_t *path = _Py_join_relfile(config->base_exec_prefix, RELOCATABLE_LIBPYTHON);
++    if (path == NULL) {
++        return PyStatus_NoMemory();
++    }
++    char *filename = Py_EncodeLocale(path, NULL);
++    PyMem_RawFree(path);
++    if (filename == NULL) {
++        return PyStatus_NoMemory();
++    }
++    // Keep this DSO mapped so a wheel requesting its soname can reuse it.
++    // The statically linked interpreter also works without the shared library.
++    (void)dlopen(filename, RTLD_LAZY | RTLD_LOCAL);
++    PyMem_Free(filename);
++    return _PyStatus_OK();
++}
++#endif
+ 
+ /* Perform the actual path calculation.
+@@ -1030,4 +1067,8 @@
+     Py_DECREF(dict);
+ 
++#if defined(RELOCATABLE_LIBPYTHON) && defined(__GLIBC__)
++    return preload_libpython(config);
++#else
+     return _PyStatus_OK();
+-}
++#endif
++}
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1052,4 +1052,10 @@
+    and extensions. Move these directories together.
+ 
++   On glibc, when :option:`--enable-static-libpython-for-interpreter` is
++   also enabled, the installed command-line interpreter opens its versioned
++   shared library before importing :mod:`site`. This allows extensions that
++   depend on its soname to find it. The interpreter can run without the
++   shared library.
++
+    .. warning::
+ 

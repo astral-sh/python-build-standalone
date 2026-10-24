@@ -21,15 +21,13 @@ from pathlib import Path
 class TestRelocation(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.tmp = Path(cls.enterClassContext(tempfile.TemporaryDirectory()))
+        cls.tmp = Path(cls.enterClassContext(tempfile.TemporaryDirectory())).resolve()
         cls.prefix = cls.tmp / "moved Python"
         shutil.copytree(
             sys.base_prefix,
             cls.prefix,
             symlinks=True,
-            ignore=shutil.ignore_patterns(
-                "__pycache__", "test", "site-packages", "*.a"
-            ),
+            ignore=shutil.ignore_patterns("__pycache__", "test", "*.a"),
         )
         cls.python = cls.prefix / "bin" / Path(sys.executable).name
         cls.lib = cls.prefix / "lib"
@@ -58,6 +56,8 @@ class TestRelocation(unittest.TestCase):
         return result.stdout
 
     def test_installed_paths(self):
+        self.assertEqual(sysconfig.get_config_var("RELOCATABLE"), "yes")
+        self.assertEqual(sysconfig.get_config_var("Py_ENABLE_RELOCATABLE"), 1)
         result = self.run_command(
             self.python,
             "-I",
@@ -82,6 +82,9 @@ class TestRelocation(unittest.TestCase):
         self.assertEqual(Path(pc_libdir.replace(r"\ ", " ")).resolve(), self.lib)
         self.assertIn(
             "module errno", self.run_command(self.python.parent / "pydoc3", "errno")
+        )
+        self.assertIn(
+            prefix, self.run_command(self.python.parent / "pip3", "--version")
         )
 
     def test_library_search_paths(self):
@@ -254,3 +257,18 @@ with open('/proc/self/maps') as maps:
                     executable, "-I", "-c", probe, wheel, soname, env=env
                 )
                 self.assertEqual(paths.splitlines(), [str(selected / soname)])
+        if not self.musl:
+            site_packages = self.prefix / Path(
+                sysconfig.get_path("purelib")
+            ).relative_to(sys.base_prefix)
+            pth = site_packages / "linked-wheel.pth"
+            pth.write_text(
+                f"import sys; sys.path.insert(0, {str(wheel)!r}); import _linked\n"
+            )
+            self.addCleanup(pth.unlink)
+            self.run_command(
+                self.python,
+                "-I",
+                "-c",
+                "import sys; assert sys.modules['_linked'].none() is None",
+            )

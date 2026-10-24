@@ -1,0 +1,85 @@
+Backport of python/cpython#160377 at d1ac334eb7c6a6d8a1d5d8525001bbd981fc51d9.
+The build regenerates configure from configure.ac.
+
+diff --git a/Doc/using/configure.rst b/Doc/using/configure.rst
+index 0d420d80f8e261e..2cc8e94ebf075ca 100644
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1073,6 +1073,17 @@ Linker options
+ 
+    Enable building a shared Python library: ``libpython`` (default is no).
+ 
++.. option:: --enable-relocatable
++
++   Enable experimental support for relocatable builds (default is no).
++   This option currently has no effect on the build.
++
++   .. warning::
++
++      This feature is under active development. Do not use it in production.
++
++   .. versionadded:: 3.16
++
+ .. option:: --without-static-libpython
+ 
+    Do not build ``libpythonMAJOR.MINOR.a`` and do not install ``python.o``
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 36515dbd146a1e3..7dcfc4557976966 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -60,6 +60,7 @@ DSYMUTIL=       @DSYMUTIL@
+ DSYMUTIL_PATH=  @DSYMUTIL_PATH@
+ 
+ GNULD=		@GNULD@
++RELOCATABLE=	@RELOCATABLE@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+ SHELL=		/bin/sh -e
+diff --git a/Misc/NEWS.d/next/Build/2026-10-22-18-00-00.gh-issue-119696.r3Flag.rst b/Misc/NEWS.d/next/Build/2026-10-22-18-00-00.gh-issue-119696.r3Flag.rst
+new file mode 100644
+index 000000000000000..328d94c1094e4c5
+--- /dev/null
++++ b/Misc/NEWS.d/next/Build/2026-10-22-18-00-00.gh-issue-119696.r3Flag.rst
+@@ -0,0 +1,2 @@
++Add the experimental :option:`--enable-relocatable` configure option.
++The option currently has no effect on the build.
+diff --git a/configure.ac b/configure.ac
+index a8760c94ac151aa..1afbeba002bbbf1 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1594,6 +1594,21 @@ if test "x$enable_profiling" = xyes; then
+   LDFLAGS="-pg $LDFLAGS"
+ fi
+ 
++AC_MSG_CHECKING([for --enable-relocatable])
++AC_ARG_ENABLE([relocatable],
++  AS_HELP_STRING([--enable-relocatable],
++                 [enable experimental relocatable build support (default is no)]),
++  [], [enable_relocatable=no])
++AS_CASE([$enable_relocatable],
++  [yes|no], [],
++  [AC_MSG_ERROR([--enable-relocatable must be yes or no])])
++AC_MSG_RESULT([$enable_relocatable])
++AS_VAR_IF([enable_relocatable], [yes], [
++  AC_DEFINE([Py_ENABLE_RELOCATABLE], [1],
++            [Define if --enable-relocatable is used.])
++])
++AC_SUBST([RELOCATABLE], [$enable_relocatable])
++
+ AC_MSG_CHECKING([LDLIBRARY])
+ 
+ # Apple framework builds need more magic. LDLIBRARY is the dynamic
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 08306a1dc8ba135..4fb029a6756e3c2 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -1880,6 +1880,9 @@
+ /* Define if you want to build an interpreter with many run-time checks. */
+ #undef Py_DEBUG
+ 
++/* Define if --enable-relocatable is used. */
++#undef Py_ENABLE_RELOCATABLE
++
+ /* Defined if Python is built as a shared library. */
+ #undef Py_ENABLE_SHARED
+ 

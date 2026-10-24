@@ -1,0 +1,28 @@
+When earlier searches find no prefix, search up from the absolute runtime
+path for an unpacked standard library.
+
+https://github.com/itamaro/cpython/commit/083a7b4bdf7f70c0a1deb58e2ff607182bfb9c50
+
+diff --git a/Modules/getpath.py b/Modules/getpath.py
+--- a/Modules/getpath.py
++++ b/Modules/getpath.py
+@@ -614,6 +614,19 @@
+         if prefix and not stdlib_dir:
+             stdlib_dir = joinpath(prefix, STDLIB_SUBDIR)
+ 
++
++    # Detect prefix by searching from our runtime library for the stdlib_dir.
++    # This only runs when the executable location did not lead to a prefix,
++    # e.g. a launcher that sets argv[0] to a path outside the installation,
++    # or an application embedding libpython from a relocated prefix.
++    # Only an absolute path is used: a relative loader path may have been
++    # resolved against an earlier working directory.
++    if (STDLIB_SUBDIR and STDLIB_LANDMARKS and not prefix
++            and library and os_name != 'nt' and isabs(library)):
++        prefix = search_up(dirname(abspath(library)), *STDLIB_LANDMARKS)
++        if prefix and not stdlib_dir:
++            stdlib_dir = joinpath(prefix, STDLIB_SUBDIR)
++
+     if PREFIX and not prefix:
+         prefix = PREFIX
+         if not any(isfile(joinpath(prefix, f)) for f in STDLIB_LANDMARKS):

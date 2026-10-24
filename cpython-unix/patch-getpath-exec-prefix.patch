@@ -1,0 +1,17 @@
+Look for `lib-dynload` under the discovered prefix before searching from
+the executable.
+
+https://github.com/python/cpython/commit/34e840f9ddd9c04991cf004e2594c6a1e0e278d3
+
+diff --git a/Modules/getpath.py b/Modules/getpath.py
+--- a/Modules/getpath.py
++++ b/Modules/getpath.py
+@@ -625,6 +625,8 @@ def search_up(prefix, *landmarks, test=isfile):
+             # gh-100320: Our PYDs are assumed to be relative to the Lib directory
+             # (that is, prefix) rather than the executable (that is, executable_dir)
+             exec_prefix = prefix
++        if not exec_prefix and prefix and isdir(joinpath(prefix, PLATSTDLIB_LANDMARK)):
++            exec_prefix = prefix
+         if not exec_prefix and executable_dir:
+             exec_prefix = search_up(executable_dir, PLATSTDLIB_LANDMARK, test=isdir)
+         if not exec_prefix and EXEC_PREFIX:

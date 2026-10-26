@@ -489,12 +489,18 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
     if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" && -n "${BOLT_CAPABLE}" ]]; then
         CONFIGURE_FLAGS="${CONFIGURE_FLAGS} --enable-bolt"
 
-        # Prevent the perf trampoline end marker from sharing the following
-        # function's address; BOLT can otherwise move it with that function.
+        # CPython copies the trampoline's bytes into executable memory.
+        # Put the template in `.rodata` so BOLT does not treat it as a function.
         if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
             patch -p1 -i "${ROOT}/patch-perf-trampoline-bolt.patch" Python/asm_trampoline_x86_64.S
         else
             patch -p1 -i "${ROOT}/patch-perf-trampoline-bolt.patch"
+        fi
+
+        if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_14}" ]; then
+            patch -p1 -i "${ROOT}/patch-test-perf-profiler-bolt.patch"
+        elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
+            patch -p1 -i "${ROOT}/patch-test-perf-profiler-bolt-3.13.patch"
         fi
 
         # CPython allows overriding the default BOLT flags via configure
@@ -509,9 +515,7 @@ if [ -n "${CPYTHON_OPTIMIZED}" ]; then
         # the HACL hash compressors, leaving frame-pointer-relative accesses
         # below the x86-64 red zone. Match BOLT's `/N` suffix for local symbols.
         # https://github.com/astral-sh/uv/issues/20618
-        # The perf trampoline's code is copied at runtime using its start and
-        # end markers, so exclude it from BOLT's function optimizations.
-        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=_Py_trampoline_func_.*,RC4_options/1,sha256_update/.*,sha512_update/.*,PyBlake2_blake2b_compress/.*,PyBlake2_blake2s_compress/.*,update_block.*"
+        BOLT_COMMON_FLAGS="-update-debug-sections -skip-funcs=RC4_options/1,sha256_update/.*,sha512_update/.*,PyBlake2_blake2b_compress/.*,PyBlake2_blake2s_compress/.*,update_block.*"
         BOLT_APPLY_FLAGS="${BOLT_COMMON_FLAGS} \
 -reorder-blocks=ext-tsp \
 -reorder-functions=cdsort \

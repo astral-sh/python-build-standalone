@@ -5,6 +5,7 @@
 
 import argparse
 import concurrent.futures
+import hashlib
 import io
 import json
 import multiprocessing
@@ -14,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import zipfile
 
@@ -32,6 +34,7 @@ from pythonbuild.utils import (
     download_entry,
     extract_tar_to_directory,
     extract_zip_to_directory,
+    hash_path,
     normalize_tar_archive,
     release_tag_from_git,
     validate_python_json,
@@ -42,6 +45,8 @@ BUILD = ROOT / "build"
 DIST = ROOT / "dist"
 SUPPORT = ROOT / "cpython-windows"
 STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
+OPENSSL_ENTRY = "openssl-3.5"
+LIBFFI_REVISION = "16fad4855b3d8c03b5910e405ff3a04395b39a98"
 
 TARGET_ARCHITECTURES = {
     "i686-pc-windows-msvc": "x86",
@@ -783,7 +788,7 @@ def build_libffi(
                 "-c",
                 "core.autocrlf=input",
                 "checkout",
-                "16fad4855b3d8c03b5910e405ff3a04395b39a98",
+                LIBFFI_REVISION,
             ],
             cwd=ffi_source_path,
             check=True,
@@ -797,7 +802,6 @@ def build_libffi(
         prepare_libffi = (
             td / f"Python-{python_entry['version']}" / "PCbuild" / "prepare_libffi.bat"
         )
-
         # The upstream script activates Visual Studio again. Keep it on the
         # same version selection as OpenSSL and CPython, and stop if setup fails.
         static_replace_in_file(
@@ -1784,6 +1788,121 @@ def fetch_strawberry_perl() -> pathlib.Path:
     return strawberryperl
 
 
+def libffi_prepare_sha256(python: str) -> str:
+    archive = download_entry(python, BUILD)
+    script = f"Python-{DOWNLOADS[python]['version']}/PCbuild/prepare_libffi.bat"
+    # Read only this member before cache lookup, including on a cache hit.
+    with tarfile.open(archive, "r|*") as tf:
+        for member in tf:
+            if member.name == script and member.isfile():
+                with tf.extractfile(member) as fh:
+                    return hashlib.sha256(fh.read()).hexdigest()
+    raise FileNotFoundError(f"{script} is missing from {archive}")
+
+
+def dependency_archive(
+    dependency: str, args: argparse.Namespace, build_env: dict[str, str]
+) -> pathlib.Path:
+    env = {k.upper(): v for k, v in build_env.items()}
+    inputs = {
+        "target": args.target_triple,
+        "vs": args.vs,
+        "toolset": args.platform_toolset,
+        "vcvars_ver": args.vc_tools_version,
+        "sdk": args.windows_sdk_version,
+        "resolved_msvc": env["VCTOOLSVERSION"],
+        "resolved_sdk": env["WINDOWSSDKVERSION"],
+        "environment": {
+            name: env.get(name)
+            for name in (
+                "VCTOOLSINSTALLDIR WINDOWSSDKDIR UCRTVERSION VSCMD_VER IMAGEVERSION "
+                "INCLUDE LIB LIBPATH CL _CL_ LINK _LINK_ "
+                "AR ARFLAGS AS ASFLAGS CC CFLAGS CXX CXXFLAGS CPP CPPFLAGS CPPDEFINES "
+                "CPPINCLUDES CROSS_COMPILE HASHBANGPERL LD LDFLAGS LDLIBS LIBS MT MTFLAGS "
+                "PERL RANLIB RC RCFLAGS WINDRES OBJCOPY RM"
+            ).split()
+        },
+    }
+    for name in ("cl.exe", "link.exe"):
+        path = shutil.which(name, path=env["PATH"])
+        if not path:
+            raise RuntimeError(f"Visual Studio environment is missing {name}")
+        inputs[name] = hash_path(pathlib.Path(path))
+
+    scripts = [SUPPORT / "build.py", ROOT / "pythonbuild" / "utils.py"]
+    ci = env.get("GITHUB_ACTIONS") == "true"
+    if ci:
+        scripts.append(ROOT / ".github" / "workflows" / "windows.yml")
+    prefix = dependency
+    if dependency == "openssl":
+        entries = [
+            OPENSSL_ENTRY,
+            "nasm-windows-bin",
+            "jom-windows-bin",
+            "strawberryperl",
+        ]
+        inputs["uplink"] = args.python == "cpython-3.11"
+        if inputs["uplink"]:
+            scripts.append(SUPPORT / "patch-openssl-uplink.patch")
+    else:
+        entries = []
+        prepare_sha256 = libffi_prepare_sha256(args.python)
+        inputs["prepare_libffi_sha256"] = prepare_sha256
+        prefix = f"libffi-{prepare_sha256[:7]}"
+        # An unreviewed script could read other files from the same CPython tree.
+        if prepare_sha256 not in env.get("PYBUILD_LIBFFI_PREPARE_HASHES", "").split():
+            entries.append(args.python)
+        inputs["libffi_revision"] = LIBFFI_REVISION
+        inputs["sh"] = str(args.sh)
+        if ci:
+            # The Cygwin installer selects live packages. Share its recipe
+            # within one run without installing those packages on consumers.
+            inputs["cygwin_run"] = env["GITHUB_RUN_ID"]
+            scripts.append(ROOT / "scripts" / "install-cygwin.ps1")
+        else:
+            scripts.append(args.sh)
+            installed = args.sh.parent.parent / "etc" / "setup" / "installed.db"
+            if installed.exists():
+                scripts.append(installed)
+
+    inputs["sources"] = {
+        name: (DOWNLOADS[name]["version"], DOWNLOADS[name]["sha256"])
+        for name in entries
+    }
+    inputs["scripts"] = {p.name: hash_path(p) for p in scripts}
+    digest = hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest()
+    # Use the full digest for cache lookup even when two short names coincide.
+    return BUILD / digest / f"{prefix}-{digest[:7]}.tar"
+
+
+def ensure_dependency(dependency: str, archive: pathlib.Path, args: argparse.Namespace):
+    LOG_PREFIX[0] = dependency
+    if archive.is_file():
+        log(f"reusing {archive.name}")
+        return
+
+    log(f"building {archive.name}")
+    arch = TARGET_ARCHITECTURES[args.target_triple]
+    # Publish only a complete archive, even if a local build is interrupted.
+    archive.parent.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=archive.parent) as td:
+        tmp = pathlib.Path(td) / archive.name
+        if dependency == "openssl":
+            perl_path = fetch_strawberry_perl() / "perl" / "bin" / "perl.exe"
+            build_openssl(
+                OPENSSL_ENTRY,
+                perl_path,
+                arch,
+                tmp,
+                with_uplink=args.python == "cpython-3.11",
+            )
+        else:
+            build_libffi(
+                args.python, arch, args.sh, args.vs, args.vc_tools_version, tmp
+            )
+        tmp.replace(archive)
+
+
 def main() -> None:
     BUILD.mkdir(exist_ok=True)
 
@@ -1830,7 +1949,18 @@ def main() -> None:
         help="Build options to apply when compiling Python",
     )
     parser.add_argument(
-        "--sh", required=True, help="Path to sh.exe in a cygwin or mingw installation"
+        "--sh",
+        required=True,
+        type=pathlib.Path,
+        help="Path to sh.exe in a cygwin or mingw installation",
+    )
+    parser.add_argument(
+        "--dependency", choices=("openssl", "libffi"), help="Build only this dependency"
+    )
+    parser.add_argument(
+        "--write-dependency-keys",
+        type=pathlib.Path,
+        help="Append relative dependency archive paths to a GitHub Actions output file and exit",
     )
     parser.add_argument(
         "--windows-sdk-version",
@@ -1846,17 +1976,16 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    build_options = args.options
-    target_triple = args.target_triple or default_target_triple()
-    arch = TARGET_ARCHITECTURES[target_triple]
-    platform_toolset = args.platform_toolset or (
+    args.target_triple = args.target_triple or default_target_triple()
+    arch = TARGET_ARCHITECTURES[args.target_triple]
+    args.platform_toolset = args.platform_toolset or (
         "v145"
         if arch == "amd64"
         and meets_python_minimum_version(DOWNLOADS[args.python]["version"], "3.15")
         else "v143"
     )
-    vc_tools_version = args.vc_tools_version or (
-        "14.5" if platform_toolset == "v145" else "14.4"
+    args.vc_tools_version = args.vc_tools_version or (
+        "14.5" if args.platform_toolset == "v145" else "14.4"
     )
 
     log_path = BUILD / "build.log"
@@ -1864,60 +1993,42 @@ def main() -> None:
     with log_path.open("wb") as log_fh:
         LOG_FH[0] = log_fh
 
-        log(f"building for {target_triple}")
-        log(f"using {platform_toolset} with MSVC {vc_tools_version}")
-        build_env = get_visual_studio_environment(args.vs, arch, vc_tools_version)
+        log(f"building for {args.target_triple}")
+        log(f"using {args.platform_toolset} with MSVC {args.vc_tools_version}")
+        build_env = get_visual_studio_environment(args.vs, arch, args.vc_tools_version)
         os.environ.update(build_env)
+        archives = {}
+        for dep in [args.dependency] if args.dependency else ["openssl", "libffi"]:
+            dep_env = build_env
+            if dep == "libffi" and arch == "arm64":
+                # prepare_libffi.bat activates the x86-hosted ARM64 tools.
+                dep_env = get_visual_studio_environment(
+                    args.vs, "x86_arm64", args.vc_tools_version
+                )
+            archives[dep] = dependency_archive(dep, args, dep_env)
 
-        compiler_cache_key = f"{platform_toolset}-{vc_tools_version}"
+        if args.write_dependency_keys:
+            with args.write_dependency_keys.open("a", encoding="utf-8") as fh:
+                for name, archive in archives.items():
+                    print(f"{name}={archive.relative_to(BUILD).as_posix()}", file=fh)
+            return
 
-        # TODO need better dependency checking.
-
-        openssl_entry = "openssl-3.5"
-        openssl_with_uplink = args.python == "cpython-3.11"
-        if openssl_with_uplink:
-            openssl_build_options = f"{build_options}-uplink"
-        else:
-            openssl_build_options = f"{build_options}-no-uplink"
-
-        openssl_archive = BUILD / (
-            f"{openssl_entry}-{target_triple}-{openssl_build_options}-{compiler_cache_key}.tar"
-        )
-        if not openssl_archive.exists():
-            perl_path = fetch_strawberry_perl() / "perl" / "bin" / "perl.exe"
-            LOG_PREFIX[0] = "openssl"
-            build_openssl(
-                openssl_entry,
-                perl_path,
-                arch,
-                dest_archive=openssl_archive,
-                with_uplink=openssl_with_uplink,
-            )
-
-        libffi_archive = BUILD / (
-            f"libffi-{target_triple}-{build_options}-{compiler_cache_key}.tar"
-        )
-        if not libffi_archive.exists():
-            build_libffi(
-                args.python,
-                arch,
-                pathlib.Path(args.sh),
-                args.vs,
-                vc_tools_version,
-                libffi_archive,
-            )
+        for name, archive in archives.items():
+            ensure_dependency(name, archive, args)
+        if args.dependency:
+            return
 
         LOG_PREFIX[0] = "cpython"
         tar_path = build_cpython(
             args.python,
-            target_triple,
+            args.target_triple,
             arch,
-            build_options=build_options,
-            platform_toolset=platform_toolset,
+            build_options=args.options,
+            platform_toolset=args.platform_toolset,
             windows_sdk_version=args.windows_sdk_version,
-            openssl_archive=openssl_archive,
-            libffi_archive=libffi_archive,
-            openssl_entry=openssl_entry,
+            openssl_archive=archives["openssl"],
+            libffi_archive=archives["libffi"],
+            openssl_entry=OPENSSL_ENTRY,
         )
 
         if "PYBUILD_RELEASE_TAG" in os.environ:

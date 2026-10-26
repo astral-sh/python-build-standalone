@@ -117,7 +117,7 @@ jobs:
     permissions:
       id-token: write
       attestations: write
-    uses: ./.github/workflows/windows-build.yml
+    uses: $/.github/workflows/windows-build.yml
     with:
       builds: ${{ toJSON(matrix.builds) }}
       dependencies: ${{ toJSON(matrix.dependencies) }}

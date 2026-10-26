@@ -6,9 +6,11 @@ import argparse
 import hashlib
 import importlib.util
 import io
+import json
 import os
 import pathlib
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -309,3 +311,76 @@ class DependencyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "failed"):
                 build.ensure_dependency("libffi", archive, self.args)
         self.assertFalse(archive.exists())
+
+
+class MatrixTests(unittest.TestCase):
+    def matrix(self, labels="", *extra):
+        argv = [
+            "uv",
+            "run",
+            "ci-matrix.py",
+            "--platform",
+            "windows",
+            "--event",
+            "pull_request",
+            "--labels",
+            labels,
+            *extra,
+        ]
+        return json.loads(subprocess.check_output(argv, cwd=ROOT))
+
+    def test_no_speculative_producers(self):
+        default = self.matrix()
+        self.assertEqual(len(default["python-build"]["include"]), 1)
+        self.assertEqual(default["windows-deps"]["include"], [])
+        for labels in (
+            "platform:linux",
+            "python:3.10",
+            "ci:skip",
+            "ci:dry-run,python:all",
+        ):
+            self.assertEqual(self.matrix(labels)["windows-deps"]["include"], [])
+        crate_only = self.matrix("platform:linux", "--force-crate-build")
+        self.assertEqual(crate_only["windows-deps"]["include"], [])
+
+    def test_only_shared_configurations_get_producers(self):
+        result = self.matrix("python:3.11,python:3.12,build:all")
+        producers = [
+            (row["dependency"], row["python"])
+            for row in result["windows-deps"]["include"]
+        ]
+        self.assertCountEqual(
+            producers,
+            [
+                ("openssl", "3.11"),
+                ("openssl", "3.12"),
+                ("libffi", "3.11"),
+                ("libffi", "3.12"),
+            ],
+        )
+        # With one build per minor, only the two newer builds are expected to share.
+        result = self.matrix("python:3.11,python:3.12,python:3.13")
+        self.assertCountEqual(
+            [
+                (row["dependency"], row["python"])
+                for row in result["windows-deps"]["include"]
+            ],
+            [("openssl", "3.12"), ("libffi", "3.12")],
+        )
+        self.assertEqual(len(result["libffi-prepare-hashes"]), 2)
+        for digest in result["libffi-prepare-hashes"]:
+            self.assertRegex(digest, r"^[0-9a-f]{64}$")
+
+    def test_x64_toolchain_change_separates_both_dependencies(self):
+        result = self.matrix("python:3.14,python:3.15,build:all")
+        self.assertCountEqual(
+            [
+                (row["dependency"], row["platform_toolset"])
+                for row in result["windows-deps"]["include"]
+            ],
+            [
+                (dep, toolset)
+                for dep in ("openssl", "libffi")
+                for toolset in ("v143", "v145")
+            ],
+        )

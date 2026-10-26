@@ -18,6 +18,7 @@ permissions: { }
 
 jobs:
   crate-build:
+    if: ${{ needs.generate-matrix.outputs.any_builds == 'true' }}
     needs:
       - generate-matrix
     runs-on: ${{ matrix.runner }}
@@ -114,6 +115,7 @@ jobs:
           STEPS_GET_LABELS_OUTPUTS_LABELS: ${{ steps.get-labels.outputs.labels }}
 
   build:
+    if: ${{ needs.generate-matrix.outputs.any_builds == 'true' }}
     timeout-minutes: 90
     needs:
       - generate-matrix

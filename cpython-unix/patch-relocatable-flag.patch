@@ -1,0 +1,74 @@
+diff --git a/Doc/using/configure.rst b/Doc/using/configure.rst
+index 0d420d8..2cc8e94 100644
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1073,6 +1073,17 @@ Linker options
+ 
+    Enable building a shared Python library: ``libpython`` (default is no).
+ 
++.. option:: --enable-relocatable
++
++   Enable experimental support for relocatable builds (default is no).
++   This option currently has no effect on the build.
++
++   .. warning::
++
++      This feature is under active development. Do not use it in production.
++
++   .. versionadded:: 3.16
++
+ .. option:: --without-static-libpython
+ 
+    Do not build ``libpythonMAJOR.MINOR.a`` and do not install ``python.o``
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+index 36515db..7dcfc45 100644
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -60,6 +60,7 @@ DSYMUTIL=       @DSYMUTIL@
+ DSYMUTIL_PATH=  @DSYMUTIL_PATH@
+ 
+ GNULD=		@GNULD@
++RELOCATABLE=	@RELOCATABLE@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+ SHELL=		/bin/sh -e
+diff --git a/configure.ac b/configure.ac
+index a8760c9..1afbeba 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -1594,6 +1594,21 @@ if test "x$enable_profiling" = xyes; then
+   LDFLAGS="-pg $LDFLAGS"
+ fi
+ 
++AC_MSG_CHECKING([for --enable-relocatable])
++AC_ARG_ENABLE([relocatable],
++  AS_HELP_STRING([--enable-relocatable],
++                 [enable experimental relocatable build support (default is no)]),
++  [], [enable_relocatable=no])
++AS_CASE([$enable_relocatable],
++  [yes|no], [],
++  [AC_MSG_ERROR([--enable-relocatable must be yes or no])])
++AC_MSG_RESULT([$enable_relocatable])
++AS_VAR_IF([enable_relocatable], [yes], [
++  AC_DEFINE([Py_ENABLE_RELOCATABLE], [1],
++            [Define if --enable-relocatable is used.])
++])
++AC_SUBST([RELOCATABLE], [$enable_relocatable])
++
+ AC_MSG_CHECKING([LDLIBRARY])
+ 
+ # Apple framework builds need more magic. LDLIBRARY is the dynamic
+diff --git a/pyconfig.h.in b/pyconfig.h.in
+index 08306a1..4fb029a 100644
+--- a/pyconfig.h.in
++++ b/pyconfig.h.in
+@@ -1880,6 +1880,9 @@
+ /* Define if you want to build an interpreter with many run-time checks. */
+ #undef Py_DEBUG
+ 
++/* Define if --enable-relocatable is used. */
++#undef Py_ENABLE_RELOCATABLE
++
+ /* Defined if Python is built as a shared library. */
+ #undef Py_ENABLE_SHARED
+ 

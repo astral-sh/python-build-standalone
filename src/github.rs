@@ -42,8 +42,15 @@ impl RetryableStrategy for GitHubUploadRetryStrategy {
         res: &std::result::Result<reqwest::Response, reqwest_middleware::Error>,
     ) -> Option<Retryable> {
         match res {
-            // Retry on 403s, these indicate a transient failure.
-            Ok(success) if success.status() == StatusCode::FORBIDDEN => Some(Retryable::Transient),
+            // Retry transient GitHub upload failures.
+            Ok(success)
+                if matches!(
+                    success.status(),
+                    StatusCode::FORBIDDEN | StatusCode::REQUEST_TIMEOUT
+                ) =>
+            {
+                Some(Retryable::Transient)
+            }
             Ok(_) => None,
             Err(error) => default_on_request_failure(error),
         }

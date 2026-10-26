@@ -178,6 +178,8 @@ releases = [
     Release(4012, "late-401", fault1=lambda: quart.abort(401)),
     Release(4031, "early-403", fault0=lambda: quart.abort(403)),
     Release(4032, "late-403", fault1=lambda: quart.abort(403)),
+    Release(4081, "early-408", fault0=lambda: quart.abort(408)),
+    Release(4082, "late-408", fault1=lambda: quart.abort(408)),
     Release(5001, "early-500", fault0=lambda: quart.abort(500)),
     Release(5002, "late-500", fault1=lambda: quart.abort(500)),
 ]
@@ -328,7 +330,16 @@ def upload_release_distributions(tmp_path_factory):
 
 
 # TODO: test all of [r.tag_name for r in releases]
-TAGS_TO_TEST = ["basic", "draft", "early-drop", "late-drop", "early-403", "late-403"]
+TAGS_TO_TEST = [
+    "basic",
+    "draft",
+    "early-drop",
+    "late-drop",
+    "early-403",
+    "late-403",
+    "early-408",
+    "late-408",
+]
 
 
 @pytest.mark.parametrize("tag", TAGS_TO_TEST)

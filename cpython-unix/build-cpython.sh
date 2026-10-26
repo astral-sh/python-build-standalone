@@ -352,6 +352,10 @@ if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
 
     # Prevent using symbols not supported by current macOS SDK target.
     CFLAGS="${CFLAGS} -Werror=unguarded-availability-new"
+
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
+        EXTRA_CONFIGURE_FLAGS="${EXTRA_CONFIGURE_FLAGS} --with-dsymutil"
+    fi
 fi
 
 # Always build against libedit instead of the default of readline.

@@ -336,14 +336,7 @@ def generate_crate_build_matrix_entries(
 def generate_windows_dependency_matrix_entries(
     python_entries: list[dict[str, str]],
 ) -> list[dict[str, str]]:
-    """Prebuild only dependencies shared by multiple real Windows builds."""
-    windows_entries = [
-        entry
-        for entry in python_entries
-        if entry["platform"] == "windows" and not entry.get("dry-run")
-    ]
-    if len(windows_entries) < 2:
-        return []
+    """Select shared dependencies within one target and toolchain group."""
     prepare_hashes = {
         minor: digest
         for digest, minors in LIBFFI_PREPARE_SCRIPTS.items()
@@ -351,30 +344,49 @@ def generate_windows_dependency_matrix_entries(
     }
     producers = {}
     shared = {}
-    for entry in windows_entries:
-        toolchain = tuple(
-            entry[field]
-            for field in (
-                "target_triple",
-                "runner",
-                "vs_version",
-                "platform_toolset",
-                "vc_tools_version",
-            )
-        )
-        # These groups schedule producers. The Windows build itself checks
-        # the full input fingerprint, including the toolchain on the runner.
+    for entry in python_entries:
+        if entry.get("dry-run"):
+            continue
         python = entry["python"]
         for dependency, variant in (
             ("openssl", python == "3.11"),
             ("libffi", prepare_hashes.get(python, python)),
         ):
-            key = (dependency, variant, toolchain)
+            key = (dependency, variant)
             if key in producers:
                 shared[key] = producers[key]
             else:
                 producers[key] = {**entry, "dependency": dependency}
     return list(shared.values())
+
+
+def generate_windows_build_groups(
+    python_entries: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    # Each group runs as a separate workflow call, so its consumers wait
+    # only for producers using the same target, runner and toolchain.
+    groups: dict[tuple[str, ...], list[dict[str, str]]] = {}
+    for entry in python_entries:
+        if entry["platform"] == "windows":
+            key = (
+                entry["target_triple"],
+                entry["runner"],
+                entry["vs_version"],
+                entry["platform_toolset"],
+                entry["vc_tools_version"],
+            )
+            groups.setdefault(key, []).append(entry)
+    return [
+        {
+            "target_triple": entries[0]["target_triple"],
+            "platform_toolset": entries[0]["platform_toolset"],
+            "builds": {"include": entries},
+            "dependencies": {
+                "include": generate_windows_dependency_matrix_entries(entries)
+            },
+        }
+        for entries in groups.values()
+    ]
 
 
 def generate_python_build_matrix_entries(
@@ -600,7 +612,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "crate-build", "windows-deps", "all"],
+        choices=[
+            "python-build",
+            "docker-build",
+            "crate-build",
+            "windows-groups",
+            "all",
+        ],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -643,11 +661,11 @@ def main() -> None:
             result["docker-build"] = {"include": []}
         if args.matrix_type in ["crate-build", "all"]:
             result["crate-build"] = {"include": []}
-        if args.matrix_type in ["windows-deps", "all"] and args.platform in (
+        if args.matrix_type in ["windows-groups", "all"] and args.platform in (
             None,
             "windows",
         ):
-            result["windows-deps"] = {"include": []}
+            result["windows-groups"] = {"include": []}
         print(json.dumps(result))
         return
 
@@ -675,12 +693,12 @@ def main() -> None:
         if should_include_entry(entry, labels, event_defaults, allowed_triples)
     ]
 
-    if args.matrix_type in ["windows-deps", "all"] and args.platform in (
+    if args.matrix_type in ["windows-groups", "all"] and args.platform in (
         None,
         "windows",
     ):
-        result["windows-deps"] = {
-            "include": generate_windows_dependency_matrix_entries(python_entries)
+        result["windows-groups"] = {
+            "include": generate_windows_build_groups(python_entries)
         }
         result["libffi-prepare-hashes"] = list(LIBFFI_PREPARE_SCRIPTS)
 

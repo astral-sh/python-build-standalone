@@ -1832,7 +1832,8 @@ def dependency_archive(
     scripts = [SUPPORT / "build.py", ROOT / "pythonbuild" / "utils.py"]
     ci = env.get("GITHUB_ACTIONS") == "true"
     if ci:
-        scripts.append(ROOT / ".github" / "workflows" / "windows.yml")
+        workflows = ROOT / ".github" / "workflows"
+        scripts.extend([workflows / "windows.yml", workflows / "windows-build.yml"])
     prefix = dependency
     if dependency == "openssl":
         entries = [

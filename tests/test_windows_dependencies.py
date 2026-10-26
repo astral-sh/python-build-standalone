@@ -332,22 +332,25 @@ class MatrixTests(unittest.TestCase):
     def test_no_speculative_producers(self):
         default = self.matrix()
         self.assertEqual(len(default["python-build"]["include"]), 1)
-        self.assertEqual(default["windows-deps"]["include"], [])
-        for labels in (
-            "platform:linux",
-            "python:3.10",
-            "ci:skip",
-            "ci:dry-run,python:all",
-        ):
-            self.assertEqual(self.matrix(labels)["windows-deps"]["include"], [])
+        (group,) = default["windows-groups"]["include"]
+        self.assertEqual(group["builds"], default["python-build"])
+        self.assertEqual(group["dependencies"]["include"], [])
+        for labels in ("platform:linux", "python:3.10", "ci:skip"):
+            self.assertEqual(self.matrix(labels)["windows-groups"]["include"], [])
+        dry_run = self.matrix("ci:dry-run,python:all")["windows-groups"]["include"]
+        self.assertTrue(dry_run)
+        for group in dry_run:
+            self.assertEqual(group["dependencies"]["include"], [])
+            self.assertTrue(all(row["dry-run"] for row in group["builds"]["include"]))
         crate_only = self.matrix("platform:linux", "--force-crate-build")
-        self.assertEqual(crate_only["windows-deps"]["include"], [])
+        self.assertEqual(crate_only["windows-groups"]["include"], [])
 
     def test_only_shared_configurations_get_producers(self):
         result = self.matrix("python:3.11,python:3.12,build:all")
+        (group,) = result["windows-groups"]["include"]
         producers = [
             (row["dependency"], row["python"])
-            for row in result["windows-deps"]["include"]
+            for row in group["dependencies"]["include"]
         ]
         self.assertCountEqual(
             producers,
@@ -360,10 +363,11 @@ class MatrixTests(unittest.TestCase):
         )
         # With one build per minor, only the two newer builds are expected to share.
         result = self.matrix("python:3.11,python:3.12,python:3.13")
+        (group,) = result["windows-groups"]["include"]
         self.assertCountEqual(
             [
                 (row["dependency"], row["python"])
-                for row in result["windows-deps"]["include"]
+                for row in group["dependencies"]["include"]
             ],
             [("openssl", "3.12"), ("libffi", "3.12")],
         )
@@ -371,16 +375,46 @@ class MatrixTests(unittest.TestCase):
         for digest in result["libffi-prepare-hashes"]:
             self.assertRegex(digest, r"^[0-9a-f]{64}$")
 
-    def test_x64_toolchain_change_separates_both_dependencies(self):
-        result = self.matrix("python:3.14,python:3.15,build:all")
+    def test_single_consumer_group_needs_no_producers(self):
+        result = self.matrix("arch:x86_64,python:3.12,python:3.13,python:3.15")
+        groups = {g["platform_toolset"]: g for g in result["windows-groups"]["include"]}
+        self.assertEqual(len(groups["v143"]["dependencies"]["include"]), 2)
+        self.assertEqual(groups["v145"]["dependencies"]["include"], [])
+        (build,) = groups["v145"]["builds"]["include"]
+        self.assertEqual(build["python"], "3.15")
+
+    def test_full_matrix_groups_builds_with_their_own_producers(self):
+        result = self.matrix("platform:windows,arch:all,python:all,build:all")
+        groups = result["windows-groups"]["include"]
         self.assertCountEqual(
             [
-                (row["dependency"], row["platform_toolset"])
-                for row in result["windows-deps"]["include"]
+                (
+                    g["target_triple"],
+                    g["platform_toolset"],
+                    len(g["builds"]["include"]),
+                    len(g["dependencies"]["include"]),
+                )
+                for g in groups
             ],
             [
-                (dep, toolset)
-                for dep in ("openssl", "libffi")
-                for toolset in ("v143", "v145")
+                ("i686-pc-windows-msvc", "v143", 20, 4),
+                ("x86_64-pc-windows-msvc", "v143", 12, 4),
+                ("x86_64-pc-windows-msvc", "v145", 8, 2),
+                ("aarch64-pc-windows-msvc", "v143", 20, 4),
             ],
         )
+        self.assertCountEqual(
+            [row for g in groups for row in g["builds"]["include"]],
+            result["python-build"]["include"],
+        )
+        for group in groups:
+            builds = group["builds"]["include"]
+            for row in builds:
+                self.assertEqual(row["target_triple"], group["target_triple"])
+                self.assertEqual(row["platform_toolset"], group["platform_toolset"])
+                for field in ("runner", "vs_version", "vc_tools_version"):
+                    self.assertEqual(row[field], builds[0][field])
+            for row in group["dependencies"]["include"]:
+                self.assertIn(
+                    {k: v for k, v in row.items() if k != "dependency"}, builds
+                )

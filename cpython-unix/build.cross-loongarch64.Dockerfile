@@ -50,7 +50,8 @@ RUN apt-get install \
     xz-utils \
     unzip \
     zip \
-    zlib1g-dev
+    zlib1g-dev && \
+    {% include 'distrust-emsign-g3.jinja' %}
 
 RUN apt-get install \
     g++-loongarch64-linux-gnu \

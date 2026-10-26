@@ -1,0 +1,153 @@
+Set relative loader paths with --enable-relocatable. Based on zanieb/cpython#49.
+
+--- a/configure.ac
++++ b/configure.ac
+@@ -6752,4 +6752,55 @@
+ AC_SUBST([LIBPL])
+ 
++# Keep the install layout out of LDSHARED, which also builds third-party extensions.
++RELOCATABLE_PYTHON_LDFLAGS=
++RELOCATABLE_LIBPYTHON_LDFLAGS=
++RELOCATABLE_EXTENSION_LDFLAGS=
++LIBPYTHON_INSTALL_NAME='$(prefix)/lib/libpython$(LDVERSION).dylib'
++AS_IF([test "$enable_relocatable" = yes], [
++  AS_CASE([$ac_sys_system], [Linux|Darwin], [],
++    [AC_MSG_ERROR([--enable-relocatable is supported on Linux and macOS])])
++  AS_IF([test -n "$enable_framework"],
++    [AC_MSG_ERROR([--enable-relocatable does not support framework builds])])
++  AS_VAR_IF([prefix], [NONE], [reloc_prefix=$ac_default_prefix], [reloc_prefix=$prefix])
++  AS_CASE([$exec_prefix], [NONE|'${prefix}'|"$reloc_prefix"], [],
++    [AC_MSG_ERROR([--enable-relocatable requires a common prefix and exec-prefix])])
++  relative_dir () {
++    "$SHELL" "$srcdir/Tools/build/relative-path.sh" "$reloc_prefix" "[$]1" "[$]2"
++  }
++  bindir_to_libdir=$(relative_dir "$bindir" "$libdir") ||
++    AC_MSG_ERROR([--enable-relocatable requires bindir and libdir below prefix])
++  # DESTSHARED is BINLIBDEST/lib-dynload.
++  dynload_to_libdir=$(relative_dir '${exec_prefix}/'"$PLATLIBDIR/python$VERSION$ABI_THREAD/lib-dynload" "$libdir") ||
++    AC_MSG_ERROR([--enable-relocatable requires the standard library below prefix])
++  AS_IF([test "$PY_ENABLE_SHARED" = 1], [
++    AS_CASE([$ac_sys_system],
++      [Linux], [
++        origin='$$ORIGIN'
++        rpath=-Wl,--enable-new-dtags,-rpath
++        WITH_SAVE_ENV([
++          LDFLAGS="$LDFLAGS -Wl,--enable-new-dtags"
++          AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])], [],
++            [AC_MSG_ERROR([--enable-relocatable requires linker support for --enable-new-dtags])])
++        ])
++      ],
++      [Darwin], [
++        origin=@loader_path
++        rpath=-Wl,-rpath
++        LIBPYTHON_INSTALL_NAME='@rpath/libpython$(LDVERSION).dylib'
++      ])
++    RELOCATABLE_LIBPYTHON_LDFLAGS="$rpath,'$origin'"
++    RELOCATABLE_EXTENSION_LDFLAGS="$rpath,'$origin/$dynload_to_libdir'"
++    # musl resolves a wheel's dependencies through its loader chain.
++    AS_IF([test "$enable_static_libpython_for_interpreter" != yes],
++      [RELOCATABLE_PYTHON_LDFLAGS="$rpath,'$origin/$bindir_to_libdir'"],
++      [AS_CASE([$host], [*-musl*],
++        [RELOCATABLE_PYTHON_LDFLAGS="$rpath,'$origin/$bindir_to_libdir'"])])
++  ])
++])
++AC_SUBST([RELOCATABLE_PYTHON_LDFLAGS])
++AC_SUBST([RELOCATABLE_LIBPYTHON_LDFLAGS])
++AC_SUBST([RELOCATABLE_EXTENSION_LDFLAGS])
++AC_SUBST([LIBPYTHON_INSTALL_NAME])
++
+ # Check for --with-wheel-pkg-dir=PATH
+ AC_SUBST([WHEEL_PKG_DIR])
+--- /dev/null
++++ b/Tools/build/relative-path.sh
+@@ -0,0 +1,29 @@
++# Print the relative path between two installation directories below prefix.
++# Autoconf directory options may contain unexpanded prefix references.
++prefix=${1%/}
++expand_dir () {
++    case $1 in
++        '${prefix}'|'${exec_prefix}') printf '%s\n' "$prefix" ;;
++        '${prefix}/'*|'${exec_prefix}/'*) printf '%s/%s\n' "$prefix" "${1#*/}" ;;
++        *) printf '%s\n' "$1" ;;
++    esac
++}
++
++from=$(expand_dir "$2")
++to=$(expand_dir "$3")
++from=${from%/}
++to=${to%/}
++case "$from/$to/" in */../*|*/./*) exit 1 ;; esac
++case "$from/" in "$prefix/"*) ;; *) exit 1 ;; esac
++case "$to/" in "$prefix/"*) ;; *) exit 1 ;; esac
++# The common ancestor determines how many levels to ascend from the first directory.
++up=
++while :; do
++    case "$to/" in "$from/"*) break ;; esac
++    from=${from%/*}
++    up=../$up
++done
++down=${to#"$from"}
++relative=$up${down#/}
++relative=${relative%/}
++printf '%s\n' "${relative:-.}"
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -62,4 +62,8 @@
+ GNULD=		@GNULD@
+ RELOCATABLE=	@RELOCATABLE@
++RELOCATABLE_PYTHON_LDFLAGS=@RELOCATABLE_PYTHON_LDFLAGS@
++RELOCATABLE_LIBPYTHON_LDFLAGS=@RELOCATABLE_LIBPYTHON_LDFLAGS@
++RELOCATABLE_EXTENSION_LDFLAGS=@RELOCATABLE_EXTENSION_LDFLAGS@
++LIBPYTHON_INSTALL_NAME=@LIBPYTHON_INSTALL_NAME@
+ 
+ # Shell used by make (some versions default to the login shell, which is bad)
+@@ -286,5 +290,5 @@
+ LDLIBRARY=      @LDLIBRARY@
+ BLDLIBRARY=     @BLDLIBRARY@
+-MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY))
++MODULE_LDFLAGS_SHARED=$(if $(LIBPYTHON),$(BLDLIBRARY)) $(RELOCATABLE_EXTENSION_LDFLAGS)
+ PY3LIBRARY=     @PY3LIBRARY@
+ DLLLIBRARY=	@DLLLIBRARY@
+@@ -1005,4 +1009,6 @@
+ 	$(PYTHON_FOR_REGEN) $(srcdir)/Tools/clinic/clinic.py -f $(srcdir)/Lib/test/clinic.test.c
+ 
++$(BUILDPYTHON) Programs/_testembed: LINKFORSHARED += $(RELOCATABLE_PYTHON_LDFLAGS)
++
+ # Build the interpreter
+ $(BUILDPYTHON):	Programs/python.o $(LINK_PYTHON_DEPS)
+@@ -1039,5 +1045,5 @@
+ 	# AIX Linker don't support "-h" option
+ 	if test "$(MACHDEP)" != "aix"; then \
+-		$(BLDSHARED) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
++		$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -Wl,-h$(INSTSONAME) -o $(INSTSONAME) $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 	else \
+ 		$(BLDSHARED) -o $@ $(LIBRARY_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+@@ -1048,8 +1054,8 @@
+ 
+ libpython3.so:	libpython$(LDVERSION).so
+-	$(BLDSHARED) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
++	$(BLDSHARED) $(RELOCATABLE_LIBPYTHON_LDFLAGS) $(NO_AS_NEEDED) -o $@ -Wl,-h$@ $^
+ 
+ libpython$(LDVERSION).dylib: $(LIBRARY_OBJS)
+-	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(prefix)/lib/libpython$(LDVERSION).dylib -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
++	 $(CC) -dynamiclib $(PY_CORE_LDFLAGS) -undefined dynamic_lookup -Wl,-install_name,$(LIBPYTHON_INSTALL_NAME) $(RELOCATABLE_LIBPYTHON_LDFLAGS) -Wl,-compatibility_version,$(VERSION) -Wl,-current_version,$(VERSION) -o $@ $(LIBRARY_OBJS) $(DTRACE_OBJS) $(MODLIBS) $(SHLIBS) $(LIBC) $(LIBM); \
+ 
+ 
+--- a/Doc/using/configure.rst
++++ b/Doc/using/configure.rst
+@@ -1047,5 +1047,8 @@
+ 
+    Enable experimental support for relocatable builds (default is no).
+-   This option currently has no effect on the build.
++   On Linux and non-framework macOS builds, link shared libraries and
++   standard-library extensions with paths relative to their installed locations.
++   The installation must use a common prefix for the interpreter, libraries,
++   and extensions. Move these directories together.
+ 
+    .. warning::
+--- a/Misc/NEWS.d/next/Build/2026-10-22-18-00-00.gh-issue-119696.r3Flag.rst
++++ b/Misc/NEWS.d/next/Build/2026-10-22-18-00-00.gh-issue-119696.r3Flag.rst
+@@ -1,2 +1,2 @@
+ Add the experimental :option:`--enable-relocatable` configure option.
+-The option currently has no effect on the build.
++On Linux and non-framework macOS builds, the installed binaries use relative loader paths.

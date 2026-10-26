@@ -13,6 +13,8 @@ import unittest
 from pathlib import Path
 from typing import Optional
 
+from .relocation import TestRelocation as TestRelocation
+
 TERMINFO_DIRS = [
     "/etc/terminfo",
     "/lib/terminfo",

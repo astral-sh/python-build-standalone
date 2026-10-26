@@ -733,6 +733,7 @@ if [ -e "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch" ]
     patch -p1 -i "${ROOT}/patch-python-getpath-backport-${PYTHON_MAJMIN_VERSION}.patch"
 fi
 patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
+patch -p1 -i "${ROOT}/patch-getpath-stdlib-fallback.patch"
 
 # Another, similar change to getpath: When reading inside a venv use the base_executable path to
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
@@ -741,6 +742,8 @@ patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 # Python 3.14 and 3.15 include the fix.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
+    # Python 3.14 and later also check the discovered prefix for `lib-dynload`.
+    patch -p1 -i "${ROOT}/patch-getpath-exec-prefix.patch"
 fi
 
 # TODO: Remove this block when updating to Python 3.16.0a2.

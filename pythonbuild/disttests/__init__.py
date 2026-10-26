@@ -2,6 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+import encodings
 import importlib.machinery
 import os
 import shutil
@@ -443,18 +444,39 @@ assert errors == ["main thread is not in main loop"], errors
     )
     @unittest.skipIf(os.name == "nt", "no symlinks or argv[0] on Windows")
     def test_getpath(self):
-        def assertPythonWorks(path: Path, argv0: Optional[str] = None):
+        def assertPythonUsesPrefix(
+            path: Path, prefix: Path, argv0: Optional[str] = None
+        ):
             output = subprocess.check_output(
-                [argv0 or path, "-c", "print(42)"], executable=path, text=True
+                [
+                    argv0 or path,
+                    "-I",
+                    "-c",
+                    "import encodings, math, sys\n"
+                    "print(sys.base_prefix, sys.base_exec_prefix, encodings.__file__, "
+                    "*sys.path, sep='\\n')",
+                ],
+                executable=path,
+                text=True,
             )
-            self.assertEqual(output.strip(), "42")
+            base, base_exec, encodings_file, *search_path = output.splitlines()
+            self.assertEqual(Path(base).resolve(), prefix.resolve())
+            self.assertEqual(Path(base_exec).resolve(), prefix.resolve())
+            relative_encodings = Path(encodings.__file__).relative_to(sys.base_prefix)
+            self.assertEqual(Path(encodings_file), Path(base) / relative_encodings)
+            self.assertIn(
+                str(Path(base_exec) / relative_encodings.parents[1] / "lib-dynload"),
+                search_path,
+            )
 
+        prefix = Path(sys.base_prefix)
+        executable = Path(sys.executable)
         with tempfile.TemporaryDirectory(prefix="disttests-") as t:
-            tmpdir = Path(t)
+            tmpdir = Path(t).resolve()
             symlink = tmpdir / "python"
-            symlink.symlink_to(sys.executable)
+            symlink.symlink_to(executable)
             with self.subTest(msg="symlink without venv"):
-                assertPythonWorks(symlink)
+                assertPythonUsesPrefix(symlink, prefix)
 
             # TODO: --copies does not work right
             for flag in ("--symlinks",):
@@ -463,10 +485,17 @@ assert errors == ["main thread is not in main loop"], errors
                     subprocess.check_call(
                         [symlink, "-m", "venv", flag, "--without-pip", venv]
                     )
-                    assertPythonWorks(venv / "bin" / "python")
+                    assertPythonUsesPrefix(venv / "bin" / "python", prefix)
 
-        with self.subTest(msg="weird argv[0]"):
-            assertPythonWorks(Path(sys.executable), argv0="/dev/null")
+            with self.subTest(msg="argv[0] under a second prefix"):
+                # Make the distribution's library available under a second prefix.
+                (tmpdir / sys.platlibdir).symlink_to(prefix / sys.platlibdir)
+                launcher = tmpdir / "launcher"
+                launcher.touch()
+                assertPythonUsesPrefix(executable, tmpdir, argv0=str(launcher))
+
+        with self.subTest(msg="argv[0] set to /dev/null"):
+            assertPythonUsesPrefix(executable, prefix, argv0="/dev/null")
 
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket constant")
     # TODO(jjh) remove when musl builds use a sysroot

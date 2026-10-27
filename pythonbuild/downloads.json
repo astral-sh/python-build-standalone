@@ -316,10 +316,10 @@
         "version": "26.2.2"
     },
     "setuptools": {
-        "url": "https://files.pythonhosted.org/packages/dd/a2/2e1af99d56c8145aa69496026c7e5fd7b6ec759b500c3ad697e2062832dc/setuptools-84.2.0-py3-none-any.whl",
-        "size": 875816,
-        "sha256": "8cc107ac7a403105dc8d6477664171f36135fab26adf8b5e0edaebc313f39b21",
-        "version": "84.2.0"
+        "url": "https://files.pythonhosted.org/packages/ef/55/6dc6d6bb953bdfc52519a0059592c52b6e3b8ad51cf8256dffceb55b0610/setuptools-84.2.1-py3-none-any.whl",
+        "size": 876263,
+        "sha256": "ca140b45d5325a9478f880e351484f62fef15f336462e449ca0c03c873d589c2",
+        "version": "84.2.1"
     },
     "sqlite": {
         "_comment": "Remember to update pythonbuild/disttests/ when version changed.",

@@ -304,6 +304,9 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
 fi
 
+# Supply Linux file seal constants missing from older libc headers.
+patch -p1 -i "${ROOT}/patch-fcntl-seals.patch"
+
 # Backport CPython's getdents64 fix for older musl headers.
 # https://github.com/python/cpython/commit/74c91a6fbfa3625cdc850acc99b509cc3d8c6ed0
 # TODO: Remove this patch when updating to Python 3.16.0a2.

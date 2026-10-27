@@ -304,6 +304,18 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
 fi
 
+# Expose Linux constants and vectored I/O flags when the glibc sysroot
+# lacks them.
+if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+        patch -p1 -i "${ROOT}/patch-linux-vectored-io.patch"
+    else
+        # CPython moved test_posix into test_os in 3.15.
+        sed 's|Lib/test/test_os/test_posix.py|Lib/test/test_posix.py|g' \
+            "${ROOT}/patch-linux-vectored-io.patch" | patch -p1
+    fi
+fi
+
 # Backport CPython's getdents64 fix for older musl headers.
 # https://github.com/python/cpython/commit/74c91a6fbfa3625cdc850acc99b509cc3d8c6ed0
 # TODO: Remove this patch when updating to Python 3.16.0a2.

@@ -691,5 +691,61 @@ print(time.monotonic() - start, time.process_time() - cpu_start)
                         self.assertLess(cpu_elapsed, timeout / 2)
 
 
+@unittest.skipUnless(
+    "-linux-gnu" in os.environ["TARGET_TRIPLE"], "Linux GNU kernel interfaces"
+)
+class TestLinuxGnuAPIs(unittest.TestCase):
+    def assert_ints(self, module, names, *, since=(3, 11)):
+        for name in names.split():
+            with self.subTest(module=module.__name__, name=name):
+                if sys.version_info >= since:
+                    self.assertIsInstance(getattr(module, name), int)
+                else:
+                    self.assertFalse(hasattr(module, name))
+
+    def test_vectored_io_flags(self):
+        self.assert_ints(os, "RWF_DSYNC RWF_HIPRI RWF_SYNC RWF_NOWAIT RWF_APPEND")
+        self.assert_ints(os, "RWF_ATOMIC RWF_DONTCACHE", since=(3, 15))
+        self.assert_ints(os, "RWF_NOSIGNAL", since=(3, 16))
+
+    def test_vectored_io(self):
+        import errno
+
+        # A nonzero high word exercises the split syscall offset on 32-bit targets.
+        offset = (1 << 32) + 17
+        with tempfile.TemporaryFile() as file:
+            fd = file.fileno()
+            try:
+                self.assertEqual(os.pwritev(fd, [b"ab", b"cd"], offset, os.RWF_SYNC), 4)
+                data = [bytearray(2), bytearray(2)]
+                self.assertEqual(os.preadv(fd, data, offset, os.RWF_SYNC), 4)
+                self.assertEqual(data, [b"ab", b"cd"])
+                self.assertEqual(os.fstat(fd).st_size, offset + 4)
+                self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 0)
+
+                os.lseek(fd, offset, os.SEEK_SET)
+                self.assertEqual(os.pwritev(fd, [b"xy"], -1, os.RWF_SYNC), 2)
+                self.assertEqual(os.preadv(fd, data[:1], -1, os.RWF_SYNC), 2)
+                self.assertEqual(data[0], b"cd")
+                self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), offset + 4)
+            except OSError as exc:
+                if exc.errno in {errno.ENOSYS, errno.EOPNOTSUPP}:
+                    self.skipTest(
+                        "runtime kernel or filesystem lacks flagged vectored I/O"
+                    )
+                raise
+
+    def test_vectored_io_current_offset(self):
+        with tempfile.TemporaryFile() as file:
+            fd = file.fileno()
+            self.assertEqual(os.pwritev(fd, [b"abcd"], -1), 4)
+            self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 4)
+            os.lseek(fd, 2, os.SEEK_SET)
+            data = bytearray(2)
+            self.assertEqual(os.preadv(fd, [data], -1), 2)
+            self.assertEqual(data, b"cd")
+            self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 4)
+
+
 if __name__ == "__main__":
     unittest.main()

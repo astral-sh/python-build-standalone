@@ -304,8 +304,9 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
 fi
 
-# musl aliases getdents64 to getdents, which expects a struct dirent pointer.
-# Passing the buffer as void * is compatible with both libc signatures.
+# Backport CPython's getdents64 fix for older musl headers.
+# https://github.com/python/cpython/commit/74c91a6fbfa3625cdc850acc99b509cc3d8c6ed0
+# TODO: Remove this patch when updating to Python 3.16.0a2.
 if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" && "${TARGET_TRIPLE}" == *-linux-musl ]]; then
     patch -p1 -i "${ROOT}/patch-posixsubprocess-musl-getdents64.patch"
 fi

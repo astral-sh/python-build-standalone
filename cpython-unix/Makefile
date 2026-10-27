@@ -88,7 +88,7 @@ $(OUTDIR)/$(CLANG_FILENAME):
 	$(RUN_BUILD) --toolchain clang --target-triple $(TARGET_TRIPLE)
 
 $(OUTDIR)/$(MUSL_TOOLCHAIN_NAME)-$(MUSL_TOOLCHAIN_VERSION)-$(HOST_PLATFORM).tar: $(BASE_TOOLCHAIN_DEPENDS) \
-    $(HERE)/build-musl.sh \
+    $(HERE)/build-musl.sh $(wildcard $(HERE)/patch-musl-CVE-*.patch) \
     $(if $(PYBUILD_NO_DOCKER),,$(OUTDIR)/image-$(DOCKER_IMAGE_GCC).$(HOST_PLATFORM).tar)
 	$(RUN_BUILD) --toolchain musl --docker-image $(DOCKER_IMAGE_GCC)
 

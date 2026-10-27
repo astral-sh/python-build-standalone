@@ -347,6 +347,8 @@ def build_musl(client, image, host_platform: str, target_triple: str, build_opti
         )
         build_env.copy_file(musl_archive)
         build_env.copy_file(SUPPORT / "build-musl.sh")
+        for patch in SUPPORT.glob("patch-musl-CVE-*.patch"):
+            build_env.copy_file(patch)
 
         env = {
             "MUSL_VERSION": DOWNLOADS[musl]["version"],

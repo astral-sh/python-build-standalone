@@ -15,6 +15,12 @@ tar -xf "musl-${MUSL_VERSION}.tar.gz"
 
 pushd "musl-${MUSL_VERSION}"
 
+if [ "${MUSL_VERSION}" = "1.2.6" ]; then
+    patch -p1 -i /build/patch-musl-CVE-2026-6042.patch
+    patch -p1 -i /build/patch-musl-CVE-2026-40200.patch
+    patch -p1 -i /build/patch-musl-CVE-2026-107891.patch
+fi
+
 # Unlike GNU ld, lld honors an explicit interpreter even with -static. Only
 # supply the musl interpreter when producing a dynamically linked executable.
 patch -p1 <<'EOF'

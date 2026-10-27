@@ -1144,7 +1144,7 @@ def main():
         elif action == "musl":
             build_musl(
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 host_platform,
                 target_triple,
                 build_options,
@@ -1154,7 +1154,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1168,7 +1168,7 @@ def main():
             build_libedit(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,
@@ -1206,7 +1206,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1220,7 +1220,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1240,7 +1240,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1253,7 +1253,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1266,7 +1266,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1290,7 +1290,7 @@ def main():
             simple_build(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 action,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1309,7 +1309,7 @@ def main():
             build_cpython_host(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 entry,
                 host_platform=host_platform,
                 target_triple=target_triple,
@@ -1330,7 +1330,7 @@ def main():
             build_cpython(
                 settings,
                 client,
-                get_image(client, ROOT, BUILD, docker_image, host_platform),
+                get_image(client, BUILD, docker_image, host_platform),
                 host_platform=host_platform,
                 target_triple=target_triple,
                 build_options=build_options,

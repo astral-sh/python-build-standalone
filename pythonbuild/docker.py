@@ -109,15 +109,13 @@ def ensure_docker_image(client, fh, image_path, platform=None):
     return image
 
 
-def get_image(
-    client, source_dir: pathlib.Path, image_dir: pathlib.Path, name, host_platform
-):
+def get_image(client, image_dir: pathlib.Path, name, host_platform):
     if client is None:
         return None
 
     image_name = f"image-{name}.{host_platform}"
     image_path = image_dir / image_name
-    tar_path = image_path.with_suffix(".tar")
+    tar_path = pathlib.Path(str(image_path) + ".tar")
 
     with image_path.open("r") as fh:
         image_id = fh.read().strip()
@@ -134,8 +132,9 @@ def get_image(
             return image_id
 
         else:
+            image_data = (image_dir / f"{name}.Dockerfile").read_bytes()
             return build_docker_image(
-                client, str(source_dir).encode(), image_dir, name, host_platform
+                client, image_data, image_dir, name, host_platform
             )
 
 

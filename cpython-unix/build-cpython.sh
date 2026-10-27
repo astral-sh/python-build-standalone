@@ -320,6 +320,7 @@ if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
         patch -p1 -i "${ROOT}/patch-linux-pidfd-timerfd-flags.patch"
     fi
     patch -p1 -i "${ROOT}/patch-linux-fcntl-constants.patch"
+    patch -p1 -i "${ROOT}/patch-linux-socket-constants.patch"
 fi
 
 # Backport CPython's getdents64 fix for older musl headers.

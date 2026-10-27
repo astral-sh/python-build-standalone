@@ -1,0 +1,127 @@
+diff --git a/Modules/socketmodule.h b/Modules/socketmodule.h
+--- a/Modules/socketmodule.h
++++ b/Modules/socketmodule.h
+@@ -116,6 +116,9 @@
+ #  include <asm/types.h>
+ # endif
+ # include <linux/qrtr.h>
++# ifndef AF_QIPCRTR
++#  define AF_QIPCRTR 42  // Linux socket family for struct sockaddr_qrtr
++# endif
+ #else
+ #  undef AF_QIPCRTR
+ #endif
+diff --git a/Modules/socketmodule.c b/Modules/socketmodule.c
+--- a/Modules/socketmodule.c
++++ b/Modules/socketmodule.c
+@@ -264,6 +264,11 @@
+ /* Generic socket object definitions and includes */
+ #define PySocket_BUILDING_SOCKET
+ #include "socketmodule.h"
++
++#ifdef __linux__
++#include <linux/rds.h>
++int _PySocket_AddLinuxConstants(PyObject *module);
++#endif
+ 
+ /* Addressing includes */
+ 
+@@ -8276,2 +8281,13 @@
+ 
++#ifdef __linux__
++    if (_PySocket_AddLinuxConstants(m) < 0) {
++#if PY_MINOR_VERSION == 11
++        Py_DECREF(m);
++        return NULL;
++#else
++        goto error;
++#endif
++    }
++#endif
++
+     /* Socket types */
+diff --git a/Modules/Setup.stdlib.in b/Modules/Setup.stdlib.in
+--- a/Modules/Setup.stdlib.in
++++ b/Modules/Setup.stdlib.in
+@@ -129,1 +129,1 @@
+-@MODULE__SOCKET_TRUE@_socket socketmodule.c
++@MODULE__SOCKET_TRUE@_socket socketmodule.c socket_linux_constants.c
+diff --git a/Modules/socket_linux_constants.c b/Modules/socket_linux_constants.c
+new file mode 100644
+--- /dev/null
++++ b/Modules/socket_linux_constants.c
+@@ -0,0 +1,74 @@
++#include "Python.h"
++
++#ifdef __linux__
++#include <linux/in.h>
++#include <linux/rds.h>
++#include <linux/tcp.h>
++
++int _PySocket_AddLinuxConstants(PyObject *module);
++
++int
++_PySocket_AddLinuxConstants(PyObject *module)
++{
++    static const struct {
++        const char *name;
++        int value;
++    } constants[] = {
++#define CONSTANT(name) {#name, name}
++#if defined(IPPROTO_MPTCP)
++        CONSTANT(IPPROTO_MPTCP),
++#endif
++#if defined(RDS_CMSG_CONG_UPDATE)
++        CONSTANT(RDS_CMSG_CONG_UPDATE),
++#endif
++#if defined(TCP_NOTSENT_LOWAT)
++        CONSTANT(TCP_NOTSENT_LOWAT),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_CC_INFO)
++        CONSTANT(TCP_CC_INFO),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_SAVE_SYN)
++        CONSTANT(TCP_SAVE_SYN),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_SAVED_SYN)
++        CONSTANT(TCP_SAVED_SYN),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_REPAIR_WINDOW)
++        CONSTANT(TCP_REPAIR_WINDOW),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_FASTOPEN_CONNECT)
++        CONSTANT(TCP_FASTOPEN_CONNECT),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_ULP)
++        CONSTANT(TCP_ULP),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_MD5SIG_EXT)
++        CONSTANT(TCP_MD5SIG_EXT),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_FASTOPEN_KEY)
++        CONSTANT(TCP_FASTOPEN_KEY),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_FASTOPEN_NO_COOKIE)
++        CONSTANT(TCP_FASTOPEN_NO_COOKIE),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_ZEROCOPY_RECEIVE)
++        CONSTANT(TCP_ZEROCOPY_RECEIVE),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_INQ)
++        CONSTANT(TCP_INQ),
++#endif
++#if PY_MINOR_VERSION >= 12 && defined(TCP_TX_DELAY)
++        CONSTANT(TCP_TX_DELAY),
++#endif
++#undef CONSTANT
++        {NULL, 0}
++    };
++
++    for (size_t i = 0; constants[i].name != NULL; i++) {
++        if (PyModule_AddIntConstant(module, constants[i].name, constants[i].value) < 0) {
++            return -1;
++        }
++    }
++    return 0;
++}
++#endif  // __linux__

@@ -815,6 +815,43 @@ class TestLinuxGnuAPIs(unittest.TestCase):
         finally:
             os.close(fd)
 
+    def test_socket_constants(self):
+        import socket
+
+        self.assert_ints(socket, "TCP_NOTSENT_LOWAT IPPROTO_MPTCP SOL_RDS AF_QIPCRTR")
+        self.assert_ints(
+            socket,
+            "RDS_CMSG_RDMA_ARGS RDS_CMSG_RDMA_DEST RDS_CMSG_RDMA_MAP "
+            "RDS_CMSG_RDMA_STATUS RDS_CMSG_CONG_UPDATE",
+        )
+        self.assert_ints(
+            socket,
+            "RDS_RDMA_READWRITE RDS_RDMA_FENCE RDS_RDMA_INVALIDATE RDS_RDMA_USE_ONCE "
+            "RDS_RDMA_DONTWAIT RDS_RDMA_NOTIFY_ME RDS_RDMA_SILENT",
+        )
+        self.assert_ints(
+            socket,
+            "TCP_CC_INFO TCP_SAVE_SYN TCP_SAVED_SYN TCP_REPAIR_WINDOW "
+            "TCP_FASTOPEN_CONNECT TCP_ULP TCP_MD5SIG_EXT TCP_FASTOPEN_KEY "
+            "TCP_FASTOPEN_NO_COOKIE TCP_ZEROCOPY_RECEIVE TCP_INQ TCP_TX_DELAY",
+            since=(3, 12),
+        )
+
+    def test_tcp_notsent_lowat(self):
+        import errno
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT, 4096)
+            except OSError as exc:
+                if exc.errno == errno.ENOPROTOOPT:
+                    self.skipTest("runtime kernel lacks TCP_NOTSENT_LOWAT")
+                raise
+            self.assertEqual(
+                sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT), 4096
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

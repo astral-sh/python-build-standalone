@@ -538,6 +538,10 @@ _sqlite3:
 _socket:
   sources:
     - socketmodule.c
+  sources-conditional:
+    - source: socket_linux_constants.c
+      targets:
+        - .*-linux-gnu.*
 
 _sre:
   setup-enabled: true

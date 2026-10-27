@@ -766,6 +766,14 @@ class TestLinuxGnuAPIs(unittest.TestCase):
             raise
         self.assertEqual(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]), 0)
 
+    def test_process_and_timer_flags(self):
+        self.assert_ints(os, "PIDFD_NONBLOCK", since=(3, 12))
+        self.assert_ints(os, "TFD_TIMER_CANCEL_ON_SET", since=(3, 13))
+        if sys.version_info >= (3, 12):
+            self.assertEqual(os.PIDFD_NONBLOCK, os.O_NONBLOCK)
+        if sys.version_info >= (3, 13):
+            self.assertEqual(os.TFD_TIMER_CANCEL_ON_SET, 1 << 1)
+
 
 if __name__ == "__main__":
     unittest.main()

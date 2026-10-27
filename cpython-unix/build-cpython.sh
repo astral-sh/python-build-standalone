@@ -316,6 +316,9 @@ if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
                 "${ROOT}/patch-${patch_name}.patch" | patch -p1
         fi
     done
+    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
+        patch -p1 -i "${ROOT}/patch-linux-pidfd-timerfd-flags.patch"
+    fi
 fi
 
 # Backport CPython's getdents64 fix for older musl headers.

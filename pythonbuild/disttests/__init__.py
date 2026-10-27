@@ -852,6 +852,15 @@ class TestLinuxGnuAPIs(unittest.TestCase):
                 sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT), 4096
             )
 
+    def test_clock_poll_and_memory_constants(self):
+        import mmap
+        import select
+        import time
+
+        self.assertEqual(time.CLOCK_TAI, 11)
+        self.assertEqual(select.EPOLLEXCLUSIVE, 1 << 28)
+        self.assert_ints(mmap, "MADV_FREE MADV_SOFT_OFFLINE")
+
 
 if __name__ == "__main__":
     unittest.main()

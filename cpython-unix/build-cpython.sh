@@ -321,6 +321,7 @@ if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
     fi
     patch -p1 -i "${ROOT}/patch-linux-fcntl-constants.patch"
     patch -p1 -i "${ROOT}/patch-linux-socket-constants.patch"
+    patch -p1 -i "${ROOT}/patch-linux-clock-epoll-madvise.patch"
 fi
 
 # Backport CPython's getdents64 fix for older musl headers.

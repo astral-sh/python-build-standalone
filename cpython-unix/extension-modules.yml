@@ -951,6 +951,10 @@ faulthandler:
 fcntl:
   sources:
     - fcntlmodule.c
+  sources-conditional:
+    - source: fcntl_linux_constants.c
+      targets:
+        - .*-linux-gnu.*
 
 gc:
   config-c-only: true

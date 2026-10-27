@@ -774,6 +774,47 @@ class TestLinuxGnuAPIs(unittest.TestCase):
         if sys.version_info >= (3, 13):
             self.assertEqual(os.TFD_TIMER_CANCEL_ON_SET, 1 << 1)
 
+    def test_fcntl_constants(self):
+        import fcntl
+
+        self.assert_ints(fcntl, "F_OFD_GETLK F_OFD_SETLK F_OFD_SETLKW")
+        self.assert_ints(
+            fcntl,
+            "F_ADD_SEALS F_GET_SEALS F_SEAL_SEAL F_SEAL_SHRINK F_SEAL_GROW F_SEAL_WRITE",
+        )
+        self.assert_ints(
+            fcntl,
+            "F_SEAL_FUTURE_WRITE F_GET_RW_HINT F_SET_RW_HINT "
+            "F_GET_FILE_RW_HINT F_SET_FILE_RW_HINT",
+            since=(3, 13),
+        )
+        self.assert_ints(
+            fcntl,
+            "RWH_WRITE_LIFE_NOT_SET RWH_WRITE_LIFE_NONE RWH_WRITE_LIFE_SHORT "
+            "RWH_WRITE_LIFE_MEDIUM RWH_WRITE_LIFE_LONG RWH_WRITE_LIFE_EXTREME",
+            since=(3, 13),
+        )
+        self.assert_ints(fcntl, "F_DUPFD_QUERY", since=(3, 14))
+
+    def test_memfd_seals(self):
+        import errno
+        import fcntl
+
+        try:
+            fd = os.memfd_create("test-seal", os.MFD_ALLOW_SEALING)
+        except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                self.skipTest("runtime kernel lacks memfd_create")
+            raise
+        try:
+            fcntl.fcntl(fd, fcntl.F_ADD_SEALS, fcntl.F_SEAL_WRITE)
+            self.assertEqual(fcntl.fcntl(fd, fcntl.F_GET_SEALS), fcntl.F_SEAL_WRITE)
+            with self.assertRaises(OSError) as ctx:
+                os.write(fd, b"x")
+            self.assertEqual(ctx.exception.errno, errno.EPERM)
+        finally:
+            os.close(fd)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -746,6 +746,26 @@ class TestLinuxGnuAPIs(unittest.TestCase):
             self.assertEqual(data, b"cd")
             self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 4)
 
+    def test_spawn_setsid(self):
+        import errno
+        import platform
+
+        argv = [
+            sys.executable,
+            "-I",
+            "-c",
+            "import os, sys; sys.exit(os.getsid(0) != os.getpid())",
+        ]
+        try:
+            pid = os.posix_spawn(sys.executable, argv, os.environ, setsid=True)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                libc, version = platform.libc_ver()
+                if libc == "glibc" and tuple(map(int, version.split("."))) < (2, 26):
+                    self.skipTest("runtime glibc lacks POSIX_SPAWN_SETSID")
+            raise
+        self.assertEqual(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]), 0)
+
 
 if __name__ == "__main__":
     unittest.main()

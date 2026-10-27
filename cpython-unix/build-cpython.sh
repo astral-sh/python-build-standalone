@@ -305,15 +305,17 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
 fi
 
 # Expose Linux constants and vectored I/O flags when the glibc sysroot
-# lacks them.
+# lacks them. Let the runtime glibc handle POSIX_SPAWN_SETSID.
 if [[ "${TARGET_TRIPLE}" == *-linux-gnu* ]]; then
-    if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
-        patch -p1 -i "${ROOT}/patch-linux-vectored-io.patch"
-    else
-        # CPython moved test_posix into test_os in 3.15.
-        sed 's|Lib/test/test_os/test_posix.py|Lib/test/test_posix.py|g' \
-            "${ROOT}/patch-linux-vectored-io.patch" | patch -p1
-    fi
+    for patch_name in linux-vectored-io linux-posix-spawn-setsid; do
+        if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]]; then
+            patch -p1 -i "${ROOT}/patch-${patch_name}.patch"
+        else
+            # CPython moved test_posix into test_os in 3.15.
+            sed 's|Lib/test/test_os/test_posix.py|Lib/test/test_posix.py|g' \
+                "${ROOT}/patch-${patch_name}.patch" | patch -p1
+        fi
+    done
 fi
 
 # Backport CPython's getdents64 fix for older musl headers.

@@ -19,17 +19,16 @@ pushd "libedit-${LIBEDIT_VERSION}"
 # run-time. So we hack up the configure script instead.
 patch -p1 << "EOF"
 diff --git a/configure b/configure
-index 614795f..4671f1b 100755
 --- a/configure
 +++ b/configure
-@@ -14154,14 +14154,14 @@ test -n "$NROFF" || NROFF="/bin/false"
+@@ -15138,14 +15138,14 @@ test -n "$NROFF" || NROFF="/bin/false"
 
 
 
--{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lncurses" >&5
+-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lncurses" >&5
 -printf %s "checking for tgetent in -lncurses... " >&6; }
 -if test ${ac_cv_lib_ncurses_tgetent+y}
-+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lncursesw" >&5
++{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lncursesw" >&5
 +printf %s "checking for tgetent in -lncursesw... " >&6; }
 +if test ${ac_cv_lib_ncursesw_tgetent+y}
  then :
@@ -41,7 +40,7 @@ index 614795f..4671f1b 100755
  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
  /* end confdefs.h.  */
 
-@@ -14185,9 +14185,9 @@ return tgetent ();
+@@ -15169,9 +15169,9 @@ return tgetent ();
  _ACEOF
  if ac_fn_c_try_link "$LINENO"
  then :
@@ -53,25 +52,25 @@ index 614795f..4671f1b 100755
  esac
  fi
  rm -f core conftest.err conftest.$ac_objext conftest.beam \
-@@ -14195,13 +14195,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
+@@ -15179,13 +15179,13 @@ rm -f core conftest.err conftest.$ac_objext conftest.beam \
  LIBS=$ac_check_lib_save_LIBS ;;
  esac
  fi
--{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ncurses_tgetent" >&5
--printf "%s\n" "$ac_cv_lib_ncurses_tgetent" >&6; }
+-{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ncurses_tgetent" >&5
+-printf '%s\n' "$ac_cv_lib_ncurses_tgetent" >&6; }
 -if test "x$ac_cv_lib_ncurses_tgetent" = xyes
-+{ printf "%s\n" "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ncursesw_tgetent" >&5
-+printf "%s\n" "$ac_cv_lib_ncursesw_tgetent" >&6; }
++{ printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_ncursesw_tgetent" >&5
++printf '%s\n' "$ac_cv_lib_ncursesw_tgetent" >&6; }
 +if test "x$ac_cv_lib_ncursesw_tgetent" = xyes
  then :
-   printf "%s\n" "#define HAVE_LIBNCURSES 1" >>confdefs.h
+   printf '%s\n' "#define HAVE_LIBNCURSES 1" >>confdefs.h
 
 -  LIBS="-lncurses $LIBS"
 +  LIBS="-lncursesw $LIBS"
 
  else case e in #(
-   e) { printf "%s\n" "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lcurses" >&5
-@@ -14354,7 +14354,7 @@ then :
+   e) { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for tgetent in -lcurses" >&5
+@@ -15338,7 +15338,7 @@ then :
    LIBS="-ltinfo $LIBS"
 
  else case e in #(
@@ -80,32 +79,6 @@ index 614795f..4671f1b 100755
         ;;
  esac
  fi
-EOF
-
-# When libedit receives a signal, it re-broadcasts it to its entire pgroup.
-# This seems intended to preserve normal ^C behavior in "raw" mode when the
-# terminal's ISIG flag is cleared? However, libedit does not in fact clear
-# ISIG. (And Jack can't find any evidence of any version that ever did.) This
-# sometimes results in the parent process receiving ^C twice back-to-back,
-# depending on the vagaries of signal coalescing. More pathologically, if the
-# parent tries to signal the child directly with e.g. `kill(pid, SIGTERM)`,
-# libedit *signals the parent right back* (not to mention any other pgroup
-# siblings or grandparents). This is just wild behavior, even though it's
-# probably rare that it matters in practice. Patch it out. See also:
-# https://github.com/astral-sh/uv/issues/13919#issuecomment-2960501229.
-patch -p1 << "EOF"
-diff --git i/src/sig.c w/src/sig.c
-index d2b77e7..884b2dd 100644
---- i/src/sig.c
-+++ w/src/sig.c
-@@ -107,7 +107,7 @@ sig_handler(int signo)
- 	sel->el_signal->sig_action[i].sa_flags = 0;
- 	sigemptyset(&sel->el_signal->sig_action[i].sa_mask);
- 	(void) sigprocmask(SIG_SETMASK, &oset, NULL);
--	(void) kill(0, signo);
-+	(void) raise(signo);
- 	errno = save_errno;
- }
 EOF
 
 cflags="${EXTRA_TARGET_CFLAGS} -fPIC -I${TOOLS_PATH}/deps/include -I${TOOLS_PATH}/deps/include/ncursesw"

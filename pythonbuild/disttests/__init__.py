@@ -530,6 +530,40 @@ assert errors == ["main thread is not in main loop"], errors
 
     @unittest.skipUnless(
         "-linux-gnu" in os.environ["TARGET_TRIPLE"],
+        "test file sealing on Linux GNU targets",
+    )
+    def test_fcntl_seals(self):
+        import errno
+        import fcntl
+
+        for name in (
+            "F_ADD_SEALS",
+            "F_GET_SEALS",
+            "F_SEAL_SEAL",
+            "F_SEAL_SHRINK",
+            "F_SEAL_GROW",
+            "F_SEAL_WRITE",
+        ):
+            self.assertIsInstance(getattr(fcntl, name), int)
+        if sys.version_info >= (3, 13):
+            self.assertIsInstance(fcntl.F_SEAL_FUTURE_WRITE, int)
+
+        try:
+            fd = os.memfd_create("pbs-seals", os.MFD_ALLOW_SEALING)
+        except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                self.skipTest("the runtime kernel does not support memfd_create")
+            raise
+
+        with os.fdopen(fd, "wb") as memfd:
+            fcntl.fcntl(memfd, fcntl.F_ADD_SEALS, fcntl.F_SEAL_GROW)
+            self.assertTrue(fcntl.fcntl(memfd, fcntl.F_GET_SEALS) & fcntl.F_SEAL_GROW)
+            with self.assertRaises(OSError) as raised:
+                os.ftruncate(fd, 1)
+            self.assertEqual(raised.exception.errno, errno.EPERM)
+
+    @unittest.skipUnless(
+        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
         "the copy_file_range syscall fallback is enabled for Linux GNU targets",
     )
     def test_os_copy_file_range(self):

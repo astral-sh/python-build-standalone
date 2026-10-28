@@ -177,6 +177,8 @@ $(OUTDIR)/openssl-3.5-$(OPENSSL_3.5_VERSION)-$(PACKAGE_SUFFIX).tar: $(PYTHON_DEP
 
 LIBEDIT_DEPENDS = \
     $(PYTHON_DEP_DEPENDS) \
+    $(OUTDIR)/autoconf-$(AUTOCONF_VERSION)-$(PACKAGE_SUFFIX).tar \
+    $(OUTDIR)/m4-$(M4_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(OUTDIR)/ncurses-$(NCURSES_VERSION)-$(PACKAGE_SUFFIX).tar \
     $(HERE)/build-libedit.sh \
     $(NULL)

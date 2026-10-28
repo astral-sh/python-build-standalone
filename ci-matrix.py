@@ -24,6 +24,18 @@ CI_DEFAULTS_YAML = "ci-defaults.yaml"
 CI_EXTRA_SKIP_LABELS = ["documentation"]
 CI_MATRIX_SIZE_LIMIT = 256  # The maximum size of a matrix in GitHub Actions
 
+# Reviewed, self-contained PCbuild/prepare_libffi.bat scripts and the minors
+# expected to ship them. Windows jobs hash the script in their actual source.
+LIBFFI_PREPARE_SCRIPTS = {
+    "ee2ce6baaa441f01907806376f25c5affdec0fe26707978d423d0c2203a61139": ("3.11",),
+    "617b434a4f79bef8934a0d5613c88ff859a2f95dba13b4521d3ba317cbdbeb19": (
+        "3.12",
+        "3.13",
+        "3.14",
+        "3.15",
+        "3.16",
+    ),
+}
 
 # Docker images for building toolchains and dependencies
 DOCKER_BUILD_IMAGES = [
@@ -320,6 +332,62 @@ def generate_crate_build_matrix_entries(
     ]
 
 
+def generate_windows_dependency_matrix_entries(
+    python_entries: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Select shared dependencies within one target and toolchain group."""
+    prepare_hashes = {
+        minor: digest
+        for digest, minors in LIBFFI_PREPARE_SCRIPTS.items()
+        for minor in minors
+    }
+    producers = {}
+    shared = {}
+    for entry in python_entries:
+        if entry.get("dry-run"):
+            continue
+        python = entry["python"]
+        for dependency, variant in (
+            ("openssl", python == "3.11"),
+            ("libffi", prepare_hashes.get(python, python)),
+        ):
+            key = (dependency, variant)
+            if key in producers:
+                shared[key] = producers[key]
+            else:
+                producers[key] = {**entry, "dependency": dependency}
+    return list(shared.values())
+
+
+def generate_windows_build_groups(
+    python_entries: list[dict[str, str]],
+) -> list[dict[str, Any]]:
+    # Each group runs as a separate workflow call, so its consumers wait
+    # only for producers using the same target, runner and toolchain.
+    groups: dict[tuple[str, ...], list[dict[str, str]]] = {}
+    for entry in python_entries:
+        if entry["platform"] == "windows":
+            key = (
+                entry["target_triple"],
+                entry["runner"],
+                entry["vs_version"],
+                entry["platform_toolset"],
+                entry["vc_tools_version"],
+            )
+            groups.setdefault(key, []).append(entry)
+    return [
+        {
+            "target_triple": entries[0]["target_triple"],
+            "platform_toolset": entries[0]["platform_toolset"],
+            "builds": {"include": entries},
+            "dependencies": {
+                "include": generate_windows_dependency_matrix_entries(entries)
+            },
+        }
+        for entries in groups.values()
+    ]
+
+
 def generate_python_build_matrix_entries(
     config: dict[str, Any],
     runners: dict[str, Any],
@@ -543,7 +611,13 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--matrix-type",
-        choices=["python-build", "docker-build", "crate-build", "all"],
+        choices=[
+            "python-build",
+            "docker-build",
+            "crate-build",
+            "windows-groups",
+            "all",
+        ],
         default="all",
         help="Which matrix types to generate (default: all)",
     )
@@ -586,6 +660,11 @@ def main() -> None:
             result["docker-build"] = {"include": []}
         if args.matrix_type in ["crate-build", "all"]:
             result["crate-build"] = {"include": []}
+        if args.matrix_type in ["windows-groups", "all"] and args.platform in (
+            None,
+            "windows",
+        ):
+            result["windows-groups"] = {"include": []}
         print(json.dumps(result))
         return
 
@@ -612,6 +691,15 @@ def main() -> None:
         for entry in python_entries
         if should_include_entry(entry, labels, event_defaults, allowed_triples)
     ]
+
+    if args.matrix_type in ["windows-groups", "all"] and args.platform in (
+        None,
+        "windows",
+    ):
+        result["windows-groups"] = {
+            "include": generate_windows_build_groups(python_entries)
+        }
+        result["libffi-prepare-hashes"] = list(LIBFFI_PREPARE_SCRIPTS)
 
     # Output python-build matrix if requested
     if args.matrix_type in ["python-build", "all"]:

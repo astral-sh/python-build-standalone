@@ -1,0 +1,218 @@
+name: Windows build group
+
+on:
+  workflow_call:
+    inputs:
+      builds:
+        type: string
+        required: true
+      dependencies:
+        type: string
+        required: true
+      libffi-prepare-hashes:
+        type: string
+        required: true
+
+env:
+  FORCE_COLOR: 1
+  UV_CACHE_DIR: ${{ github.workspace }}/.uv-cache
+  ARCHIVE_COMPRESSION: ${{ github.event_name == 'pull_request' && 'fast' || 'small' }}
+  PYBUILD_LIBFFI_PREPARE_HASHES: ${{ inputs.libffi-prepare-hashes }}
+
+permissions: {}
+
+jobs:
+  dependencies:
+    if: fromJSON(inputs.dependencies).include[0] != null
+    # Consumers retry a missing dependency with their own toolchain.
+    continue-on-error: true
+    runs-on: ${{ matrix.runner }}
+    env:
+      MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
+      MATRIX_PYTHON: cpython-${{ matrix.python }}
+      MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+      MATRIX_VS_VERSION: ${{ matrix.vs_version }}
+      MATRIX_PLATFORM_TOOLSET: ${{ matrix.platform_toolset }}
+      MATRIX_VC_TOOLS_VERSION: ${{ matrix.vc_tools_version }}
+      MATRIX_DEPENDENCY: ${{ matrix.dependency }}
+    strategy:
+      matrix: ${{ fromJSON(inputs.dependencies) }}
+      fail-fast: false
+    name: ${{ matrix.dependency }} / ${{ matrix.target_triple }} / ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: false
+
+      - name: Resolve dependency archive name
+        id: keys
+        shell: pwsh
+        run: >-
+          uv run --no-dev build.py
+          --target-triple "$env:MATRIX_TARGET_TRIPLE" --python "$env:MATRIX_PYTHON"
+          --sh C:\cygwin\bin\sh.exe --options "$env:MATRIX_BUILD_OPTIONS"
+          --vs "$env:MATRIX_VS_VERSION" --platform-toolset "$env:MATRIX_PLATFORM_TOOLSET"
+          --vc-tools-version "$env:MATRIX_VC_TOOLS_VERSION" --compression "$env:ARCHIVE_COMPRESSION"
+          --dependency "$env:MATRIX_DEPENDENCY" --write-dependency-keys "$env:GITHUB_OUTPUT"
+
+      - name: Cache dependency
+        id: cache
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/${{ steps.keys.outputs[matrix.dependency] }}
+          key: ${{ steps.keys.outputs[matrix.dependency] }}
+
+      - name: Prepare for a cache miss
+        shell: pwsh
+        env:
+          ARCHIVE: ${{ steps.keys.outputs[matrix.dependency] }}
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          # A failed cache extraction can leave a partial archive on disk.
+          $archive = "build/$env:ARCHIVE"
+          if ($env:CACHE_HIT -ne 'true' -and (Test-Path -LiteralPath $archive -PathType Leaf)) {
+            Remove-Item -LiteralPath $archive
+          }
+          if ($env:MATRIX_DEPENDENCY -eq 'libffi' -and !(Test-Path -LiteralPath $archive -PathType Leaf)) {
+            ./scripts/install-cygwin.ps1 -Packages autoconf,automake,libtool,make
+          }
+
+      - name: Build dependency
+        shell: pwsh
+        run: >-
+          uv run --no-dev build.py
+          --target-triple "$env:MATRIX_TARGET_TRIPLE" --python "$env:MATRIX_PYTHON"
+          --sh C:\cygwin\bin\sh.exe --options "$env:MATRIX_BUILD_OPTIONS"
+          --vs "$env:MATRIX_VS_VERSION" --platform-toolset "$env:MATRIX_PLATFORM_TOOLSET"
+          --vc-tools-version "$env:MATRIX_VC_TOOLS_VERSION" --compression "$env:ARCHIVE_COMPRESSION"
+          --dependency "$env:MATRIX_DEPENDENCY"
+
+  build:
+    timeout-minutes: 90
+    needs: dependencies
+    # A skipped or failed cache producer is a cache miss for its consumers.
+    if: ${{ !cancelled() }}
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    env:
+      MATRIX_TARGET_TRIPLE: ${{ matrix.target_triple }}
+      MATRIX_PYTHON: cpython-${{ matrix.python }}
+      MATRIX_BUILD_OPTIONS: ${{ matrix.build_options }}
+      MATRIX_VS_VERSION: ${{ matrix.vs_version }}
+      MATRIX_PLATFORM_TOOLSET: ${{ matrix.platform_toolset }}
+      MATRIX_VC_TOOLS_VERSION: ${{ matrix.vc_tools_version }}
+    strategy:
+      matrix: ${{ fromJSON(inputs.builds) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          enable-cache: false
+
+      - name: Download pythonbuild Executable
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ matrix.crate_artifact_name }}
+
+      # Prepare the Python environment before starting the build.
+      - name: Bootstrap Python environment
+        run: |
+          uv run --no-dev build.py --help
+
+      - name: Resolve dependency archive names
+        id: keys
+        if: ${{ ! matrix.dry-run }}
+        shell: pwsh
+        run: >-
+          uv run --no-dev build.py
+          --target-triple "$env:MATRIX_TARGET_TRIPLE" --python "$env:MATRIX_PYTHON"
+          --sh C:\cygwin\bin\sh.exe --options "$env:MATRIX_BUILD_OPTIONS"
+          --vs "$env:MATRIX_VS_VERSION" --platform-toolset "$env:MATRIX_PLATFORM_TOOLSET"
+          --vc-tools-version "$env:MATRIX_VC_TOOLS_VERSION" --compression "$env:ARCHIVE_COMPRESSION"
+          --write-dependency-keys "$env:GITHUB_OUTPUT"
+
+      - name: Cache OpenSSL
+        if: steps.keys.outputs.openssl
+        id: openssl
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/${{ steps.keys.outputs.openssl }}
+          key: ${{ steps.keys.outputs.openssl }}
+
+      - name: Cache libffi
+        if: steps.keys.outputs.libffi
+        id: libffi
+        continue-on-error: true
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: build/${{ steps.keys.outputs.libffi }}
+          key: ${{ steps.keys.outputs.libffi }}
+
+      - name: Prepare for cache misses
+        if: ${{ ! matrix.dry-run }}
+        shell: pwsh
+        env:
+          OPENSSL_ARCHIVE: ${{ steps.keys.outputs.openssl }}
+          LIBFFI_ARCHIVE: ${{ steps.keys.outputs.libffi }}
+          OPENSSL_HIT: ${{ steps.openssl.outputs.cache-hit }}
+          LIBFFI_HIT: ${{ steps.libffi.outputs.cache-hit }}
+        run: |
+          # A failed cache extraction can leave a partial archive on disk.
+          if ($env:OPENSSL_HIT -ne 'true' -and (Test-Path -LiteralPath "build/$env:OPENSSL_ARCHIVE" -PathType Leaf)) {
+            Remove-Item -LiteralPath "build/$env:OPENSSL_ARCHIVE"
+          }
+          $archive = "build/$env:LIBFFI_ARCHIVE"
+          if ($env:LIBFFI_HIT -ne 'true' -and (Test-Path -LiteralPath $archive -PathType Leaf)) {
+            Remove-Item -LiteralPath $archive
+          }
+          if (!(Test-Path -LiteralPath $archive -PathType Leaf)) {
+            ./scripts/install-cygwin.ps1 -Packages autoconf,automake,libtool,make
+          }
+
+      - name: Build
+        if: ${{ ! matrix.dry-run }}
+        shell: pwsh
+        run: >-
+          uv run --no-dev build.py
+          --target-triple "$env:MATRIX_TARGET_TRIPLE" --python "$env:MATRIX_PYTHON"
+          --sh C:\cygwin\bin\sh.exe --options "$env:MATRIX_BUILD_OPTIONS"
+          --vs "$env:MATRIX_VS_VERSION" --platform-toolset "$env:MATRIX_PLATFORM_TOOLSET"
+          --vc-tools-version "$env:MATRIX_VC_TOOLS_VERSION" --compression "$env:ARCHIVE_COMPRESSION"
+
+      - name: Generate attestations
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          subject-path: dist/*
+
+      - name: Upload Distributions
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: cpython-${{ matrix.python }}-${{ matrix.target_triple }}-${{ matrix.build_options }}
+          path: dist/*
+          compression-level: '0'
+
+      - name: Validate Distribution
+        if: ${{ ! matrix.dry-run }}
+        run: |
+          $Dists = Resolve-Path -Path "dist/*.tar.zst" -Relative
+          .\pythonbuild.exe validate-distribution $Dists
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+          uv run --no-dev test-distribution.py $Dists

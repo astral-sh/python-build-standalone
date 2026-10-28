@@ -298,10 +298,10 @@
         "version": "2.16.03"
     },
     "patchelf": {
-        "url": "https://github.com/NixOS/patchelf/releases/download/0.13.1/patchelf-0.13.1.tar.bz2",
-        "size": 173598,
-        "sha256": "39e8aeccd7495d54df094d2b4a7c08010ff7777036faaf24f28e07777d1598e2",
-        "version": "0.13.1"
+        "url": "https://github.com/NixOS/patchelf/releases/download/0.19.2/patchelf-0.19.2.tar.bz2",
+        "size": 444307,
+        "sha256": "d4ad9a4e5c689e09119ce2f30a94b0e8b4f98c78590123ea21665e34c6928801",
+        "version": "0.19.2"
     },
     "pkgconf": {
         "url": "https://github.com/pkgconf/pkgconf/releases/download/pkgconf-3.0.3/pkgconf-3.0.3.tar.xz",

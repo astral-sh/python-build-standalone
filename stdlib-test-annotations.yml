@@ -559,18 +559,6 @@ expected-failures:
     maximum-python-version: "3.11"
     reason: "setuptools rejects the locally built egg's macOS deployment-target tag as incompatible with the host OS"
 
-  - name: test.test_ctypes.test_callbacks.Callbacks.test_i38748_stackCorruption
-    targets:
-      - "i686-pc-windows-msvc"
-    minimum-python-version: "3.12"
-    reason: "OSError: exception: access violation writing 0x00000005"
-
-  - name: test.test_ctypes.test_callbacks.StdcallCallbacks.test_i38748_stackCorruption
-    targets:
-      - "i686-pc-windows-msvc"
-    minimum-python-version: "3.12"
-    reason: "OSError: exception: access violation writing 0x00000005"
-
   - name: test.datetimetester.ExtensionModuleTests_Fast.test_concurrent_initialization_subinterpreter
     targets:
       - ".+-unknown-linux-musl"

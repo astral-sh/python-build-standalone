@@ -11,38 +11,7 @@ export PATH=/tools/${TOOLCHAIN}/bin:/tools/host/bin:$PATH
 
 tar -xf "patchelf-${PATCHELF_VERSION}.tar.bz2"
 
-pushd patchelf-0.13.1.20211127.72b6d44
-
-# TODO: Drop this patch once patchelf is updated to 0.14.0 or newer,
-# which includes native LoongArch64 support.
-# See: https://github.com/astral-sh/python-build-standalone/issues/1106
-if [[ "${TARGET_TRIPLE}" = loongarch64* ]]; then
-    patch -p1 << 'EOF'
-diff --git a/src/patchelf.cc b/src/patchelf.cc
-index 2b7ec8b9..06f41c6f 100644
---- a/src/patchelf.cc
-+++ b/src/patchelf.cc
-@@ -57,6 +57,10 @@ static int forcedPageSize = DEFAULT_PAGESIZE;
- static int forcedPageSize = -1;
- #endif
- 
-+#ifndef EM_LOONGARCH
-+#define EM_LOONGARCH    258
-+#endif
-+
- using FileContents = std::shared_ptr<std::vector<unsigned char>>;
- 
- #define ElfFileParams class Elf_Ehdr, class Elf_Phdr, class Elf_Shdr, class Elf_Addr, class Elf_Off, class Elf_Dyn, class Elf_Sym, class Elf_Verneed, class Elf_Versym
-@@ -460,6 +464,7 @@ unsigned int ElfFile<ElfFileParamNames>::getPageSize() const
-       case EM_PPC64:
-       case EM_AARCH64:
-       case EM_TILEGX:
-+      case EM_LOONGARCH:
-         return 0x10000;
-       default:
-         return 0x1000;
-EOF
-fi
+pushd "patchelf-${PATCHELF_VERSION}"
 
 CC="${HOST_CC}" CXX="${HOST_CXX}" CFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" CPPFLAGS="${EXTRA_HOST_CFLAGS} -fPIC" \
     LDFLAGS="${EXTRA_HOST_LDFLAGS}" \

@@ -351,6 +351,10 @@ POLICIES: dict[str, Policy] = {
         mirrored=True,
         version_transform=lambda value: value.replace("-", "."),
     ),
+    "musl-static": html_policy(
+        "https://musl.libc.org/",
+        r"(?:^|/)musl-(?P<version>[0-9]+\.[0-9]+\.[0-9]+)\.tar\.gz$",
+    ),
     "ncurses": gnu_policy("ncurses", "tar.gz"),
     "openssl-3.5": github_policy(
         "openssl/openssl",
@@ -420,7 +424,6 @@ UNSUPPORTED: dict[str, str] = {
     "llvm-x86_64-linux": "toolchain bootstrap requires coordinated updates",
     "llvm-aarch64-macos": "toolchain bootstrap requires coordinated updates",
     "musl": "intentionally pinned build toolchain",
-    "musl-static": "intentionally pinned build toolchain",
     "sqlite": "requires SQLite's numeric-version and release-year mapping",
     "strawberryperl": "Windows toolchain update requires manual validation",
     "tix": "source dependency snapshot",

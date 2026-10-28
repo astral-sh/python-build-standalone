@@ -1400,7 +1400,7 @@ cp -av "${TOOLS_PATH}/deps/lib"/*.a "${ROOT}/out/python/build/lib/"
 # ___isOSVersionAtLeast.
 #
 # We copy the libclang_rt.<platform>.a library from our clang into the
-# distribution so it is available. See documentation in quirks.rst for more.
+# distribution so it is available. See documentation in docs/quirks.md for more.
 if [[ "${PYBUILD_PLATFORM}" = macos* ]]; then
   cp -av "$(dirname "$(which clang)")/../lib/clang"/*/lib/darwin/libclang_rt.osx.a "${ROOT}/out/python/build/lib/"
 fi

@@ -126,10 +126,10 @@
         "version": "1.1.4"
     },
     "libedit": {
-        "url": "https://thrysoee.dk/editline/libedit-20240808-3.1.tar.gz",
-        "size": 538611,
-        "sha256": "5f0573349d77c4a48967191cdd6634dd7aa5f6398c6a57fe037cc02696d6099f",
-        "version": "20240808-3.1",
+        "url": "https://thrysoee.dk/editline/libedit-20260512-3.1.tar.gz",
+        "size": 550471,
+        "sha256": "432d5e7ea8b0116dd39f2eca7bc11d0eed77faa6b77ea526ace89907c23ea4a0",
+        "version": "20260512-3.1",
         "library_names": [
             "edit"
         ],

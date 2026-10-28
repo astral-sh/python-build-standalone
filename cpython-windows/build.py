@@ -783,7 +783,7 @@ def build_libffi(
                 "-c",
                 "core.autocrlf=input",
                 "checkout",
-                "16fad4855b3d8c03b5910e405ff3a04395b39a98",
+                "73b247f34ef3ae1859b8c2c34d321d34ebc5db15",
             ],
             cwd=ffi_source_path,
             check=True,

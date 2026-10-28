@@ -1,0 +1,39 @@
+diff --git a/Modules/mmapmodule.c b/Modules/mmapmodule.c
+--- a/Modules/mmapmodule.c
++++ b/Modules/mmapmodule.c
+@@ -65,6 +65,9 @@
+ 
+ #ifdef UNIX
+ #include <sys/mman.h>
++#ifdef __linux__
++#  include <linux/mman.h>         // MADV_FREE, MADV_SOFT_OFFLINE
++#endif
+ #include <sys/stat.h>
+ 
+ #if defined(HAVE_SYSCONF) && defined(_SC_PAGESIZE)
+diff --git a/Modules/selectmodule.c b/Modules/selectmodule.c
+--- a/Modules/selectmodule.c
++++ b/Modules/selectmodule.c
+@@ -1310,6 +1310,9 @@
+ 
+ #ifdef HAVE_SYS_EPOLL_H
+ #include <sys/epoll.h>
++#if defined(__linux__) && !defined(EPOLLEXCLUSIVE)
++#  define EPOLLEXCLUSIVE (1U << 28)  // <linux/eventpoll.h>
++#endif
+ #endif
+ 
+ typedef struct {
+diff --git a/Modules/timemodule.c b/Modules/timemodule.c
+--- a/Modules/timemodule.c
++++ b/Modules/timemodule.c
+@@ -2131,6 +2131,9 @@
+             return -1;
+         }
+ #endif
++#if defined(__linux__) && !defined(CLOCK_TAI)
++#  define CLOCK_TAI 11  // <linux/time.h>
++#endif
+ #ifdef CLOCK_TAI
+         if (PyModule_AddIntMacro(module, CLOCK_TAI) < 0) {
+             return -1;

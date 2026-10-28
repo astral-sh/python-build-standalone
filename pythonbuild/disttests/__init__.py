@@ -691,5 +691,176 @@ print(time.monotonic() - start, time.process_time() - cpu_start)
                         self.assertLess(cpu_elapsed, timeout / 2)
 
 
+@unittest.skipUnless(
+    "-linux-gnu" in os.environ["TARGET_TRIPLE"], "Linux GNU kernel interfaces"
+)
+class TestLinuxGnuAPIs(unittest.TestCase):
+    def assert_ints(self, module, names, *, since=(3, 11)):
+        for name in names.split():
+            with self.subTest(module=module.__name__, name=name):
+                if sys.version_info >= since:
+                    self.assertIsInstance(getattr(module, name), int)
+                else:
+                    self.assertFalse(hasattr(module, name))
+
+    def test_vectored_io_flags(self):
+        self.assert_ints(os, "RWF_DSYNC RWF_HIPRI RWF_SYNC RWF_NOWAIT RWF_APPEND")
+        self.assert_ints(os, "RWF_ATOMIC RWF_DONTCACHE", since=(3, 15))
+        self.assert_ints(os, "RWF_NOSIGNAL", since=(3, 16))
+
+    def test_vectored_io(self):
+        import errno
+
+        # A nonzero high word exercises the split syscall offset on 32-bit targets.
+        offset = (1 << 32) + 17
+        with tempfile.TemporaryFile() as file:
+            fd = file.fileno()
+            try:
+                self.assertEqual(os.pwritev(fd, [b"ab", b"cd"], offset, os.RWF_SYNC), 4)
+                data = [bytearray(2), bytearray(2)]
+                self.assertEqual(os.preadv(fd, data, offset, os.RWF_SYNC), 4)
+                self.assertEqual(data, [b"ab", b"cd"])
+                self.assertEqual(os.fstat(fd).st_size, offset + 4)
+                self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 0)
+
+                os.lseek(fd, offset, os.SEEK_SET)
+                self.assertEqual(os.pwritev(fd, [b"xy"], -1, os.RWF_SYNC), 2)
+                self.assertEqual(os.preadv(fd, data[:1], -1, os.RWF_SYNC), 2)
+                self.assertEqual(data[0], b"cd")
+                self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), offset + 4)
+            except OSError as exc:
+                if exc.errno in {errno.ENOSYS, errno.EOPNOTSUPP}:
+                    self.skipTest(
+                        "runtime kernel or filesystem lacks flagged vectored I/O"
+                    )
+                raise
+
+    def test_vectored_io_current_offset(self):
+        with tempfile.TemporaryFile() as file:
+            fd = file.fileno()
+            self.assertEqual(os.pwritev(fd, [b"abcd"], -1), 4)
+            self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 4)
+            os.lseek(fd, 2, os.SEEK_SET)
+            data = bytearray(2)
+            self.assertEqual(os.preadv(fd, [data], -1), 2)
+            self.assertEqual(data, b"cd")
+            self.assertEqual(os.lseek(fd, 0, os.SEEK_CUR), 4)
+
+    def test_spawn_setsid(self):
+        import errno
+        import platform
+
+        argv = [
+            sys.executable,
+            "-I",
+            "-c",
+            "import os, sys; sys.exit(os.getsid(0) != os.getpid())",
+        ]
+        try:
+            pid = os.posix_spawn(sys.executable, argv, os.environ, setsid=True)
+        except OSError as exc:
+            if exc.errno == errno.EINVAL:
+                libc, version = platform.libc_ver()
+                if libc == "glibc" and tuple(map(int, version.split("."))) < (2, 26):
+                    self.skipTest("runtime glibc lacks POSIX_SPAWN_SETSID")
+            raise
+        self.assertEqual(os.waitstatus_to_exitcode(os.waitpid(pid, 0)[1]), 0)
+
+    def test_process_and_timer_flags(self):
+        self.assert_ints(os, "PIDFD_NONBLOCK", since=(3, 12))
+        self.assert_ints(os, "TFD_TIMER_CANCEL_ON_SET", since=(3, 13))
+        if sys.version_info >= (3, 12):
+            self.assertEqual(os.PIDFD_NONBLOCK, os.O_NONBLOCK)
+        if sys.version_info >= (3, 13):
+            self.assertEqual(os.TFD_TIMER_CANCEL_ON_SET, 1 << 1)
+
+    def test_fcntl_constants(self):
+        import fcntl
+
+        self.assert_ints(fcntl, "F_OFD_GETLK F_OFD_SETLK F_OFD_SETLKW")
+        self.assert_ints(
+            fcntl,
+            "F_ADD_SEALS F_GET_SEALS F_SEAL_SEAL F_SEAL_SHRINK F_SEAL_GROW F_SEAL_WRITE",
+        )
+        self.assert_ints(
+            fcntl,
+            "F_SEAL_FUTURE_WRITE F_GET_RW_HINT F_SET_RW_HINT "
+            "F_GET_FILE_RW_HINT F_SET_FILE_RW_HINT",
+            since=(3, 13),
+        )
+        self.assert_ints(
+            fcntl,
+            "RWH_WRITE_LIFE_NOT_SET RWH_WRITE_LIFE_NONE RWH_WRITE_LIFE_SHORT "
+            "RWH_WRITE_LIFE_MEDIUM RWH_WRITE_LIFE_LONG RWH_WRITE_LIFE_EXTREME",
+            since=(3, 13),
+        )
+        self.assert_ints(fcntl, "F_DUPFD_QUERY", since=(3, 14))
+
+    def test_memfd_seals(self):
+        import errno
+        import fcntl
+
+        try:
+            fd = os.memfd_create("test-seal", os.MFD_ALLOW_SEALING)
+        except OSError as exc:
+            if exc.errno == errno.ENOSYS:
+                self.skipTest("runtime kernel lacks memfd_create")
+            raise
+        try:
+            fcntl.fcntl(fd, fcntl.F_ADD_SEALS, fcntl.F_SEAL_WRITE)
+            self.assertEqual(fcntl.fcntl(fd, fcntl.F_GET_SEALS), fcntl.F_SEAL_WRITE)
+            with self.assertRaises(OSError) as ctx:
+                os.write(fd, b"x")
+            self.assertEqual(ctx.exception.errno, errno.EPERM)
+        finally:
+            os.close(fd)
+
+    def test_socket_constants(self):
+        import socket
+
+        self.assert_ints(socket, "TCP_NOTSENT_LOWAT IPPROTO_MPTCP SOL_RDS AF_QIPCRTR")
+        self.assert_ints(
+            socket,
+            "RDS_CMSG_RDMA_ARGS RDS_CMSG_RDMA_DEST RDS_CMSG_RDMA_MAP "
+            "RDS_CMSG_RDMA_STATUS RDS_CMSG_CONG_UPDATE",
+        )
+        self.assert_ints(
+            socket,
+            "RDS_RDMA_READWRITE RDS_RDMA_FENCE RDS_RDMA_INVALIDATE RDS_RDMA_USE_ONCE "
+            "RDS_RDMA_DONTWAIT RDS_RDMA_NOTIFY_ME RDS_RDMA_SILENT",
+        )
+        self.assert_ints(
+            socket,
+            "TCP_CC_INFO TCP_SAVE_SYN TCP_SAVED_SYN TCP_REPAIR_WINDOW "
+            "TCP_FASTOPEN_CONNECT TCP_ULP TCP_MD5SIG_EXT TCP_FASTOPEN_KEY "
+            "TCP_FASTOPEN_NO_COOKIE TCP_ZEROCOPY_RECEIVE TCP_INQ TCP_TX_DELAY",
+            since=(3, 12),
+        )
+
+    def test_tcp_notsent_lowat(self):
+        import errno
+        import socket
+
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            try:
+                sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT, 4096)
+            except OSError as exc:
+                if exc.errno == errno.ENOPROTOOPT:
+                    self.skipTest("runtime kernel lacks TCP_NOTSENT_LOWAT")
+                raise
+            self.assertEqual(
+                sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_NOTSENT_LOWAT), 4096
+            )
+
+    def test_clock_poll_and_memory_constants(self):
+        import mmap
+        import select
+        import time
+
+        self.assertEqual(time.CLOCK_TAI, 11)
+        self.assertEqual(select.EPOLLEXCLUSIVE, 1 << 28)
+        self.assert_ints(mmap, "MADV_FREE MADV_SOFT_OFFLINE")
+
+
 if __name__ == "__main__":
     unittest.main()

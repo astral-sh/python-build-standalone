@@ -1,0 +1,47 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -7670,6 +7670,10 @@
+         all_flags |= POSIX_SPAWN_SETSID;
+ #elif defined(POSIX_SPAWN_SETSID_NP)
+         all_flags |= POSIX_SPAWN_SETSID_NP;
++#elif defined(__linux__) && defined(__GLIBC__)
++        // POSIX_SPAWN_SETSID was added in glibc 2.26.
++        // Older glibc returns EINVAL from posix_spawnattr_setflags.
++        all_flags |= 0x80;
+ #else
+         argument_unavailable_error(func_name, "setsid");
+         return -1;
+diff --git a/Lib/test/test_os/test_posix.py b/Lib/test/test_os/test_posix.py
+--- a/Lib/test/test_os/test_posix.py
++++ b/Lib/test/test_os/test_posix.py
+@@ -2134,6 +2134,12 @@
+                 self.skipTest(f"setsid is not supported: {exc!r}")
+             except PermissionError as exc:
+                 self.skipTest(f"setsid failed with: {exc!r}")
++            except OSError as exc:
++                if exc.errno == errno.EINVAL:
++                    libc, version = platform.libc_ver()
++                    if libc == "glibc" and tuple(map(int, version.split("."))) < (2, 26):
++                        self.skipTest("setsid requires glibc 2.26 or later")
++                raise
+         finally:
+             os.close(wfd)
+ 
+diff --git a/Doc/library/os.rst b/Doc/library/os.rst
+--- a/Doc/library/os.rst
++++ b/Doc/library/os.rst
+@@ -5435,8 +5435,11 @@
+ 
+    If the *setsid* argument is ``True``, it will create a new session ID
+    for ``posix_spawn``. *setsid* requires :c:macro:`!POSIX_SPAWN_SETSID`
+-   or :c:macro:`!POSIX_SPAWN_SETSID_NP` flag. Otherwise, :exc:`NotImplementedError`
+-   is raised.
++   or :c:macro:`!POSIX_SPAWN_SETSID_NP` flag. On Linux builds using glibc,
++   this requires glibc 2.26 or later at runtime. Older glibc versions raise
++   :exc:`OSError` with :data:`errno.EINVAL`. On other builds,
++   :exc:`NotImplementedError` is raised if neither flag was available at
++   build time.
+ 
+    The *setsigmask* argument will set the signal mask to the signal set
+    specified. If the parameter is not used, then the child inherits the

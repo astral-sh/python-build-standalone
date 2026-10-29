@@ -1,43 +1,39 @@
-# Debian Trixie.
-FROM debian@sha256:5e64db7e29879fbb479ab2c6324656c9c0e489423e4885ed7e2f22c5b58a7a9b
-LABEL org.opencontainers.image.authors="Gregory Szorc <gregory.szorc@gmail.com>"
+{% include 'base.debian13.Dockerfile' %}
 
-RUN groupadd -g 1000 build && \
-    useradd -u 1000 -g 1000 -d /build -s /bin/bash -m build && \
-    mkdir /tools && \
-    chown -R build:build /build /tools
+RUN apt-get install mmdebstrap gpgv debian-ports-archive-keyring
+# mmdebstrap's APT hooks use file descriptors above 9.
+RUN ln -sf bash /bin/sh
 
-ENV HOME=/build \
-    SHELL=/bin/bash \
-    USER=build \
-    LOGNAME=build \
-    HOSTNAME=builder \
-    DEBIAN_FRONTEND=noninteractive
+# The 2024 Debian Ports key has expired. Verify its signature and pin the
+# authenticated InRelease so another signed snapshot cannot be substituted.
+RUN echo '12a48a67e7880fa5c6398e66d01d9306f65b4baba11df4eb317674a7919f3439  snapshot.debian.org_archive_debian-ports_20240812T192057Z_dists_unstable_InRelease' \
+        > /loong64-metadata.sha256
+RUN mmdebstrap --variant=extract --mode=root \
+    --skip=chroot/mount,cleanup/apt/lists \
+    --architectures=loong64 \
+    --keyring=/usr/share/keyrings/debian-ports-archive-keyring-removed.gpg \
+    --aptopt='Acquire::Check-Valid-Until "false"' \
+    --aptopt='Acquire::Retries "5"' \
+    --aptopt='APT::Update::Error-Mode "any"' \
+    --aptopt='DPkg::Chroot-Directory ""' \
+    --aptopt='Apt::Key::gpgvcommand "/usr/libexec/mmdebstrap/gpgvnoexpkeysig"' \
+    --aptopt='APT::Update::Post-Invoke { "cd /sysroot/var/lib/apt/lists && sha256sum --check --strict /loong64-metadata.sha256"; }' \
+    --include=libc6-dev,linux-libc-dev,libcrypt-dev,libgcc-14-dev,libstdc++-14-dev \
+    unstable /sysroot \
+    'deb [signed-by=01C2D6F3D1A46AD1C0DC2F3D8D69674688B6CB36!] https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/ unstable main'
 
-CMD ["/bin/bash", "--login"]
-WORKDIR '/build'
+# Keep the native multiarch layout, including the merged-/usr aliases used
+# by libc's linker script and the ELF interpreter.
+RUN mkdir -p /target/usr && \
+    mv /sysroot/usr/include /sysroot/usr/lib /sysroot/usr/lib64 /target/usr/ && \
+    ln -s usr/lib /target/lib && \
+    ln -s usr/lib64 /target/lib64
 
-RUN for s in debian_trixie debian_trixie-updates; do \
-      echo "deb http://snapshot.debian.org/archive/${s%_*}/20240812T212427Z/ ${s#*_} main"; \
-    done > /etc/apt/sources.list && \
-    for s in debian-security_trixie-security/updates; do \
-      echo "deb http://snapshot.debian.org/archive/${s%_*}/20240813T064849Z/ ${s#*_} main"; \
-    done >> /etc/apt/sources.list && \
-    ( echo 'quiet "true";'; \
-      echo 'APT::Get::Assume-Yes "true";'; \
-      echo 'APT::Install-Recommends "false";'; \
-      echo 'Acquire::Check-Valid-Until "false";'; \
-      echo 'Acquire::Retries "5";'; \
-    ) > /etc/apt/apt.conf.d/99cpython-portable && \
-    rm -f /etc/apt/sources.list.d/*
-
-RUN apt-get update
+{% include 'base.debian13.Dockerfile' %}
 
 # Host building.
 RUN apt-get install \
     bzip2 \
-    ca-certificates \
-    curl \
     gcc \
     g++ \
     libc6-dev \
@@ -52,14 +48,4 @@ RUN apt-get install \
     zip \
     zlib1g-dev
 
-RUN apt-get install \
-    g++-loongarch64-linux-gnu \
-    gcc-loongarch64-linux-gnu \
-    libc6-dev-loong64-cross
-
-RUN cd /tmp && \
-    curl -LO https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/pool-loong64/main/libx/libxcrypt/libcrypt-dev_4.4.36-4_loong64.deb && \
-    curl -LO https://snapshot.debian.org/archive/debian-ports/20240812T192057Z/pool-loong64/main/libx/libxcrypt/libcrypt1_4.4.36-4_loong64.deb && \
-    dpkg -x libcrypt-dev_4.4.36-4_loong64.deb / && \
-    dpkg -x libcrypt1_4.4.36-4_loong64.deb / && \
-    rm -f /tmp/*.deb
+COPY --from=0 /target/ /usr/loongarch64-linux-gnu/

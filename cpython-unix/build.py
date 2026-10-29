@@ -380,9 +380,11 @@ def build_libedit(
                 linux_llvm_setup_script=SUPPORT / "setup-llvm-aliases.sh",
             )
 
-        build_env.install_artifact_archive(
-            BUILD, "ncurses", target_triple, build_options
-        )
+        for package in ("autoconf", "m4", "ncurses"):
+            build_env.install_artifact_archive(
+                BUILD, package, target_triple, build_options
+            )
+
         build_env.copy_file(libedit_archive)
         build_env.copy_file(SUPPORT / "build-libedit.sh")
 

@@ -1121,7 +1121,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
             let strings = sections.strings(endian, data, index).unwrap_or_default();
 
             for entry in entries {
-                if entry.tag32(endian) == Some(object::elf::DT_NEEDED) {
+                if entry.tag(endian) == object::elf::DT_NEEDED {
                     let lib = entry.string(endian, strings)?;
                     let lib = String::from_utf8(lib.to_vec())?;
 
@@ -1176,17 +1176,22 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     }
                 }
 
-                match entry.tag32(endian) {
-                    Some(DT_BIND_NOW) => has_bind_now = true,
-                    Some(DT_FLAGS) => {
-                        let flags = entry.val32(endian).unwrap_or_default();
-                        has_bind_now |= flags & DF_BIND_NOW != 0;
-                        has_text_relocations |= flags & DF_TEXTREL != 0;
+                match entry.tag(endian) {
+                    DT_BIND_NOW => has_bind_now = true,
+                    DT_FLAGS => {
+                        let flags = object::elf::DynamicFlags(
+                            entry.val32(endian).unwrap_or_default().into(),
+                        );
+                        has_bind_now |= flags.contains(DF_BIND_NOW);
+                        has_text_relocations |= flags.contains(DF_TEXTREL);
                     }
-                    Some(DT_FLAGS_1) => {
-                        has_bind_now |= entry.val32(endian).unwrap_or_default() & DF_1_NOW != 0;
+                    DT_FLAGS_1 => {
+                        let flags = object::elf::DynamicFlags1(
+                            entry.val32(endian).unwrap_or_default().into(),
+                        );
+                        has_bind_now |= flags.contains(DF_1_NOW);
                     }
-                    Some(DT_TEXTREL) => has_text_relocations = true,
+                    DT_TEXTREL => has_text_relocations = true,
                     _ => {}
                 }
             }
@@ -1217,7 +1222,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                     if let Some(versions) = &versions {
                         let version_index = versions.version_index(endian, symbol_index);
 
-                        if let Some(version) = versions.version(version_index)? {
+                        if let Some(version) = versions.version(version_index.into())? {
                             let version = String::from_utf8_lossy(version.name()).to_string();
 
                             Some(version)
@@ -1317,14 +1322,14 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
                 }
                 PT_GNU_STACK => {
                     found_pt_gnu_stack = true;
-                    if flags & PF_X != 0 {
+                    if flags.contains(PF_X) {
                         context
                             .errors
                             .push(format!("{} requests executable stack", path.display()));
                     }
                 }
                 PT_GNU_RELRO => found_pt_gnu_relro = true,
-                PT_LOAD if flags & (PF_W | PF_X) == (PF_W | PF_X) => {
+                PT_LOAD if flags.contains(PF_W | PF_X) => {
                     context.errors.push(format!(
                         "{} has a writable and executable PT_LOAD segment",
                         path.display(),
@@ -1436,7 +1441,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
         ));
     }
 
-    if header.filetype(endian) != MH_OBJECT && header.flags(endian) & MH_TWOLEVEL == 0 {
+    if header.filetype(endian) != MH_OBJECT && !header.flags(endian).contains(MH_TWOLEVEL) {
         context.errors.push(format!(
             "{} does not use two-level symbol lookup",
             path.display()
@@ -1454,22 +1459,22 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
     while let Some(load_command) = load_commands.next()? {
         match load_command.variant()? {
-            LoadCommandVariant::BuildVersion(v) => {
+            LoadCommandVariant::BuildVersion(v, _) => {
                 // Sometimes the SDK version is advertised as 0.0.0. In that case just ignore it.
-                let version = parse_version_nibbles(v.sdk.get(endian));
+                let version = parse_version_nibbles(v.sdk.get(endian).0);
                 if version > semver::Version::new(0, 0, 0) {
                     sdk_version = Some(version);
                 }
 
-                target_version = Some(parse_version_nibbles(v.minos.get(endian)));
+                target_version = Some(parse_version_nibbles(v.minos.get(endian).0));
             }
             LoadCommandVariant::VersionMin(v) => {
-                let version = parse_version_nibbles(v.sdk.get(endian));
+                let version = parse_version_nibbles(v.sdk.get(endian).0);
                 if version > semver::Version::new(0, 0, 0) {
                     sdk_version = Some(version);
                 }
 
-                target_version = Some(parse_version_nibbles(v.version.get(endian)));
+                target_version = Some(parse_version_nibbles(v.version.get(endian).0));
             }
             LoadCommandVariant::Dylib(command) => {
                 let raw_string = load_command.string(endian, command.dylib.name)?;
@@ -1490,7 +1495,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
 
                 if let Some(entry) = allowed.iter().find(|l| l.name == lib) {
                     let load_version =
-                        MachOPackedVersion::from(command.dylib.compatibility_version.get(endian));
+                        MachOPackedVersion::from(command.dylib.compatibility_version.get(endian).0);
 
                     if load_version > entry.max_compatibility_version {
                         context.errors.push(format!(
@@ -1522,8 +1527,8 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                     if symbol.is_undefined() {
                         undefined_symbols.push(MachOSymbol {
                             name: name.clone(),
-                            library_ordinal: symbol.library_ordinal(endian),
-                            weak: symbol.n_desc(endian) & (object::macho::N_WEAK_REF) != 0,
+                            library_ordinal: symbol.library_ordinal(endian).0,
+                            weak: symbol.n_desc(endian).contains(object::macho::N_WEAK_REF),
                         });
                     }
 
@@ -1532,11 +1537,11 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                     if header.filetype(endian) != MH_OBJECT {
                         let n_type = symbol.n_type();
 
-                        let scope = if n_type & object::macho::N_TYPE == object::macho::N_UNDF {
+                        let scope = if n_type.typ() == object::macho::N_UNDF {
                             SymbolScope::Unknown
-                        } else if n_type & object::macho::N_EXT == 0 {
+                        } else if !n_type.is_ext() {
                             SymbolScope::Compilation
-                        } else if n_type & object::macho::N_PEXT != 0 {
+                        } else if n_type.is_pext() {
                             SymbolScope::Linkage
                         } else {
                             SymbolScope::Dynamic
@@ -1574,15 +1579,19 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
                 }
             }
             LoadCommandVariant::Segment32(segment, segment_data) => {
-                for section in segment.sections(endian, segment_data)? {
-                    if let Some((offset, _)) = section.file_range(endian) {
+                let sections = segment.sections(endian, segment_data)?;
+                for section in segment.section_offsets(endian, sections) {
+                    let (section, offset) = section?;
+                    if let Some((offset, _)) = section.file_range(endian, offset) {
                         lowest_file_offset = lowest_file_offset.min(offset);
                     }
                 }
             }
             LoadCommandVariant::Segment64(segment, segment_data) => {
-                for section in segment.sections(endian, segment_data)? {
-                    if let Some((offset, _)) = section.file_range(endian) {
+                let sections = segment.sections(endian, segment_data)?;
+                for section in segment.section_offsets(endian, sections) {
+                    let (section, offset) = section?;
+                    if let Some((offset, _)) = section.file_range(endian, offset) {
                         lowest_file_offset = lowest_file_offset.min(offset);
                     }
                 }
@@ -1632,7 +1641,7 @@ fn validate_macho<Mach: MachHeader<Endian = Endianness>>(
     if header.filetype(endian) != MH_OBJECT {
         for symbol in undefined_symbols {
             // Assume undefined symbols provided by current library will resolve.
-            if symbol.library_ordinal == object::macho::SELF_LIBRARY_ORDINAL {
+            if symbol.library_ordinal == object::macho::SELF_LIBRARY_ORDINAL.0 {
                 continue;
             }
 
@@ -1705,11 +1714,18 @@ fn validate_pe<'data, Pe: ImageNtHeaders>(
         .ok_or_else(|| anyhow!("should be able to resolve filename"))?
         .to_string_lossy();
 
-    if filename.starts_with("python") && filename.ends_with(".dll") {
-        for symbol in pe.exports()? {
-            context
-                .libpython_exported_symbols
-                .insert(String::from_utf8(symbol.name().to_vec())?);
+    if filename.starts_with("python")
+        && filename.ends_with(".dll")
+        && let Some(exports) = pe.export_table()?
+    {
+        for (name_pointer, address_index) in exports.name_iter() {
+            let name = exports.name_from_pointer(name_pointer)?;
+            let address = exports.address_by_index(address_index)?;
+            if !exports.is_forward(address) {
+                context
+                    .libpython_exported_symbols
+                    .insert(String::from_utf8(name.to_vec())?);
+            }
         }
     }
 

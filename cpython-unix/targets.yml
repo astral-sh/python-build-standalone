@@ -357,7 +357,7 @@ loongarch64-unknown-linux-gnu:
   target_cflags:
     - '--target=loongarch64-unknown-linux-gnu'
     - '--sysroot=/usr/loongarch64-linux-gnu'
-    - '--gcc-install-dir=/usr/lib/gcc-cross/loongarch64-linux-gnu/14'
+    - '--gcc-install-dir=/usr/loongarch64-linux-gnu/usr/lib/gcc/loongarch64-linux-gnu/14'
     - '-fuse-ld=lld'
     - '-Wno-unused-command-line-argument'
     # Hardening
@@ -367,7 +367,7 @@ loongarch64-unknown-linux-gnu:
   target_ldflags:
     - '--target=loongarch64-unknown-linux-gnu'
     - '--sysroot=/usr/loongarch64-linux-gnu'
-    - '--gcc-install-dir=/usr/lib/gcc-cross/loongarch64-linux-gnu/14'
+    - '--gcc-install-dir=/usr/loongarch64-linux-gnu/usr/lib/gcc/loongarch64-linux-gnu/14'
     - '-fuse-ld=lld'
     # Hardening
     - '-Wl,-z,noexecstack'

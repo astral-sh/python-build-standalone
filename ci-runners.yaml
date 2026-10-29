@@ -35,7 +35,7 @@ windows-latest-large:
   platform: windows
   free: false
 
-depot-windows-2025-8:
+namespace-profile-windows-2022-x86-64-16x32:
   arch: x86_64
   platform: windows
   free: false

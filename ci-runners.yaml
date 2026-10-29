@@ -35,7 +35,7 @@ windows-latest-large:
   platform: windows
   free: false
 
-github-windows-2025-x86_64-8:
+depot-windows-2025-8:
   arch: x86_64
   platform: windows
   free: false

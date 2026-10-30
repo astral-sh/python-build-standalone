@@ -63,6 +63,29 @@ $ ./build.py --target-triple riscv64-unknown-linux-gnu
 $ ./build.py --target-triple s390x-unknown-linux-gnu
 ```
 
+### Training PGO with an external workload
+
+For `x86_64-unknown-linux-gnu` and `aarch64-unknown-linux-gnu`, you can build
+an instrumented interpreter, collect profiles outside the build, and apply
+those profiles in a separate optimized build. Use the same CPython source,
+target triple, and build options (`pgo` or `pgo+lto`) for both builds.
+
+```sh
+./build.py --python cpython-3.13 --target-triple x86_64-unknown-linux-gnu --options pgo+lto --pgo-instrument
+tar --extract --zstd --file dist/cpython-3.13.*-x86_64-unknown-linux-gnu-pgo+lto-instrumented-*.tar.zst
+mkdir -p profiles
+LLVM_PROFILE_FILE="$(pwd)/profiles/%m-%p.profraw" python/install/bin/python3 workload.py
+llvm-profdata merge --output=workload.profdata profiles/*.profraw
+./build.py --python cpython-3.13 --target-triple x86_64-unknown-linux-gnu --options pgo+lto --pgo-profile "$(pwd)/workload.profdata"
+```
+
+Replace `workload.py` with the workload you want to optimize. The instrumented
+archive can be moved to another compatible machine for collection. Merge the
+raw profiles with an `llvm-profdata` version matching the LLVM toolchain used
+to build the interpreter. The final archive name includes a hash of the merged
+profile; ordinary PGO builds use a separate archive. On targets that support
+BOLT, the final build still runs its BOLT training workload.
+
 ### Jessie image package authentication
 
 The `build`, `gcc`, and `rust` Dockerfiles include

@@ -137,10 +137,12 @@ jobs:
     outputs:
       python-build-matrix-0: ${{ steps.set-matrix.outputs.python-build-matrix-0 }}
       python-build-matrix-1: ${{ steps.set-matrix.outputs.python-build-matrix-1 }}
+      python-build-matrix-2: ${{ steps.set-matrix.outputs.python-build-matrix-2 }}
       docker-build-matrix: ${{ steps.set-matrix.outputs.docker-build-matrix }}
       crate-build-matrix: ${{ steps.set-matrix.outputs.crate-build-matrix }}
       has-builds-0: ${{ steps.set-matrix.outputs.has-builds-0 }}
       has-builds-1: ${{ steps.set-matrix.outputs.has-builds-1 }}
+      has-builds-2: ${{ steps.set-matrix.outputs.has-builds-2 }}
       has-crate-builds: ${{ steps.set-matrix.outputs.has-crate-builds }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -180,17 +182,19 @@ jobs:
           uv run ci-matrix.py \
             --platform linux \
             --labels "${STEPS_GET_LABELS_OUTPUTS_LABELS}" \
-            --max-shards 2 \
+            --max-shards 3 \
             --event ${{ github.event_name }} \
             ${{ (steps.check-pythonbuild.outputs.changed == 'true' || github.ref == 'refs/heads/main') && '--force-crate-build' || '' }} \
             > matrix.json
 
           echo "python-build-matrix-0=$(jq -c '."python-build"["0"]' matrix.json)" >> $GITHUB_OUTPUT
           echo "python-build-matrix-1=$(jq -c '."python-build"["1"]' matrix.json)" >> $GITHUB_OUTPUT
+          echo "python-build-matrix-2=$(jq -c '."python-build"["2"]' matrix.json)" >> $GITHUB_OUTPUT
           echo "docker-build-matrix=$(jq -c '."docker-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "crate-build-matrix=$(jq -c '."crate-build"' matrix.json)" >> $GITHUB_OUTPUT
           echo "has-builds-0=$(jq '."python-build"["0"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
           echo "has-builds-1=$(jq '."python-build"["1"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
+          echo "has-builds-2=$(jq '."python-build"["2"].include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
           echo "has-crate-builds=$(jq '."crate-build".include | length > 0' matrix.json)" >> $GITHUB_OUTPUT
 
           # Display the matrix for debugging too
@@ -349,6 +353,23 @@ jobs:
     runs-on: ${{ matrix.runner }}
     strategy:
       matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-1) }}
+      fail-fast: false
+    name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
+    steps: *build_steps
+
+  build-2:
+    if: ${{ needs.generate-matrix.outputs.has-builds-2 == 'true' }}
+    needs:
+      - generate-matrix
+      - crate-build
+      - image
+    # Permissions used for actions/attest-build-provenance
+    permissions:
+      id-token: write
+      attestations: write
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.python-build-matrix-2) }}
       fail-fast: false
     name: ${{ matrix.target_triple }} / ${{ matrix.python }} / ${{ matrix.build_options }}
     steps: *build_steps

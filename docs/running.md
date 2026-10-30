@@ -164,6 +164,24 @@ maximum portability, stick with the baseline `x86_64` builds.
 
 : Linux 64-bit POWER8+ CPUs linking against GNU libc.
 
+`ppc64le_power9-unknown-linux-gnu`
+
+: Linux 64-bit POWER9+ CPUs linking against GNU libc.
+
+    Compiled with `-mcpu=pwr9 -mtune=pwr9`.
+
+`ppc64le_power10-unknown-linux-gnu`
+
+: Linux 64-bit POWER10+ CPUs linking against GNU libc.
+
+    Compiled with `-mcpu=pwr10 -mtune=pwr10`.
+
+`ppc64le_power11-unknown-linux-gnu`
+
+: Linux 64-bit POWER11 CPUs linking against GNU libc.
+
+    Compiled with `-mcpu=pwr11 -mtune=pwr11`.
+
 `riscv64-unknown-linux-gnu`
 
 : Linux 64-bit RISC-V CPUs linking against GNU libc.

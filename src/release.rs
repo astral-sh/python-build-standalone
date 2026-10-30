@@ -555,6 +555,13 @@ pub fn convert_to_install_only<W: Write>(reader: impl BufRead, writer: W) -> Res
         let new_path = PathBuf::from("python").join(path.strip_prefix("python/install/")?);
 
         let mut header = entry.header().clone();
+        // `set_path` leaves the rest of the original path in place after the
+        // new path's NUL terminator, and leaves a stale ustar prefix when the
+        // new path fits in the name field. Clear both first.
+        header.as_old_mut().name.fill(0);
+        if let Some(ustar) = header.as_ustar_mut() {
+            ustar.prefix.fill(0);
+        }
         header.set_path(&new_path)?;
         header.set_cksum();
 
@@ -755,6 +762,94 @@ mod tests {
 
         assert!(!should_strip(Path::new("tcl90.dll"), &unsigned));
         assert!(!should_strip(Path::new("tcl9tk90.dll"), &unsigned));
+    }
+
+    fn full_archive(entries: &[(&str, &[u8])]) -> Vec<u8> {
+        let python_json = serde_json::json!({
+            "build_info": {
+                "core": {"objs": [], "links": []},
+                "extensions": {},
+                "inittab_object": "",
+                "inittab_source": "",
+                "inittab_cflags": [],
+                "object_file_format": "elf",
+            },
+            "build_options": "pgo+lto",
+            "crt_features": [],
+            "libpython_link_mode": "static",
+            "optimizations": "pgo+lto",
+            "python_bytecode_magic_number": "",
+            "python_config_vars": {},
+            "python_exe": "install/bin/python3",
+            "python_extension_module_loading": [],
+            "python_implementation_cache_tag": "cpython-313",
+            "python_implementation_hex_version": 0,
+            "python_implementation_name": "cpython",
+            "python_implementation_version": [],
+            "python_major_minor_version": "3.13",
+            "python_paths_abstract": {},
+            "python_paths": {"stdlib": "install/lib/python3.13"},
+            "python_platform_tag": "",
+            "python_stdlib_test_packages": [],
+            "python_suffixes": {},
+            "python_symbol_visibility": "",
+            "python_tag": "cp313",
+            "python_version": "3.13.0",
+            "target_triple": "x86_64-unknown-linux-gnu",
+            "run_tests": "",
+            "version": "8",
+        });
+        let python_json = serde_json::to_vec(&python_json).unwrap();
+
+        let mut builder = tar::Builder::new(vec![]);
+        for (path, data) in std::iter::once(("python/PYTHON.json", python_json.as_slice()))
+            .chain(entries.iter().copied())
+        {
+            let mut header = tar::Header::new_ustar();
+            header.set_path(path).unwrap();
+            header.set_size(data.len() as u64);
+            header.set_mode(0o644);
+            header.set_cksum();
+            builder.append(&header, data).unwrap();
+        }
+
+        zstd::encode_all(builder.into_inner().unwrap().as_slice(), 0).unwrap()
+    }
+
+    #[test]
+    fn install_only_clears_stale_header_path_bytes() {
+        let long_name = format!(
+            "python/install/lib/python3.13/site-packages/{}.py",
+            "x".repeat(60)
+        );
+        let full = full_archive(&[("python/install/bin/idle3.13", b""), (&long_name, b"")]);
+
+        let install_only = convert_to_install_only(full.as_slice(), vec![]).unwrap();
+        let mut tar = vec![];
+        flate2::read::GzDecoder::new(install_only.as_slice())
+            .read_to_end(&mut tar)
+            .unwrap();
+
+        let mut names = vec![];
+        for header in tar.as_chunks::<512>().0 {
+            let header = tar::Header::from_byte_slice(header);
+            let Some(ustar) = header.as_ustar() else {
+                continue;
+            };
+
+            let len = ustar.name.iter().position(|b| *b == 0).unwrap_or(100);
+            assert!(ustar.name[len..].iter().all(|b| *b == 0));
+            assert!(ustar.prefix.iter().all(|b| *b == 0));
+            names.push(String::from_utf8(ustar.name[..len].to_vec()).unwrap());
+        }
+
+        assert_eq!(
+            names,
+            [
+                "python/bin/idle3.13".to_string(),
+                long_name.replace("python/install/", "python/"),
+            ]
+        );
     }
 }
 

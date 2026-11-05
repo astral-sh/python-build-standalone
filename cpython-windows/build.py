@@ -69,7 +69,7 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_decimal": {},
     "_elementtree": {},
     "_hashlib": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64"],
+        "shared_depends_amd64": ["libcrypto-3"],
         "shared_depends_win32": ["libcrypto-1_1"],
     },
     "_lzma": {
@@ -87,10 +87,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     },
     "_socket": {},
     "_sqlite3": {"shared_depends": ["sqlite3"]},
-    # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
-    # project files.
     "_ssl": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64", "libssl-1_1-x64"],
+        "shared_depends_amd64": ["libcrypto-3", "libssl-3"],
         "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
     },
     "_tkinter": {
@@ -440,30 +438,8 @@ LIBFFI_PROPS_REMOVE_RULES = b"""
 """
 
 
-def hack_openssl_props(pcbuild_path: pathlib.Path, arch: str):
-    # We want to statically link against OpenSSL. This requires using our own
-    # OpenSSL build. This requires some hacking of various files.
-    openssl_props = pcbuild_path / "openssl.props"
-
-    if arch == "amd64":
-        suffix = b"-x64"
-    elif arch == "win32":
-        suffix = b""
-    elif arch == "arm64":
-        suffix = b""
-    else:
-        raise Exception(f"unhandled architecture: {arch}")
-
-    static_replace_in_file(
-        openssl_props,
-        b"<_DLLSuffix>-3</_DLLSuffix>",
-        b"<_DLLSuffix>-3%s</_DLLSuffix>" % suffix,
-    )
-
-
 def hack_project_files(
     cpython_source_path: pathlib.Path,
-    build_directory: str,
     python_version: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
@@ -471,7 +447,6 @@ def hack_project_files(
     pcbuild_path = cpython_source_path / "PCbuild"
 
     apply_cpython_patches(cpython_source_path, python_version)
-    hack_openssl_props(pcbuild_path, build_directory)
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -607,7 +582,7 @@ def build_openssl_for_arch(
         configure = "VC-WIN32"
         prefix = "32"
     elif arch == "amd64":
-        configure = "VC-WIN64A"
+        configure = "VC-WIN64A-masm"
         prefix = "64"
     elif arch == "arm64":
         configure = "VC-WIN64-ARM"
@@ -1402,11 +1377,7 @@ def build_cpython(
 
         builtin_extensions = parse_config_c(config_c)
 
-        hack_project_files(
-            cpython_source_path,
-            build_directory,
-            python_version=python_version,
-        )
+        hack_project_files(cpython_source_path, python_version=python_version)
 
         if pgo:
             run_msbuild(

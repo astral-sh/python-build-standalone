@@ -362,15 +362,6 @@ POLICIES: dict[str, Policy] = {
         artifact_name="openssl-{version}.tar.gz",
         series=2,
     ),
-    "nasm-windows-bin": html_policy(
-        "https://www.nasm.us/pub/nasm/releasebuilds/",
-        r"^(?P<version>[0-9][0-9.]*)/$",
-        artifact_url=(
-            "https://www.nasm.us/pub/nasm/releasebuilds/{version}/win64/"
-            "nasm-{version}-win64.zip"
-        ),
-        mirrored=True,
-    ),
     "patchelf": github_policy(
         "NixOS/patchelf",
         r"(?P<version>[0-9.]+)",

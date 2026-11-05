@@ -550,27 +550,20 @@ def build_openssl_for_arch(
     arch: str,
     openssl_archive,
     openssl_version: str,
-    nasm_archive,
     build_root: pathlib.Path,
     *,
     jom_archive,
     with_uplink: bool = False,
 ):
-    nasm_version = DOWNLOADS["nasm-windows-bin"]["version"]
-
     log(f"extracting {openssl_archive} to {build_root}")
     extract_tar_to_directory(openssl_archive, build_root)
-    log(f"extracting {nasm_archive} to {build_root}")
-    extract_zip_to_directory(nasm_archive, build_root)
     log(f"extracting {jom_archive} to {build_root}")
     extract_zip_to_directory(jom_archive, build_root / "jom")
 
-    nasm_path = build_root / f"nasm-{nasm_version}"
     jom_path = build_root / "jom"
 
     env = dict(os.environ)
-    # Add Perl and nasm paths to front of PATH.
-    env["PATH"] = f"{perl_path.parent};{nasm_path};{jom_path};{env['PATH']}"
+    env["PATH"] = f"{perl_path.parent};{jom_path};{env['PATH']}"
 
     source_root = build_root / f"openssl-{openssl_version}"
 
@@ -660,7 +653,6 @@ def build_openssl(
 
     # First ensure the dependencies are in place.
     openssl_archive = download_entry(entry, BUILD)
-    nasm_archive = download_entry("nasm-windows-bin", BUILD)
     jom_archive = download_entry("jom-windows-bin", BUILD)
 
     with tempfile.TemporaryDirectory(prefix="openssl-build-") as td:
@@ -677,7 +669,6 @@ def build_openssl(
                 "x86",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_32,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,
@@ -689,7 +680,6 @@ def build_openssl(
                 "amd64",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_64,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,
@@ -701,7 +691,6 @@ def build_openssl(
                 "arm64",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_arm64,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,

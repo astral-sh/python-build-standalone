@@ -70,7 +70,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_elementtree": {},
     "_hashlib": {
         "shared_depends_amd64": ["libcrypto-3"],
-        "shared_depends_win32": ["libcrypto-1_1"],
+        "shared_depends_arm64": ["libcrypto-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3"],
     },
     "_lzma": {
         "ignore_additional_depends": {"$(OutDir)liblzma$(PyDebugExt).lib"},
@@ -89,7 +90,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_sqlite3": {"shared_depends": ["sqlite3"]},
     "_ssl": {
         "shared_depends_amd64": ["libcrypto-3", "libssl-3"],
-        "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
+        "shared_depends_arm64": ["libcrypto-3-arm64", "libssl-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3", "libssl-3"],
     },
     "_tkinter": {
         "ignore_additional_depends": {"$(tcltkLib)"},
@@ -578,14 +580,15 @@ def build_openssl_for_arch(
         # builds. So update its source to look for it from there.
         apply_source_patch(source_root, SUPPORT / "patch-openssl-uplink.patch")
 
+    # Match the Python.org release build targets and their assembly settings.
     if arch == "x86":
-        configure = "VC-WIN32"
+        target_args = ["VC-WIN32", "no-asm"]
         prefix = "32"
     elif arch == "amd64":
-        configure = "VC-WIN64A-masm"
+        target_args = ["VC-WIN64A-masm"]
         prefix = "64"
     elif arch == "arm64":
-        configure = "VC-WIN64-ARM"
+        target_args = ["VC-WIN64-ARM"]
         prefix = "arm64"
     else:
         raise Exception(f"unhandled architecture: {arch}")
@@ -598,7 +601,7 @@ def build_openssl_for_arch(
     configure_args = [
         str(perl_path),
         "Configure",
-        configure,
+        *target_args,
         "no-idea",
         "no-mdc2",
         "no-tests",

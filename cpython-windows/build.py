@@ -414,32 +414,6 @@ def apply_cpython_patches(cpython_source_path: pathlib.Path, python_version: str
         apply_source_patch(cpython_source_path, SUPPORT / patch)
 
 
-OPENSSL_PROPS_REMOVE_RULES = rb"""
-  <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
-  </ItemGroup>
-  <Target Name="_CopySSLDLL"
-          Inputs="@(_SSLDLL)"
-          Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')"
-          Condition="$(SkipCopySSLDLL) == ''"
-          AfterTargets="Build">
-    <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-  <Target Name="_CleanSSLDLL" Condition="$(SkipCopySSLDLL) == ''" BeforeTargets="Clean">
-    <Delete Files="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" TreatErrorsAsWarnings="true" />
-  </Target>
-"""
-
-LIBFFI_PROPS_REMOVE_RULES = b"""
-  <Target Name="_CopyLIBFFIDLL" Inputs="@(_LIBFFIDLL)" Outputs="@(_LIBFFIDLL->'$(OutDir)%(Filename)%(Extension)')" AfterTargets="Build">
-    <Copy SourceFiles="@(_LIBFFIDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-"""
-
-
 def hack_project_files(
     cpython_source_path: pathlib.Path,
     python_version: str,

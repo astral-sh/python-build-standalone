@@ -17,7 +17,7 @@ from pythonbuild.mirror import CACHE_CONTROL, main
 
 
 class MirrorIntegrationTests(unittest.TestCase):
-    def test_uploads_artifacts_to_mock_s3(self) -> None:
+    def test_resumes_partial_mirror_upload(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             dist = Path(td) / "dist"
             dist.mkdir()
@@ -55,6 +55,14 @@ class MirrorIntegrationTests(unittest.TestCase):
                     aws_secret_access_key="testing",
                 )
                 s3.create_bucket(Bucket=bucket)
+                s3.put_bucket_versioning(
+                    Bucket=bucket, VersioningConfiguration={"Status": "Enabled"}
+                )
+                full_key = (
+                    prefix
+                    + "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
+                )
+                s3.put_object(Bucket=bucket, Key=full_key, Body=b"already published")
 
                 with mock.patch.dict(
                     os.environ,
@@ -65,31 +73,27 @@ class MirrorIntegrationTests(unittest.TestCase):
                         "AWS_ENDPOINT_URL": endpoint_url,
                     },
                 ):
-                    self.assertEqual(
-                        main(
-                            [
-                                "--dist",
-                                str(dist),
-                                "--tag",
-                                "20260324",
-                                "--bucket",
-                                bucket,
-                                "--prefix",
-                                prefix,
-                            ]
-                        ),
-                        0,
-                    )
+                    args = [
+                        "--dist",
+                        str(dist),
+                        "--tag",
+                        "20260324",
+                        "--bucket",
+                        bucket,
+                        "--prefix",
+                        prefix,
+                    ]
+                    self.assertEqual(main(args), 0)
+                    self.assertEqual(main(args), 0)
 
-                objects = s3.list_objects_v2(Bucket=bucket, Prefix=prefix)
+                objects = s3.list_object_versions(Bucket=bucket, Prefix=prefix)
                 self.assertEqual(
-                    sorted(obj["Key"] for obj in objects["Contents"]),
+                    sorted(obj["Key"] for obj in objects["Versions"]),
                     [
                         prefix + "SHA256SUMS",
                         prefix
                         + "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz",
-                        prefix
-                        + "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst",
+                        full_key,
                     ],
                 )
 

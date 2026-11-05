@@ -177,8 +177,13 @@ class S3MirrorClient:
     client: Boto3S3Client | None
     transfer_config: TransferConfig | None
     dry_run: bool
+    existing_keys: set[str]
 
     def upload_file(self, bucket: str, key: str, path: Path) -> None:
+        if key in self.existing_keys:
+            print(f"skipping existing s3://{bucket}/{key}")
+            return
+
         print(f"uploading {path.name} -> s3://{bucket}/{key}")
         if self.dry_run:
             return
@@ -215,13 +220,21 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         client = None
         transfer_config = None
+        existing_keys: set[str] = set()
         if not args.dry_run:
             client, transfer_config = make_s3_client()
+            pages = client.get_paginator("list_objects_v2").paginate(
+                Bucket=args.bucket, Prefix=args.prefix
+            )
+            existing_keys = {
+                obj["Key"] for page in pages for obj in page.get("Contents", [])
+            }
 
         mirror = S3MirrorClient(
             client=client,
             transfer_config=transfer_config,
             dry_run=args.dry_run,
+            existing_keys=existing_keys,
         )
 
         errors: list[str] = []

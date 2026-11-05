@@ -126,10 +126,12 @@ class MirrorTests(unittest.TestCase):
             def fail_upload(bucket: str, key: str, path: Path) -> None:
                 raise MirrorError(f"failed for {path.name}")
 
+            client = mock.Mock()
+            client.get_paginator.return_value.paginate.return_value = []
             with (
                 mock.patch(
                     "pythonbuild.mirror.make_s3_client",
-                    return_value=(object(), TransferConfig()),
+                    return_value=(client, TransferConfig()),
                 ),
                 mock.patch.object(
                     S3MirrorClient,

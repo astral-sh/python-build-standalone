@@ -70,7 +70,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_elementtree": {},
     "_hashlib": {
         "shared_depends_amd64": ["libcrypto-3"],
-        "shared_depends_win32": ["libcrypto-1_1"],
+        "shared_depends_arm64": ["libcrypto-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3"],
     },
     "_lzma": {
         "ignore_additional_depends": {"$(OutDir)liblzma$(PyDebugExt).lib"},
@@ -91,7 +92,8 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     # project files.
     "_ssl": {
         "shared_depends_amd64": ["libcrypto-3", "libssl-3"],
-        "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
+        "shared_depends_arm64": ["libcrypto-3-arm64", "libssl-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3", "libssl-3"],
     },
     "_tkinter": {
         "ignore_additional_depends": {"$(tcltkLib)"},

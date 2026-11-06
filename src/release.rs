@@ -638,6 +638,15 @@ pub fn convert_to_stripped<W: Write>(
     for entry in tar_in.entries()? {
         let mut entry = entry?;
 
+        // `.dSYM` bundles are retained only in archives with debugging symbols.
+        if entry.path()?.components().any(|component| {
+            Path::new(component.as_os_str())
+                .extension()
+                .is_some_and(|extension| extension == "dSYM")
+        }) {
+            continue;
+        }
+
         let mut data = vec![];
         entry.read_to_end(&mut data)?;
 
@@ -690,6 +699,43 @@ pub fn convert_to_stripped<W: Write>(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn stripped_archives_omit_complete_dsym_bundles() -> Result<()> {
+        let encoder = flate2::write::GzEncoder::new(vec![], flate2::Compression::default());
+        let mut archive = tar::Builder::new(encoder);
+        let paths = [
+            "python/bin/python3.15.dSYM/Contents/Info.plist",
+            "python/bin/python3.15.dSYM/Contents/Resources/DWARF/python3.15",
+            "python/lib/libpython3.15.dylib.dSYM/Contents/Resources/DWARF/libpython3.15.dylib",
+            "python/lib/python3.15/lib-dynload/_ssl.so.dSYM/Contents/Resources/DWARF/_ssl.so",
+            "python/lib/python3.15/example.dSYM.txt",
+        ];
+        for path in paths {
+            let mut header = tar::Header::new_gnu();
+            header.set_size(4);
+            header.set_mode(0o644);
+            header.set_cksum();
+            archive.append_data(&mut header, path, &b"data"[..])?;
+        }
+        let input = archive.into_inner()?.finish()?;
+        let output = convert_to_stripped(
+            std::io::Cursor::new(input),
+            vec![],
+            Path::new("unused-llvm-directory"),
+        )?;
+        let decoder = flate2::read::GzDecoder::new(output.as_slice());
+        let mut archive = tar::Archive::new(decoder);
+        let paths = archive
+            .entries()?
+            .map(|entry| Ok(entry?.path()?.into_owned()))
+            .collect::<Result<Vec<_>>>()?;
+        assert_eq!(
+            paths,
+            [PathBuf::from("python/lib/python3.15/example.dSYM.txt")]
+        );
+        Ok(())
+    }
 
     fn pe_with_certificate_table(
         optional_header_magic: u16,

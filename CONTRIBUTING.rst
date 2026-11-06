@@ -5,7 +5,7 @@ Contributing
 Building distributions
 ======================
 
-See the [documentation](https://gregoryszorc.com/docs/python-build-standalone/main/building.html)
+See the `documentation <https://docs.astral.sh/python-build-standalone/building/>`_
 for instructions on building distributions locally.
 
 Pull request labels

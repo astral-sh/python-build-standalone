@@ -34,6 +34,16 @@ fi
 # PATH. The macro it is using allows us to specify its path via an
 # environment variable.
 export LLVM_PROFDATA=${TOOLS_PATH}/${TOOLCHAIN}/bin/llvm-profdata
+if [ -n "${CPYTHON_PGO_PROFILE_HASH}" ]; then
+    if ! printf '%s  %s\n' "${CPYTHON_PGO_PROFILE_HASH}" "${ROOT}/pgo.profdata" | sha256sum --check --status; then
+        echo "PGO profile changed after the build started" >&2
+        exit 1
+    fi
+    if ! "${LLVM_PROFDATA}" show --instr "${ROOT}/pgo.profdata" >/dev/null; then
+        echo "Invalid PGO profile: expected LLVM instrumentation data compatible with the build toolchain" >&2
+        exit 1
+    fi
+fi
 
 # autoconf has some paths hardcoded into scripts. These paths just work in
 # the containerized build environment. But from macOS the paths are wrong.
@@ -783,9 +793,26 @@ if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}
     printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
 fi
 
-make -j "${NUM_CPUS}"
-make -j "${NUM_CPUS}" sharedinstall DESTDIR="${ROOT}/out/python"
-make -j "${NUM_CPUS}" install DESTDIR="${ROOT}/out/python"
+install_make_args=()
+if [ -n "${CPYTHON_PGO_INSTRUMENT}" ]; then
+    # External workloads can be multithreaded. Set the interpreter RPATH at
+    # link time so packaging does not rewrite its LLVM profile counters.
+    cat >> Makefile <<'EOF'
+PGO_PROF_GEN_FLAG += -fprofile-update=atomic
+$(BUILDPYTHON): LINKFORSHARED += -Wl,--disable-new-dtags,-rpath,\$$ORIGIN/../lib
+EOF
+    make -j "${NUM_CPUS}" profile-gen-stamp
+    # Install the instrumented build without re-entering the PGO/BOLT default.
+    install_make_args=(--assume-old=all)
+else
+    if [ -n "${CPYTHON_PGO_PROFILE_HASH}" ]; then
+        cp "${ROOT}/pgo.profdata" code.profclangd
+        touch profile-run-stamp
+    fi
+    make -j "${NUM_CPUS}"
+fi
+make -j "${NUM_CPUS}" "${install_make_args[@]}" sharedinstall DESTDIR="${ROOT}/out/python"
+make -j "${NUM_CPUS}" "${install_make_args[@]}" install DESTDIR="${ROOT}/out/python"
 
 
 if [ -n "${CPYTHON_FREETHREADED}" ]; then
@@ -920,12 +947,14 @@ if [ "${PYBUILD_SHARED}" = "1" ]; then
         # empty dummy libpython.so, which allows the link to succeed but
         # ensures they do not use any unwanted symbols. That might be
         # worth doing at some point.)
-        patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
-            "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
-
-        if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+        if [ -z "${CPYTHON_PGO_INSTRUMENT}" ]; then
             patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
-                "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
+                "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}"
+
+            if [ -n "${PYTHON_BINARY_SUFFIX}" ]; then
+                patchelf --force-rpath --set-rpath "\$ORIGIN/../lib" \
+                    "${ROOT}/out/python/install/bin/python${PYTHON_MAJMIN_VERSION}${PYTHON_BINARY_SUFFIX}"
+            fi
         fi
 
         # For libpython3.so (the ABI3 library for embedders), we do

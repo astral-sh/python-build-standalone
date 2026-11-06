@@ -62,7 +62,7 @@ async fn fetch_artifact(
     org: &str,
     repo: &str,
     artifact: WorkflowListArtifact,
-) -> Result<bytes::Bytes> {
+) -> Result<(String, bytes::Bytes)> {
     println!("downloading artifact {}", artifact.name);
 
     let res = client
@@ -70,7 +70,7 @@ async fn fetch_artifact(
         .download_artifact(org, repo, artifact.id, ArchiveFormat::Zip)
         .await?;
 
-    Ok(res)
+    Ok((artifact.name, res))
 }
 
 enum UploadSource {
@@ -323,9 +323,15 @@ pub async fn command_fetch_release_distributions(args: &ArgMatches) -> Result<()
     let mut install_paths = vec![];
 
     while let Some(res) = buffered.next().await {
-        let data = res?;
+        let (name, data) = res?;
 
-        let mut za = ZipArchive::new(std::io::Cursor::new(data))?;
+        let mut za = match ZipArchive::new(std::io::Cursor::new(data)) {
+            Ok(za) => za,
+            Err(err) => {
+                eprintln!("failed to read zip archive {name}: {err}");
+                continue;
+            }
+        };
         for i in 0..za.len() {
             let mut zf = za.by_index(i)?;
 

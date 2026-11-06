@@ -1,12 +1,17 @@
 name: macos
 
 on:
-  push:
-    branches: [ main ]
   pull_request:
+  workflow_call:
+    inputs:
+      ref:
+        description: "The git ref to build."
+        type: string
+        required: false
+        default: ''
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  group: macos-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
@@ -27,6 +32,7 @@ jobs:
       - uses: astral-sh/github-actions/demudhra@7aa50a3def9f5428c532b0ae972d1e5b357de5a5 # 2026.11.03.0
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || '' }}
           persist-credentials: false
 
       - name: Emit rustc version
@@ -61,6 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || '' }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -129,6 +136,7 @@ jobs:
       - uses: astral-sh/github-actions/demudhra@7aa50a3def9f5428c532b0ae972d1e5b357de5a5 # 2026.11.03.0
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ inputs.ref || '' }}
           fetch-depth: 0
           persist-credentials: false
 

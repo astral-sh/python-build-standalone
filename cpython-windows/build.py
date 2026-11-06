@@ -376,9 +376,16 @@ def apply_source_patch(source_path: pathlib.Path, patch_path: pathlib.Path):
 
 
 def apply_cpython_patches(cpython_source_path: pathlib.Path, python_version: str):
-    # Omit UWP executables, the legacy launcher, and the shell extension to
-    # reduce build time and keep them out of the distribution artifacts.
-    patches = ["patch-disable-uwp.patch"]
+    patches = [
+        # Omit UWP executables, the legacy launcher, and the shell extension to
+        # reduce build time and keep them out of the distribution artifacts.
+        "patch-disable-uwp.patch",
+        # Windows can't load a DLL with an embedded manifest from a path near
+        # MAX_PATH, even with long paths enabled. Only the executables need the
+        # manifest.
+        # https://github.com/python/cpython/issues/126929
+        "patch-disable-dll-manifests.patch",
+    ]
 
     # The legacy launcher and shell extension are present through Python 3.15.
     # https://github.com/python/cpython/pull/153512

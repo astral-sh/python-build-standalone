@@ -41,6 +41,7 @@ const RECOGNIZED_TRIPLES: &[&str] = &[
     "armv7-unknown-linux-gnueabihf",
     "i686-pc-windows-msvc",
     "i686-unknown-linux-gnu",
+    "loongarch64-unknown-linux-gnu",
     "ppc64le-unknown-linux-gnu",
     "riscv64-unknown-linux-gnu",
     "s390x-unknown-linux-gnu",
@@ -201,6 +202,10 @@ static GLIBC_MAX_VERSION_BY_TRIPLE: Lazy<HashMap<&'static str, version_compare::
             version_compare::Version::from("2.17").unwrap(),
         );
         versions.insert(
+            "loongarch64-unknown-linux-gnu",
+            version_compare::Version::from("2.38").unwrap(),
+        );
+        versions.insert(
             "ppc64le-unknown-linux-gnu",
             version_compare::Version::from("2.17").unwrap(),
         );
@@ -291,6 +296,7 @@ static ELF_ALLOWED_LIBRARIES_BY_TRIPLE: Lazy<HashMap<&'static str, Vec<&'static 
                 vec!["ld-linux-aarch64.so.1", "libgcc_s.so.1"],
             ),
             ("i686-unknown-linux-gnu", vec!["ld-linux-x86-64.so.2"]),
+            ("loongarch64-unknown-linux-gnu", vec!["ld-linux-loongarch-lp64d.so.1"]),
             ("ppc64le-unknown-linux-gnu", vec!["ld64.so.1", "ld64.so.2"]),
             (
                 "riscv64-unknown-linux-gnu",
@@ -598,6 +604,7 @@ static PLATFORM_TAG_BY_TRIPLE: Lazy<HashMap<&'static str, &'static str>> = Lazy:
         ("armv7-unknown-linux-gnueabihf", "linux-arm"),
         ("i686-pc-windows-msvc", "win32"),
         ("i686-unknown-linux-gnu", "linux-i686"),
+        ("loongarch64-unknown-linux-gnu", "linux-loongarch64"),
         ("ppc64le-unknown-linux-gnu", "linux-powerpc64le"),
         ("riscv64-unknown-linux-gnu", "linux-riscv64"),
         ("s390x-unknown-linux-gnu", "linux-s390x"),
@@ -1034,6 +1041,7 @@ fn validate_elf<Elf: FileHeader<Endian = Endianness>>(
         "armv7-unknown-linux-gnueabi" => object::elf::EM_ARM,
         "armv7-unknown-linux-gnueabihf" => object::elf::EM_ARM,
         "i686-unknown-linux-gnu" => object::elf::EM_386,
+        "loongarch64-unknown-linux-gnu" => object::elf::EM_LOONGARCH,
         "ppc64le-unknown-linux-gnu" => object::elf::EM_PPC64,
         "riscv64-unknown-linux-gnu" => object::elf::EM_RISCV,
         "s390x-unknown-linux-gnu" => object::elf::EM_S390,

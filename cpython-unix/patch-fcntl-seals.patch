@@ -1,0 +1,40 @@
+diff --git a/Modules/fcntlmodule.c b/Modules/fcntlmodule.c
+--- a/Modules/fcntlmodule.c
++++ b/Modules/fcntlmodule.c
+@@ -31,4 +31,5 @@
+ /*[clinic end generated code: output=da39a3ee5e6b4b0d input=124b58387c158179]*/
+ 
++#include "pbs-fcntl-seals.h"
+ #include "clinic/fcntlmodule.c.h"
+ 
+diff --git a/Modules/pbs-fcntl-seals.h b/Modules/pbs-fcntl-seals.h
+new file mode 100644
+--- /dev/null
++++ b/Modules/pbs-fcntl-seals.h
+@@ -0,0 +1,26 @@
++/* File sealing commands and flags from Linux UAPI <linux/fcntl.h>.
++ * Including that header alongside libc's <fcntl.h> can redefine struct flock.
++ */
++#ifdef __linux__
++#  ifndef F_ADD_SEALS
++#    define F_ADD_SEALS 1033
++#  endif
++#  ifndef F_GET_SEALS
++#    define F_GET_SEALS 1034
++#  endif
++#  ifndef F_SEAL_SEAL
++#    define F_SEAL_SEAL 0x0001
++#  endif
++#  ifndef F_SEAL_SHRINK
++#    define F_SEAL_SHRINK 0x0002
++#  endif
++#  ifndef F_SEAL_GROW
++#    define F_SEAL_GROW 0x0004
++#  endif
++#  ifndef F_SEAL_WRITE
++#    define F_SEAL_WRITE 0x0008
++#  endif
++#  ifndef F_SEAL_FUTURE_WRITE
++#    define F_SEAL_FUTURE_WRITE 0x0010
++#  endif
++#endif

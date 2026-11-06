@@ -1,0 +1,29 @@
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -7148,8 +7148,8 @@
+ AC_MSG_NOTICE([creating Makefile])
+ $SHELL $srcdir/Modules/makesetup -c $srcdir/Modules/config.c.in \
+ 			-s Modules \
+-			Modules/Setup.local $MODULES_SETUP_STDLIB Modules/Setup.bootstrap $srcdir/Modules/Setup
+-mv config.c Modules
++			Modules/Setup.local $MODULES_SETUP_STDLIB -b Modules/Setup.bootstrap $srcdir/Modules/Setup
++mv config.c config_bootstrap.c Modules
+ 
+ if test -z "$PKG_CONFIG"; then
+   AC_MSG_WARN([pkg-config is missing. Some dependencies may not be detected correctly.])
+diff --git a/Makefile.pre.in b/Makefile.pre.in
+--- a/Makefile.pre.in
++++ b/Makefile.pre.in
+@@ -951,9 +951,9 @@
+ 				-s Modules \
+ 				Modules/Setup.local \
+ 				@MODULES_SETUP_STDLIB@ \
+-				Modules/Setup.bootstrap \
++				-b Modules/Setup.bootstrap \
+ 				$(srcdir)/Modules/Setup
+-	@mv config.c Modules
++	@mv config.c config_bootstrap.c Modules
+ 	@echo "The Makefile was updated, you may need to re-run make."
+ 
+ .PHONY: regen-test-frozenmain

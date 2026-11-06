@@ -1,0 +1,93 @@
+diff --git a/Modules/fcntlmodule.c b/Modules/fcntlmodule.c
+--- a/Modules/fcntlmodule.c
++++ b/Modules/fcntlmodule.c
+@@ -829,9 +829,18 @@
+     return 0;
+ }
+ 
++#ifdef __linux__
++int _PyFcntl_AddLinuxConstants(PyObject *module);
++#endif
++
+ static int
+ fcntl_exec(PyObject *module)
+ {
++#ifdef __linux__
++    if (_PyFcntl_AddLinuxConstants(module) < 0) {
++        return -1;
++    }
++#endif
+     if (all_ins(module) < 0) {
+         return -1;
+     }
+diff --git a/Modules/Setup.stdlib.in b/Modules/Setup.stdlib.in
+--- a/Modules/Setup.stdlib.in
++++ b/Modules/Setup.stdlib.in
+@@ -122,1 +122,1 @@
+-@MODULE_FCNTL_TRUE@fcntl fcntlmodule.c
++@MODULE_FCNTL_TRUE@fcntl fcntlmodule.c fcntl_linux_constants.c
+diff --git a/Modules/fcntl_linux_constants.c b/Modules/fcntl_linux_constants.c
+new file mode 100644
+--- /dev/null
++++ b/Modules/fcntl_linux_constants.c
+@@ -0,0 +1,60 @@
++#include "Python.h"
++
++#ifdef __linux__
++#include <linux/fcntl.h>
++
++int _PyFcntl_AddLinuxConstants(PyObject *module);
++
++int
++_PyFcntl_AddLinuxConstants(PyObject *module)
++{
++    static const struct {
++        const char *name;
++        int value;
++    } constants[] = {
++#define CONSTANT(name) {#name, name}
++#if defined(F_OFD_GETLK)
++        CONSTANT(F_OFD_GETLK),
++        CONSTANT(F_OFD_SETLK),
++        CONSTANT(F_OFD_SETLKW),
++#endif
++#if defined(F_ADD_SEALS)
++        CONSTANT(F_ADD_SEALS),
++        CONSTANT(F_GET_SEALS),
++        CONSTANT(F_SEAL_SEAL),
++        CONSTANT(F_SEAL_SHRINK),
++        CONSTANT(F_SEAL_GROW),
++        CONSTANT(F_SEAL_WRITE),
++#endif
++#if PY_MINOR_VERSION >= 13 && defined(F_SEAL_FUTURE_WRITE)
++        CONSTANT(F_SEAL_FUTURE_WRITE),
++#endif
++#if PY_MINOR_VERSION >= 13 && defined(F_GET_RW_HINT)
++        CONSTANT(F_GET_RW_HINT),
++        CONSTANT(F_SET_RW_HINT),
++        CONSTANT(F_GET_FILE_RW_HINT),
++        CONSTANT(F_SET_FILE_RW_HINT),
++#endif
++#if PY_MINOR_VERSION >= 13 && defined(RWH_WRITE_LIFE_NOT_SET)
++        CONSTANT(RWH_WRITE_LIFE_NOT_SET),
++        CONSTANT(RWH_WRITE_LIFE_NONE),
++        CONSTANT(RWH_WRITE_LIFE_SHORT),
++        CONSTANT(RWH_WRITE_LIFE_MEDIUM),
++        CONSTANT(RWH_WRITE_LIFE_LONG),
++        CONSTANT(RWH_WRITE_LIFE_EXTREME),
++#endif
++#if PY_MINOR_VERSION >= 14 && defined(F_DUPFD_QUERY)
++        CONSTANT(F_DUPFD_QUERY),
++#endif
++#undef CONSTANT
++        {NULL, 0}
++    };
++
++    for (size_t i = 0; constants[i].name != NULL; i++) {
++        if (PyModule_AddIntConstant(module, constants[i].name, constants[i].value) < 0) {
++            return -1;
++        }
++    }
++    return 0;
++}
++#endif  // __linux__

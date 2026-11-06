@@ -1,0 +1,106 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -75,2 +75,8 @@
+ 
++#ifdef __linux__
++#  include <linux/fs.h>           // RWF_* flags
++#  include <sys/syscall.h>        // __NR_preadv2, __NR_pwritev2
++// Linux preadv2 and pwritev2 take the offset in two arguments, including on LP64.
++#  define IOV_OFFSET(offset) (long)(offset), (long)((uint64_t)(offset) >> 32)
++#endif
+ #ifdef HAVE_SYS_UIO_H
+@@ -12415,7 +12421,7 @@
+         return -1;
+     }
+ 
+-#ifndef HAVE_PREADV2
++#if !defined(HAVE_PREADV2) && !defined(__NR_preadv2)
+     if(flags != 0) {
+         argument_unavailable_error("preadv2", "flags");
+         return -1;
+@@ -12445,7 +12451,18 @@
+ #endif
+         Py_BEGIN_ALLOW_THREADS
+         _Py_BEGIN_SUPPRESS_IPH
+-        n = preadv(fd, iov, cnt, offset);
++#ifdef __NR_preadv2
++        if (flags != 0) {
++            n = syscall(__NR_preadv2, fd, iov, cnt, IOV_OFFSET(offset), flags);
++        }
++        else if (offset == -1) {
++            n = readv(fd, iov, cnt);
++        }
++        else
++#endif
++        {
++            n = preadv(fd, iov, cnt, offset);
++        }
+         _Py_END_SUPPRESS_IPH
+         Py_END_ALLOW_THREADS
+     } while (n < 0 && errno == EINTR && !(async_err = PyErr_CheckSignals()));
+@@ -13121,7 +13138,7 @@
+         return -1;
+     }
+ 
+-#ifndef HAVE_PWRITEV2
++#if !defined(HAVE_PWRITEV2) && !defined(__NR_pwritev2)
+     if(flags != 0) {
+         argument_unavailable_error("pwritev2", "flags");
+         return -1;
+@@ -13152,7 +13169,18 @@
+     do {
+         Py_BEGIN_ALLOW_THREADS
+         _Py_BEGIN_SUPPRESS_IPH
+-        result = pwritev(fd, iov, cnt, offset);
++#ifdef __NR_pwritev2
++        if (flags != 0) {
++            result = syscall(__NR_pwritev2, fd, iov, cnt, IOV_OFFSET(offset), flags);
++        }
++        else if (offset == -1) {
++            result = writev(fd, iov, cnt);
++        }
++        else
++#endif
++        {
++            result = pwritev(fd, iov, cnt, offset);
++        }
+         _Py_END_SUPPRESS_IPH
+         Py_END_ALLOW_THREADS
+     } while (result < 0 && errno == EINTR && !(async_err = PyErr_CheckSignals()));
+diff --git a/Lib/test/test_os/test_posix.py b/Lib/test/test_os/test_posix.py
+--- a/Lib/test/test_os/test_posix.py
++++ b/Lib/test/test_os/test_posix.py
+@@ -346,7 +346,7 @@
+             # Is possible that the macro RWF_HIPRI was defined at compilation time
+             # but the option is not supported by the kernel or the runtime libc shared
+             # library.
+-            if inst.errno in {errno.EINVAL, errno.ENOTSUP}:
++            if inst.errno in {errno.EINVAL, errno.ENOTSUP, errno.ENOSYS}:
+                 raise unittest.SkipTest("RWF_HIPRI is not supported by the current system")
+             else:
+                 raise
+@@ -392,7 +392,7 @@
+             os.close(fd)
+ 
+     @unittest.skipUnless(hasattr(posix, 'pwritev'), "test needs posix.pwritev()")
+-    @unittest.skipUnless(hasattr(posix, 'os.RWF_SYNC'), "test needs os.RWF_SYNC")
++    @unittest.skipUnless(hasattr(posix, 'RWF_SYNC'), "test needs os.RWF_SYNC")
+     def test_pwritev_flags(self):
+         fd = os.open(os_helper.TESTFN, os.O_RDWR | os.O_CREAT)
+         try:
+@@ -402,7 +402,13 @@
+             self.assertEqual(n, 10)
+ 
+             os.lseek(fd, 0, os.SEEK_SET)
+-            self.assertEqual(b'xxtest1tt2', posix.read(fd, 100))
++            self.assertEqual(b'xxtest1tt2t3', posix.read(fd, 100))
++        except NotImplementedError:
++            self.skipTest("pwritev2 not available")
++        except OSError as exc:
++            if exc.errno in {errno.ENOSYS, errno.EOPNOTSUPP}:
++                self.skipTest("RWF_SYNC is not supported by the current system")
++            raise
+         finally:
+             os.close(fd)
+ 

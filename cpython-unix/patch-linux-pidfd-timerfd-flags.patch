@@ -1,0 +1,21 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -16802,6 +16802,17 @@
+ 
+ #include "clinic/posixmodule.c.h"
+ 
++#ifdef __linux__
++// <linux/pidfd.h> and <linux/timerfd.h> also pull in the kernel's struct flock,
++// which conflicts with the one from libc's <fcntl.h>.
++#  ifndef PIDFD_NONBLOCK
++#    define PIDFD_NONBLOCK O_NONBLOCK
++#  endif
++#  ifndef TFD_TIMER_CANCEL_ON_SET
++#    define TFD_TIMER_CANCEL_ON_SET (1 << 1)
++#  endif
++#endif
++
+ static PyMethodDef DirEntry_methods[] = {
+     OS_DIRENTRY_IS_DIR_METHODDEF
+     OS_DIRENTRY_IS_FILE_METHODDEF

@@ -152,9 +152,8 @@ fi
 
 # The default build rule for the macOS dylib doesn't pick up libraries
 # from modules / makesetup. So patch it accordingly.
-# Python 3.14.10+ and 3.15.2+ include this patch, but the 3.16.0a1
-# source predates the upstream fix. Revisit when updating 3.16.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ] || [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
+# Included upstream in Python 3.14+
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ]; then
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules-13.patch"
 elif [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules.patch"
@@ -302,13 +301,6 @@ fi
 # Backport of https://github.com/python/cpython/pull/155520, included in 3.16.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
-fi
-
-# Backport CPython's getdents64 fix for older musl headers.
-# https://github.com/python/cpython/commit/74c91a6fbfa3625cdc850acc99b509cc3d8c6ed0
-# TODO: Remove this patch when updating to Python 3.16.0a2.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" && "${TARGET_TRIPLE}" == *-linux-musl ]]; then
-    patch -p1 -i "${ROOT}/patch-posixsubprocess-musl-getdents64.patch"
 fi
 
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
@@ -741,14 +733,9 @@ patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
 # cases the above patch doesn't. See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-# Python 3.14 and 3.15 include the fix.
+# Python 3.14 and later include the fix.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
-fi
-
-# TODO: Remove this block when updating to Python 3.16.0a2.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
-    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
 fi
 
 # We patched configure.ac above. Reflect those changes.

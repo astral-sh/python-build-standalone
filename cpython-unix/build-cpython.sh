@@ -136,10 +136,10 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-cpython-configure-target-triple-musl-3.12.patch"
 fi
 
-# Python 3.11 supports using a provided Python to use during bootstrapping
-# (e.g. freezing). Normally it only uses this Python during cross-compiling.
-# This patch forces always using it. See comment related to
-# `--with-build-python` for more.
+# CPython selects the external freezing rules only when cross-compiling.
+# We always pass --with-build-python. Select those rules whenever the option
+# is set so native builds also use the host Python to freeze modules and
+# skip building _freeze_module and _bootstrap_python for that step.
 patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can

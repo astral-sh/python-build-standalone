@@ -206,17 +206,15 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-make-targets.patch"
 fi
 
-# Show PGO instrumentation statistics to aid debugging PGO.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+# Print PGO statistics and use a pool of profile data files to prevent data loss.
+# CPython 3.16 already prints the statistics.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
+    patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.16.patch"
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-print-statistics.patch"
-else
-    patch -p1 -i "${ROOT}/patch-pgo-print-statistics-3.11.patch"
-fi
-
-# Use a pool of PGO data files with merging to prevent data loss.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-file-pool.patch"
 else
+    patch -p1 -i "${ROOT}/patch-pgo-print-statistics-3.11.patch"
     patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.11.patch"
 fi
 

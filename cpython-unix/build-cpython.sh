@@ -136,10 +136,10 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-cpython-configure-target-triple-musl-3.12.patch"
 fi
 
-# Python 3.11 supports using a provided Python to use during bootstrapping
-# (e.g. freezing). Normally it only uses this Python during cross-compiling.
-# This patch forces always using it. See comment related to
-# `--with-build-python` for more.
+# CPython selects the external freezing rules only when cross-compiling.
+# We always pass --with-build-python. Select those rules whenever the option
+# is set so native builds also use the host Python to freeze modules and
+# skip building _freeze_module and _bootstrap_python for that step.
 patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can
@@ -152,9 +152,8 @@ fi
 
 # The default build rule for the macOS dylib doesn't pick up libraries
 # from modules / makesetup. So patch it accordingly.
-# Python 3.14.10+ and 3.15.2+ include this patch, but the 3.16.0a1
-# source predates the upstream fix. Revisit when updating 3.16.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ] || [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
+# Included upstream in Python 3.14+
+if [ "${PYTHON_MAJMIN_VERSION}" = "3.13" ]; then
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules-13.patch"
 elif [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-macos-link-extension-modules.patch"
@@ -207,17 +206,15 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-make-targets.patch"
 fi
 
-# Show PGO instrumentation statistics to aid debugging PGO.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
+# Print PGO statistics and use a pool of profile data files to prevent data loss.
+# CPython 3.16 already prints the statistics.
+if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" ]; then
+    patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.16.patch"
+elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-print-statistics.patch"
-else
-    patch -p1 -i "${ROOT}/patch-pgo-print-statistics-3.11.patch"
-fi
-
-# Use a pool of PGO data files with merging to prevent data loss.
-if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
     patch -p1 -i "${ROOT}/patch-pgo-file-pool.patch"
 else
+    patch -p1 -i "${ROOT}/patch-pgo-print-statistics-3.11.patch"
     patch -p1 -i "${ROOT}/patch-pgo-file-pool-3.11.patch"
 fi
 
@@ -302,13 +299,6 @@ fi
 # Backport of https://github.com/python/cpython/pull/155520, included in 3.16.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
     patch -p1 -i "${ROOT}/patch-posixmodule-syscall-fallback.patch"
-fi
-
-# Backport CPython's getdents64 fix for older musl headers.
-# https://github.com/python/cpython/commit/74c91a6fbfa3625cdc850acc99b509cc3d8c6ed0
-# TODO: Remove this patch when updating to Python 3.16.0a2.
-if [[ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_16}" && "${TARGET_TRIPLE}" == *-linux-musl ]]; then
-    patch -p1 -i "${ROOT}/patch-posixsubprocess-musl-getdents64.patch"
 fi
 
 # Most bits look at CFLAGS. But setup.py only looks at CPPFLAGS.
@@ -714,8 +704,8 @@ fi
 # When building against glibc headers older than 2.30, configure cannot detect
 # sem_clockwait, causing threading.Event.wait() to use CLOCK_REALTIME instead of
 # CLOCK_MONOTONIC. This makes waits hang when the system clock jumps backward.
-# The patch declares sem_clockwait as a weak symbol and checks at runtime.
-if [[ "${PYBUILD_PLATFORM}" != macos* ]]; then
+# CPython 3.16 already checks for the weak symbol at runtime.
+if [[ "${PYBUILD_PLATFORM}" != macos* && -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]]; then
     if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_15}" ]; then
         patch -p1 -i ${ROOT}/patch-sem-clockwait-weak-parking-lot.patch
     elif [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_13}" ]; then
@@ -741,14 +731,9 @@ patch -p1 -i "${ROOT}/patch-python-getpath-library.patch"
 # determine executable_dir when valid. This allows venv to be created from symlinks and covers some
 # cases the above patch doesn't. See:
 # https://github.com/python/cpython/issues/106045#issuecomment-2594628161
-# Python 3.14 and 3.15 include the fix.
+# Python 3.14 and later include the fix.
 if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_13}" ]; then
     patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir.patch"
-fi
-
-# TODO: Remove this block when updating to Python 3.16.0a2.
-if [ "${PYTHON_MAJMIN_VERSION}" = "3.16" ]; then
-    patch -p1 -i "${ROOT}/patch-getpath-use-base_executable-for-executable_dir-314.patch"
 fi
 
 # We patched configure.ac above. Reflect those changes.

@@ -276,6 +276,17 @@ class TestPythonInterpreter(unittest.TestCase):
 
         ssl.create_default_context()
 
+    @unittest.skipUnless(os.name == "nt", "Windows OpenSSL DLL names")
+    def test_windows_openssl_dll_names(self):
+        dll_dir = Path(sys.executable).parent / "DLLs"
+        target_triple = os.environ["TARGET_TRIPLE"]
+        suffix = "-arm64" if target_triple == "aarch64-pc-windows-msvc" else ""
+
+        for library in ("libcrypto", "libssl"):
+            with self.subTest(library=library):
+                names = sorted(path.name for path in dll_dir.glob(f"{library}-3*.dll"))
+                self.assertEqual(names, [f"{library}-3{suffix}.dll"])
+
     @unittest.skipIf(os.name != "nt", "Windows-specific OpenSSL uplink regression")
     # CPython's own suite skips keylog tests on Windows debug builds, to avoid
     # mixing the debug and release CRT; 3.12+ refuses the call outright.

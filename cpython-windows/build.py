@@ -69,8 +69,9 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_decimal": {},
     "_elementtree": {},
     "_hashlib": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64"],
-        "shared_depends_win32": ["libcrypto-1_1"],
+        "shared_depends_amd64": ["libcrypto-3"],
+        "shared_depends_arm64": ["libcrypto-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3"],
     },
     "_lzma": {
         "ignore_additional_depends": {"$(OutDir)liblzma$(PyDebugExt).lib"},
@@ -90,8 +91,9 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
     # project files.
     "_ssl": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64", "libssl-1_1-x64"],
-        "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
+        "shared_depends_amd64": ["libcrypto-3", "libssl-3"],
+        "shared_depends_arm64": ["libcrypto-3-arm64", "libssl-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3", "libssl-3"],
     },
     "_tkinter": {
         "ignore_additional_depends": {"$(tcltkLib)"},
@@ -414,56 +416,8 @@ def apply_cpython_patches(cpython_source_path: pathlib.Path, python_version: str
         apply_source_patch(cpython_source_path, SUPPORT / patch)
 
 
-OPENSSL_PROPS_REMOVE_RULES = rb"""
-  <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
-  </ItemGroup>
-  <Target Name="_CopySSLDLL"
-          Inputs="@(_SSLDLL)"
-          Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')"
-          Condition="$(SkipCopySSLDLL) == ''"
-          AfterTargets="Build">
-    <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-  <Target Name="_CleanSSLDLL" Condition="$(SkipCopySSLDLL) == ''" BeforeTargets="Clean">
-    <Delete Files="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" TreatErrorsAsWarnings="true" />
-  </Target>
-"""
-
-LIBFFI_PROPS_REMOVE_RULES = b"""
-  <Target Name="_CopyLIBFFIDLL" Inputs="@(_LIBFFIDLL)" Outputs="@(_LIBFFIDLL->'$(OutDir)%(Filename)%(Extension)')" AfterTargets="Build">
-    <Copy SourceFiles="@(_LIBFFIDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-"""
-
-
-def hack_openssl_props(pcbuild_path: pathlib.Path, arch: str):
-    # We want to statically link against OpenSSL. This requires using our own
-    # OpenSSL build. This requires some hacking of various files.
-    openssl_props = pcbuild_path / "openssl.props"
-
-    if arch == "amd64":
-        suffix = b"-x64"
-    elif arch == "win32":
-        suffix = b""
-    elif arch == "arm64":
-        suffix = b""
-    else:
-        raise Exception(f"unhandled architecture: {arch}")
-
-    static_replace_in_file(
-        openssl_props,
-        b"<_DLLSuffix>-3</_DLLSuffix>",
-        b"<_DLLSuffix>-3%s</_DLLSuffix>" % suffix,
-    )
-
-
 def hack_project_files(
     cpython_source_path: pathlib.Path,
-    build_directory: str,
     python_version: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
@@ -471,7 +425,6 @@ def hack_project_files(
     pcbuild_path = cpython_source_path / "PCbuild"
 
     apply_cpython_patches(cpython_source_path, python_version)
-    hack_openssl_props(pcbuild_path, build_directory)
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -604,13 +557,13 @@ def build_openssl_for_arch(
         apply_source_patch(source_root, SUPPORT / "patch-openssl-uplink.patch")
 
     if arch == "x86":
-        configure = "VC-WIN32"
+        target_args = ["VC-WIN32"]
         prefix = "32"
     elif arch == "amd64":
-        configure = "VC-WIN64A"
+        target_args = ["VC-WIN64A-pbs", f"--config={SUPPORT / 'openssl-pbs.conf'}"]
         prefix = "64"
     elif arch == "arm64":
-        configure = "VC-WIN64-ARM"
+        target_args = ["VC-WIN64-ARM"]
         prefix = "arm64"
     else:
         raise Exception(f"unhandled architecture: {arch}")
@@ -623,7 +576,7 @@ def build_openssl_for_arch(
     configure_args = [
         str(perl_path),
         "Configure",
-        configure,
+        *target_args,
         "no-idea",
         "no-mdc2",
         "no-tests",
@@ -1402,11 +1355,7 @@ def build_cpython(
 
         builtin_extensions = parse_config_c(config_c)
 
-        hack_project_files(
-            cpython_source_path,
-            build_directory,
-            python_version=python_version,
-        )
+        hack_project_files(cpython_source_path, python_version=python_version)
 
         if pgo:
             run_msbuild(

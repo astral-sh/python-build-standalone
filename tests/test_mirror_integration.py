@@ -33,7 +33,8 @@ class MirrorIntegrationTests(unittest.TestCase):
             shasums_path = dist / "SHA256SUMS"
 
             full_path.write_bytes(b"full")
-            install_only_path.write_bytes(b"install")
+            install_contents = b"i" * (8 * 1024 * 1024 + 1)
+            install_only_path.write_bytes(install_contents)
             shasums_path.write_text(
                 "abc  cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst\n"
                 "def  cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz\n"
@@ -102,7 +103,8 @@ class MirrorIntegrationTests(unittest.TestCase):
                     Key=prefix
                     + "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz",
                 )
-                self.assertEqual(install_only_object["Body"].read(), b"install")
+                self.assertEqual(install_only_object["Body"].read(), install_contents)
+                self.assertNotIn("-", install_only_object["ETag"])
                 self.assertEqual(install_only_object["CacheControl"], CACHE_CONTROL)
 
                 shasums_object = s3.get_object(Bucket=bucket, Key=prefix + "SHA256SUMS")

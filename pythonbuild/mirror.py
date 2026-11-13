@@ -28,6 +28,14 @@ from mypy_boto3_s3.client import S3Client as Boto3S3Client
 CACHE_CONTROL = "public, max-age=31536000, immutable"
 UPLOAD_CONCURRENCY = 4
 MAX_ATTEMPTS = 5
+# R2 recommends multipart uploads above approximately 100 MB, but single uploads
+# support objects up to about 5 GiB. Current release artifacts fit under 200 MiB.
+# Single uploads avoid multipart completion for current artifacts, but a failed
+# upload must retransmit the entire file. If R2 stores an object and its response
+# is lost, retrying the same immutable key can still fail. Files at or above this
+# threshold use multipart uploads and require additional retry handling.
+# https://developers.cloudflare.com/r2/objects/upload-objects/#choose-an-upload-method
+SINGLE_UPLOAD_THRESHOLD = 200 * 1024 * 1024
 BUILD_DATETIME_RE = re.compile(r"-(\d{8}T\d{4})\.tar\.(?:gz|zst)$")
 DESTINATION_TAG_RE_TEMPLATE = r"^(cpython-[^+-]+)\+{tag}-(.+)$"
 
@@ -167,7 +175,9 @@ def make_s3_client() -> tuple[Boto3S3Client, TransferConfig]:
 
     session = boto3.session.Session()
     client = session.client("s3", **client_kwargs)
-    transfer_config = TransferConfig()
+    transfer_config = TransferConfig(
+        multipart_threshold=SINGLE_UPLOAD_THRESHOLD,
+    )
 
     return client, transfer_config
 

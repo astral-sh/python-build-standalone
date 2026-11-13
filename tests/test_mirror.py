@@ -18,10 +18,20 @@ from pythonbuild.mirror import (
     build_upload_entries,
     destination_to_source_name,
     main,
+    make_s3_client,
 )
 
 
 class MirrorTests(unittest.TestCase):
+    def test_make_s3_client_uses_single_uploads_below_threshold(self) -> None:
+        with (
+            mock.patch.dict("pythonbuild.mirror.os.environ", {}, clear=True),
+            mock.patch("pythonbuild.mirror.boto3.session.Session"),
+        ):
+            _client, transfer_config = make_s3_client()
+
+        self.assertEqual(transfer_config.multipart_threshold, 200 * 1024 * 1024)
+
     def test_destination_to_source_name_full_archive(self) -> None:
         self.assertEqual(
             destination_to_source_name(

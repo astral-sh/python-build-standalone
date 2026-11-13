@@ -854,6 +854,17 @@ def build_cpython(
             if meets_python_maximum_version(python_version, v):
                 env[f"PYTHON_MEETS_MAXIMUM_VERSION_{normal_version}"] = "1"
 
+        if os.environ.get("PYBUILD_PGO_INSTRUMENT"):
+            env["CPYTHON_PGO_INSTRUMENT"] = "1"
+        elif profile := os.environ.get("PYBUILD_PGO_PROFILE"):
+            build_env.copy_file(pathlib.Path(profile), dest_name="pgo.profdata")
+            # The copied profile may retain restrictive permissions.
+            build_env.run(
+                ["/bin/chmod", "0444", "pgo.profdata"],
+                user="root" if build_env.is_isolated else "build",
+            )
+            env["CPYTHON_PGO_PROFILE_HASH"] = os.environ["PYBUILD_PGO_PROFILE_HASH"]
+
         if "freethreaded" in parsed_build_options:
             env["CPYTHON_FREETHREADED"] = "1"
 
@@ -938,6 +949,8 @@ def build_cpython(
             # TODO: Remove YAML-derived extension metadata when Python 3.11 is dropped.
             enabled_extensions = setup["extensions"]
 
+        if "CPYTHON_PGO_INSTRUMENT" in env:
+            build_options = build_options.replace("pgo", "pgo-instrumented")
         # TODO: Remove `optimizations` in the future, deprecated in favor of
         # `build_options` in metadata version 8.
         optimizations = build_options.replace("freethreaded+", "")

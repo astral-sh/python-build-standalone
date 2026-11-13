@@ -4,6 +4,7 @@
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
 import argparse
+import hashlib
 import multiprocessing
 import os
 import pathlib
@@ -51,6 +52,17 @@ def main():
         choices=options,
         default="noopt",
         help="Build options to apply when compiling Python",
+    )
+    pgo = parser.add_mutually_exclusive_group()
+    pgo.add_argument(
+        "--pgo-instrument",
+        action="store_true",
+        help="Build an instrumented interpreter for external PGO profile collection",
+    )
+    pgo.add_argument(
+        "--pgo-profile",
+        type=pathlib.Path,
+        help="Absolute path to a merged LLVM profile for a PGO build",
     )
     parser.add_argument(
         "--python",
@@ -118,6 +130,22 @@ def main():
 
     target_triple = args.target_triple
 
+    if args.pgo_instrument or args.pgo_profile:
+        if target_triple not in {
+            "aarch64-unknown-linux-gnu",
+            "x86_64-unknown-linux-gnu",
+        } or args.options not in {"pgo", "pgo+lto"}:
+            parser.error(
+                "external PGO requires aarch64-unknown-linux-gnu or "
+                "x86_64-unknown-linux-gnu with --options pgo or pgo+lto"
+            )
+        if args.make_target != "default":
+            parser.error("external PGO requires the default make target")
+    if args.pgo_profile:
+        if not args.pgo_profile.is_absolute() or not args.pgo_profile.is_file():
+            parser.error("--pgo-profile must be an absolute path to an existing file")
+        args.pgo_profile = args.pgo_profile.resolve()
+
     settings = get_target_settings(TARGETS_CONFIG, target_triple)
 
     supported_pythons = {"cpython-%s" % p for p in settings["pythons_supported"]}
@@ -167,6 +195,18 @@ def main():
     env["PYBUILD_TARGET_TRIPLE"] = target_triple
     env["PYBUILD_BUILD_OPTIONS"] = args.options
     env["PYBUILD_PYTHON_SOURCE"] = python_source
+    env["PYBUILD_PGO_INSTRUMENT"] = "1" if args.pgo_instrument else ""
+    env["PYBUILD_PGO_PROFILE"] = str(args.pgo_profile) if args.pgo_profile else ""
+    variant = ""
+    profile_hash = ""
+    if args.pgo_instrument:
+        variant = "-instrumented"
+    elif args.pgo_profile:
+        with args.pgo_profile.open("rb") as fh:
+            profile_hash = hashlib.file_digest(fh, "sha256").hexdigest()
+        variant = "-profile-" + profile_hash[:16]
+    env["PYBUILD_CPYTHON_VARIANT"] = variant
+    env["PYBUILD_PGO_PROFILE_HASH"] = profile_hash
     if musl:
         env["PYBUILD_MUSL"] = "1"
     if args.break_on_failure:
@@ -205,7 +245,7 @@ def main():
     archive_components = [
         "cpython-%s" % cpython_version,
         target_triple,
-        args.options,
+        args.options + variant,
     ]
 
     build_basename = "-".join(archive_components) + ".tar"

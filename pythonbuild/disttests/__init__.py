@@ -45,6 +45,19 @@ if "TERMINFO_DIRS" not in os.environ:
 
 
 class TestPythonInterpreter(unittest.TestCase):
+    @unittest.skipUnless(
+        sys.platform in ("darwin", "linux"), "bundled libuuid is used on Unix"
+    )
+    def test_uuid_generate_time_safe(self):
+        import _uuid  # type: ignore
+        import uuid
+
+        self.assertTrue(_uuid.has_uuid_generate_time_safe)
+        data, status = _uuid.generate_time_safe()
+        self.assertEqual(uuid.UUID(bytes=data).version, 1)
+        self.assertIn(status, (0, -1))
+        self.assertIn(uuid.uuid1().is_safe, (uuid.SafeUUID.safe, uuid.SafeUUID.unsafe))
+
     @unittest.skipUnless(os.name == "nt", "Windows executable names")
     def test_windows_executables(self):
         build_options = os.environ["BUILD_OPTIONS"].split("+")

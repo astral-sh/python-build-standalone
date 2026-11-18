@@ -323,11 +323,11 @@
     },
     "sqlite": {
         "_comment": "Remember to update pythonbuild/disttests/ when version changed.",
-        "url": "https://www.sqlite.org/2026/sqlite-autoconf-3530100.tar.gz",
-        "size": 3275272,
-        "sha256": "83e6b2020a034e9a7ad4a72feea59e1ad52f162e09cbd26735a3ffb98359fc4f",
-        "version": "3530100",
-        "actual_version": "3.53.1.0",
+        "url": "https://www.sqlite.org/2026/sqlite-autoconf-3540100.tar.gz",
+        "size": 3332984,
+        "sha256": "926ef8d3eab93fbf6e06011901273eec076b25594a4e1cdadd50c987f4f6d64e",
+        "version": "3540100",
+        "actual_version": "3.54.1.0",
         "library_names": [
             "sqlite3"
         ],

@@ -1,40 +1,17 @@
 From 60d6a76dcee2a5647d69874d9b5c24f701a6722d Mon Sep 17 00:00:00 2001
 From: Geoffrey Thomas <geofft@ldpreload.com>
 Date: Mon, 1 Dec 2025 14:11:43 -0500
-Subject: [PATCH 1/1] getpath: Fix library detection and canonicalize paths on
- Linux
+Subject: [PATCH] getpath: Find the runtime path in shared and static builds
 Forwarded: no
 
-The code in getpath.py to look for the stdlib relative to the Python
-library did not work in the common layout where libpython itself is in
-the lib/ directory; it added an extra lib/ segment. It is also equally
-applicable and useful when statically linking libpython into bin/python;
-in both cases, we want to go up a directory and then look into
-lib/python3.x/. Add an extra dirname() call in getpath.py, and
-unconditionally attempt to fill in the "library" variable in getpath.c,
-even on builds that are statically linking libpython.
+Locate the runtime path in shared and static builds. On Linux, try
+/proc/self/maps to obtain an absolute path before falling back to dladdr().
 
-Also, we want to use the realpath'd version of the library's path to
-locate the standard library, particularly in the case where the library
-is a symlink to an executable statically linking libpython. On macOS
-dyld, this is done automatically. On glibc and musl, we often get
-relative paths and they are not canonicalized, so instead, use
-/proc/self/maps to find the file where libpython is coming from.
-
-(We could instead use the origin, which is canonicalized,  but there is
-no safe API on glibc to read it and no API at all on musl. Note that and
-glibc also uses procfs to do so; see discussion at
-https://sourceware.org/bugzilla/show_bug.cgi?id=25263)
-
-Finally, switch the target address for lookups to the current function's
-return address. This avoids issues on some build configurations and
-platforms where the addresses Python library functions are behind a
-layer of indirection like the PLT. (See also the BUGS section of Linux
-man-pages' dladdr(3).)
+Look up the caller's return address so that a function pointer in the
+procedure linkage table cannot identify a different object.
 ---
- Modules/getpath.c  | 62 +++++++++++++++++++++++++++++++++++++++++-----
- Modules/getpath.py |  4 +--
- 2 files changed, 58 insertions(+), 8 deletions(-)
+ Modules/getpath.c | 62 +++++++++++++++++++++++++++++++++++++++++-----
+ 1 file changed, 56 insertions(+), 6 deletions(-)
 
 diff --git a/Modules/getpath.c b/Modules/getpath.c
 index 1e75993480a..347c21e7387 100644
@@ -124,28 +101,5 @@ index 1e75993480a..347c21e7387 100644
  #endif
  
      return PyDict_SetItemString(dict, key, Py_None) == 0;
-diff --git a/Modules/getpath.py b/Modules/getpath.py
-index b89d7427e3f..8c431e53be2 100644
---- a/Modules/getpath.py
-+++ b/Modules/getpath.py
-@@ -436,7 +436,7 @@ def search_up(prefix, *landmarks, test=isfile):
- 
- if not executable_dir and os_name == 'darwin' and library:
-     # QUIRK: macOS checks adjacent to its library early
--    library_dir = dirname(library)
-+    library_dir = dirname(dirname(library))
-     if any(isfile(joinpath(library_dir, p)) for p in STDLIB_LANDMARKS):
-         # Exceptions here should abort the whole process (to match
-         # previous behavior)
-@@ -570,7 +570,7 @@ def search_up(prefix, *landmarks, test=isfile):
- 
-     # First try to detect prefix by looking alongside our runtime library, if known
-     if library and not prefix:
--        library_dir = dirname(library)
-+        library_dir = dirname(dirname(library))
-         if ZIP_LANDMARK:
-             if os_name == 'nt':
-                 # QUIRK: Windows does not search up for ZIP file
 -- 
 2.50.1 (Apple Git-155)
-

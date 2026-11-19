@@ -25,7 +25,7 @@ macos-latest:
   platform: darwin
   free: true
 
-depot-windows-2022-8:
+namespace-profile-windows-2022-x86-64-16x32:
   arch: x86_64
   platform: windows
   free: false

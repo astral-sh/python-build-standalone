@@ -1082,8 +1082,11 @@ xcode_path = os.getenv("APPLE_SDK_PATH")
 if xcode_path:
     replace_in_all("-isysroot %s" % xcode_path, "")
 
-# -fdebug-default-version is Clang only. Strip so compiling works on GCC.
+# Strip Clang-only flags so compiling works on GCC.
 replace_in_all("-fdebug-default-version=4", "")
+if os.environ["TARGET_TRIPLE"].startswith("armv7-"):
+    replace_in_all("-mno-omit-leaf-frame-pointer", "")
+    replace_in_all("-mno-thumb", "")
 
 # Downstream extension builds can use their compiler's default linker and need
 # not have LLVM installed.

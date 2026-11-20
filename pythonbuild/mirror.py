@@ -14,15 +14,19 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import hashlib
 import os
 import re
+from contextlib import closing
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
 import boto3
+from boto3.exceptions import S3UploadFailedError
 from boto3.s3.transfer import TransferConfig
 from botocore.config import Config
+from botocore.exceptions import ClientError
 from mypy_boto3_s3.client import S3Client as Boto3S3Client
 
 CACHE_CONTROL = "public, max-age=31536000, immutable"
@@ -48,6 +52,7 @@ class MirrorError(RuntimeError):
 class UploadEntry:
     source_name: str
     dest_name: str
+    sha256: str
 
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
@@ -96,24 +101,24 @@ def infer_build_datetime(dist_dir: Path) -> str:
     return datetimes.pop()
 
 
-def parse_shasums(shasums_path: Path) -> list[str]:
+def parse_shasums(shasums_path: Path) -> list[tuple[str, str]]:
     if not shasums_path.exists():
         raise SystemExit(f"{shasums_path} not found")
 
-    filenames: list[str] = []
+    checksums: list[tuple[str, str]] = []
     for line in shasums_path.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
 
         try:
-            _digest, filename = line.split(maxsplit=1)
+            digest, filename = line.split(maxsplit=1)
         except ValueError as e:
             raise SystemExit(f"malformed line in {shasums_path}: {line!r}") from e
 
-        filenames.append(filename.lstrip("*"))
+        checksums.append((filename.lstrip("*"), digest.lower()))
 
-    return filenames
+    return checksums
 
 
 def destination_to_source_name(dest_name: str, tag: str, build_datetime: str) -> str:
@@ -140,17 +145,19 @@ def build_upload_entries(
     dist_dir: Path, tag: str
 ) -> tuple[list[UploadEntry], list[str]]:
     build_datetime = infer_build_datetime(dist_dir)
-    dest_names = parse_shasums(dist_dir / "SHA256SUMS")
+    checksums = parse_shasums(dist_dir / "SHA256SUMS")
 
     uploads: list[UploadEntry] = []
     missing: list[str] = []
 
-    for dest_name in dest_names:
+    for dest_name, sha256 in checksums:
         source_name = destination_to_source_name(dest_name, tag, build_datetime)
         if not (dist_dir / source_name).exists():
             missing.append(source_name)
             continue
-        uploads.append(UploadEntry(source_name=source_name, dest_name=dest_name))
+        uploads.append(
+            UploadEntry(source_name=source_name, dest_name=dest_name, sha256=sha256)
+        )
 
     return uploads, missing
 
@@ -166,6 +173,8 @@ def make_s3_client() -> tuple[Boto3S3Client, TransferConfig]:
             signature_version="s3v4",
             retries={"max_attempts": MAX_ATTEMPTS, "mode": "standard"},
             s3={"addressing_style": "path"},
+            # The lock recovery check uses the manifest's full-object SHA-256.
+            response_checksum_validation="when_required",
         )
     }
     if endpoint_url:
@@ -174,7 +183,7 @@ def make_s3_client() -> tuple[Boto3S3Client, TransferConfig]:
         client_kwargs["region_name"] = region_name
 
     session = boto3.session.Session()
-    client = session.client("s3", **client_kwargs)
+    client: Boto3S3Client = session.client("s3", **client_kwargs)
     transfer_config = TransferConfig(
         multipart_threshold=SINGLE_UPLOAD_THRESHOLD,
     )
@@ -189,7 +198,9 @@ class S3MirrorClient:
     dry_run: bool
     existing_keys: set[str]
 
-    def upload_file(self, bucket: str, key: str, path: Path) -> None:
+    def upload_file(
+        self, bucket: str, key: str, path: Path, sha256: str | None = None
+    ) -> None:
         if key in self.existing_keys:
             print(f"skipping existing s3://{bucket}/{key}")
             return
@@ -210,7 +221,46 @@ class S3MirrorClient:
                 Config=self.transfer_config,
             )
         except Exception as e:
+            # boto3 wraps the original ClientError in upload_file().
+            error = e
+            if isinstance(e, S3UploadFailedError):
+                error = e.__cause__ or e.__context__
+            if (
+                isinstance(error, ClientError)
+                and error.operation_name in ("PutObject", "CompleteMultipartUpload")
+                and error.response.get("Error", {}).get("Code")
+                == "ObjectLockedByBucketPolicy"
+            ):
+                self._verify_locked_object(self.client, bucket, key, path, sha256)
+                return
             raise MirrorError(f"failed to upload {path.name}: {e}") from e
+
+    @staticmethod
+    def _verify_locked_object(
+        client: Boto3S3Client, bucket: str, key: str, path: Path, sha256: str | None
+    ) -> None:
+        try:
+            # SHA256SUMS has no entry for itself.
+            if sha256 is None:
+                with path.open("rb") as local:
+                    sha256 = hashlib.file_digest(local, "sha256").hexdigest()
+
+            response = client.get_object(Bucket=bucket, Key=key)
+            digest = hashlib.sha256()
+            with closing(response["Body"]) as body:
+                for chunk in body.iter_chunks(1024 * 1024):
+                    digest.update(chunk)
+        except Exception as e:
+            raise MirrorError(
+                f"failed to verify locked object s3://{bucket}/{key}: {e}"
+            ) from e
+
+        actual = digest.hexdigest()
+        if actual != sha256:
+            raise MirrorError(
+                f"SHA-256 mismatch for s3://{bucket}/{key}: expected {sha256}, got {actual}"
+            )
+        print(f"verified existing s3://{bucket}/{key}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -257,6 +307,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     args.bucket,
                     f"{args.prefix}{entry.dest_name}",
                     args.dist / entry.source_name,
+                    entry.sha256,
                 )
                 for entry in uploads
             ]

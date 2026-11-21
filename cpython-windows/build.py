@@ -69,8 +69,9 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     "_decimal": {},
     "_elementtree": {},
     "_hashlib": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64"],
-        "shared_depends_win32": ["libcrypto-1_1"],
+        "shared_depends_amd64": ["libcrypto-3"],
+        "shared_depends_arm64": ["libcrypto-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3"],
     },
     "_lzma": {
         "ignore_additional_depends": {"$(OutDir)liblzma$(PyDebugExt).lib"},
@@ -87,11 +88,10 @@ CONVERT_TO_BUILTIN_EXTENSIONS = {
     },
     "_socket": {},
     "_sqlite3": {"shared_depends": ["sqlite3"]},
-    # See the one-off calls to copy_link_to_lib() and elsewhere to hack up
-    # project files.
     "_ssl": {
-        "shared_depends_amd64": ["libcrypto-1_1-x64", "libssl-1_1-x64"],
-        "shared_depends_win32": ["libcrypto-1_1", "libssl-1_1"],
+        "shared_depends_amd64": ["libcrypto-3", "libssl-3"],
+        "shared_depends_arm64": ["libcrypto-3-arm64", "libssl-3-arm64"],
+        "shared_depends_win32": ["libcrypto-3", "libssl-3"],
     },
     "_tkinter": {
         "ignore_additional_depends": {"$(tcltkLib)"},
@@ -414,56 +414,8 @@ def apply_cpython_patches(cpython_source_path: pathlib.Path, python_version: str
         apply_source_patch(cpython_source_path, SUPPORT / patch)
 
 
-OPENSSL_PROPS_REMOVE_RULES = rb"""
-  <ItemGroup>
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libcrypto$(_DLLSuffix).pdb" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).dll" />
-    <_SSLDLL Include="$(opensslOutDir)\libssl$(_DLLSuffix).pdb" />
-  </ItemGroup>
-  <Target Name="_CopySSLDLL"
-          Inputs="@(_SSLDLL)"
-          Outputs="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')"
-          Condition="$(SkipCopySSLDLL) == ''"
-          AfterTargets="Build">
-    <Copy SourceFiles="@(_SSLDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-  <Target Name="_CleanSSLDLL" Condition="$(SkipCopySSLDLL) == ''" BeforeTargets="Clean">
-    <Delete Files="@(_SSLDLL->'$(OutDir)%(Filename)%(Extension)')" TreatErrorsAsWarnings="true" />
-  </Target>
-"""
-
-LIBFFI_PROPS_REMOVE_RULES = b"""
-  <Target Name="_CopyLIBFFIDLL" Inputs="@(_LIBFFIDLL)" Outputs="@(_LIBFFIDLL->'$(OutDir)%(Filename)%(Extension)')" AfterTargets="Build">
-    <Copy SourceFiles="@(_LIBFFIDLL)" DestinationFolder="$(OutDir)" />
-  </Target>
-"""
-
-
-def hack_openssl_props(pcbuild_path: pathlib.Path, arch: str):
-    # We want to statically link against OpenSSL. This requires using our own
-    # OpenSSL build. This requires some hacking of various files.
-    openssl_props = pcbuild_path / "openssl.props"
-
-    if arch == "amd64":
-        suffix = b"-x64"
-    elif arch == "win32":
-        suffix = b""
-    elif arch == "arm64":
-        suffix = b""
-    else:
-        raise Exception(f"unhandled architecture: {arch}")
-
-    static_replace_in_file(
-        openssl_props,
-        b"<_DLLSuffix>-3</_DLLSuffix>",
-        b"<_DLLSuffix>-3%s</_DLLSuffix>" % suffix,
-    )
-
-
 def hack_project_files(
     cpython_source_path: pathlib.Path,
-    build_directory: str,
     python_version: str,
 ):
     """Hacks Visual Studio project files to work with our build."""
@@ -471,7 +423,6 @@ def hack_project_files(
     pcbuild_path = cpython_source_path / "PCbuild"
 
     apply_cpython_patches(cpython_source_path, python_version)
-    hack_openssl_props(pcbuild_path, build_directory)
 
     # Our SQLite directory is named weirdly. This throws off version detection
     # in the project file. Replace the parsing logic with a static string.
@@ -573,27 +524,20 @@ def build_openssl_for_arch(
     arch: str,
     openssl_archive,
     openssl_version: str,
-    nasm_archive,
     build_root: pathlib.Path,
     *,
     jom_archive,
     with_uplink: bool = False,
 ):
-    nasm_version = DOWNLOADS["nasm-windows-bin"]["version"]
-
     log(f"extracting {openssl_archive} to {build_root}")
     extract_tar_to_directory(openssl_archive, build_root)
-    log(f"extracting {nasm_archive} to {build_root}")
-    extract_zip_to_directory(nasm_archive, build_root)
     log(f"extracting {jom_archive} to {build_root}")
     extract_zip_to_directory(jom_archive, build_root / "jom")
 
-    nasm_path = build_root / f"nasm-{nasm_version}"
     jom_path = build_root / "jom"
 
     env = dict(os.environ)
-    # Add Perl and nasm paths to front of PATH.
-    env["PATH"] = f"{perl_path.parent};{nasm_path};{jom_path};{env['PATH']}"
+    env["PATH"] = f"{perl_path.parent};{jom_path};{env['PATH']}"
 
     source_root = build_root / f"openssl-{openssl_version}"
 
@@ -603,14 +547,15 @@ def build_openssl_for_arch(
         # builds. So update its source to look for it from there.
         apply_source_patch(source_root, SUPPORT / "patch-openssl-uplink.patch")
 
+    # Match the Python.org release build targets and their assembly settings.
     if arch == "x86":
-        configure = "VC-WIN32"
+        target_args = ["VC-WIN32", "no-asm"]
         prefix = "32"
     elif arch == "amd64":
-        configure = "VC-WIN64A"
+        target_args = ["VC-WIN64A-masm"]
         prefix = "64"
     elif arch == "arm64":
-        configure = "VC-WIN64-ARM"
+        target_args = ["VC-WIN64-ARM"]
         prefix = "arm64"
     else:
         raise Exception(f"unhandled architecture: {arch}")
@@ -623,7 +568,7 @@ def build_openssl_for_arch(
     configure_args = [
         str(perl_path),
         "Configure",
-        configure,
+        *target_args,
         "no-idea",
         "no-mdc2",
         "no-tests",
@@ -682,7 +627,6 @@ def build_openssl(
 
     # First ensure the dependencies are in place.
     openssl_archive = download_entry(entry, BUILD)
-    nasm_archive = download_entry("nasm-windows-bin", BUILD)
     jom_archive = download_entry("jom-windows-bin", BUILD)
 
     with tempfile.TemporaryDirectory(prefix="openssl-build-") as td:
@@ -699,7 +643,6 @@ def build_openssl(
                 "x86",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_32,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,
@@ -711,7 +654,6 @@ def build_openssl(
                 "amd64",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_64,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,
@@ -723,7 +665,6 @@ def build_openssl(
                 "arm64",
                 openssl_archive,
                 openssl_version,
-                nasm_archive,
                 root_arm64,
                 jom_archive=jom_archive,
                 with_uplink=with_uplink,
@@ -1402,11 +1343,7 @@ def build_cpython(
 
         builtin_extensions = parse_config_c(config_c)
 
-        hack_project_files(
-            cpython_source_path,
-            build_directory,
-            python_version=python_version,
-        )
+        hack_project_files(cpython_source_path, python_version=python_version)
 
         if pgo:
             run_msbuild(

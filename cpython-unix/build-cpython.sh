@@ -763,9 +763,11 @@ BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:
 cat ../Makefile.extra >> Makefile
 
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
-    # configure-derived MODLIBS uses plain -l flags. Hide symbols from bundled
-    # static dependency libraries in both libpython and the interpreter.
-    printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
+    # Hide symbols from bundled archives whether they are linked into
+    # libpython (MODLIBS) or a shared extension (MODULE_<name>_LDFLAGS).
+    for var in MODLIBS $(sed -En 's/^(MODULE_[A-Z0-9_]+_LDFLAGS)=.*/\1/p' Makefile); do
+        printf '\n%s := $(patsubst -l%%,-Xlinker -hidden-l%%,$(%s))\n' "$var" "$var" >> Makefile
+    done
 fi
 
 make -j "${NUM_CPUS}"

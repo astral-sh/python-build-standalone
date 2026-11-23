@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-"""Upload release artifacts to an S3-compatible mirror bucket.
+"""Stage release artifacts for the Astral mirror.
 
 This mirrors the exact filenames referenced by ``dist/SHA256SUMS``. That file is
 written by the GitHub release upload step, so using it here keeps the mirror in
@@ -13,35 +13,17 @@ matrix logic in Python.
 from __future__ import annotations
 
 import argparse
-import concurrent.futures
-import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Sequence
 
-import boto3
-from boto3.s3.transfer import TransferConfig
-from botocore.config import Config
-from mypy_boto3_s3.client import S3Client as Boto3S3Client
-
-CACHE_CONTROL = "public, max-age=31536000, immutable"
-UPLOAD_CONCURRENCY = 4
-MAX_ATTEMPTS = 5
-# R2 recommends multipart uploads above approximately 100 MB, but single uploads
-# support objects up to about 5 GiB. Current release artifacts fit under 200 MiB.
-# Single uploads avoid multipart completion for current artifacts, but a failed
-# upload must retransmit the entire file. If R2 stores an object and its response
-# is lost, retrying the same immutable key can still fail. Files at or above this
-# threshold use multipart uploads and require additional retry handling.
-# https://developers.cloudflare.com/r2/objects/upload-objects/#choose-an-upload-method
-SINGLE_UPLOAD_THRESHOLD = 200 * 1024 * 1024
 BUILD_DATETIME_RE = re.compile(r"-(\d{8}T\d{4})\.tar\.(?:gz|zst)$")
 DESTINATION_TAG_RE_TEMPLATE = r"^(cpython-[^+-]+)\+{tag}-(.+)$"
 
 
 class MirrorError(RuntimeError):
-    """Base exception for mirror upload failures."""
+    """Raised when release artifacts cannot be staged for the mirror."""
 
 
 @dataclass(frozen=True)
@@ -52,28 +34,17 @@ class UploadEntry:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Upload release distributions to an S3-compatible mirror bucket"
+        description="Stage release distributions for the Astral mirror"
     )
     parser.add_argument(
         "--dist", type=Path, required=True, help="Directory with release artifacts"
     )
     parser.add_argument("--tag", required=True, help="Release tag")
-    parser.add_argument("--bucket", required=True, help="S3 bucket name")
     parser.add_argument(
-        "--prefix",
-        default="",
-        help="Key prefix within the bucket (e.g. 'github/python-build-standalone/releases/download/20250317/')",
-    )
-    parser.add_argument(
-        "-n",
-        "--dry-run",
-        action="store_true",
-        help="Dry run mode; do not actually upload",
-    )
-    parser.add_argument(
-        "--ignore-missing",
-        action="store_true",
-        help="Continue even if there are missing artifacts",
+        "--stage-to",
+        type=Path,
+        required=True,
+        help="Existing empty directory for mirror assets",
     )
     return parser.parse_args(argv)
 
@@ -155,62 +126,15 @@ def build_upload_entries(
     return uploads, missing
 
 
-def make_s3_client() -> tuple[Boto3S3Client, TransferConfig]:
-    endpoint_url = os.environ.get("AWS_ENDPOINT_URL")
-    region_name = os.environ.get("AWS_DEFAULT_REGION") or os.environ.get("AWS_REGION")
-    if endpoint_url and region_name is None:
-        region_name = "auto"
+def stage_mirror_assets(
+    dist_dir: Path, stage_dir: Path, uploads: Sequence[UploadEntry]
+) -> None:
+    for entry in uploads:
+        if Path(entry.dest_name).name != entry.dest_name:
+            raise MirrorError(f"expected a release filename: {entry.dest_name}")
+        (stage_dir / entry.dest_name).hardlink_to(dist_dir / entry.source_name)
 
-    client_kwargs: dict[str, Any] = {
-        "config": Config(
-            signature_version="s3v4",
-            retries={"max_attempts": MAX_ATTEMPTS, "mode": "standard"},
-            s3={"addressing_style": "path"},
-        )
-    }
-    if endpoint_url:
-        client_kwargs["endpoint_url"] = endpoint_url
-    if region_name:
-        client_kwargs["region_name"] = region_name
-
-    session = boto3.session.Session()
-    client = session.client("s3", **client_kwargs)
-    transfer_config = TransferConfig(
-        multipart_threshold=SINGLE_UPLOAD_THRESHOLD,
-    )
-
-    return client, transfer_config
-
-
-@dataclass(kw_only=True)
-class S3MirrorClient:
-    client: Boto3S3Client | None
-    transfer_config: TransferConfig | None
-    dry_run: bool
-    existing_keys: set[str]
-
-    def upload_file(self, bucket: str, key: str, path: Path) -> None:
-        if key in self.existing_keys:
-            print(f"skipping existing s3://{bucket}/{key}")
-            return
-
-        print(f"uploading {path.name} -> s3://{bucket}/{key}")
-        if self.dry_run:
-            return
-
-        if self.client is None or self.transfer_config is None:
-            raise MirrorError("S3 client not initialised")
-
-        try:
-            self.client.upload_file(
-                str(path),
-                bucket,
-                key,
-                ExtraArgs={"CacheControl": CACHE_CONTROL},
-                Config=self.transfer_config,
-            )
-        except Exception as e:
-            raise MirrorError(f"failed to upload {path.name}: {e}") from e
+    (stage_dir / "SHA256SUMS").hardlink_to(dist_dir / "SHA256SUMS")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -219,66 +143,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         uploads, missing = build_upload_entries(args.dist, args.tag)
 
-        for filename in missing:
-            print(f"missing release artifact: {filename}")
-
-        if missing and not args.ignore_missing:
+        if missing:
+            for filename in missing:
+                print(f"missing release artifact: {filename}")
             raise SystemExit(f"missing {len(missing)} release artifacts")
 
-        if not missing:
-            print(f"found all {len(uploads)} release artifacts")
-
-        client = None
-        transfer_config = None
-        existing_keys: set[str] = set()
-        if not args.dry_run:
-            client, transfer_config = make_s3_client()
-            pages = client.get_paginator("list_objects_v2").paginate(
-                Bucket=args.bucket, Prefix=args.prefix
-            )
-            existing_keys = {
-                obj["Key"] for page in pages for obj in page.get("Contents", [])
-            }
-
-        mirror = S3MirrorClient(
-            client=client,
-            transfer_config=transfer_config,
-            dry_run=args.dry_run,
-            existing_keys=existing_keys,
-        )
-
-        errors: list[str] = []
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=UPLOAD_CONCURRENCY
-        ) as executor:
-            futures = [
-                executor.submit(
-                    mirror.upload_file,
-                    args.bucket,
-                    f"{args.prefix}{entry.dest_name}",
-                    args.dist / entry.source_name,
-                )
-                for entry in uploads
-            ]
-
-            for future in concurrent.futures.as_completed(futures):
-                try:
-                    future.result()
-                except MirrorError as e:
-                    errors.append(str(e))
-
-        if errors:
-            error_lines = "\n".join(f"- {error}" for error in sorted(errors))
-            raise MirrorError(
-                f"encountered {len(errors)} upload errors:\n{error_lines}"
-            )
-
-        mirror.upload_file(
-            args.bucket,
-            f"{args.prefix}SHA256SUMS",
-            args.dist / "SHA256SUMS",
-        )
-    except MirrorError as e:
+        stage_mirror_assets(args.dist, args.stage_to, uploads)
+        print(f"staged {len(uploads)} release artifacts and SHA256SUMS")
+    except (MirrorError, OSError) as e:
         raise SystemExit(str(e)) from e
 
     return 0

@@ -99,28 +99,47 @@ jobs:
             dist/*.tar.gz
             dist/*.tar.zst
 
-      - name: Publish to Astral mirror
+      - name: Stage Astral mirror assets
+        id: mirror-assets
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          # Keep the staging directory on the same filesystem as dist for hard links.
+          directory=$(mktemp -d "$GITHUB_WORKSPACE/.r2-release-assets.XXXXXX")
+          uv run python -m pythonbuild.mirror --dist dist --tag "$RELEASE_TAG" --stage-to "$directory"
+          echo "directory=$directory" >> "$GITHUB_OUTPUT"
+
+      - name: Publish archives to Astral mirror
+        uses: astral-sh/github-actions/upload-r2@46d9685eed35b39a3d83a8dde3a3b4e1bff97a8a # 2026.11.19.0
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.MIRROR_R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.MIRROR_R2_SECRET_ACCESS_KEY }}
-          AWS_ENDPOINT_URL: https://${{ secrets.MIRROR_R2_CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-          AWS_DEFAULT_REGION: auto
-          R2_BUCKET: ${{ secrets.MIRROR_R2_BUCKET_NAME }}
-          PROJECT: python-build-standalone
-          VERSION: ${{ github.event.inputs.tag }}
-          DRY_RUN: ${{ github.event.inputs.dry-run }}
-        run: |
-          if [ "${DRY_RUN}" = 'true' ]; then
-            just release-upload-mirror-dry-run \
-              ${R2_BUCKET} \
-              github/${PROJECT}/releases/download/${VERSION}/ \
-              ${VERSION}
-          else
-            just release-upload-mirror \
-              ${R2_BUCKET} \
-              github/${PROJECT}/releases/download/${VERSION}/ \
-              ${VERSION}
-          fi
+        with:
+          account-id: ${{ secrets.MIRROR_R2_CLOUDFLARE_ACCOUNT_ID }}
+          bucket: ${{ secrets.MIRROR_R2_BUCKET_NAME }}
+          source-directory: ${{ steps.mirror-assets.outputs.directory }}
+          include: |
+            *.tar.gz
+            *.tar.zst
+          prefix: github/python-build-standalone/releases/download/${{ inputs.tag }}
+          if-exists: skip
+          cache-control: public, max-age=31536000, immutable
+          dry-run: ${{ inputs.dry-run }}
+
+      - name: Publish SHA256SUMS to Astral mirror
+        uses: astral-sh/github-actions/upload-r2@46d9685eed35b39a3d83a8dde3a3b4e1bff97a8a # 2026.11.19.0
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.MIRROR_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.MIRROR_R2_SECRET_ACCESS_KEY }}
+        with:
+          account-id: ${{ secrets.MIRROR_R2_CLOUDFLARE_ACCOUNT_ID }}
+          bucket: ${{ secrets.MIRROR_R2_BUCKET_NAME }}
+          source-directory: ${{ steps.mirror-assets.outputs.directory }}
+          include: SHA256SUMS
+          prefix: github/python-build-standalone/releases/download/${{ inputs.tag }}
+          if-exists: skip
+          cache-control: public, max-age=31536000, immutable
+          dry-run: ${{ inputs.dry-run }}
 
       - name: Generate versions metadata
         if: ${{ github.event.inputs.dry-run == 'false' }}

@@ -7,31 +7,17 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
-
-from boto3.s3.transfer import TransferConfig
 
 from pythonbuild.mirror import (
     MirrorError,
-    S3MirrorClient,
     UploadEntry,
     build_upload_entries,
     destination_to_source_name,
     main,
-    make_s3_client,
 )
 
 
 class MirrorTests(unittest.TestCase):
-    def test_make_s3_client_uses_single_uploads_below_threshold(self) -> None:
-        with (
-            mock.patch.dict("pythonbuild.mirror.os.environ", {}, clear=True),
-            mock.patch("pythonbuild.mirror.boto3.session.Session"),
-        ):
-            _client, transfer_config = make_s3_client()
-
-        self.assertEqual(transfer_config.multipart_threshold, 200 * 1024 * 1024)
-
     def test_destination_to_source_name_full_archive(self) -> None:
         self.assertEqual(
             destination_to_source_name(
@@ -93,9 +79,11 @@ class MirrorTests(unittest.TestCase):
                 ],
             )
 
-    def test_build_upload_entries_reports_missing(self) -> None:
+    def test_staging_rejects_missing_archive(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             dist = Path(td)
+            stage = dist / "stage"
+            stage.mkdir()
             (
                 dist
                 / "cpython-3.12.10-x86_64-unknown-linux-gnu-pgo+lto-20260324T1200.tar.zst"
@@ -105,70 +93,67 @@ class MirrorTests(unittest.TestCase):
                 "def  cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz\n"
             )
 
-            uploads, missing = build_upload_entries(dist, "20260324")
+            with self.assertRaisesRegex(SystemExit, "missing 1 release artifacts"):
+                main(
+                    [
+                        "--dist",
+                        str(dist),
+                        "--tag",
+                        "20260324",
+                        "--stage-to",
+                        str(stage),
+                    ]
+                )
+            self.assertEqual(list(stage.iterdir()), [])
 
-            self.assertEqual(len(uploads), 1)
-            self.assertEqual(
-                missing,
-                [
-                    "cpython-3.12.10-x86_64-unknown-linux-gnu-install_only-20260324T1200.tar.gz"
-                ],
-            )
-
-    def test_main_reports_all_upload_errors(self) -> None:
+    def test_stage_mirror_assets(self) -> None:
         with tempfile.TemporaryDirectory() as td:
-            dist = Path(td)
-            full_path = (
+            root = Path(td)
+            dist = root / "dist"
+            dist.mkdir()
+            stage = root / "stage"
+            stage.mkdir()
+
+            full_archive = (
                 dist
                 / "cpython-3.12.10-x86_64-unknown-linux-gnu-pgo+lto-20260324T1200.tar.zst"
             )
-            install_only_path = (
+            install_archive = (
                 dist
                 / "cpython-3.12.10-x86_64-unknown-linux-gnu-install_only-20260324T1200.tar.gz"
             )
-            full_path.write_bytes(b"full")
-            install_only_path.write_bytes(b"install")
-            (dist / "SHA256SUMS").write_text(
-                "abc  cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst\n"
-                "def  cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz\n"
+            full_name = (
+                "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-pgo+lto-full.tar.zst"
             )
-
-            def fail_upload(bucket: str, key: str, path: Path) -> None:
-                raise MirrorError(f"failed for {path.name}")
-
-            client = mock.Mock()
-            client.get_paginator.return_value.paginate.return_value = []
-            with (
-                mock.patch(
-                    "pythonbuild.mirror.make_s3_client",
-                    return_value=(client, TransferConfig()),
-                ),
-                mock.patch.object(
-                    S3MirrorClient,
-                    "upload_file",
-                    side_effect=fail_upload,
-                ),
-            ):
-                with self.assertRaises(SystemExit) as cm:
-                    main(
-                        [
-                            "--dist",
-                            str(dist),
-                            "--tag",
-                            "20260324",
-                            "--bucket",
-                            "bucket",
-                            "--prefix",
-                            "prefix/",
-                        ]
-                    )
+            install_name = (
+                "cpython-3.12.10+20260324-x86_64-unknown-linux-gnu-install_only.tar.gz"
+            )
+            full_archive.write_bytes(b"full")
+            install_archive.write_bytes(b"install")
+            manifest = dist / "SHA256SUMS"
+            manifest.write_text(f"abc  {full_name}\ndef  {install_name}\n")
 
             self.assertEqual(
-                str(cm.exception),
-                "encountered 2 upload errors:\n"
-                f"- failed for {install_only_path.name}\n"
-                f"- failed for {full_path.name}",
+                main(
+                    [
+                        "--dist",
+                        str(dist),
+                        "--tag",
+                        "20260324",
+                        "--stage-to",
+                        str(stage),
+                    ]
+                ),
+                0,
             )
+
+            self.assertEqual(
+                {path.name for path in stage.iterdir()},
+                {full_name, install_name, "SHA256SUMS"},
+            )
+            self.assertTrue((stage / full_name).samefile(full_archive))
+            self.assertTrue((stage / install_name).samefile(install_archive))
+            self.assertTrue((stage / "SHA256SUMS").samefile(manifest))
 
 
 if __name__ == "__main__":

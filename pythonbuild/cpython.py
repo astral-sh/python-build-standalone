@@ -354,13 +354,15 @@ def _parse_setup_stdlib(
     module_lines: dict[str, bytes] = {}
     module_linkage: dict[str, str] = {}
 
-    # CPython 3.12+ is configured with MODULE_BUILDTYPE=static.
     section = "static"
 
     for line in setup_stdlib_lines:
         line = line.rstrip()
 
-        if line == b"*shared*":
+        if line == b"*@MODULE_BUILDTYPE@*":
+            section = "default"
+            continue
+        elif line == b"*shared*":
             section = "shared"
             continue
         elif line == b"*static*":
@@ -937,10 +939,12 @@ def _build_yaml_setup_line(
     return setup_line, module_cflags
 
 
-def _determine_module_linkage(info: dict[str, Any], build_options: set[str]) -> str:
+def _determine_module_linkage(
+    info: dict[str, Any], build_options: set[str], default: str
+) -> str:
     # Fully static builds override the configured per-module linkage.
     build_mode: str = (
-        "static" if "static" in build_options else info.get("build-mode", "static")
+        "static" if "static" in build_options else info.get("build-mode", default)
     )
 
     # shared-or-disabled modules have already been disabled for static builds.
@@ -985,6 +989,10 @@ def derive_setup_local(
     )
     _validate_extension_modules(extension_modules, module_info, classification)
 
+    # The 3.14 build applies the upstream patch moving _asyncio to *static*.
+    if python_version.startswith("3.14."):
+        module_info.stdlib_linkage["_asyncio"] = "static"
+
     # Generate a Setup.local file.
     # Python 3.12+ builds extensions from Setup.stdlib using configure-derived
     # compiler and linker flags. Setup.local only disables modules or overrides
@@ -1021,7 +1029,14 @@ def derive_setup_local(
             enabled_extensions[name]["setup_line"] = name.encode("ascii")
             continue
 
-        section = _determine_module_linkage(info, build_options)
+        # Modules enabled by Setup.bootstrap or Setup are built-ins. Other
+        # modules follow the section in Setup.stdlib (or our default on 3.11).
+        upstream_section = module_info.stdlib_linkage.get(
+            name, "static" if name in classification.setup_enabled else "default"
+        )
+        if upstream_section == "default":
+            upstream_section = "static" if "static" in build_options else "shared"
+        section = _determine_module_linkage(info, build_options, upstream_section)
         enabled_extensions[name]["build-mode"] = section
 
         # Presumably this means the extension comes from the distribution's
@@ -1046,7 +1061,7 @@ def derive_setup_local(
             else:
                 log(f"extension {name} being configured via Modules/Setup.bootstrap")
 
-            if section == module_info.stdlib_linkage.get(name, "static"):
+            if section == upstream_section:
                 continue
 
             if name not in module_info.stdlib_lines:

@@ -246,8 +246,7 @@ fi
 patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as
-# static (which we do anyway in our own fashion) and more importantly to
-# take this into account when finding the AsyncioDebug section.
+# static and take this into account when finding the AsyncioDebug section.
 if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
@@ -392,9 +391,11 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
 fi
 
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    # Build standard-library extensions as built-ins by default. Setup.local
-    # overrides only the extensions that must remain shared or disabled.
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=static --enable-loadable-sqlite-extensions"
+    module_buildtype=shared
+    if [ -n "${CPYTHON_STATIC}" ]; then
+        module_buildtype=static
+    fi
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=${module_buildtype} --enable-loadable-sqlite-extensions"
 fi
 
 if [[ "${PYTHON_MAJMIN_VERSION}" = "3.12" && "${PYBUILD_PLATFORM}" = macos* ]]; then

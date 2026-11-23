@@ -40,6 +40,7 @@ jobs:
   release:
     name: Release
     needs: release-deployment
+    if: ${{ !inputs.dry-run }}
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     runs-on: depot-ubuntu-24.04-8
@@ -48,7 +49,7 @@ jobs:
     permissions:
       contents: write
       packages: write
-      # Permissions used for actions/attest-build-provenance and the credential broker
+      # Permissions used for actions/attest-build-provenance
       id-token: write
       attestations: write
 
@@ -63,23 +64,13 @@ jobs:
           repo: casey/just
           version: 1.42.4
 
-      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
-
-      # Perform a release in dry-run mode.
-      - run: just release-dry-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
-        if: ${{ github.event.inputs.dry-run == 'true' }}
-        env:
-          GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
-          GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Configure Git identity
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         run: |
           git config --global user.name "$GITHUB_ACTOR"
           git config --global user.email "$GITHUB_ACTOR@users.noreply.github.com"
 
       # Create a GitHub draft release for the target commit.
       - name: Create GitHub Release
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         run: just release-create ${GITHUB_EVENT_INPUTS_TAG} ${GITHUB_EVENT_INPUTS_SHA}
         env:
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
@@ -87,26 +78,66 @@ jobs:
 
       # Uploading the relevant artifact to the GitHub release.
       - run: just release-run ${GH_TOKEN} ${GITHUB_EVENT_INPUTS_SHA} ${GITHUB_EVENT_INPUTS_TAG}
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           GITHUB_EVENT_INPUTS_SHA: ${{ github.event.inputs.sha }}
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
       - name: Generate attestations
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         with:
           subject-path: |
             dist/*.tar.gz
             dist/*.tar.zst
 
-      - name: Stage Astral mirror assets
+  publish-mirror:
+    name: Publish Astral mirror
+    needs: [release-deployment, release]
+    # Dry runs skip the GitHub release job and still need the release deployment.
+    if: ${{ !cancelled() && needs.release-deployment.result == 'success' && (inputs.dry-run || needs.release.result == 'success') }}
+    runs-on: depot-ubuntu-24.04-8
+    environment: release
+    permissions:
+      actions: read # dry runs fetch build artifacts
+      contents: read
+    outputs:
+      manifest-artifact: ${{ steps.manifest.outputs.artifact-id }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: ${{ inputs.dry-run && 'recursive' || 'false' }}
+          persist-credentials: false
+
+      - uses: extractions/setup-crate@7577c1bdf2d95e6d65d532788f35ed79d4b1dda2 # v2.0.1
+        if: ${{ inputs.dry-run }}
+        with:
+          repo: casey/just
+          version: 1.42.4
+
+      - name: Prepare dry-run distributions
+        if: ${{ inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: just release-dry-run "$GH_TOKEN" "$RELEASE_SHA" "$RELEASE_TAG"
+
+      - name: Prepare and verify Astral mirror assets
         id: mirror-assets
         env:
+          GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.tag }}
+          DRY_RUN: ${{ inputs.dry-run }}
         run: |
           # Keep the staging directory on the same filesystem as dist for hard links.
-          directory=$(mktemp -d "$GITHUB_WORKSPACE/.r2-release-assets.XXXXXX")
-          uv run python -m pythonbuild.mirror --dist dist --tag "$RELEASE_TAG" --stage-to "$directory"
+          directory=$(mktemp -d "$GITHUB_WORKSPACE/r2-release-assets.XXXXXX")
+          if [[ "$DRY_RUN" == true ]]; then
+            python3 -m pythonbuild.mirror stage --dist dist --tag "$RELEASE_TAG" --stage-to "$directory"
+          else
+            gh release download --repo "$GITHUB_REPOSITORY" --dir "$directory" \
+              --pattern '*.tar.gz' --pattern '*.tar.zst' --pattern SHA256SUMS \
+              -- "${RELEASE_TAG:?missing release tag}"
+          fi
+          python3 -m pythonbuild.mirror verify "$directory"
           echo "directory=$directory" >> "$GITHUB_OUTPUT"
 
       - name: Publish archives to Astral mirror
@@ -141,28 +172,56 @@ jobs:
           cache-control: public, max-age=31536000, immutable
           dry-run: ${{ inputs.dry-run }}
 
+      - name: Save the mirrored checksum manifest
+        id: manifest
+        if: ${{ !inputs.dry-run }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mirror-checksums-${{ github.run_attempt }}
+          path: ${{ steps.mirror-assets.outputs.directory }}/SHA256SUMS
+          if-no-files-found: error
+
+  update-versions:
+    name: Update versions index
+    needs: publish-mirror
+    if: ${{ !inputs.dry-run }}
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: read
+      id-token: write # versions credential broker
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+
+      - name: Download the mirrored checksum manifest
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          artifact-ids: ${{ needs.publish-mirror.outputs.manifest-artifact }}
+          path: dist
+
       - name: Generate versions metadata
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           GITHUB_EVENT_INPUTS_TAG: ${{ github.event.inputs.tag }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: uv run generate-version-metadata.py > dist/versions.ndjson
 
       - name: Validate metadata
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         run: |
           echo "Generated $(wc -l < dist/versions.ndjson) version entries"
           head -c 1000 dist/versions.ndjson
 
       - name: Set branch name
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           TAG: ${{ github.event.inputs.tag }}
         run: echo "BRANCH_NAME=update-versions-$TAG-$(date +%s)" >> $GITHUB_ENV
 
       - name: Get versions token
         id: token
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         uses: astral-sh/github-actions/simple-token-service@67dc9ee1ddc113eccd8116e7b949fb6cdcd89889 # 2026.11.16.0
         with:
           exchange-url: ${{ secrets.RELEASES_STS_API_URL }}/exchange
@@ -173,7 +232,6 @@ jobs:
             pull_requests: write
 
       - name: Checkout versions repo
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: astral-sh/versions
@@ -183,11 +241,9 @@ jobs:
           persist-credentials: false
 
       - name: Update versions
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         run: cat dist/versions.ndjson | uv run astral-versions/scripts/insert-versions.py --name python-build-standalone
 
       - name: Commit versions
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           TAG: ${{ github.event.inputs.tag }}
         working-directory: astral-versions
@@ -200,7 +256,6 @@ jobs:
           git commit -m "Update python-build-standalone to $TAG"
 
       - name: Create Pull Request
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           TAG: ${{ github.event.inputs.tag }}
           GH_TOKEN: ${{ steps.token.outputs.token }}
@@ -220,7 +275,6 @@ jobs:
             --label "automation"
 
       - name: Merge Pull Request
-        if: ${{ github.event.inputs.dry-run == 'false' }}
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
         working-directory: astral-versions
@@ -231,8 +285,8 @@ jobs:
           gh pr merge --squash --admin "$BRANCH_NAME"
 
   publish-docs:
-    needs: release
-    if: ${{ github.event.inputs.dry-run == 'false' }}
+    needs: update-versions
+    if: ${{ !inputs.dry-run }}
     uses: $/.github/workflows/publish-docs.yml
     permissions:
       contents: read

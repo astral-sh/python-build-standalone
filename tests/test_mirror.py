@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
+from hashlib import sha256
 from pathlib import Path
 
 from pythonbuild.mirror import (
@@ -96,6 +97,7 @@ class MirrorTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, "missing 1 release artifacts"):
                 main(
                     [
+                        "stage",
                         "--dist",
                         str(dist),
                         "--tag",
@@ -131,11 +133,15 @@ class MirrorTests(unittest.TestCase):
             full_archive.write_bytes(b"full")
             install_archive.write_bytes(b"install")
             manifest = dist / "SHA256SUMS"
-            manifest.write_text(f"abc  {full_name}\ndef  {install_name}\n")
+            manifest.write_text(
+                f"{sha256(b'full').hexdigest()}  {full_name}\n"
+                f"{sha256(b'install').hexdigest()} *{install_name}\n"
+            )
 
             self.assertEqual(
                 main(
                     [
+                        "stage",
                         "--dist",
                         str(dist),
                         "--tag",
@@ -154,6 +160,44 @@ class MirrorTests(unittest.TestCase):
             self.assertTrue((stage / full_name).samefile(full_archive))
             self.assertTrue((stage / install_name).samefile(install_archive))
             self.assertTrue((stage / "SHA256SUMS").samefile(manifest))
+            self.assertEqual(main(["verify", str(stage)]), 0)
+
+    def test_verify_rejects_corrupt_archive(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            directory = Path(td)
+            archive = directory / "expected.tar.gz"
+            archive.write_bytes(b"corrupt")
+            digest = sha256(b"expected").hexdigest()
+            (directory / "SHA256SUMS").write_text(f"{digest}  {archive.name}\n")
+
+            with self.assertRaisesRegex(
+                SystemExit, r"SHA-256 mismatch for expected\.tar\.gz"
+            ):
+                main(["verify", str(directory)])
+
+    def test_verify_requires_exact_manifest_file_set(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            directory = Path(td)
+            (directory / "extra.tar.zst").write_bytes(b"extra")
+            digest = sha256(b"expected").hexdigest()
+            (directory / "SHA256SUMS").write_text(f"{digest}  expected.tar.gz\n")
+
+            with self.assertRaisesRegex(
+                SystemExit,
+                r"archives do not match SHA256SUMS .*expected\.tar\.gz.*extra\.tar\.zst",
+            ):
+                main(["verify", str(directory)])
+
+    def test_verify_rejects_paths_outside_download_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            directory = Path(td)
+            digest = sha256(b"archive").hexdigest()
+            (directory / "SHA256SUMS").write_text(f"{digest}  ../outside.tar.gz\n")
+
+            with self.assertRaisesRegex(
+                SystemExit, "expected a release archive filename"
+            ):
+                main(["verify", str(directory)])
 
 
 if __name__ == "__main__":

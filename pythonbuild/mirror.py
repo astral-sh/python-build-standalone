@@ -2,7 +2,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-"""Stage release artifacts for the Astral mirror.
+"""Stage and verify release artifacts for the Astral mirror.
 
 This mirrors the exact filenames referenced by ``dist/SHA256SUMS``. That file is
 written by the GitHub release upload step, so using it here keeps the mirror in
@@ -13,6 +13,7 @@ matrix logic in Python.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,7 +24,7 @@ DESTINATION_TAG_RE_TEMPLATE = r"^(cpython-[^+-]+)\+{tag}-(.+)$"
 
 
 class MirrorError(RuntimeError):
-    """Raised when release artifacts cannot be staged for the mirror."""
+    """Raised when release artifacts cannot be staged or verified."""
 
 
 @dataclass(frozen=True)
@@ -34,17 +35,25 @@ class UploadEntry:
 
 def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Stage release distributions for the Astral mirror"
+        description="Stage and verify release distributions for the Astral mirror"
     )
-    parser.add_argument(
+    commands = parser.add_subparsers(dest="command", required=True)
+    stage = commands.add_parser("stage", help="Stage build outputs under release names")
+    stage.add_argument(
         "--dist", type=Path, required=True, help="Directory with release artifacts"
     )
-    parser.add_argument("--tag", required=True, help="Release tag")
-    parser.add_argument(
+    stage.add_argument("--tag", required=True, help="Release tag")
+    stage.add_argument(
         "--stage-to",
         type=Path,
         required=True,
         help="Existing empty directory for mirror assets",
+    )
+    verify = commands.add_parser(
+        "verify", help="Verify a complete set of mirror assets"
+    )
+    verify.add_argument(
+        "directory", type=Path, help="Directory with archives and SHA256SUMS"
     )
     return parser.parse_args(argv)
 
@@ -67,24 +76,30 @@ def infer_build_datetime(dist_dir: Path) -> str:
     return datetimes.pop()
 
 
-def parse_shasums(shasums_path: Path) -> list[str]:
-    if not shasums_path.exists():
-        raise SystemExit(f"{shasums_path} not found")
-
-    filenames: list[str] = []
+def parse_shasums(shasums_path: Path) -> dict[str, str]:
+    checksums: dict[str, str] = {}
     for line in shasums_path.read_text().splitlines():
         line = line.strip()
         if not line:
             continue
 
         try:
-            _digest, filename = line.split(maxsplit=1)
+            digest, filename = line.split(maxsplit=1)
         except ValueError as e:
-            raise SystemExit(f"malformed line in {shasums_path}: {line!r}") from e
+            raise MirrorError(f"malformed line in {shasums_path}: {line!r}") from e
 
-        filenames.append(filename.lstrip("*"))
+        filename = filename.removeprefix("*")
+        if Path(filename).name != filename or not filename.endswith(
+            (".tar.gz", ".tar.zst")
+        ):
+            raise MirrorError(f"expected a release archive filename: {filename}")
+        if filename in checksums:
+            raise MirrorError(f"duplicate archive in {shasums_path}: {filename}")
+        checksums[filename] = digest.lower()
 
-    return filenames
+    if not checksums:
+        raise MirrorError(f"no archives listed in {shasums_path}")
+    return checksums
 
 
 def destination_to_source_name(dest_name: str, tag: str, build_datetime: str) -> str:
@@ -130,17 +145,44 @@ def stage_mirror_assets(
     dist_dir: Path, stage_dir: Path, uploads: Sequence[UploadEntry]
 ) -> None:
     for entry in uploads:
-        if Path(entry.dest_name).name != entry.dest_name:
-            raise MirrorError(f"expected a release filename: {entry.dest_name}")
         (stage_dir / entry.dest_name).hardlink_to(dist_dir / entry.source_name)
 
     (stage_dir / "SHA256SUMS").hardlink_to(dist_dir / "SHA256SUMS")
+
+
+def verify_mirror_assets(directory: Path) -> None:
+    manifest = directory / "SHA256SUMS"
+    if manifest.is_symlink() or not manifest.is_file():
+        raise MirrorError("SHA256SUMS must be a regular file")
+    checksums = parse_shasums(manifest)
+    archives = {path.name: path for path in directory.iterdir() if path != manifest}
+    missing = checksums.keys() - archives.keys()
+    extra = archives.keys() - checksums.keys()
+    if missing or extra:
+        raise MirrorError(
+            f"archives do not match SHA256SUMS (missing: {sorted(missing)}, extra: {sorted(extra)})"
+        )
+
+    for name, digest in checksums.items():
+        archive = archives[name]
+        if archive.is_symlink() or not archive.is_file():
+            raise MirrorError(f"expected a regular archive file: {name}")
+        with archive.open("rb") as file:
+            actual = hashlib.file_digest(file, "sha256").hexdigest()
+        if actual != digest:
+            raise MirrorError(f"SHA-256 mismatch for {name}")
+
+    print(f"verified {len(checksums)} release archives against SHA256SUMS")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
 
     try:
+        if args.command == "verify":
+            verify_mirror_assets(args.directory)
+            return 0
+
         uploads, missing = build_upload_entries(args.dist, args.tag)
 
         if missing:

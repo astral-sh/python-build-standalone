@@ -1218,7 +1218,7 @@ cat "${ROOT}/metadata.json"
 
 if [[ "${PYBUILD_PLATFORM}" = linux* && "${CC}" != "musl-clang" && -z "${CPYTHON_STATIC}" ]]; then
     # GNU and LLVM objdump use different columns for symbol versions.
-    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
+    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" "${ROOT}"/out/python/install/lib/python*/lib-dynload/*.so | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
     cat "${ROOT}/glibc_version.txt"
 fi
 

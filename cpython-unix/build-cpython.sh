@@ -142,6 +142,13 @@ fi
 # skip building _freeze_module and _bootstrap_python for that step.
 patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 
+# Keep target extensions off the build interpreter's import path when host
+# and target share a SOABI (e.g. arm64 and x86_64 on macOS).
+# Backport https://github.com/python/cpython/pull/116294 (Python 3.13.1+).
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i "${ROOT}/patch-isolate-build-sysconfigdata.patch"
+fi
+
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can
 # invoke the host Python on our own.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then

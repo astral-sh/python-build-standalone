@@ -1,0 +1,49 @@
+diff --git a/Lib/sysconfig.py b/Lib/sysconfig.py
+--- a/Lib/sysconfig.py
++++ b/Lib/sysconfig.py
+@@ -539,5 +539,18 @@ def _init_posix(vars):
+     # _sysconfigdata is generated at build time, see _generate_posix_vars()
+     name = _get_sysconfigdata_name()
+-    _temp = __import__(name, globals(), locals(), ['build_time_vars'], 0)
++
++    # For cross builds, the path to the target's sysconfigdata must be specified
++    # so it can be imported. It cannot be in PYTHONPATH, as foreign modules in
++    # sys.path can cause crashes when loaded by the host interpreter.
++    # Rely on truthiness as a valueless env variable is still an empty string.
++    # See OS X note in _generate_posix_vars re _sysconfigdata.
++    if (path := os.environ.get('_PYTHON_SYSCONFIGDATA_PATH')):
++        from importlib.machinery import FileFinder, SourceFileLoader, SOURCE_SUFFIXES
++        from importlib.util import module_from_spec
++        spec = FileFinder(path, (SourceFileLoader, SOURCE_SUFFIXES)).find_spec(name)
++        _temp = module_from_spec(spec)
++        spec.loader.exec_module(_temp)
++    else:
++        _temp = __import__(name, globals(), locals(), ['build_time_vars'], 0)
+     build_time_vars = _temp.build_time_vars
+     vars.update(build_time_vars)
+diff --git a/Lib/test/libregrtest/main.py b/Lib/test/libregrtest/main.py
+--- a/Lib/test/libregrtest/main.py
++++ b/Lib/test/libregrtest/main.py
+@@ -576,4 +576,5 @@ def _add_cross_compile_opts(self, regrtest_opts):
+                 '_PYTHON_HOST_PLATFORM',
+                 '_PYTHON_SYSCONFIGDATA_NAME',
++                "_PYTHON_SYSCONFIGDATA_PATH",
+                 'PYTHONPATH'
+             }
+diff --git a/configure.ac b/configure.ac
+--- a/configure.ac
++++ b/configure.ac
+@@ -165,5 +165,5 @@ AC_ARG_WITH([build-python],
+     ac_cv_prog_PYTHON_FOR_REGEN=$with_build_python
+     PYTHON_FOR_FREEZE="$with_build_python"
+-    PYTHON_FOR_BUILD='_PYTHON_PROJECT_BASE=$(abs_builddir) _PYTHON_HOST_PLATFORM=$(_PYTHON_HOST_PLATFORM) PYTHONPATH=$(shell test -f pybuilddir.txt && echo $(abs_builddir)/`cat pybuilddir.txt`:)$(srcdir)/Lib _PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata_$(ABIFLAGS)_$(MACHDEP)_$(MULTIARCH) '$with_build_python
++    PYTHON_FOR_BUILD='_PYTHON_PROJECT_BASE=$(abs_builddir) _PYTHON_HOST_PLATFORM=$(_PYTHON_HOST_PLATFORM) PYTHONPATH=$(srcdir)/Lib _PYTHON_SYSCONFIGDATA_NAME=_sysconfigdata_$(ABIFLAGS)_$(MACHDEP)_$(MULTIARCH) _PYTHON_SYSCONFIGDATA_PATH=$(shell test -f pybuilddir.txt && echo $(abs_builddir)/`cat pybuilddir.txt`) '$with_build_python
+     AC_MSG_RESULT([$with_build_python])
+   ], [
+diff --git a/Lib/test/pythoninfo.py b/Lib/test/pythoninfo.py
+--- a/Lib/test/pythoninfo.py
++++ b/Lib/test/pythoninfo.py
+@@ -336,2 +336,3 @@ def format_groups(groups):
+         "_PYTHON_SYSCONFIGDATA_NAME",
++        "_PYTHON_SYSCONFIGDATA_PATH",
+         "__PYVENV_LAUNCHER__",

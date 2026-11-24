@@ -1353,9 +1353,7 @@ def build_cpython(
         if zlib_entry == "zlib-ng":
             dependency_paths["zlibNgDir"] = zlib_path
         if zstd_archive is not None:
-            dependency_paths["zstdDir"] = (
-                td / f"cpython-source-deps-zstd-{DOWNLOADS['zstd']['version']}"
-            )
+            dependency_paths["zstdDir"] = td / f"zstd-{DOWNLOADS['zstd']['version']}"
         if mpdecimal_archive is not None:
             dependency_paths["mpdecimalDir"] = (
                 td / f"mpdecimal-{DOWNLOADS['mpdecimal']['version']}"

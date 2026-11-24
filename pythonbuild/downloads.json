@@ -477,10 +477,10 @@
         "license_file": "LICENSE.zlib-ng.txt"
     },
     "zstd": {
-        "url": "https://github.com/python/cpython-source-deps/archive/refs/tags/zstd-1.5.7.tar.gz",
-        "size": 2440298,
-        "sha256": "f24b52470d12f466e9fa4fcc94e6c530625ada51d7b36de7fdc6ed7e6f499c8e",
-        "version": "1.5.7",
+        "url": "https://github.com/meta/zstd/releases/download/v1.6.0/zstd-1.6.0.tar.gz",
+        "size": 2564432,
+        "sha256": "2ba599ae2a257976278e7e71e998433a387bfd18aa7b78678229fd5d84f5e9b8",
+        "version": "1.6.0",
         "library_names": [
             "zstd"
         ],

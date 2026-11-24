@@ -1,8 +1,8 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
+#     "astral-yaml>=0.0.7",
 #     "packaging",
-#     "pyyaml",
 # ]
 #
 # [tool.uv]
@@ -15,7 +15,7 @@ import json
 import sys
 from typing import Any
 
-import yaml
+import astral_yaml
 from packaging.version import Version
 
 CI_TARGETS_YAML = "ci-targets.yaml"
@@ -555,13 +555,13 @@ def main() -> None:
     labels = parse_labels(args.labels)
 
     with open(CI_TARGETS_YAML) as f:
-        ci_config = yaml.safe_load(f)
+        ci_config = astral_yaml.load(f)
 
     with open(CI_RUNNERS_YAML) as f:
-        runners = yaml.safe_load(f)
+        runners = astral_yaml.load(f)
 
     with open(CI_DEFAULTS_YAML) as f:
-        ci_defaults = yaml.safe_load(f) or {}
+        ci_defaults = astral_yaml.load(f) or {}
 
     # If only free runners are allowed, reduce to a subset
     if args.free_runners:

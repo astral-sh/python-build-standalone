@@ -6,6 +6,20 @@ requires-python = ">=3.11"
 build-constraints = [{ name = "uv-build", specifier = "==0.11.33", hashes = ["sha256:0757cd5359d98a83aea5463f43299be0c61bcd035cd0628cfee782fed8037f63", "sha256:0d74032307c081cab58addd2b3f0d8ecc537fd446ac7ceda85cfe63869f24789", "sha256:0f97182a3c8a9280f09c7df30e71b10d31c8a78027cdd731dd5f9923a02c0638", "sha256:1a777eb673f673a98fbb71056d7fc5399f6e9d53441f88f3418ca6fa309b2098", "sha256:1d13df8cc9ad9d9bc18fbb4296d49cde6563bbe7f0f5ea084456ef1c892ff8d0", "sha256:2fd1b53f4423d6ce11246c0c6e622db82bd99df0106ef9d4f65d30494f46ed9f", "sha256:36aacfa7f8c09664da34358acba8d65bfa2ab21ef73669da005d79c7245793cc", "sha256:3c039dcdabfbb25fa682b183b78d5aab193ac9eb93dbe3a762289a2c5c7bc954", "sha256:3c3457f81a84d12b3e9ee8f5555d78788d7d7b2af6febf16558069469a3cceaa", "sha256:46ab7032874b32bb595705141e1e9c101ded7aa432fce47880cf4c61e5e20517", "sha256:530a83fa2617804777689e3b88f7e5c80ef5f1e437461710f82d00cf4a868064", "sha256:5d948aff5843885a7b0a05b754663a9c435ab75d0c0137b1fc86f8098607f252", "sha256:7370103f46f528bea073d2b3f41f0f32a5d5a438cdeb57c891003b16cd1fa2ea", "sha256:975db5751fa1aa449f3c0a06ada787b3c5bad7a1de8b4ca5204db0ffeadd87a6", "sha256:9dd92f812965010d4109c2a34e07b9405ca17d2783d15cb2bb0e024a2f9f407d", "sha256:b0396c88a100a25595c7e7769a848ac0005128d034bff39b1a620e6bf512addf", "sha256:b09dcd86e4bbb31f4d85470892771e7c8786b3bd9b6519f7ce7480517b4d1381", "sha256:c94b83e51e14d4c786e4d1611788ab6c545c0d9e7ba6ae50b32e1cb67a5c4578", "sha256:fc405a12db0e058ee799def2ec4829edc6d3181dba5713b3aa8f2ae896af93e1"] }]
 
 [[package]]
+name = "astral-yaml"
+version = "0.0.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/1c/2d/274204fe20ef675a3d47759b3550e43fa5d819fe0a68b3c527efbb769b40/astral_yaml-0.0.7.tar.gz", hash = "sha256:c13bd29f061b428ad643b4fc03d035adc94ea616bdf7e52097972ed1a685df7b", size = 899773, upload-time = "2026-11-23T23:32:43.783Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/9c/49/f966f949eba19363d406d96e04435be8e41f58aa5f297acfb1597aa210b3/astral_yaml-0.0.7-cp311-abi3-macosx_10_12_x86_64.whl", hash = "sha256:50f0603ae5a00c426b0352c37e16a2de9379a6feae40206f4c72c626b5f5f324", size = 383655, upload-time = "2026-11-23T23:32:36.334Z" },
+    { url = "https://files.pythonhosted.org/packages/ab/f7/9e890bd0b8388a7ce8d59f4a874ad16ba4c74c69794f3e1c658d7dcadffd/astral_yaml-0.0.7-cp311-abi3-macosx_11_0_arm64.whl", hash = "sha256:5909bc6d891e8249cfe6e0caa71efd80ba2234cd57cba5d1786f1d546407916e", size = 379153, upload-time = "2026-11-23T23:32:37.618Z" },
+    { url = "https://files.pythonhosted.org/packages/d0/0a/cfdabef8ca24303d3a0536bc872349e04950b8f42ab3c13c3eea6d8e236b/astral_yaml-0.0.7-cp311-abi3-manylinux_2_34_aarch64.whl", hash = "sha256:3113f81355f01fa58ff08680ae0d7987290838b6760b76d0c2ea461be33f69c3", size = 407665, upload-time = "2026-11-23T23:32:38.92Z" },
+    { url = "https://files.pythonhosted.org/packages/28/10/b32bd9c984671624648ca5966d91befd41535dbe3a43e0fd5a0920437afd/astral_yaml-0.0.7-cp311-abi3-manylinux_2_34_x86_64.whl", hash = "sha256:9effd4a4b2e7c5fc5ea0888d0954d1ee7e80ea726e9ae3c2d9de8000f495fa66", size = 407673, upload-time = "2026-11-23T23:32:40.039Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/4d/03ec3239f86ce9e8c0eb2216618dbab7c4233ac5e1de5ac1246a845e5dfd/astral_yaml-0.0.7-cp311-abi3-win_amd64.whl", hash = "sha256:49731b8bbfd06bb7cf89bfe48c07ea43b48a3b2c3925329feff53187ebc02168", size = 287856, upload-time = "2026-11-23T23:32:41.298Z" },
+    { url = "https://files.pythonhosted.org/packages/f8/19/e0a14802dd3901dde401ce295b01f7f1c7ea6fe1467ca0fcfbefd2966cdb/astral_yaml-0.0.7-cp311-abi3-win_arm64.whl", hash = "sha256:7977d3546e0e12eddcc89ea436865ef6527306f02112123257f3df7d7d8e4487", size = 277411, upload-time = "2026-11-23T23:32:42.434Z" },
+]
+
+[[package]]
 name = "attrs"
 version = "26.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -462,11 +476,11 @@ name = "python-build-standalone"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "astral-yaml" },
     { name = "docker" },
     { name = "jinja2" },
     { name = "jsonschema" },
     { name = "junitparser" },
-    { name = "pyyaml" },
     { name = "six" },
     { name = "tomli" },
     { name = "typing-extensions" },
@@ -479,7 +493,6 @@ check = [
     { name = "ty" },
     { name = "types-jinja2" },
     { name = "types-jsonschema" },
-    { name = "types-pyyaml" },
 ]
 docs = [
     { name = "mkdocs" },
@@ -488,11 +501,11 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "astral-yaml", specifier = ">=0.0.7" },
     { name = "docker", specifier = ">=7.1.0" },
     { name = "jinja2", specifier = ">=3.1.5" },
     { name = "jsonschema", specifier = ">=4.23.0" },
     { name = "junitparser", specifier = ">=4.0.2" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
     { name = "six", specifier = ">=1.17.0" },
     { name = "tomli", specifier = ">=2.2.1" },
     { name = "typing-extensions", specifier = ">=4.14.1" },
@@ -505,7 +518,6 @@ check = [
     { name = "ty", specifier = ">=0.0.84" },
     { name = "types-jinja2", specifier = ">=2.11.9" },
     { name = "types-jsonschema", specifier = ">=4.26.0.20260324" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
 ]
 docs = [
     { name = "mkdocs", specifier = ">=1.6.0" },
@@ -891,15 +903,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/39/31/b5f059142d058aec41e913d8e0eff0a967e7bc46f9a2ba2f31bc11cff059/types-MarkupSafe-1.1.10.tar.gz", hash = "sha256:85b3a872683d02aea3a5ac2a8ef590193c344092032f58457287fbf8e06711b1", size = 2986, upload-time = "2021-11-27T03:18:07.558Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/d6/b8effb1c48539260a5eb4196afc55efac4ea1684a4991977555eb266b2ef/types_MarkupSafe-1.1.10-py3-none-any.whl", hash = "sha256:ca2bee0f4faafc45250602567ef38d533e877d2ddca13003b319c551ff5b3cc5", size = 3998, upload-time = "2021-11-27T03:18:06.398Z" },
-]
-
-[[package]]
-name = "types-pyyaml"
-version = "6.0.12.20250915"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7e/69/3c51b36d04da19b92f9e815be12753125bd8bc247ba0470a982e6979e71c/types_pyyaml-6.0.12.20250915.tar.gz", hash = "sha256:0f8b54a528c303f0e6f7165687dd33fafa81c807fcac23f632b63aa624ced1d3", size = 17522, upload-time = "2025-09-15T03:01:00.728Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bd/e0/1eed384f02555dde685fff1a1ac805c1c7dcb6dd019c916fe659b1c1f9ec/types_pyyaml-6.0.12.20250915-py3-none-any.whl", hash = "sha256:e7d4d9e064e89a3b3cae120b4990cd370874d2bf12fa5f46c97018dd5d3c9ab6", size = 20338, upload-time = "2025-09-15T03:00:59.218Z" },
 ]
 
 [[package]]

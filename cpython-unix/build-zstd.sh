@@ -12,7 +12,7 @@ export PREFIX="/tools/deps"
 
 tar -xf "zstd-${ZSTD_VERSION}.tar.gz"
 
-pushd "cpython-source-deps-zstd-${ZSTD_VERSION}/lib"
+pushd "zstd-${ZSTD_VERSION}/lib"
 
 if [ "${CC}" = "musl-clang" ]; then
     # In order to build the library with intrinsics, we need musl-clang to find
@@ -32,51 +32,10 @@ if [ "${CC}" = "musl-clang" ]; then
     done
     EXTRA_TARGET_CFLAGS="${EXTRA_TARGET_CFLAGS} -I${TOOLS_PATH}/host/include/"
 
-    # `qsort_r` is only available in musl 1.2.3+ but we use 1.2.2. The zstd source provides a
-    # fallback implementation, but they do not have a `configure`-style detection of whether
-    # `qsort_r` is actually available so we patch it to include a check for glibc.
-    patch -p1 <<EOF
-diff --git a/dictBuilder/cover.c b/dictBuilder/cover.c
-index 2ef33c7..078e2ee 100644
---- a/dictBuilder/cover.c
-+++ b/dictBuilder/cover.c
-@@ -241,7 +241,7 @@ typedef struct {
-   unsigned d;
- } COVER_ctx_t;
- 
--#if !defined(_GNU_SOURCE) && !defined(__APPLE__) && !defined(_MSC_VER)
-+#if !(defined(_GNU_SOURCE) && defined(__GLIBC__)) && !defined(__APPLE__) && !defined(_MSC_VER)
- /* C90 only offers qsort() that needs a global context. */
- static COVER_ctx_t *g_coverCtx = NULL;
- #endif
-@@ -290,7 +290,7 @@ static int COVER_cmp8(COVER_ctx_t *ctx, const void *lp, const void *rp) {
-  */
- #if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
- static int WIN_CDECL COVER_strict_cmp(void* g_coverCtx, const void* lp, const void* rp) {
--#elif defined(_GNU_SOURCE)
-+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
- static int COVER_strict_cmp(const void *lp, const void *rp, void *g_coverCtx) {
- #else /* C90 fallback.*/
- static int COVER_strict_cmp(const void *lp, const void *rp) {
-@@ -306,7 +306,7 @@ static int COVER_strict_cmp(const void *lp, const void *rp) {
-  */
- #if (defined(_WIN32) && defined(_MSC_VER)) || defined(__APPLE__)
- static int WIN_CDECL COVER_strict_cmp8(void* g_coverCtx, const void* lp, const void* rp) {
--#elif defined(_GNU_SOURCE)
-+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
- static int COVER_strict_cmp8(const void *lp, const void *rp, void *g_coverCtx) {
- #else /* C90 fallback.*/
- static int COVER_strict_cmp8(const void *lp, const void *rp) {
-@@ -328,7 +328,7 @@ static void stableSort(COVER_ctx_t *ctx) {
-     qsort_r(ctx->suffix, ctx->suffixSize, sizeof(U32),
-             ctx,
-             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp));
--#elif defined(_GNU_SOURCE)
-+#elif defined(_GNU_SOURCE) && defined(__GLIBC__)
-     qsort_r(ctx->suffix, ctx->suffixSize, sizeof(U32),
-             (ctx->d <= 8 ? &COVER_strict_cmp8 : &COVER_strict_cmp),
-             ctx);
-EOF
+    # musl 1.2.2 lacks qsort_r, so select zstd's standard qsort fallback.
+    if [ -z "${STATIC}" ]; then
+        EXTRA_TARGET_CFLAGS="${EXTRA_TARGET_CFLAGS} -DZDICT_QSORT=ZDICT_QSORT_C90"
+    fi
 fi
 
 CFLAGS="${EXTRA_TARGET_CFLAGS} -fPIC -DZSTD_MULTITHREAD -O3" LDFLAGS="${EXTRA_TARGET_LDFLAGS}" make -j "${NUM_CPUS}" VERBOSE=1 libzstd.a

@@ -414,6 +414,11 @@ POLICIES: dict[str, Policy] = {
         r"v(?P<version>[0-9.]+)",
         artifact_name="zlib-{version}.tar.gz",
     ),
+    "zstd": github_policy(
+        "meta/zstd",
+        r"v(?P<version>[0-9.]+)",
+        artifact_name="zstd-{version}.tar.gz",
+    ),
 }
 
 
@@ -431,7 +436,6 @@ UNSUPPORTED: dict[str, str] = {
     "tk-windows-bin-8615": "commit-pinned CPython binary dependency",
     "uuid": "inactive upstream project",
     "zlib-ng": "CPython source-deps snapshot must follow the upstream release",
-    "zstd": "CPython source-deps snapshot must follow the upstream release",
 }
 
 

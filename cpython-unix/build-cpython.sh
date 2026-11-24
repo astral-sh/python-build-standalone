@@ -142,6 +142,13 @@ fi
 # skip building _freeze_module and _bootstrap_python for that step.
 patch -p1 -i "${ROOT}/patch-always-build-python-for-freeze.patch"
 
+# Keep target extensions off the build interpreter's import path when host
+# and target share a SOABI (e.g. arm64 and x86_64 on macOS).
+# Backport https://github.com/python/cpython/pull/116294 (Python 3.13.1+).
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_12}" ]; then
+    patch -p1 -i "${ROOT}/patch-isolate-build-sysconfigdata.patch"
+fi
+
 # Add a make target to write the PYTHON_FOR_BUILD variable so we can
 # invoke the host Python on our own.
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
@@ -246,8 +253,7 @@ fi
 patch -p1 -i ${ROOT}/patch-cpython-redhat-cert-file.patch
 
 # Cherry-pick an upstream change in Python 3.15 to build _asyncio as
-# static (which we do anyway in our own fashion) and more importantly to
-# take this into account when finding the AsyncioDebug section.
+# static and take this into account when finding the AsyncioDebug section.
 if [ "${PYTHON_MAJMIN_VERSION}" = 3.14 ]; then
     patch -p1 -i "${ROOT}/patch-python-3.14-asyncio-static.patch"
 fi
@@ -392,9 +398,11 @@ if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_15}" ]; then
 fi
 
 if [ -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]; then
-    # Build standard-library extensions as built-ins by default. Setup.local
-    # overrides only the extensions that must remain shared or disabled.
-    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=static --enable-loadable-sqlite-extensions"
+    module_buildtype=shared
+    if [ -n "${CPYTHON_STATIC}" ]; then
+        module_buildtype=static
+    fi
+    CONFIGURE_FLAGS="${CONFIGURE_FLAGS} MODULE_BUILDTYPE=${module_buildtype} --enable-loadable-sqlite-extensions"
 fi
 
 if [[ "${PYTHON_MAJMIN_VERSION}" = "3.12" && "${PYBUILD_PLATFORM}" = macos* ]]; then
@@ -762,10 +770,18 @@ BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:
 # Supplement produced Makefile with our modifications.
 cat ../Makefile.extra >> Makefile
 
+# In Python 3.11, both install targets write to lib-dynload. Finish
+# setup.py's chmod before oldsharedinstall replaces the same files.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+    printf '\noldsharedinstall: sharedinstall\n' >> Makefile
+fi
+
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
-    # configure-derived MODLIBS uses plain -l flags. Hide symbols from bundled
-    # static dependency libraries in both libpython and the interpreter.
-    printf '\nMODLIBS := $(subst -l,-Xlinker -hidden-l,$(MODLIBS))\n' >> Makefile
+    # Hide symbols from bundled archives whether they are linked into
+    # libpython (MODLIBS) or a shared extension (MODULE_<name>_LDFLAGS).
+    for var in MODLIBS $(sed -En 's/^(MODULE_[A-Z0-9_]+_LDFLAGS)=.*/\1/p' Makefile); do
+        printf '\n%s := $(patsubst -l%%,-Xlinker -hidden-l%%,$(%s))\n' "$var" "$var" >> Makefile
+    done
 fi
 
 make -j "${NUM_CPUS}"
@@ -1216,7 +1232,7 @@ cat "${ROOT}/metadata.json"
 
 if [[ "${PYBUILD_PLATFORM}" = linux* && "${CC}" != "musl-clang" && -z "${CPYTHON_STATIC}" ]]; then
     # GNU and LLVM objdump use different columns for symbol versions.
-    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
+    objdump -T "${LIBPYTHON_SHARED_LIBRARY}" "${ROOT}"/out/python/install/lib/python*/lib-dynload/*.so | grep -oE 'GLIBC_[0-9]+(\.[0-9]+)*' | sort -V | tail -n 1 | cut -d_ -f2 > "${ROOT}/glibc_version.txt"
     cat "${ROOT}/glibc_version.txt"
 fi
 

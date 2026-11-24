@@ -45,6 +45,20 @@ if "TERMINFO_DIRS" not in os.environ:
 
 
 class TestPythonInterpreter(unittest.TestCase):
+    @unittest.skipUnless(sys.platform in ("darwin", "linux"), "Unix extension linkage")
+    def test_extension_linkage(self):
+        self.assertIn("_io", sys.builtin_module_names)
+        for name in ("math", "_ssl", "_sqlite3"):
+            with self.subTest(module=name):
+                spec = importlib.import_module(name).__spec__
+                assert spec is not None
+                if "static" in os.environ["BUILD_OPTIONS"].split("+"):
+                    self.assertEqual(spec.origin, "built-in")
+                else:
+                    self.assertIsInstance(
+                        spec.loader, importlib.machinery.ExtensionFileLoader
+                    )
+
     @unittest.skipUnless(os.name == "nt", "Windows executable names")
     def test_windows_executables(self):
         build_options = os.environ["BUILD_OPTIONS"].split("+")

@@ -909,18 +909,15 @@ const GLOBAL_EXTENSIONS_WINDOWS_PRE_3_13: &[&str] = &["_msi"];
 /// Extension modules not present in Windows static builds.
 const GLOBAL_EXTENSIONS_WINDOWS_NO_STATIC: &[&str] = &["_testinternalcapi", "_tkinter"];
 
-/// Extension modules that should be built as shared libraries.
-const SHARED_LIBRARY_EXTENSIONS: &[&str] = &[
+/// Python 3.10 does not record MODSHARED_NAMES in sysconfig.
+const SHARED_LIBRARY_EXTENSIONS_310: &[&str] = &[
     "_crypt",
     "_ctypes_test",
     "_dbm",
     "_testbuffer",
     "_testcapi",
-    "_testexternalinspection",
     "_testimportmultiple",
-    "_testlimitedcapi",
     "_testmultiphase",
-    "_testsinglephase",
     "_tkinter",
 ];
 
@@ -2318,7 +2315,19 @@ fn validate_distribution(
     }
 
     // Validate extension module metadata.
-    for (name, variants) in json.as_ref().unwrap().build_info.extensions.iter() {
+    let json = json.as_ref().unwrap();
+    let posix_shared_modules: BTreeSet<&str> = if triple.contains("windows") || is_static {
+        BTreeSet::new()
+    } else if python_major_minor == "3.10" {
+        SHARED_LIBRARY_EXTENSIONS_310.iter().copied().collect()
+    } else {
+        json.python_config_vars
+            .get("MODSHARED_NAMES")
+            .context("missing MODSHARED_NAMES in sysconfig")?
+            .split_whitespace()
+            .collect()
+    };
+    for (name, variants) in json.build_info.extensions.iter() {
         for ext in variants {
             for path in ext.license_paths.iter().flatten() {
                 check_license_path(
@@ -2336,20 +2345,9 @@ fn validate_distribution(
                 }
             }
 
-            #[allow(clippy::if_same_then_else)]
-            // Static builds never have shared library extension modules.
-            let want_shared = if is_static {
-                false
-            // Extension modules in libpython core are never shared libraries.
-            } else if ext.in_core {
-                false
-            // All remaining extensions are shared on Windows.
-            } else if triple.contains("windows") {
-                true
-            // On POSIX platforms we maintain a list.
-            } else {
-                SHARED_LIBRARY_EXTENSIONS.contains(&name.as_str())
-            };
+            let want_shared = !is_static
+                && !ext.in_core
+                && (triple.contains("windows") || posix_shared_modules.contains(name.as_str()));
 
             if want_shared && ext.shared_lib.is_none() {
                 context.errors.push(format!(
@@ -2409,7 +2407,7 @@ fn validate_distribution(
     // on macOS.
     if triple.contains("-apple-darwin") {
         if let Some(sdks) = macos_sdks {
-            if let Some(value) = json.as_ref().unwrap().apple_sdk_deployment_target.as_ref() {
+            if let Some(value) = json.apple_sdk_deployment_target.as_ref() {
                 let target_minimum_sdk = semver::Version::parse(&format!("{value}.0"))?;
 
                 sdks.validate_context(&mut context, target_minimum_sdk, triple)?;
@@ -2423,7 +2421,7 @@ fn validate_distribution(
     }
 
     // Ensure all referenced object paths are in the archive.
-    for object_path in json.as_ref().unwrap().all_object_paths() {
+    for object_path in json.all_object_paths() {
         let wanted_path = PathBuf::from("python").join(object_path);
 
         if !seen_paths.contains(&wanted_path) {

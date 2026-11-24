@@ -23,7 +23,7 @@ import urllib.error
 import urllib.request
 import zipfile
 
-import yaml
+import astral_yaml
 import zstandard
 
 from .downloads import DOWNLOADS
@@ -90,7 +90,7 @@ def default_target_triple() -> str:
 def get_targets(yaml_path: pathlib.Path):
     """Obtain the parsed targets YAML file."""
     with yaml_path.open("rb") as fh:
-        return yaml.load(fh, Loader=yaml.SafeLoader)
+        return astral_yaml.load(fh)
 
 
 def get_target_settings(yaml_path: pathlib.Path, target: str):

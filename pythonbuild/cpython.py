@@ -12,8 +12,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import IO, Any, Optional
 
+import astral_yaml
 import jsonschema
-import yaml
 
 from pythonbuild.logging import log
 
@@ -1115,7 +1115,7 @@ def parse_config_c(s: str):
 def extension_modules_config(yaml_path: pathlib.Path):
     """Loads the extension-modules.yml file."""
     with yaml_path.open("r", encoding="utf-8") as fh:
-        data = yaml.load(fh, Loader=yaml.SafeLoader)
+        data = astral_yaml.load(fh)
 
     jsonschema.validate(data, EXTENSION_MODULES_SCHEMA)
 
@@ -1225,7 +1225,7 @@ def stdlib_test_annotations(
 ) -> TestAnnotations:
     """Processes the test-annotations.yml file for a given build configuration."""
     with yaml_path.open("r", encoding="utf-8") as fh:
-        data = yaml.load(fh, Loader=yaml.SafeLoader)
+        data = astral_yaml.load(fh)
 
     jsonschema.validate(data, STDLIB_TEST_ANNOTATIONS_SCHEMA)
 

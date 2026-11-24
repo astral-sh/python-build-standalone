@@ -1189,7 +1189,6 @@ aarch64-unknown-linux-musl:
     - '3.14'
     - '3.15'
     - '3.16'
-  needs_toolchain: true
   docker_image_suffix: .debian13
   needs_toolchain: true
   host_cc: clang

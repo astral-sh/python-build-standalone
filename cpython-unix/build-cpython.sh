@@ -770,6 +770,12 @@ BOLT_COMMON_FLAGS="${BOLT_COMMON_FLAGS:-}" BOLT_APPLY_FLAGS="${BOLT_APPLY_FLAGS:
 # Supplement produced Makefile with our modifications.
 cat ../Makefile.extra >> Makefile
 
+# In Python 3.11, both install targets write to lib-dynload. Finish
+# setup.py's chmod before oldsharedinstall replaces the same files.
+if [ -n "${PYTHON_MEETS_MAXIMUM_VERSION_3_11}" ]; then
+    printf '\noldsharedinstall: sharedinstall\n' >> Makefile
+fi
+
 if [[ "${PYBUILD_PLATFORM}" = macos* && -n "${PYTHON_MEETS_MINIMUM_VERSION_3_12}" ]]; then
     # Hide symbols from bundled archives whether they are linked into
     # libpython (MODLIBS) or a shared extension (MODULE_<name>_LDFLAGS).

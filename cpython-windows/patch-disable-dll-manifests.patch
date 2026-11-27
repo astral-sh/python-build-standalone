@@ -1,0 +1,40 @@
+diff --git a/PC/python_nt.rc b/PC/python_nt.rc
+--- a/PC/python_nt.rc
++++ b/PC/python_nt.rc
+@@ -2,16 +2,6 @@
+ 
+ #include "python_ver_rc.h"
+ 
+-#ifndef RT_MANIFEST
+-// bpo-45220: Cannot reliably #include RT_MANIFEST from
+-// anywhere, so we hardcode it
+-#define RT_MANIFEST 24
+-#endif
+-
+-// Include the manifest file that indicates we support all
+-// current versions of Windows.
+-2 RT_MANIFEST "python.manifest"
+-
+ /////////////////////////////////////////////////////////////////////////////
+ //
+ // Version
+diff --git a/PC/sqlite3.rc b/PC/sqlite3.rc
+--- a/PC/sqlite3.rc
++++ b/PC/sqlite3.rc
+@@ -2,16 +2,6 @@
+ 
+ #include <winver.h>
+ 
+-#ifndef RT_MANIFEST
+-// bpo-45220: Cannot reliably #include RT_MANIFEST from
+-// anywhere, so we hardcode it
+-#define RT_MANIFEST 24
+-#endif
+-
+-// Include the manifest file that indicates we support all
+-// current versions of Windows.
+-2 RT_MANIFEST "python.manifest"
+-
+ /////////////////////////////////////////////////////////////////////////////
+ //
+ // Version

@@ -468,12 +468,22 @@ assert errors == ["main thread is not in main loop"], errors
         with self.subTest(msg="weird argv[0]"):
             assertPythonWorks(Path(sys.executable), argv0="/dev/null")
 
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket family")
+    def test_socket_af_netlink(self):
+        import socket
+
+        try:
+            sock = socket.socket(
+                socket.AF_NETLINK, socket.SOCK_RAW, socket.NETLINK_ROUTE
+            )
+        except PermissionError:
+            self.skipTest("netlink sockets are restricted in this environment")
+
+        with sock:
+            # A new netlink socket has no assigned port ID or multicast groups.
+            self.assertEqual(sock.getsockname(), (0, 0))
+
     @unittest.skipUnless(sys.platform == "linux", "Linux-specific socket constant")
-    # TODO(jjh) remove when musl builds use a sysroot
-    @unittest.skipIf(
-        os.environ["TARGET_TRIPLE"].endswith("-musl"),
-        "kernel headers not available in musl",
-    )
     def test_socket_af_vsock(self):
         import socket
 
@@ -487,10 +497,7 @@ assert errors == ["main thread is not in main loop"], errors
     def test_os_pidfd_open(self):
         self.assertTrue(hasattr(os, "pidfd_open"))
 
-    @unittest.skipUnless(
-        "-linux-gnu" in os.environ["TARGET_TRIPLE"],
-        "modern kernel UAPI headers are currently enabled for Linux GNU targets",
-    )
+    @unittest.skipUnless(sys.platform == "linux", "Linux-specific syscall")
     def test_os_getrandom(self):
         import errno
 

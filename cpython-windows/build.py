@@ -43,6 +43,10 @@ DIST = ROOT / "dist"
 SUPPORT = ROOT / "cpython-windows"
 STDLIB_TEST_ANNOTATIONS = ROOT / "stdlib-test-annotations.yml"
 
+# downloads.json entry for libffi on Windows. It follows the libffi version of
+# CPython's Windows build, which can differ from the `libffi` entry used on Unix.
+LIBFFI_ENTRY = "libffi-3.4"
+
 TARGET_ARCHITECTURES = {
     "i686-pc-windows-msvc": "x86",
     "x86_64-pc-windows-msvc": "amd64",
@@ -757,36 +761,10 @@ def build_libffi(
     with tempfile.TemporaryDirectory(prefix="libffi-build-") as td:
         td = pathlib.Path(td)
 
-        ffi_source_path = td / "libffi"
-
-        # As of April 15, 2020, the libffi source release on GitHub doesn't
-        # have patches that we need to build. https://bugs.python.org/issue40293
-        # tracks getting a proper release. Until then, git clone the repo.
-        subprocess.run(
-            [
-                "git.exe",
-                "-c",
-                "core.autocrlf=input",
-                "clone",
-                "--single-branch",
-                "--branch",
-                "libffi",
-                "https://github.com/python/cpython-source-deps.git",
-                str(ffi_source_path),
-            ],
-            check=True,
-        )
-
-        subprocess.run(
-            [
-                "git.exe",
-                "-c",
-                "core.autocrlf=input",
-                "checkout",
-                "73b247f34ef3ae1859b8c2c34d321d34ebc5db15",
-            ],
-            cwd=ffi_source_path,
-            check=True,
+        ffi_archive = download_entry(LIBFFI_ENTRY, BUILD)
+        extract_tar_to_directory(ffi_archive, td)
+        ffi_source_path = (
+            td / f"cpython-source-deps-libffi-{DOWNLOADS[LIBFFI_ENTRY]['version']}"
         )
 
         # We build libffi by running the build script that CPython ships.
@@ -1108,6 +1086,9 @@ def collect_python_build_artifacts(
 
                 if name == "tcltk":
                     name = tk_bin_entry
+
+                if name == "libffi":
+                    name = LIBFFI_ENTRY
 
                 # Tix is only included in the Tcl/Tk 8.6 bundle.
                 if name == "tix" and int(python_majmin) >= 314:
@@ -1893,7 +1874,8 @@ def main() -> None:
             )
 
         libffi_archive = BUILD / (
-            f"libffi-{target_triple}-{build_options}-{compiler_cache_key}.tar"
+            f"libffi-{DOWNLOADS[LIBFFI_ENTRY]['version']}-{target_triple}-"
+            f"{build_options}-{compiler_cache_key}.tar"
         )
         if not libffi_archive.exists():
             build_libffi(

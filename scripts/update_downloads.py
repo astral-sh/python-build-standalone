@@ -425,6 +425,7 @@ POLICIES: dict[str, Policy] = {
 UNSUPPORTED: dict[str, str] = {
     "bdb": "pinned to the last Sleepycat-licensed release",
     "jom-windows-bin": "Qt's release layout needs a dedicated policy",
+    "libffi-3.4": "CPython source-deps snapshot following CPython's Windows build",
     "llvm-aarch64-linux": "toolchain bootstrap requires coordinated updates",
     "llvm-x86_64-linux": "toolchain bootstrap requires coordinated updates",
     "llvm-aarch64-macos": "toolchain bootstrap requires coordinated updates",

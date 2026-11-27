@@ -756,6 +756,49 @@ mod tests {
         assert!(!should_strip(Path::new("tcl90.dll"), &unsigned));
         assert!(!should_strip(Path::new("tcl9tk90.dll"), &unsigned));
     }
+
+    #[test]
+    fn verifies_and_rewinds_llvm_archive() -> Result<()> {
+        let contents = vec![b'x'; 20_000];
+        let mut file = tempfile::tempfile()?;
+        file.write_all(&contents)?;
+        file.rewind()?;
+        let download = Download {
+            url: String::new(),
+            size: contents.len() as u64,
+            sha256: "42e8bc96b8eec8c4e5d503483ba0cb843ce95243c8ca8575ffc69cd25d12c61c".to_string(),
+        };
+
+        let mut file = verify_llvm_archive(file, &download)?;
+        let mut actual = Vec::new();
+        file.read_to_end(&mut actual)?;
+        assert_eq!(actual, contents);
+        Ok(())
+    }
+
+    #[test]
+    fn rejects_invalid_llvm_archive_size_or_digest() -> Result<()> {
+        let mut file = tempfile::tempfile()?;
+        file.write_all(b"abc")?;
+        file.rewind()?;
+        let mut download = Download {
+            url: String::new(),
+            size: 4,
+            sha256: String::new(),
+        };
+
+        assert!(
+            verify_llvm_archive(file.try_clone()?, &download)
+                .is_err_and(|error| error.to_string().contains("size mismatch"))
+        );
+
+        download.size = 3;
+        assert!(
+            verify_llvm_archive(file, &download)
+                .is_err_and(|error| error.to_string().contains("SHA-256 mismatch"))
+        );
+        Ok(())
+    }
 }
 
 /// Create an install-only .tar.gz archive from a .tar.zst archive.
@@ -876,7 +919,16 @@ fn verify_llvm_archive(mut file: std::fs::File, download: &Download) -> Result<s
     );
 
     let mut hasher = Sha256::new();
-    std::io::copy(&mut file, &mut hasher)?;
+    let mut buffer = [0; 8192];
+    loop {
+        let count = match file.read(&mut buffer) {
+            Ok(0) => break,
+            Ok(count) => count,
+            Err(error) if error.kind() == std::io::ErrorKind::Interrupted => continue,
+            Err(error) => return Err(error.into()),
+        };
+        hasher.update(&buffer[..count]);
+    }
     let sha256 = hex::encode(hasher.finalize());
     ensure!(
         sha256 == download.sha256,

@@ -1,0 +1,18 @@
+diff --git a/Lib/test/test_perf_profiler.py b/Lib/test/test_perf_profiler.py
+--- a/Lib/test/test_perf_profiler.py
++++ b/Lib/test/test_perf_profiler.py
+@@ -65,2 +65 @@
+-    @unittest.skipIf(support.check_bolt_optimized(), "fails on BOLT instrumented binaries")
+     def test_trampoline_works(self):
+@@ -116,2 +115 @@
+-    @unittest.skipIf(support.check_bolt_optimized(), "fails on BOLT instrumented binaries")
+     def test_trampoline_with_unencodable_name(self):
+@@ -126,2 +124 @@
+-    @unittest.skipIf(support.check_bolt_optimized(), "fails on BOLT instrumented binaries")
+     def test_trampoline_works_with_forks(self):
+@@ -196,2 +193 @@
+-    @unittest.skipIf(support.check_bolt_optimized(), "fails on BOLT instrumented binaries")
+     def test_trampoline_works_after_fork_with_many_code_objects(self):
+@@ -236,2 +232 @@
+-    @unittest.skipIf(support.check_bolt_optimized(), "fails on BOLT instrumented binaries")
+     def test_sys_api(self):
